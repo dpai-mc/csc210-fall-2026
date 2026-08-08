@@ -1,0 +1,1662 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="03">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — SPA 3: Signed Integers & Two's Complement</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+/* ---------- Widget 3: Two's Complement Explorer ---------- */
+/* Bit display row */
+.bit-cell {
+      width: 32px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      font-weight: 700;
+      font-size: var(--fs-md);
+      background: var(--color-surface);
+      color: var(--color-text);
+    }
+.bit-cell.sign-bit {
+      border-color: var(--color-danger);
+      background: #fdf0ef;
+      color: var(--color-danger);
+    }
+.bit-cell.one {
+      background: var(--color-primary);
+      color: #fff;
+      border-color: var(--color-primary);
+    }
+.bit-cell.sign-bit.one {
+      background: var(--color-danger);
+      color: #fff;
+      border-color: var(--color-danger);
+    }
+.bit-labels span {
+      width: 32px;
+      text-align: center;
+    }
+/* Comparison table */
+.comparison-panel {
+      margin-top: var(--space-lg);
+    }
+.comparison-panel__title {
+      font-size: var(--fs-sm);
+      font-weight: 700;
+      color: var(--color-primary);
+      margin-bottom: var(--space-sm);
+    }
+.comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--fs-sm);
+    }
+.comparison-table th,
+    .comparison-table td {
+      padding: var(--space-sm) var(--space-md);
+      border: 1px solid var(--color-border);
+      text-align: left;
+    }
+.comparison-table th {
+      background: var(--color-code-bg);
+      font-weight: 700;
+      color: var(--color-primary);
+    }
+.comparison-table td {
+      font-family: var(--font-mono);
+      font-size: var(--fs-sm);
+    }
+.comparison-table .rep-name {
+      font-family: var(--font-sans);
+      font-weight: 600;
+    }
+.comparison-table .dual-zero {
+      background: #fff3cd;
+      font-weight: 700;
+      color: var(--color-danger);
+    }
+/* Derivation panel */
+/* Preset demos */
+/* Display panels */
+@media (max-width: 600px) {
+      .display-grid {
+        grid-template-columns: 1fr;
+      }
+      .bit-cell {
+        width: 28px;
+        height: 32px;
+        font-size: var(--fs-sm);
+      }
+      .bit-labels span {
+        width: 28px;
+      }
+    }
+/* ---------- Two's Complement Number Wheel ---------- */
+.wheel-container {
+      display: flex; flex-direction: column; align-items: center; gap: var(--space-md);
+      margin: var(--space-lg) 0;
+    }
+.wheel {
+      position: relative; width: 320px; height: 320px; max-width: 100%;
+    }
+.wheel-node {
+      position: absolute; width: 40px; height: 40px; margin-left: -20px; margin-top: -20px;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--color-border); border-radius: 50%;
+      background: var(--color-surface); font-family: var(--font-mono); font-size: var(--fs-xs);
+      cursor: pointer; transition: background .15s, border-color .15s; font-weight: 700;
+    }
+.wheel-node:hover { border-color: var(--color-primary-lt); }
+.wheel-node.selected { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+.wheel-node.wrap-point { border-color: var(--color-danger); }
+.wheel-center {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      text-align: center; font-family: var(--font-mono);
+    }
+.wheel-center__value { font-size: var(--fs-lg); font-weight: 700; color: var(--color-primary); }
+.wheel-center__label { font-size: var(--fs-xs); color: var(--color-text-muted); }
+/* ---------- Binary Arithmetic Calculator / Overflow ---------- */
+.calc-row { display: flex; gap: var(--space-md); flex-wrap: wrap; align-items: flex-end; margin-bottom: var(--space-md); }
+.calc-op-select {
+      font-family: var(--font-sans); font-size: var(--fs-base); padding: var(--space-sm) var(--space-md);
+      border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-bg); color: var(--color-text);
+    }
+.overflow-flag {
+      display: inline-flex; align-items: center; gap: var(--space-xs);
+      padding: var(--space-sm) var(--space-md); border-radius: var(--radius);
+      font-weight: 700; font-size: var(--fs-sm); margin-top: var(--space-md);
+    }
+.overflow-flag--off { background: #f0faf4; color: var(--color-success); border: 1px solid var(--color-success); }
+.overflow-flag--on { background: #fdf0ef; color: var(--color-danger); border: 1px solid var(--color-danger); }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== Header ==================== -->
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization & Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 1 &rsaquo; <span>Signed Integers & Two's Complement</span>
+    </nav>
+  </header>
+
+  <!-- ==================== Main Content (Single Column) ==================== -->
+  <main class="sp-main sp-main--full">
+
+      <h1>Signed Integers & Two's Complement</h1>
+      <p><strong>Estimated time:</strong> ~2.0 hours &nbsp;|&nbsp; <strong>Sections:</strong> 1.6&ndash;1.7 &nbsp;|&nbsp; <strong>Prerequisite:</strong> SPA 2 (Converting Between Bases)</p>
+
+      <!-- Opening Prose -->
+      <div class="callout callout--hook">
+        <div class="callout__title">What We Have / What We Can't Do / What We Can Now Do</div>
+        <p><strong>What you already know:</strong> You can convert fluently between decimal, binary, hex, and octal. You understand unsigned integer representation and the concept of overflow from SPA 2.</p>
+        <p><strong>What you can't do yet:</strong> Represent negative numbers in binary. The unsigned system only handles values from 0 upward. But every real program needs negative numbers. How do you encode &minus;5 in a fixed number of bits?</p>
+        <p><strong>What you will be able to do by the end of this SPA:</strong> Represent any signed integer in three different formats (sign-magnitude, one's complement, two's complement). Understand why two's complement is the universal choice used by every modern CPU. Perform the flip-and-add-1 derivation for any negative value.</p>
+      </div>
+
+      <p>In SPA 2 you learned that <em>n</em> unsigned bits can represent values from 0 to 2<sup>n</sup>&minus;1. But programs need negative numbers too. How do we encode a sign in a fixed number of bits?</p>
+
+      <p>Three historical approaches existed. Only one survived. Understanding all three &mdash; and why the others failed &mdash; is critical to understanding how your CPU actually works.</p>
+
+      <!-- ============================================================
+           Video: Two's Complement & Negative Numbers (CSC210 Video Embed Standard)
+           ============================================================ -->
+      <h3>Video: Understanding Negative Numbers</h3>
+      <p>A walkthrough of why negative numbers need a different representation strategy than positive ones, and how two's complement solves it.</p>
+
+            <div class="video-breakout">
+      <div class="video-transcript-row">
+        <div class="video-col">
+          <div class="video-frame" id="video-container">
+            <iframe id="youtube-player"
+                    src="https://www.youtube.com/embed/ewXDmO-iDKs?enablejsapi=1&cc_load_policy=1&iv_load_policy=3&modestbranding=1&rel=0"
+                    title="CSC210 Week 1: Understanding Negative Numbers"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    referrerpolicy="strict-origin-when-cross-origin"
+                    allowfullscreen
+                    loading="lazy">
+            </iframe>
+          </div>
+          <div class="video-caption">Closed captions available. Use the transcript panel to jump to any point in the video.</div>
+        </div>
+        <div class="transcript-col">
+          <div class="transcript-panel" id="transcript-container">
+            <p class="transcript-loading">Loading transcript...</p>
+          </div>
+        </div>
+      </div>
+      </div>
+
+      <!-- ============================================================
+           Section 1.6 &mdash; Signed Integers: Three Representations
+           ============================================================ -->
+      <section id="sec-1-6">
+        <h2>1.6 &mdash; Signed Integers: Three Representations</h2>
+
+        <h3>Sign-Magnitude</h3>
+        <p>Use the leftmost (most significant) bit as a sign: <strong>0 = positive</strong>, <strong>1 = negative</strong>. The remaining bits are the magnitude.</p>
+
+        <pre><code>+6 in 8-bit sign-magnitude:  00000110
+-6 in 8-bit sign-magnitude:  10000110</code></pre>
+
+        <p><strong>Problem:</strong> Two representations of zero: <code>00000000</code> (+0) and <code>10000000</code> (&minus;0). Hardware must special-case both. Arithmetic circuits become more complex because the sign must be handled separately from the magnitude.</p>
+
+        <h3>One's Complement</h3>
+        <p>Negative numbers are formed by <strong>flipping every bit</strong> of the positive value.</p>
+
+        <pre><code>+6 in 8-bit:      00000110
+-6 in 1's comp:   11111001  (flip every bit)</code></pre>
+
+        <p><strong>Problem:</strong> Still two zeros: <code>00000000</code> (+0) and <code>11111111</code> (&minus;0). Also requires "end-around carry" in addition, which complicates the adder circuit.</p>
+
+        <h3>Two's Complement</h3>
+        <p>Negative numbers are formed by <strong>flipping every bit and adding 1</strong>.</p>
+
+        <pre><code>+6 in 8-bit:      00000110
+Flip all bits:    11111001
+Add 1:            11111010  = -6 in two's complement</code></pre>
+
+        <p><strong>Why it works:</strong> In two's complement, the leftmost bit has a <strong>negative</strong> place value. For an 8-bit value:</p>
+
+        <pre><code>Position:  7      6   5   4   3   2   1   0
+Value:   -128    64  32  16  8   4   2   1
+Bits:     1      1   1   1  0   1   0   0
+
+Value = -128 + 64 + 32 + 16 + 4 = -12</code></pre>
+
+        <p><strong>Range of 8-bit two's complement:</strong> &minus;128 to +127 (not symmetric &mdash; one more negative value because zero takes the +0 slot).</p>
+
+        <div class="callout callout--aha">
+          <div class="callout__title">Key Insight</div>
+          <p>The range is asymmetric: &minus;128 to +127. There is no +128 in 8-bit two's complement. The bit pattern <code>10000000</code> represents &minus;128 (not &minus;0). This is because &minus;128 = &minus;128 + 0, and there is no room for a separate &minus;0 representation.</p>
+        </div>
+
+        <div class="callout callout--forward">
+          <div class="callout__title">CS301 Reference</div>
+          <p>Two's complement is covered in Saylor CS301 <strong>Unit 2</strong>. Log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> and navigate to Unit 2. Sign-magnitude and one's complement are mentioned but not explored in depth. This SPA provides the full comparative treatment (all three representations) because understanding <em>why</em> the others failed is part of understanding why two's complement is the standard.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Section 1.7 &mdash; Why Two's Complement Wins
+           ============================================================ -->
+      <section id="sec-1-7">
+        <h2>1.7 &mdash; Why Two's Complement Wins</h2>
+
+        <p>Two's complement is not just a convention. It is the representation that makes <strong>hardware simplest</strong>. Here is why:</p>
+
+        <h3>1. Single representation of zero</h3>
+        <p>There is only one zero: <code>00000000</code>. No special-casing needed in comparisons or arithmetic.</p>
+
+        <h3>2. Addition works the same for all sign combinations</h3>
+        <p>You can add two positive numbers, two negative numbers, or a positive and a negative number using the <strong>exact same adder circuit</strong>. The hardware does not need to check the signs first.</p>
+
+        <p>Example: 5 + (&minus;3) in 4-bit two's complement:</p>
+        <pre><code>  5 = 0101
+- 3 = 1101   (flip 0011 &rarr; 1100, add 1 &rarr; 1101)
+-------
+       0010  = 2  (carry out of bit 3 is discarded)</code></pre>
+
+        <p>The same adder circuit that computes 5 + 3 also computes 5 + (&minus;3). This is not a coincidence &mdash; it is a mathematical property of two's complement that makes the ALU (built Week 6) dramatically simpler.</p>
+
+        <div class="widget-card" id="widget-arith-calc">
+          <div class="widget-card__title">Interactive: Binary Arithmetic Calculator</div>
+          <div class="widget-card__subtitle">Try your own 8-bit two's complement addition. Enter two decimal values (&minus;128 to 127); the calculator shows the bit-level addition and the interpreted result.</div>
+
+          <div class="calc-row">
+            <div class="widget-input-group">
+              <label for="calc-a">Value A</label>
+              <input type="number" id="calc-a" min="-128" max="127" placeholder="e.g. 5" oninput="ArithCalc.update()">
+            </div>
+            <div class="widget-input-group">
+              <label for="calc-op">Operation</label>
+              <select class="calc-op-select" id="calc-op" onchange="ArithCalc.update()">
+                <option value="add">+ Add</option>
+                <option value="sub">&minus; Subtract</option>
+              </select>
+            </div>
+            <div class="widget-input-group">
+              <label for="calc-b">Value B</label>
+              <input type="number" id="calc-b" min="-128" max="127" placeholder="e.g. -3" oninput="ArithCalc.update()">
+            </div>
+            <button class="widget-btn widget-btn--primary" onclick="ArithCalc.update()">Calculate</button>
+          </div>
+
+          <div class="preset-row">
+            <span style="font-size:var(--fs-sm);font-weight:600;color:var(--color-text-muted);align-self:center;">Try:</span>
+            <button class="preset-btn" onclick="ArithCalc.preset(5,'add',-3)">5 + (&minus;3)</button>
+            <button class="preset-btn" onclick="ArithCalc.preset(100,'add',50)">100 + 50 (overflow!)</button>
+            <button class="preset-btn" onclick="ArithCalc.preset(-100,'add',-50)">&minus;100 + (&minus;50) (overflow!)</button>
+            <button class="preset-btn" onclick="ArithCalc.preset(20,'sub',30)">20 &minus; 30</button>
+          </div>
+
+          <div id="calc-derivation" class="derivation-panel" style="display:none;"></div>
+          <div id="calc-overflow-flag" style="display:none;"></div>
+        </div>
+
+        <h3>3. Subtraction is just addition</h3>
+        <p>To compute A &minus; B, negate B (two's complement) and add. <strong>No separate subtraction circuit needed.</strong></p>
+
+        <h3>4. The most significant bit is a natural sign indicator</h3>
+        <p>If the MSB is 0, the value is non-negative. If 1, it is negative. No extra wire or flag needed.</p>
+
+        <div class="callout callout--aha">
+          <div class="callout__title">Universal Standard</div>
+          <p>Every modern CPU uses two's complement for signed integers. MIPS, x86, ARM &mdash; all of them. When you write <code>-5</code> in C or Java, the compiler stores it as the two's complement bit pattern. When you write assembly in Week 6, immediate values in instructions are encoded in two's complement.</p>
+        </div>
+
+        <div class="callout callout--forward">
+          <div class="callout__title">CS301 Reference</div>
+          <p>The advantages of two's complement are discussed in Saylor CS301 <strong>Unit 2</strong>. Log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> and navigate to Unit 2. This SPA adds the explicit arithmetic example (5 + (&minus;3)) and the hardware-simplicity argument, which connects forward to the ALU design.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Signed Overflow (distinct from SPA 2's unsigned wraparound)
+           ============================================================ -->
+      <section id="sec-signed-overflow">
+        <h2>Signed Overflow</h2>
+
+        <div class="callout callout--forward">
+          <div class="callout__title">Not the Same as SPA 2's Overflow</div>
+          <p>SPA 2 covered <strong>unsigned wraparound</strong> (255 + 1 wraps to 0). This is a different failure mode: <strong>signed overflow</strong>. It happens when adding two <em>positive</em> two's-complement numbers produces a bit pattern that reads as <em>negative</em>, or adding two negatives produces something that reads as positive. Same hardware, same adder circuit &mdash; but a different condition, and a different flag, from unsigned wraparound.</p>
+        </div>
+
+        <p>The rule: <strong>signed overflow occurs when the two operands have the same sign, but the result has a different sign.</strong> (Two operands with different signs can never overflow &mdash; the true mathematical result is always within range.)</p>
+
+        <p>Try the calculator above with <code>100 + 50</code> in 8-bit two's complement: both operands are positive (well within the 8-bit range individually), but the true sum, 150, is outside the 8-bit signed range (max +127) &mdash; so the result bit pattern is misread as a negative number. The calculator's overflow flag will confirm this.</p>
+
+        <div class="callout callout--aha">
+          <div class="callout__title">Key Takeaway</div>
+          <p>Overflow flags are not optional bookkeeping &mdash; they're how the CPU tells you the bits it just computed can't be trusted at face value. You'll wire up this exact flag when you build the ALU in Week 6, and you'll check it explicitly in MIPS assembly using instructions like <code>add</code> (which traps on overflow) versus <code>addu</code> (which doesn't).</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Widget 3 &mdash; Two's Complement Explorer
+           ============================================================ -->
+      <section id="sec-widget-3">
+        <h2>Interactive: Two's Complement Explorer</h2>
+
+        <div class="widget-card" id="widget-twos-complement">
+          <div class="widget-card__title">Widget 3: Two's Complement Explorer</div>
+          <div class="widget-card__subtitle">Enter a decimal value (&minus;128 to +127) to see how it is represented in all three signed formats, plus unsigned.</div>
+
+          <!-- Input -->
+          <div class="widget-input-row">
+            <div class="widget-input-group">
+              <label for="tc-value">Decimal Value</label>
+              <input type="number" id="tc-value" min="-128" max="127" placeholder="e.g. -6" oninput="TCExplorer.update()">
+            </div>
+            <button class="widget-btn widget-btn--primary" onclick="TCExplorer.update()">Explore</button>
+            <button class="widget-btn widget-btn--outline" onclick="TCExplorer.clear()">Clear</button>
+          </div>
+
+          <!-- Preset Demonstrations -->
+          <div style="margin-bottom:var(--space-sm);">
+            <span style="font-size:var(--fs-sm);font-weight:600;color:var(--color-text-muted);">Quick Demos:</span>
+            <div class="preset-row">
+              <button class="preset-btn" onclick="TCExplorer.setPreset(0)">0</button>
+              <button class="preset-btn" onclick="TCExplorer.setPreset(1)">1</button>
+              <button class="preset-btn" onclick="TCExplorer.setPreset(-1)">&minus;1</button>
+              <button class="preset-btn" onclick="TCExplorer.setPreset(6)">6</button>
+              <button class="preset-btn" onclick="TCExplorer.setPreset(-6)">&minus;6</button>
+              <button class="preset-btn" onclick="TCExplorer.setPreset(127)">127</button>
+              <button class="preset-btn" onclick="TCExplorer.setPreset(-128)">&minus;128</button>
+              <button class="preset-btn" onclick="TCExplorer.setPreset(255)">11111111 (unsigned 255)</button>
+            </div>
+          </div>
+
+          <!-- Bit Display -->
+          <div id="tc-bit-display" style="display:none;">
+            <div class="bit-labels" id="tc-bit-labels"></div>
+            <div class="bit-row" id="tc-bit-row"></div>
+          </div>
+
+          <!-- Display Grid: Two's Complement, Unsigned -->
+          <div class="display-grid" id="tc-display-grid" style="display:none;">
+            <div class="display-box">
+              <div class="display-box__label">Two's Complement Binary</div>
+              <div class="display-box__value" id="tc-bin"></div>
+            </div>
+            <div class="display-box">
+              <div class="display-box__label">Same Bits as Unsigned</div>
+              <div class="display-box__value" id="tc-unsigned"></div>
+            </div>
+            <div class="display-box">
+              <div class="display-box__label">Hexadecimal</div>
+              <div class="display-box__value" id="tc-hex"></div>
+            </div>
+            <div class="display-box">
+              <div class="display-box__label">Decimal Input</div>
+              <div class="display-box__value" id="tc-decimal"></div>
+            </div>
+          </div>
+
+          <!-- Derivation Panel -->
+          <div class="derivation-panel" id="tc-derivation" style="display:none;">
+            <div class="derivation-panel__title" id="tc-deriv-title"></div>
+            <div id="tc-deriv-steps"></div>
+          </div>
+
+          <!-- Comparison Table -->
+          <div class="comparison-panel" id="tc-comparison" style="display:none;">
+            <div class="comparison-panel__title">Side-by-Side Comparison: All Three Representations</div>
+            <table class="comparison-table">
+              <thead>
+                <tr>
+                  <th>Representation</th>
+                  <th>Bit Pattern (8-bit)</th>
+                  <th>Same Bits as Unsigned</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody id="tc-comparison-body">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Widget 3b &mdash; Two's Complement Number Wheel
+           ============================================================ -->
+      <section id="sec-widget-3b">
+        <h2>Interactive: Two's Complement Number Wheel</h2>
+        <p>The bit-pattern explorer above shows two's complement value-by-value. This wheel shows the same idea spatially: values wrap around in a circle, with no gap or jump at the boundary. <em>(Scaled to 4 bits &minus;8 to +7 for a wheel you can actually see &mdash; the same wraparound logic applies at any bit width, including the 8-bit range used elsewhere on this page.)</em></p>
+
+        <div class="wheel-container">
+          <div class="wheel" id="number-wheel">
+            <div class="wheel-center">
+              <div class="wheel-center__value" id="wheel-center-value">0</div>
+              <div class="wheel-center__label" id="wheel-center-label">0000</div>
+            </div>
+            <!-- Nodes populated by JS -->
+          </div>
+        </div>
+
+        <div class="callout callout--aha">
+          <div class="callout__title">Where It Wraps</div>
+          <p>Follow the wheel clockwise from 0 through 7 &mdash; the next step lands on &minus;8, not +8. There is no gap. Adding 1 to the largest positive value in this range lands you on the smallest negative value, exactly the same way 23:59 rolls over to 00:00 on a clock. That rollover, when it happens unintentionally during arithmetic, is exactly the signed overflow condition described above.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           End-of-SPA Forward Reference
+           ============================================================ -->
+      <section id="sec-forward">
+        <h2>What Comes Next</h2>
+
+        <div class="callout callout--forward">
+          <div class="callout__title">Forward Reference</div>
+          <p>Two's complement is how every modern CPU stores signed integers. In Week 6, you will build the ALU that adds these values &mdash; and you will see why two's complement makes the hardware dramatically simpler. The same adder circuit handles all sign combinations because subtraction is just addition with a negated operand.</p>
+        </div>
+
+        <div class="callout callout--forward">
+          <div class="callout__title">What's Next in Week 1</div>
+          <p>You now understand signed integers. The final SPA for Week 1 extends the "bits represent data" idea to floating-point numbers, character encoding, and memory layout. It concludes with the synthesis section ("The Same Byte, Four Meanings") that ties everything together. <strong>Note:</strong> The synthesis section in SPA 4 references two's complement from this SPA, so complete SPA 3 before reaching the end of SPA 4.</p>
+        </div>
+
+        <div style="text-align:center;margin:var(--space-xl)0;">
+          <div class="spa-card__btn" style="font-size:var(--fs-md);padding:var(--space-md) var(--space-xl);">Continue to the next item in this module to begin SPA 4: Beyond Integers</div>
+        </div>
+      </section>
+
+  </main>
+
+  <!-- ==================== Footer ==================== -->
+  <footer class="sp-footer">
+    CSC210 — Computer Organization & Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <!-- ==================== Scripts ==================== -->
+  <script>
+  /* ============================================================
+     Widget 3: Two's Complement Explorer
+     ============================================================
+     Self-contained widget module.  Provides an 8-bit signed
+     integer explorer showing two's complement representation,
+     step-by-step derivation, unsigned interpretation, and a
+     side-by-side comparison of sign-magnitude, one's complement,
+     and two's complement for the same value.
+     ============================================================ */
+  (function () {
+    'use strict';
+
+    var TCExplorer = {
+      bits: 8,
+
+      /* ---------- Public methods ---------- */
+      update: function () {
+        var input = document.getElementById('tc-value');
+        var val = parseInt(input.value, 10);
+
+        // Validation
+        if (isNaN(val) || input.value.trim() === '') {
+          this.hideAll();
+          input.classList.remove('error');
+          return;
+        }
+
+        // For the preset button "11111111 (unsigned 255)", we allow 255
+        // to show what that bit pattern means in signed interpretations
+        if (val < -128 || val > 255) {
+          input.classList.add('error');
+          this.hideAll();
+          return;
+        }
+        input.classList.remove('error');
+
+        var isUnsignedMode = (val > 127);
+        var bitPattern;
+
+        if (isUnsignedMode) {
+          // User entered 255 — show the raw bit pattern and interpret
+          bitPattern = this.toBinary(val & 0xFF, this.bits);
+        } else {
+          bitPattern = this.toTwoComplement(val, this.bits);
+        }
+
+        this.showBitDisplay(bitPattern);
+        this.showDisplayGrid(val, bitPattern, isUnsignedMode);
+        this.showDerivation(val, bitPattern, isUnsignedMode);
+        this.showComparison(bitPattern);
+      },
+
+      setPreset: function (val) {
+        document.getElementById('tc-value').value = val;
+        this.update();
+      },
+
+      clear: function () {
+        document.getElementById('tc-value').value = '';
+        document.getElementById('tc-value').classList.remove('error');
+        this.hideAll();
+      },
+
+      /* ---------- Hide all output panels ---------- */
+      hideAll: function () {
+        document.getElementById('tc-bit-display').style.display = 'none';
+        document.getElementById('tc-display-grid').style.display = 'none';
+        document.getElementById('tc-derivation').style.display = 'none';
+        document.getElementById('tc-comparison').style.display = 'none';
+      },
+
+      /* ---------- Helpers ---------- */
+      toBinary: function (val, bits) {
+        var bin = (val >>> 0).toString(2);
+        while (bin.length < bits) bin = '0' + bin;
+        return bin.substring(bits - bits);
+      },
+
+      toTwoComplement: function (val, bits) {
+        if (val >= 0) return this.toBinary(val, bits);
+        // For negative: compute 2^bits + val
+        var range = Math.pow(2, bits);
+        return this.toBinary((range + val) & (range - 1), bits);
+      },
+
+      toSignMagnitude: function (val, bits) {
+        if (val >= 0) return this.toBinary(val, bits);
+        var mag = Math.abs(val);
+        var magBin = this.toBinary(mag, bits - 1);
+        return '1' + magBin;
+      },
+
+      toOnesComplement: function (val, bits) {
+        if (val >= 0) return this.toBinary(val, bits);
+        var pos = this.toBinary(Math.abs(val), bits);
+        var flipped = '';
+        for (var i = 0; i < pos.length; i++) {
+          flipped += pos[i] === '0' ? '1' : '0';
+        }
+        return flipped;
+      },
+
+      bitPatternToDecimal: function (bin) {
+        return parseInt(bin, 2);
+      },
+
+      bitPatternToTwosComp: function (bin) {
+        var val = parseInt(bin, 2);
+        var msb = parseInt(bin[0], 2);
+        if (msb === 1) {
+          // Negative in two's complement
+          var range = Math.pow(2, this.bits);
+          return val - range;
+        }
+        return val;
+      },
+
+      bitPatternToSignMag: function (bin) {
+        var val = parseInt(bin.substring(1), 2);
+        var sign = parseInt(bin[0], 2);
+        return sign === 1 ? -val : val;
+      },
+
+      bitPatternToOnesComp: function (bin) {
+        var msb = parseInt(bin[0], 2);
+        if (msb === 0) return parseInt(bin, 2);
+        // Flip all bits to get magnitude
+        var flipped = '';
+        for (var i = 0; i < bin.length; i++) {
+          flipped += bin[i] === '0' ? '1' : '0';
+        }
+        return -parseInt(flipped, 2);
+      },
+
+      /* ---------- Render: Bit Display ---------- */
+      showBitDisplay: function (bitPattern) {
+        var container = document.getElementById('tc-bit-display');
+        var labelsRow = document.getElementById('tc-bit-labels');
+        var bitsRow = document.getElementById('tc-bit-row');
+
+        // Labels (bit positions)
+        var placeValues = [];
+        for (var i = this.bits - 1; i >= 0; i--) {
+          if (i === this.bits - 1) {
+            placeValues.push('−' + Math.pow(2, i));
+          } else {
+            placeValues.push(Math.pow(2, i).toString());
+          }
+        }
+
+        labelsRow.innerHTML = '';
+        bitsRow.innerHTML = '';
+
+        for (var j = 0; j < this.bits; j++) {
+          // Label
+          var lbl = document.createElement('span');
+          lbl.textContent = placeValues[j];
+          labelsRow.appendChild(lbl);
+
+          // Bit cell
+          var cell = document.createElement('div');
+          cell.className = 'bit-cell';
+          if (j === 0) cell.classList.add('sign-bit');
+          if (bitPattern[j] === '1') cell.classList.add('one');
+          cell.textContent = bitPattern[j];
+          bitsRow.appendChild(cell);
+        }
+
+        container.style.display = 'block';
+      },
+
+      /* ---------- Render: Display Grid ---------- */
+      showDisplayGrid: function (inputVal, bitPattern, isUnsignedMode) {
+        var grid = document.getElementById('tc-display-grid');
+
+        document.getElementById('tc-bin').textContent = this.formatBits(bitPattern);
+        document.getElementById('tc-unsigned').textContent = this.bitPatternToDecimal(bitPattern);
+        document.getElementById('tc-hex').textContent = '0x' + this.bitPatternToDecimal(bitPattern).toString(16).toUpperCase().padStart(2, '0');
+
+        if (isUnsignedMode) {
+          document.getElementById('tc-decimal').textContent = inputVal + ' (unsigned input &rarr; bit pattern)';
+        } else {
+          document.getElementById('tc-decimal').textContent = inputVal;
+        }
+
+        grid.style.display = 'grid';
+      },
+
+      formatBits: function (bin) {
+        // Insert space every 4 bits for readability
+        return bin.substring(0, 4) + ' ' + bin.substring(4);
+      },
+
+      /* ---------- Render: Derivation Panel ---------- */
+      showDerivation: function (inputVal, bitPattern, isUnsignedMode) {
+        var panel = document.getElementById('tc-derivation');
+        var title = document.getElementById('tc-deriv-title');
+        var steps = document.getElementById('tc-deriv-steps');
+        steps.innerHTML = '';
+
+        if (isUnsignedMode) {
+          title.textContent = 'Bit Pattern Interpretation (Raw: ' + this.formatBits(bitPattern) + ')';
+          var step = document.createElement('div');
+          step.className = 'derivation-step';
+          step.innerHTML = 'This bit pattern was entered as unsigned <strong>' + inputVal + '</strong>. Below you can see how each signed representation interprets these same bits.';
+          steps.appendChild(step);
+        } else if (inputVal > 0) {
+          title.textContent = 'Derivation for +' + inputVal + ' (Positive Value)';
+          var s1 = document.createElement('div');
+          s1.className = 'derivation-step';
+          s1.innerHTML = '<span class="label">Step 1:</span> Positive values are stored as straight binary.';
+          steps.appendChild(s1);
+          var s2 = document.createElement('div');
+          s2.className = 'derivation-step';
+          s2.innerHTML = '<span class="label">Result:</span> ' + inputVal + ' &rarr; <code>' + this.formatBits(bitPattern) + '</code>';
+          steps.appendChild(s2);
+          var s3 = document.createElement('div');
+          s3.className = 'derivation-step';
+          s3.innerHTML = '<span class="label">Note:</span> For positive values, all three representations (sign-magnitude, one\'s complement, two\'s complement) produce the <strong>same</strong> bit pattern.';
+          steps.appendChild(s3);
+        } else if (inputVal === 0) {
+          title.textContent = 'Derivation for 0';
+          var z1 = document.createElement('div');
+          z1.className = 'derivation-step';
+          z1.innerHTML = '<span class="label">Two\'s complement:</span> <code>' + this.formatBits(bitPattern) + '</code> &mdash; single representation of zero.';
+          steps.appendChild(z1);
+          var z2 = document.createElement('div');
+          z2.className = 'derivation-step';
+          z2.innerHTML = '<span class="label">Sign-magnitude:</span> <code>' + this.formatBits(this.toSignMagnitude(0, this.bits)) + '</code> (+0)';
+          steps.appendChild(z2);
+          var z3 = document.createElement('div');
+          z3.className = 'derivation-step';
+          z3.innerHTML = '<span class="label">One\'s complement:</span> <code>' + this.formatBits(this.toOnesComplement(0, this.bits)) + '</code> (+0)';
+          steps.appendChild(z3);
+          var z4 = document.createElement('div');
+          z4.className = 'derivation-step';
+          z4.innerHTML = '<span class="label">Key point:</span> In two\'s complement, there is only <strong>one</strong> zero. In sign-magnitude and one\'s complement, there are <strong>two</strong>: +0 (<code>00000000</code>) and &minus;0 (see &minus;0 preset below).';
+          steps.appendChild(z4);
+        } else {
+          // Negative value
+          title.textContent = 'Derivation for ' + inputVal + ' (Negative Value &mdash; Two\'s Complement Method)';
+          var pos = Math.abs(inputVal);
+          var posBin = this.toBinary(pos, this.bits);
+          var flipped = '';
+          for (var i = 0; i < posBin.length; i++) {
+            flipped += posBin[i] === '0' ? '1' : '0';
+          }
+
+          var d1 = document.createElement('div');
+          d1.className = 'derivation-step';
+          d1.innerHTML = '<span class="label">Step 1 — Start with positive |' + inputVal + '| = ' + pos + ':</span> <code>' + this.formatBits(posBin) + '</code>';
+          steps.appendChild(d1);
+
+          var d2 = document.createElement('div');
+          d2.className = 'derivation-step';
+          d2.innerHTML = '<span class="label">Step 2 — Flip every bit (one\'s complement):</span> <code>' + this.formatBits(flipped) + '</code>';
+          steps.appendChild(d2);
+
+          var d3 = document.createElement('div');
+          d3.className = 'derivation-step';
+          d3.innerHTML = '<span class="label">Step 3 — Add 1:</span> <code>' + this.formatBits(bitPattern) + '</code>';
+          steps.appendChild(d3);
+
+          var d4 = document.createElement('div');
+          d4.className = 'derivation-step';
+          d4.innerHTML = '<span class="label">Result:</span> <code>' + this.formatBits(bitPattern) + '</code> = <strong>' + inputVal + '</strong> in 8-bit two\'s complement.';
+          steps.appendChild(d4);
+
+          // Verify using negative place value
+          var placeSum = '';
+          var bitsArr = bitPattern.split('');
+          var terms = [];
+          for (var b = 0; b < this.bits; b++) {
+            if (bitsArr[b] === '1') {
+              if (b === 0) {
+                terms.push('-' + Math.pow(2, this.bits - 1));
+              } else {
+                terms.push('+' + Math.pow(2, this.bits - 1 - b));
+              }
+            }
+          }
+          var d5 = document.createElement('div');
+          d5.className = 'derivation-step';
+          d5.innerHTML = '<span class="label">Verify (negative place value):</span> ' + terms.join(' ') + ' = <strong>' + inputVal + '</strong>';
+          steps.appendChild(d5);
+        }
+
+        panel.style.display = 'block';
+      },
+
+      /* ---------- Render: Comparison Table ---------- */
+      showComparison: function (bitPattern) {
+        var panel = document.getElementById('tc-comparison');
+        var tbody = document.getElementById('tc-comparison-body');
+        tbody.innerHTML = '';
+
+        var unsignedVal = this.bitPatternToDecimal(bitPattern);
+        var twosCompVal = this.bitPatternToTwosComp(bitPattern);
+        var signMagVal = this.bitPatternToSignMag(bitPattern);
+        var onesCompVal = this.bitPatternToOnesComp(bitPattern);
+
+        var rows = [
+          {
+            name: 'Sign-Magnitude',
+            pattern: this.formatBits(this.toSignMagnitude(twosCompVal, this.bits)),
+            unsigned: this.bitPatternToDecimal(this.toSignMagnitude(twosCompVal, this.bits)),
+            note: signMagVal === 0 && twosCompVal === 0 ? '' : 'Value: ' + signMagVal,
+            isDualZero: false
+          },
+          {
+            name: 'One\'s Complement',
+            pattern: this.formatBits(this.toOnesComplement(twosCompVal, this.bits)),
+            unsigned: this.bitPatternToDecimal(this.toOnesComp(twosCompVal, this.bits)),
+            note: 'Value: ' + onesCompVal,
+            isDualZero: false
+          },
+          {
+            name: 'Two\'s Complement',
+            pattern: this.formatBits(bitPattern),
+            unsigned: unsignedVal,
+            note: 'Value: ' + twosCompVal + ' (standard)',
+            isDualZero: false
+          },
+          {
+            name: 'Unsigned',
+            pattern: this.formatBits(bitPattern),
+            unsigned: unsignedVal,
+            note: 'Value: ' + unsignedVal,
+            isDualZero: false
+          }
+        ];
+
+        // Check for dual-zero patterns
+        var isAllZeros = (bitPattern === '00000000');
+        var isAllOnes = (bitPattern === '11111111');
+        var isFirstBitOnly = (bitPattern === '10000000');
+
+        if (isAllOnes) {
+          // 11111111: sign-mag = -0, ones-comp = -0, twos-comp = -1, unsigned = 255
+          rows[0].note = 'Value: <strong>-0</strong> (dual zero!)';
+          rows[0].isDualZero = true;
+          rows[1].note = 'Value: <strong>-0</strong> (dual zero!)';
+          rows[1].isDualZero = true;
+          rows[2].note = 'Value: <strong>-1</strong> (no dual zero!)';
+        }
+        if (isFirstBitOnly) {
+          // 10000000: sign-mag = -0, ones-comp = -127, twos-comp = -128, unsigned = 128
+          rows[0].note = 'Value: <strong>-0</strong> (dual zero!)';
+          rows[0].isDualZero = true;
+        }
+
+        for (var i = 0; i < rows.length; i++) {
+          var tr = document.createElement('tr');
+          var tdName = document.createElement('td');
+          tdName.className = 'rep-name';
+          tdName.textContent = rows[i].name;
+          tr.appendChild(tdName);
+
+          var tdPattern = document.createElement('td');
+          tdPattern.textContent = rows[i].pattern;
+          if (rows[i].isDualZero) tdPattern.className = 'dual-zero';
+          tr.appendChild(tdPattern);
+
+          var tdUnsigned = document.createElement('td');
+          tdUnsigned.textContent = rows[i].unsigned;
+          tr.appendChild(tdUnsigned);
+
+          var tdNote = document.createElement('td');
+          tdNote.innerHTML = rows[i].note;
+          if (rows[i].isDualZero) tdNote.className = 'dual-zero';
+          tr.appendChild(tdNote);
+
+          tbody.appendChild(tr);
+        }
+
+        panel.style.display = 'block';
+      }
+    };
+
+    /* Expose globally for inline onclick handlers */
+    window.TCExplorer = TCExplorer;
+
+  })();
+  </script>
+
+  <!-- ==================== Binary Arithmetic Calculator (signed overflow) ==================== -->
+  <script>
+  (function () {
+    'use strict';
+
+    function toTwosComplement8(n) {
+      if (n < 0) n = 256 + n;
+      return n & 0xFF;
+    }
+    function toBinary8(n) {
+      var bits = toTwosComplement8(n).toString(2);
+      while (bits.length < 8) bits = '0' + bits;
+      return bits;
+    }
+    function fromTwosComplement8(bitsVal) {
+      bitsVal = bitsVal & 0xFF;
+      return (bitsVal & 0x80) ? bitsVal - 256 : bitsVal;
+    }
+
+    var ArithCalc = {
+      preset: function (a, op, b) {
+        document.getElementById('calc-a').value = a;
+        document.getElementById('calc-op').value = op;
+        document.getElementById('calc-b').value = b;
+        this.update();
+      },
+
+      update: function () {
+        var aRaw = document.getElementById('calc-a').value.trim();
+        var bRaw = document.getElementById('calc-b').value.trim();
+        var op = document.getElementById('calc-op').value;
+        var derivEl = document.getElementById('calc-derivation');
+        var flagEl = document.getElementById('calc-overflow-flag');
+
+        if (aRaw === '' || bRaw === '') { derivEl.style.display = 'none'; flagEl.style.display = 'none'; return; }
+
+        var a = parseInt(aRaw, 10);
+        var b = parseInt(bRaw, 10);
+        if (isNaN(a) || isNaN(b) || a < -128 || a > 127 || b < -128 || b > 127) {
+          derivEl.innerHTML = '<em>Enter values from -128 to 127.</em>';
+          derivEl.style.display = 'block';
+          flagEl.style.display = 'none';
+          return;
+        }
+
+        var effectiveB = (op === 'sub') ? -b : b;
+        var aBits = toBinary8(a);
+        var bBits = toBinary8(effectiveB);
+        var aInt = parseInt(aBits, 2);
+        var bInt = parseInt(bBits, 2);
+        var sum9 = aInt + bInt;
+        var resultBits8 = sum9 & 0xFF;
+        var resultBinStr = resultBits8.toString(2);
+        while (resultBinStr.length < 8) resultBinStr = '0' + resultBinStr;
+        var resultSigned = fromTwosComplement8(resultBits8);
+
+        // Signed overflow rule: operands share a sign, result sign differs from theirs
+        var aSign = (aInt & 0x80) !== 0;
+        var bSign = (bInt & 0x80) !== 0;
+        var rSign = (resultBits8 & 0x80) !== 0;
+        var overflow = (aSign === bSign) && (rSign !== aSign);
+
+        var opSymbol = (op === 'sub') ? '\u2212' : '+';
+        var html = '';
+        html += '<div class="derivation-panel__title">' + a + ' ' + opSymbol + ' ' + b + ' (8-bit two\'s complement)</div>';
+        html += '<div class="derivation-step">' + aBits + '  (' + a + ')</div>';
+        html += '<div class="derivation-step">' + (op === 'sub' ? '+ ' + bBits + '  (\u2212(' + b + ') = ' + effectiveB + ')' : '+ ' + bBits + '  (' + effectiveB + ')') + '</div>';
+        html += '<div class="derivation-step">-----------</div>';
+        html += '<div class="derivation-step">' + resultBinStr + '  = ' + resultSigned + (sum9 > 255 ? '  (carry out of bit 7 discarded)' : '') + '</div>';
+        derivEl.innerHTML = html;
+        derivEl.style.display = 'block';
+
+        flagEl.className = 'overflow-flag ' + (overflow ? 'overflow-flag--on' : 'overflow-flag--off');
+        flagEl.innerHTML = overflow
+          ? '\u26A0 Signed Overflow: ON \u2014 both operands share a sign, but the result reads as the opposite sign.'
+          : '\u2713 Signed Overflow: OFF \u2014 result correctly represents ' + a + ' ' + opSymbol + ' ' + b + '.';
+        flagEl.style.display = 'inline-flex';
+      }
+    };
+
+    window.ArithCalc = ArithCalc;
+  })();
+  </script>
+
+  <!-- ==================== Two's Complement Number Wheel (4-bit, -8 to 7) ==================== -->
+  <script>
+  (function () {
+    'use strict';
+
+    var RADIUS = 130;
+    var CENTER = 160;
+
+    function render() {
+      var wheel = document.getElementById('number-wheel');
+      if (!wheel) return;
+      var values = [];
+      for (var v = 0; v <= 15; v++) values.push(v); // unsigned 4-bit codes 0..15, mapped below
+
+      values.forEach(function (code, i) {
+        var angle = (i / 16) * 2 * Math.PI - Math.PI / 2; // start at top
+        var x = CENTER + RADIUS * Math.cos(angle);
+        var y = CENTER + RADIUS * Math.sin(angle);
+        var signedVal = (code & 0x8) ? code - 16 : code;
+        var bin = code.toString(2);
+        while (bin.length < 4) bin = '0' + bin;
+
+        var node = document.createElement('div');
+        node.className = 'wheel-node';
+        if (code === 7 || code === 8) node.classList.add('wrap-point'); // the -8/+7 boundary
+        node.style.left = x + 'px';
+        node.style.top = y + 'px';
+        node.textContent = signedVal;
+        node.setAttribute('role', 'button');
+        node.setAttribute('tabindex', '0');
+        node.title = bin + ' = ' + signedVal;
+        node.dataset.signed = signedVal;
+        node.dataset.bin = bin;
+
+        var select = function () {
+          document.querySelectorAll('.wheel-node').forEach(function (n) { n.classList.remove('selected'); });
+          node.classList.add('selected');
+          document.getElementById('wheel-center-value').textContent = signedVal;
+          document.getElementById('wheel-center-label').textContent = bin;
+        };
+        node.addEventListener('click', select);
+        node.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(); }
+        });
+
+        wheel.appendChild(node);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', render);
+  })();
+  </script>
+
+  <!-- ==================== Video + Transcript Sync (CSC210 Video Embed Standard) ==================== -->
+  <script>
+  (function () {
+    'use strict';
+
+    var VIDEO_ID = 'ewXDmO-iDKs';
+    var player, timeUpdater, parsedTranscript = [];
+
+    var vttContent = `WEBVTT
+Kind: captions
+Language: en-US
+
+00:00:00.000 --> 00:00:06.280
+All right, so what we're going to talk about now is 2's complement, which is how we represent
+
+00:00:06.280 --> 00:00:12.080
+negative integers, okay, in a computer. So one thing I'm going to do, I'm going to start
+
+00:00:12.080 --> 00:00:17.480
+with an example. I'm just going to do an example. I'm going to use a 4-bit as my example.
+
+00:00:18.700 --> 00:00:29.500
+2's complement only works with fixed width values. So if you have 8 bits or 16 or 32 or 64 bits,
+
+00:00:30.000 --> 00:00:36.340
+okay, it works with 64 bits, but you just use all 64 bits and only 64 bits. You can't have 65,
+
+00:00:37.240 --> 00:00:45.460
+it'll mess everything up, okay? So this is to do negative numbers, okay? So with 4 bits,
+
+00:00:48.240 --> 00:00:53.900
+okay, usually you start at the bottom, like if I made only positive numbers,
+
+00:00:54.380 --> 00:00:59.940
+you know, we'd have 0, 0, 0, 0, you know, 0, 0, 0, 1,
+
+00:01:00.000 --> 00:01:12.280
+0, 0, 1, 0. If I add 1 to each one as I come up, 0, 0, 1, 1, okay, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0,
+
+00:01:12.280 --> 00:01:29.440
+0, 1, 1, 1, 1, 0, 0, 0, okay? So I add them up, and this would be decimal 0, 1, 2, 3, 4, 5, 6, 7,
+
+00:01:30.000 --> 00:01:49.880
+8, 9, 10 would be 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, see 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 10,
+
+00:01:49.880 --> 00:01:59.700
+11, 12, 13, 14, and 15. Okay, so 4 bits, 16 numbers. This is
+
+00:02:00.000 --> 00:02:08.120
+positive only. So what we want to do is we want to do positive and negative, okay? So what we do,
+
+00:02:08.280 --> 00:02:20.340
+or have to do to do that, is take our numbers, right, and we're going to start in the middle.
+
+00:02:30.000 --> 00:02:37.400
+All right, so we start with the four zeros, it's still 0.
+
+00:02:41.400 --> 00:02:49.280
+It's still 0, okay? 1, 2,
+
+00:02:49.280 --> 00:02:59.280
+3, 4, 5,
+
+00:03:00.000 --> 00:03:02.460
+6,
+
+00:03:03.380 --> 00:03:11.480
+7. 1, 2, 3, 2,
+
+00:03:11.480 --> 00:03:25.780
+1, 2, 3, 4, 5, 6, 7, okay? And now all the other numbers we have,
+
+00:03:28.600 --> 00:03:29.640
+for two's complement,
+
+00:03:30.000 --> 00:03:32.660
+all the other numbers we have
+
+00:03:32.660 --> 00:03:56.940
+are negative numbers, all right?
+
+00:03:56.940 --> 00:03:59.600
+All right, negative 1,
+
+00:04:00.000 --> 00:04:01.000
+negative 2.
+
+00:04:01.000 --> 00:04:14.600
+Okay, notice that positive, we have 0 to 7, because we're going to treat 0 as positive,
+
+00:04:15.080 --> 00:04:23.080
+and negative, we have negative 1 to negative 8, okay? So this is two's complement right here.
+
+00:04:23.500 --> 00:04:28.260
+This is what the numbers look like. Explain why that is. A couple things you should notice.
+
+00:04:30.000 --> 00:04:38.600
+All negatives start with 1.
+
+00:04:38.600 --> 00:04:51.860
+1, which means all positive, start with 0, okay?
+
+00:04:51.860 --> 00:04:56.000
+Now, you may be wondering why.
+
+00:04:56.000 --> 00:04:59.600
+So if I look at positive 1,
+
+00:05:00.000 --> 00:05:17.000
+it's 0, 0, 0, 1, and negative 1 is 1, 1, 1, 1, and not 1, 0, 0, 1, okay?
+
+00:05:17.000 --> 00:05:25.000
+Because if all the positives start with 0, here's the number, here's the sign.
+
+00:05:25.000 --> 00:05:28.500
+This is called sign magnitude.
+
+00:05:28.500 --> 00:05:29.000
+Okay?
+
+00:05:29.000 --> 00:05:43.000
+If I use sign magnitude plus 1, and if I said, oh, this is the negative, this is the sign with the same magnitude, right?
+
+00:05:43.000 --> 00:05:52.000
+Okay, so if I have to add positive 1 plus negative 1, right, I better get 0.
+
+00:05:52.000 --> 00:05:57.000
+Positive 1 is 0, 0, 0, 1.
+
+00:05:57.000 --> 00:05:58.000
+If I use this sign magnitude plus 1, right, I better get 0.
+
+00:05:58.000 --> 00:06:05.000
+If I use this sign magnitude, okay, 1, it means it's negative, 0, 0, 1.
+
+00:06:05.000 --> 00:06:12.000
+If I add them, I get 1 plus 1 is 0, carry a 1 because it's 2.
+
+00:06:12.000 --> 00:06:17.000
+1 plus 1 is 0, is 1, is 0, 1.
+
+00:06:17.000 --> 00:06:22.000
+This is not 0, okay?
+
+00:06:22.000 --> 00:06:26.000
+So it doesn't work to just use, this is called sign magnitude.
+
+00:06:26.000 --> 00:06:27.000
+Sign magnitude doesn't work.
+
+00:06:27.000 --> 00:06:39.000
+I can't just change the first bit and then treat them the same unless I do some convoluted additional process that isn't like normal addition.
+
+00:06:39.000 --> 00:06:40.000
+Okay?
+
+00:06:40.000 --> 00:06:41.000
+So that doesn't work.
+
+00:06:41.000 --> 00:06:45.000
+It also, then I also have this number.
+
+00:06:45.000 --> 00:06:53.000
+If I use sign magnitude, I have a number of 0, 0, 0, 1 equals positive 0.
+
+00:06:53.000 --> 00:06:55.000
+1, 0, 0, 0 equals negative 0.
+
+00:06:55.000 --> 00:07:00.000
+Now I have two 0s.
+
+00:07:00.000 --> 00:07:02.000
+Don't know how to deal with that either.
+
+00:07:02.000 --> 00:07:03.000
+Okay?
+
+00:07:03.000 --> 00:07:05.000
+So we don't use sign magnitude.
+
+00:07:05.000 --> 00:07:08.000
+We use this thing called two's complement.
+
+00:07:08.000 --> 00:07:09.000
+Okay?
+
+00:07:09.000 --> 00:07:17.000
+And two's complement, like I said, 0 to positive 7, negative 1 to negative 8.
+
+00:07:17.000 --> 00:07:24.000
+So anytime you do it, you'll have one more negative value or one higher negative magnitude than you will on the positive side.
+
+00:07:24.000 --> 00:07:31.000
+So if you have 8 bits, it'd be plus 127 to negative 128.
+
+00:07:31.000 --> 00:07:34.000
+All right?
+
+00:07:34.000 --> 00:07:37.000
+So we don't do this because it doesn't work.
+
+00:07:37.000 --> 00:07:38.000
+We can't do simple math.
+
+00:07:38.000 --> 00:07:40.000
+Okay?
+
+00:07:40.000 --> 00:07:48.000
+So if we wanted to do simple math with the numbers I show, right?
+
+00:07:48.000 --> 00:07:50.000
+Let's go to the sign magnitude stuff.
+
+00:07:50.000 --> 00:07:53.000
+I want to add these two numbers.
+
+00:07:53.000 --> 00:07:58.000
+Yes, 0, 0, 0, 1 plus sabemos 0, 1, 0.
+
+00:07:58.000 --> 00:08:04.000
+So 0, 0, 0, 1 plus 1, 1, 1, 1.
+
+00:08:04.000 --> 00:08:05.000
+Right?
+
+00:08:05.000 --> 00:08:06.000
+It's good to know.
+
+00:08:06.000 --> 00:08:07.000
+It's different number than usual, but it makes sense, right?
+
+00:08:07.000 --> 00:08:08.000
+1 plus 1.
+
+00:08:08.000 --> 00:08:09.000
+It's get 2 zero, so you get 3.
+
+00:08:09.000 --> 00:08:10.000
+1 plus 1 is 12, which is 0.
+
+00:08:10.000 --> 00:08:11.000
+Oh, I shouldn't have gotten the 0 part of 1, but that is the่
+
+00:08:11.000 --> 00:08:12.000
+No, you get 5.
+
+00:08:12.000 --> 00:08:13.000
+Well, I was recording.
+
+00:08:13.000 --> 00:08:14.000
+4 plus 1 plus 1 plus 5.
+
+00:08:14.000 --> 00:08:15.000
+Right?
+
+00:08:15.000 --> 00:08:16.000
+That's OK.
+
+00:08:16.000 --> 00:08:17.000
+Cool.
+
+00:08:17.000 --> 00:08:18.000
+0, 0, 0, 1, plus respons GDP Tauthights.
+
+00:08:18.000 --> 00:08:19.000
+0, 0, 0, 1, so that's it.
+
+00:08:19.000 --> 00:08:20.000
+4.
+
+00:08:20.000 --> 00:08:21.000
+Did I get the Tauthights?
+
+00:08:21.000 --> 00:08:22.000
+Did I get them?
+
+00:08:22.000 --> 00:08:23.000
+Yes, you did.
+
+00:08:23.000 --> 00:08:30.040
+with only four bits I throw this this one I just exit out and throw it away
+
+00:08:30.040 --> 00:08:38.680
+okay so I actually get zero like I should all right so and that's why we
+
+00:08:38.680 --> 00:08:49.340
+use it on a linear map like this like we started here you started zero you go up
+
+00:08:49.340 --> 00:08:53.340
+until you got the first one is zero and all the rest are ones that's your
+
+00:08:53.340 --> 00:08:57.860
+maximum negative number a positive number then your maximum negative number
+
+00:08:57.860 --> 00:09:05.420
+is one followed by all zeros and then you just add one and negative one is
+
+00:09:05.420 --> 00:09:17.720
+always all ones okay so I have a number I have a and I'm doing this in four bits
+
+00:09:17.720 --> 00:09:19.240
+but it's the same for H
+
+00:09:19.340 --> 00:09:31.040
+or 16 or 32 to have a number let's look at number 5 0 1 0 1 and I want to get
+
+00:09:31.040 --> 00:09:32.840
+negative 5
+
+00:09:32.840 --> 00:09:48.440
+ok so to get negative 5 there's two steps you do step 1 invert all bits
+
+00:09:49.340 --> 00:09:58.680
+ok so 0 becomes a 1 1 becomes a 0 0 becomes a 1 1 becomes a 0 and then and
+
+00:09:58.680 --> 00:10:02.840
+then you add 1
+
+00:10:02.840 --> 00:10:06.660
+Okay, plus 1 means 1, 0, 1, 1.
+
+00:10:07.440 --> 00:10:09.200
+This should be negative 5.
+
+00:10:11.320 --> 00:10:14.960
+If we look at our little chart, we get exactly the same number for negative 5.
+
+00:10:15.740 --> 00:10:21.740
+To verify that this works, we can take 5 plus negative 5 plus negative 5.
+
+00:10:23.120 --> 00:10:27.020
+0, 1, 0, 1 plus 1, 0, 1, 1.
+
+00:10:27.640 --> 00:10:28.700
+Add them together.
+
+00:10:30.080 --> 00:10:31.460
+1 plus 1 is 0.
+
+00:10:31.460 --> 00:10:33.960
+I mean 2, carry 1.
+
+00:10:34.040 --> 00:10:35.880
+1 plus 1 is 2, carry 1.
+
+00:10:36.100 --> 00:10:38.120
+1 plus 1 is 2, carry 1.
+
+00:10:38.220 --> 00:10:40.140
+1 plus 1 is 2, carry 1.
+
+00:10:40.640 --> 00:10:41.780
+Throw that 1 away.
+
+00:10:44.420 --> 00:10:45.740
+Okay, so that works.
+
+00:10:48.240 --> 00:10:56.760
+Similarly, if I have a negative value, right?
+
+00:10:57.060 --> 00:10:59.020
+So we'll just stick with negative 5.
+
+00:11:00.020 --> 00:11:01.380
+So I have negative 5.
+
+00:11:01.460 --> 00:11:05.940
+This is negative 5.
+
+00:11:06.320 --> 00:11:09.180
+If I want positive 5, guess what?
+
+00:11:09.260 --> 00:11:10.980
+I do the exact same two steps.
+
+00:11:12.480 --> 00:11:12.940
+Invert.
+
+00:11:13.440 --> 00:11:15.180
+0, 1, 0, 0.
+
+00:11:16.080 --> 00:11:16.960
+Add 1.
+
+00:11:17.480 --> 00:11:18.060
+So invert.
+
+00:11:21.820 --> 00:11:22.780
+Add 1.
+
+00:11:23.540 --> 00:11:24.800
+0, 1, 0, 1.
+
+00:11:26.700 --> 00:11:30.840
+Okay, so the conversion between positive and negative integers
+
+00:11:31.460 --> 00:11:37.340
+and 2's complement is invert all bits, add 1.
+
+00:11:37.340 --> 00:11:42.920
+And then when you do the addition, you throw away any extras.
+
+00:11:42.920 --> 00:11:53.580
+All right, the only problem you have is you can never get this number, negative 1, all 0s,
+
+00:11:53.580 --> 00:11:55.640
+because there's no corresponding positive value.
+
+00:11:55.640 --> 00:11:59.540
+I mean, you can calculate it.
+
+00:11:59.600 --> 00:12:01.040
+It can become an answer.
+
+00:12:01.460 --> 00:12:11.780
+When you do addition, but you can never do an invert of negative 8 or,
+
+00:12:11.780 --> 00:12:12.800
+because there's no positive 8.
+
+00:12:16.640 --> 00:12:22.940
+So you do the invert of negative 8.
+
+00:12:23.200 --> 00:12:23.960
+So let's do it.
+
+00:12:24.340 --> 00:12:25.560
+Let's say we have a negative 8.
+
+00:12:25.620 --> 00:12:27.720
+We want positive 8, but there is no positive 8.
+
+00:12:30.080 --> 00:12:31.440
+So if I take negative 8, I'm going to get a positive 8.
+
+00:12:31.440 --> 00:12:37.160
+Negative 8, 1, 0, 0, 0.
+
+00:12:37.300 --> 00:12:38.200
+This is negative 8.
+
+00:12:40.200 --> 00:12:40.680
+Invert.
+
+00:12:44.320 --> 00:12:45.920
+0, 1, 1, 1.
+
+00:12:47.760 --> 00:12:48.700
+Add 1.
+
+00:12:49.820 --> 00:12:50.740
+Plus 1.
+
+00:12:51.920 --> 00:12:53.940
+1 plus 1 is 2.
+
+00:12:54.500 --> 00:12:55.460
+Carry a 1.
+
+00:12:55.600 --> 00:12:57.000
+1 plus 1 is 2, which means 0.
+
+00:12:57.100 --> 00:12:57.640
+Carry a 1.
+
+00:12:57.720 --> 00:12:59.520
+1 plus 1 is 2, which is 0.
+
+00:12:59.520 --> 00:13:00.320
+Carry a 1.
+
+00:13:01.440 --> 00:13:02.140
+1 plus 1 is 2.
+
+00:13:02.140 --> 00:13:05.000
+I end up with negative 8.
+
+00:13:06.260 --> 00:13:06.520
+OK?
+
+00:13:06.900 --> 00:13:11.100
+So that one is the only oddball, because there's no positive 8.
+
+00:13:11.500 --> 00:13:13.980
+So it doesn't flip to anything.
+
+00:13:14.740 --> 00:13:19.280
+Just like 0, the same thing, you can't get negative 0.
+
+00:13:20.500 --> 00:13:23.180
+If 0, there's no such thing as a negative 0.
+
+00:13:24.240 --> 00:13:28.740
+So if you convert 0, if you do the 0,
+
+00:13:28.740 --> 00:13:30.740
+it's just like 0.
+
+00:13:31.440 --> 00:13:48.740
+works exactly the same way, right? If I have 0, right, 4 0s, invert 4 1s, add 1, I'm going to get
+
+00:13:48.740 --> 00:13:58.500
+4 0s with a 1 that we throw away. Okay, so 0 and negative 8, there's no conversions because there's
+
+00:13:58.500 --> 00:14:06.480
+no corresponding value in two's complement. All the others, 1 through 7, in a 4-bit, in an 8-bit,
+
+00:14:06.600 --> 00:14:16.940
+it's 127, max positive number is 127, max negative is negative 128. Okay, so that's two's complement,
+
+00:14:17.160 --> 00:14:24.000
+and the reason we do it is so that we can add them together, add. Okay, so if I want to,
+
+00:14:27.120 --> 00:14:28.320
+we have adder circuits,
+
+00:14:28.320 --> 00:14:37.720
+it's that add for us, and we throw the numbers in to add. Okay, so if I want to add, you know,
+
+00:14:38.920 --> 00:14:56.580
+5 plus negative 3, which by the way is the same as 5, 5 minus 3, okay, so 5 is 0, 1, 0, 1,
+
+00:14:56.940 --> 00:14:58.140
+negative 3 is,
+
+00:14:58.320 --> 00:15:09.480
+1, 1, 0, 1, just pulling it off the chart here, add them together, right? 1 plus 1 is 2, carry 1,
+
+00:15:09.600 --> 00:15:17.460
+1 plus 0 plus 0 is 1, 1 plus 1 is 2, carry 1, 1 plus 1 is 2, carry 1, throw the, well, carry away
+
+00:15:17.460 --> 00:15:28.180
+because it's only four bits, so we get 0, 0, 1, 0, which hopefully is 2, right? All right, so we
+
+00:15:28.180 --> 00:15:36.700
+use to complement so that we can actually do addition and subtraction all
+
+00:15:36.700 --> 00:15:43.440
+right so that's all I want to say about to complement thanks
+
+`;
+
+    function timeToSeconds(timeStr) {
+      if (!timeStr) return 0;
+      var parts = timeStr.trim().split(':');
+      if (parts.length === 2) {
+        return (parseInt(parts[0]) || 0) * 60 + (parseFloat(parts[1]) || 0);
+      } else if (parts.length === 3) {
+        return (parseInt(parts[0]) || 0) * 3600 + (parseInt(parts[1]) || 0) * 60 + (parseFloat(parts[2]) || 0);
+      }
+      return 0;
+    }
+
+    function parseVtt(vttText) {
+      var cues = vttText.trim().split(/\n\n+/);
+      var parsedCues = [];
+      cues.forEach(function (cueBlock) {
+        if (cueBlock.indexOf('WEBVTT') === 0 || cueBlock.trim() === '') return;
+        var lines = cueBlock.trim().split('\n');
+        var timeLine = lines.filter(function (l) { return l.indexOf('-->') !== -1; })[0];
+        if (!timeLine) return;
+        var parts = timeLine.split(' --> ');
+        var textLines = lines.slice(lines.indexOf(timeLine) + 1);
+        parsedCues.push({
+          start: timeToSeconds(parts[0]),
+          end: timeToSeconds(parts[1]),
+          text: textLines.join(' ').trim()
+        });
+      });
+      return parsedCues;
+    }
+
+    function populateTranscript() {
+      var container = document.getElementById('transcript-container');
+      container.innerHTML = '';
+      parsedTranscript.forEach(function (cue) {
+        var lineEl = document.createElement('div');
+        lineEl.className = 'transcript-line';
+        lineEl.dataset.start = cue.start;
+        lineEl.dataset.end = cue.end;
+        lineEl.textContent = cue.text;
+        lineEl.setAttribute('role', 'button');
+        lineEl.setAttribute('tabindex', '0');
+        var seekTo = function () {
+          if (player && player.seekTo) { player.seekTo(cue.start, true); player.playVideo(); }
+        };
+        lineEl.addEventListener('click', seekTo);
+        lineEl.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); seekTo(); }
+        });
+        container.appendChild(lineEl);
+      });
+    }
+
+    function highlightCurrentLine() {
+      if (!player || !player.getCurrentTime) return;
+      var currentTime = player.getCurrentTime();
+      var lines = document.querySelectorAll('#transcript-container .transcript-line');
+      lines.forEach(function (line) {
+        var start = parseFloat(line.dataset.start);
+        var end = parseFloat(line.dataset.end);
+        if (currentTime >= start && currentTime < end) {
+          if (!line.classList.contains('active-transcript-line')) {
+            var prev = document.querySelector('#transcript-container .active-transcript-line');
+            if (prev) prev.classList.remove('active-transcript-line');
+            line.classList.add('active-transcript-line');
+            line.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else {
+          line.classList.remove('active-transcript-line');
+        }
+      });
+    }
+
+    function syncTranscriptHeight() {
+      var videoContainer = document.getElementById('video-container');
+      var transcriptContainer = document.getElementById('transcript-container');
+      if (!videoContainer || !transcriptContainer) return;
+      if (window.matchMedia('(min-width: 1024px)').matches) {
+        transcriptContainer.style.maxHeight = videoContainer.offsetHeight + 'px';
+      } else {
+        transcriptContainer.style.maxHeight = '24rem';
+      }
+    }
+
+    window.onYouTubeIframeAPIReady = function () {
+      player = new YT.Player('youtube-player', {
+        videoId: VIDEO_ID,
+        events: {
+          onStateChange: function (event) {
+            clearInterval(timeUpdater);
+            if (event.data === YT.PlayerState.PLAYING) {
+              timeUpdater = setInterval(highlightCurrentLine, 300);
+            }
+          }
+        }
+      });
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      parsedTranscript = parseVtt(vttContent);
+      populateTranscript();
+      setTimeout(syncTranscriptHeight, 100);
+      if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+        var tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      } else {
+        window.onYouTubeIframeAPIReady();
+      }
+    });
+
+    var resizeTimeout;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(syncTranscriptHeight, 250);
+    });
+  })();
+  </script>
+
+  </body>
+</html>

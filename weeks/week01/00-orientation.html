@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="00">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 1 Orientation: What Is a Byte?</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+/* Override: single-column layout for orientation SPA */
+.sp-shell {
+      display: block;
+      max-width: 780px;
+    }
+.sp-main {
+      padding-left: 0;
+    }
+/* ---------- Interactive Computer Components Explorer ---------- */
+.component-diagram {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-md);
+      margin: var(--space-lg) 0;
+    }
+@media (max-width: 600px) { .component-diagram { grid-template-columns: 1fr; } }
+.component {
+      background: var(--color-surface); border: 2px solid var(--color-border);
+      border-radius: var(--radius); padding: var(--space-md); cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+.component:hover, .component:focus { border-color: var(--color-primary-lt); }
+.component.active { border-color: var(--color-primary); background: var(--color-code-bg); }
+.component-name { font-weight: 700; font-size: var(--fs-md); margin-bottom: var(--space-xs); }
+.component-detail {
+      display: none; font-size: var(--fs-sm); color: var(--color-text-muted); margin-top: var(--space-sm);
+    }
+.component.active .component-detail { display: block; }
+/* ---------- Abstraction Layers (interactive, replaces static timeline) ---------- */
+.layer {
+      background: var(--color-surface); border: 1px solid var(--color-border);
+      border-radius: var(--radius); margin-bottom: var(--space-sm); cursor: pointer;
+      transition: border-color .15s;
+    }
+.layer:hover, .layer:focus { border-color: var(--color-primary-lt); }
+.layer.active { border-color: var(--color-primary); }
+.layer-title {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: var(--space-md); font-weight: 700; font-size: var(--fs-md);
+    }
+.layer-title span:last-child { transition: transform .15s; }
+.layer.active .layer-title span:last-child { transform: rotate(180deg); }
+.layer-description {
+      display: none; padding: 0 var(--space-md) var(--space-md); font-size: var(--fs-sm); color: var(--color-text-muted);
+    }
+.layer.active .layer-description { display: block; }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== Header ==================== -->
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization & Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 1 &rsaquo; <span>Orientation</span>
+    </nav>
+  </header>
+
+  <!-- ==================== Shell (Single Column) ==================== -->
+  <div class="sp-shell">
+    <!-- ---------- Main Content ---------- -->
+    <main class="sp-main">
+
+      <h1>Week 1 Orientation</h1>
+      <p><strong>Estimated time:</strong> ~15 minutes &nbsp;|&nbsp; <strong>Prerequisites:</strong> None</p>
+
+      <!-- ============================================================
+           Section A — "The Gap" (Hook)
+           ============================================================ -->
+      <section id="sec-hook">
+        <h2>The Gap Between Voltage and This Webpage</h2>
+
+        <p>Every program you have ever written exists inside your computer as nothing more than <strong>patterns of electrical voltage</strong>. A wire either has voltage on it, or it doesn't. Two states. That is the entire physical vocabulary of a digital computer.</p>
+
+        <p>Yet the computer you are sitting at right now can display this sentence in color, play video, run a web browser with dozens of tabs, and compile code you write in Python, Java, or C. How is that possible when the underlying hardware only understands <strong>ON</strong> and <strong>OFF</strong>?</p>
+
+        <div class="callout callout--hook">
+          <div class="callout__title">The Gap</div>
+          <p><strong>What you know:</strong> You can count, add, and represent any number using the ten digits (0&ndash;9) you've used since childhood. You know what a "byte" is, at least vaguely, and you've seen "hex" in color codes or memory addresses.</p>
+          <p><strong>What you can't do yet:</strong> Explain how a machine that only understands "voltage present" or "voltage absent"&mdash;two states&mdash;can represent the number 2,731, the letter <code>'M'</code>, or the color blue.</p>
+          <p><strong>What you will be able to do by the end of this week:</strong> Take any integer, character, or simple data value and show exactly how it is stored as a sequence of 0s and 1s in computer memory. More importantly, you will understand that the <em>same</em> sequence of bits can mean completely different things depending on how the computer interprets them&mdash;which is the single most important idea in this entire course.</p>
+        </div>
+
+        <!-- Visual: The Gap graphic (pure CSS/HTML) -->
+        <div style="display:flex;align-items:center;justify-content:center;gap:1rem;padding:2rem 0;flex-wrap:wrap;">
+          <div style="text-align:center;padding:1.5rem 2rem;background:var(--color-surface);border:2px solid var(--color-border);border-radius:var(--radius);box-shadow:var(--shadow);">
+            <div style="font-size:2rem;margin-bottom:.5rem;">⚡</div>
+            <div style="font-weight:700;font-size:var(--fs-md);">Voltage On / Off</div>
+            <div style="font-size:var(--fs-sm);color:var(--color-text-muted);">Two physical states</div>
+          </div>
+          <div style="font-size:2rem;color:var(--color-accent);">⟶</div>
+          <div style="text-align:center;padding:1.5rem 2rem;background:var(--color-surface);border:2px solid var(--color-border);border-radius:var(--radius);box-shadow:var(--shadow);">
+            <div style="font-family:var(--font-mono);font-size:var(--fs-lg);margin-bottom:.5rem;color:var(--color-primary);">01000010</div>
+            <div style="font-size:var(--fs-sm);color:var(--color-text-muted);">Patterns of bits</div>
+          </div>
+          <div style="font-size:2rem;color:var(--color-accent);">⟶</div>
+          <div style="text-align:center;padding:1.5rem 2rem;background:var(--color-surface);border:2px solid var(--color-border);border-radius:var(--radius);box-shadow:var(--shadow);">
+            <div style="font-size:2rem;margin-bottom:.5rem;">🌐</div>
+            <div style="font-weight:700;font-size:var(--fs-md);">This Webpage</div>
+            <div style="font-size:var(--fs-sm);color:var(--color-text-muted);">Everything you see</div>
+          </div>
+        </div>
+
+        <div class="callout callout--aha">
+          <div class="callout__title">Preview: Your "Aha" Moment</div>
+          <p>By the end of this week, you will see that <code>01000010</code> could mean the number <strong>66</strong>, the letter <strong>'B'</strong>, or something else entirely. The bits don't carry meaning. The <em>context</em> does.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Section A.5 — "The Big Picture" (Video + Component Explorer)
+           ============================================================ -->
+      <section id="sec-big-picture">
+        <h2>The Big Picture</h2>
+
+        <p>Before mapping out the week's four SPAs, here's how everything in this course fits together&mdash;from the physical hardware in front of you to the programs you write.</p>
+
+                <div class="video-breakout">
+        <div class="video-transcript-row">
+          <div class="video-col">
+            <div class="video-frame" id="video-container">
+              <iframe id="youtube-player"
+                      src="https://www.youtube.com/embed/pdNLA1Hla9s?enablejsapi=1&cc_load_policy=1&iv_load_policy=3&modestbranding=1&rel=0"
+                      title="CSC210 Week 1: The Big Picture"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allowfullscreen
+                      loading="lazy">
+              </iframe>
+            </div>
+            <div class="video-caption">Closed captions available. Use the transcript panel to jump to any point in the video.</div>
+          </div>
+          <div class="transcript-col">
+            <div class="transcript-panel" id="transcript-container">
+              <p class="transcript-loading">Loading transcript...</p>
+            </div>
+          </div>
+        </div>
+        </div>
+
+        <h3>Interactive: Computer Components Explorer</h3>
+        <p>Click on each component to learn its role. Understanding these components helps you see how they work together to execute programs&mdash;this is the hardware behind every abstraction you'll meet this semester.</p>
+
+        <div class="component-diagram" id="component-explorer">
+          <div class="component" tabindex="0" role="button" aria-expanded="false" data-component="cpu">
+            <div class="component-name">🧠 CPU (Central Processing Unit)</div>
+            <div class="component-detail">The "brain" of the computer. Fetches, decodes, and executes instructions one at a time, billions of times per second. Everything you build in Logisim this semester&mdash;from a single flip-flop to a full CPU&mdash;is a piece of what happens inside this box.</div>
+          </div>
+          <div class="component" tabindex="0" role="button" aria-expanded="false" data-component="memory">
+            <div class="component-name">💾 Memory (RAM)</div>
+            <div class="component-detail">Fast, temporary, addressable storage. Holds both the program's instructions and its data while the CPU works. You'll build a scaled-down RAM matrix by hand in Week 8.</div>
+          </div>
+          <div class="component" tabindex="0" role="button" aria-expanded="false" data-component="storage">
+            <div class="component-name">🗄️ Storage (Disk/SSD)</div>
+            <div class="component-detail">Slower, persistent storage that keeps data even when the power is off. Sits below memory in the memory hierarchy you'll study in Week 16.</div>
+          </div>
+          <div class="component" tabindex="0" role="button" aria-expanded="false" data-component="io">
+            <div class="component-name">🔌 Input / Output</div>
+            <div class="component-detail">Keyboards, displays, network cards&mdash;anything that moves data in or out of the system. You'll see how the CPU talks to I/O devices via software interrupts in Week 12.</div>
+          </div>
+        </div>
+
+        <div class="callout callout--forward">
+          <div class="callout__title">Where This Is Going</div>
+          <p>Right now these are just labeled boxes. By Week 17, you will have built a working simulation of the CPU box above&mdash;from individual logic gates, all the way up.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Section B — "This Week's Learning Path" (Navigation Map)
+           ============================================================ -->
+      <section id="sec-path">
+        <h2>This Week's Learning Path</h2>
+
+        <p>Week 1 content is delivered through <strong>4 content SPAs</strong> that build on each other in sequence. Complete them in order. SPA 3 and SPA 4 can be started in any order after SPA 2, but SPA 3 is recommended before reaching the synthesis section of SPA 4.</p>
+
+        <!-- SPA 1 -->
+        <div class="spa-card-grid" style="grid-template-columns:1fr;max-width:480px;">
+          <div class="spa-card">
+            <span class="spa-card__number">SPA 1</span>
+            <div class="spa-card__title">Why Binary?</div>
+            <div class="spa-card__time">~2.5 hours &nbsp;|&nbsp; Sections 1.1&ndash;1.3</div>
+            <div class="spa-card__desc">Physical constraint → vocabulary (bit, byte, word) → number systems (binary, hex, octal). The foundation everything else builds on.</div>
+            <div class="spa-card__btn">Complete before SPA 2</div>
+          </div>
+        </div>
+
+        <div class="dep-arrow">↓</div>
+
+        <!-- SPA 2 -->
+        <div class="spa-card-grid" style="grid-template-columns:1fr;max-width:480px;">
+          <div class="spa-card">
+            <span class="spa-card__number">SPA 2</span>
+            <div class="spa-card__title">Converting Between Bases</div>
+            <div class="spa-card__time">~1.5 hours &nbsp;|&nbsp; Sections 1.4&ndash;1.5</div>
+            <div class="spa-card__desc">Mechanical skill-building for base conversion (repeated division, power-sum, grouping). Introduces unsigned integer representation and overflow.</div>
+            <div class="spa-card__btn">Complete before SPA 3 or SPA 4</div>
+          </div>
+        </div>
+
+        <div class="dep-arrow">↓</div>
+
+        <!-- SPA 3 and SPA 4 — parallel -->
+        <div class="spa-card-grid">
+          <div class="spa-card">
+            <span class="spa-card__number">SPA 3</span>
+            <div class="spa-card__title">Signed Integers & Two's Complement</div>
+            <div class="spa-card__time">~2.0 hours &nbsp;|&nbsp; Sections 1.6&ndash;1.7</div>
+            <div class="spa-card__desc">Three signed integer representations (sign-magnitude, one's complement, two's complement) and why two's complement is the universal choice. <em>Recommended before SPA 4's synthesis section.</em></div>
+            <div class="spa-card__btn">Recommended before SPA 4 synthesis</div>
+          </div>
+          <div class="spa-card">
+            <span class="spa-card__number">SPA 4</span>
+            <div class="spa-card__title">Beyond Integers</div>
+            <div class="spa-card__time">~2.5 hours &nbsp;|&nbsp; Sections 1.8&ndash;1.11</div>
+            <div class="spa-card__desc">Floating-point, character encoding, memory layout, and the synthesis section that ties everything together. Contains the core "Aha" widget (Byte Explorer).</div>
+            <div class="spa-card__btn">Contains core "Aha" widget</div>
+          </div>
+        </div>
+
+        <div class="callout callout--forward" style="margin-top:1.5rem;">
+          <div class="callout__title">Note on SPA 3 / SPA 4 Order</div>
+          <p>SPA 4 branches from SPA 2 (floating-point depends on unsigned integers; character encoding depends on hex). However, the <strong>synthesis section</strong> (1.11) at the end of SPA 4 requires all prior concepts including two's complement from SPA 3. If you start SPA 4 first, complete SPA 3 before reaching the synthesis section.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Section C — "Tools You'll Use in This Course" (Preview)
+           ============================================================ -->
+      <section id="sec-tools">
+        <h2>Tools You'll Use in This Course</h2>
+
+        <p>Throughout this course you will use two primary tools to build and simulate digital circuits and assembly programs. <strong>No installation is needed this week</strong>&mdash;you will encounter these tools starting in Weeks 2 and 5 respectively.</p>
+
+        <!-- Logisim -->
+        <div class="tool-card">
+          <div class="tool-card__icon">🔌</div>
+          <div>
+            <div class="tool-card__name">Logisim Classic 2.7.1</div>
+            <div class="tool-card__desc">Starting Week 2, you will build digital circuits from primitive logic gates (AND, OR, NOT, NAND, etc.). By the end of the course, you will have constructed a complete CPU simulation&mdash;all within a single <code>.circ</code> file.</div>
+          </div>
+        </div>
+
+        <!-- MARS -->
+        <div class="tool-card">
+          <div class="tool-card__icon">📟</div>
+          <div>
+            <div class="tool-card__name">MARS Simulator</div>
+            <div class="tool-card__desc">Starting Week 5, you will write MIPS assembly programs that run on a simulated processor. MARS provides an assembler, debugger, and memory viewer so you can see exactly how your code maps to machine-level operations.</div>
+          </div>
+        </div>
+
+        <!-- Saylor CS301 -->
+        <div class="tool-card">
+          <div class="tool-card__icon">📖</div>
+          <div>
+            <div class="tool-card__name">Saylor Academy — CS301: Computer Architecture</div>
+            <div class="tool-card__desc">Your primary reference textbook throughout the course. Free, openly licensed (CC BY 3.0), and organized into nine units that map to our four-phase progression. When SPAs reference outside reading, you will log in and navigate to specific units as directed. <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">Open Saylor CS301 →</a></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Section D — "How This Course Works" (Orientation)
+           ============================================================ -->
+      <section id="sec-how">
+        <h2>How This Course Works</h2>
+
+        <h3>Accessing Course Materials</h3>
+        <p>All primary learning content is delivered through <strong>Single-Page Applications (SPAs)</strong> like this one. Each SPA contains prose, interactive widgets, and explicit references to the Saylor CS301 textbook. Navigate through SPAs in the order presented above.</p>
+
+        <h3>Submitting Assignments</h3>
+        <p>Assignments include Logisim circuit checkpoints, MIPS programming exercises, and research papers. All Logisim work is contained within a <strong>single <code>.circ</code> file</strong> that grows each week&mdash;never create a new file.</p>
+
+        <h3>Weekly Effort Expectation</h3>
+        <p>This is a <strong>3-unit course</strong> requiring approximately <strong>9 hours per week</strong>:</p>
+        <ul>
+          <li><strong>3 hours in-class</strong> — guided activities, SPA walkthroughs, hands-on Lab time</li>
+          <li><strong>6 hours out-of-class</strong> — SPA content, assignments, textbook reading</li>
+        </ul>
+
+        <h3>Assessments</h3>
+        <p>Key assessments for Week 1's phase (Phase 1 — Digital Foundations, Weeks 1&ndash;4):</p>
+        <ul>
+          <li><strong>Quiz 1</strong> (Week 4) — Covers Weeks 1&ndash;4, all of Phase 1. This includes everything from this week's binary representation through sequential logic and flip-flops.</li>
+          <li><strong>Midterm Exam</strong> (Week 8) — Covers Weeks 1&ndash;8, Phases 1 and 2.</li>
+        </ul>
+      </section>
+
+      <!-- ============================================================
+           Section E — "Where Week 1 Fits in the Full Course" (Master Progression)
+           ============================================================ -->
+      <section id="sec-progress">
+        <h2>Where Week 1 Fits in the Full Course</h2>
+
+        <p>This course is built as a <strong>single continuous progression</strong>&mdash;not a sequence of disconnected topics&mdash;running from raw voltage to a complete, working CPU simulation. Week 1 is the first step on that ladder.</p>
+
+        <blockquote>
+          "Every program you have ever written exists inside your computer as nothing more than patterns of electrical voltage. This week, you learn the rules that make that possible."
+        </blockquote>
+
+        <h3>Interactive: Abstraction Layers</h3>
+        <p>Computers work through layers of abstraction&mdash;each layer hides the complexity of the layer below it. Click each layer to see how they build on one another, from the application on your screen down to the physics that makes it possible.</p>
+
+        <div id="abstraction-layers">
+          <div class="layer" tabindex="0" role="button" aria-expanded="false" data-layer="applications">
+            <div class="layer-title"><span>🖥️ Applications &amp; User Programs</span><span>▼</span></div>
+            <div class="layer-description">The software you use daily&mdash;web browsers, games, word processors. Written in high-level languages, focused on user functionality rather than hardware details.</div>
+          </div>
+          <div class="layer" tabindex="0" role="button" aria-expanded="false" data-layer="highlevel">
+            <div class="layer-title"><span>📝 High-Level Languages (Java, Python, C++)</span><span>▼</span></div>
+            <div class="layer-description">Languages closer to human language, providing abstractions like variables, functions, and objects that make programming easier but must be translated to lower levels.</div>
+          </div>
+          <div class="layer" tabindex="0" role="button" aria-expanded="false" data-layer="assembly">
+            <div class="layer-title"><span>⚙️ Assembly Language &amp; Machine Code</span><span>▼</span></div>
+            <div class="layer-description">Low-level languages that directly correspond to processor instructions. Assembly uses mnemonics like "ADD" and "MOV"; machine code is pure binary. This is what you'll study extensively starting Week 5.</div>
+          </div>
+          <div class="layer" tabindex="0" role="button" aria-expanded="false" data-layer="microarch">
+            <div class="layer-title"><span>🔧 Microarchitecture &amp; Hardware</span><span>▼</span></div>
+            <div class="layer-description">The physical implementation of the processor&mdash;how instructions are actually executed using registers, ALUs, and control units. Built in Logisim starting Week 5.</div>
+          </div>
+          <div class="layer" tabindex="0" role="button" aria-expanded="false" data-layer="digital">
+            <div class="layer-title"><span>🚥 Digital Logic &amp; Gates</span><span>▼</span></div>
+            <div class="layer-description">Boolean logic implemented with transistors. AND, OR, NOT gates combine to create adders, multiplexers, and everything else you'll build starting Week 2.</div>
+          </div>
+          <div class="layer" tabindex="0" role="button" aria-expanded="false" data-layer="physics">
+            <div class="layer-title"><span>⚛️ Physics &amp; Transistors</span><span>▼</span></div>
+            <div class="layer-description">The fundamental physics of semiconductors&mdash;billions of tiny switches made from silicon, turned on or off by electrical signals. Where the digital world meets the physical world, covered in SPA 1 this week.</div>
+          </div>
+        </div>
+
+        <p style="margin-top:var(--space-md);">The week-by-week course map below follows the same idea, laid out across the full 17-week semester rather than by conceptual layer:</p>
+
+        <!-- Condensed Master Progression Timeline -->
+        <div class="progression">
+          <div class="progression__item active">
+            <div class="progression__label">Week 1 — Binary & Number Representation</div>
+            <div class="progression__detail">Bits, bytes, bases, signed/unsigned, floating-point, character encoding, memory layout</div>
+          </div>
+          <div class="progression__item">
+            <div class="progression__label">Weeks 2&ndash;4 — Digital Logic</div>
+            <div class="progression__detail">Logic gates → combinational circuits → sequential circuits / flip-flops</div>
+          </div>
+          <div class="progression__item">
+            <div class="progression__label">Weeks 5&ndash;8 — Assembly Language & Hardware</div>
+            <div class="progression__detail">Registers, ALU, RAM, MIPS programming (interleaved hardware + assembly tracks)</div>
+          </div>
+          <div class="progression__item">
+            <div class="progression__label">Weeks 9&ndash;12 — CPU Design Theory</div>
+            <div class="progression__detail">Von Neumann model, fetch-decode-execute, control unit, datapath integration</div>
+          </div>
+          <div class="progression__item">
+            <div class="progression__label">Weeks 13&ndash;17 — Integration & Modern Topics</div>
+            <div class="progression__detail">Complete CPU build, pipelining, cache, multicore, final project</div>
+          </div>
+        </div>
+
+        <div class="callout callout--aha">
+          <div class="callout__title">The Thread That Connects Everything</div>
+          <p>Every new concept in this course is introduced with three elements:</p>
+          <ol>
+            <li><strong>"Here's what we have so far"</strong> — anchored to the concept you just learned</li>
+            <li><strong>"Here's the problem we can't solve yet"</strong> — creating the need for the next concept</li>
+            <li><strong>"Here's what we can now do"</strong> — closing the loop and showing forward progress</li>
+          </ol>
+          <p>No module will feel disconnected. Every step is a necessary rung on a single ladder from raw voltage to a working computer.</p>
+        </div>
+
+        <div class="callout callout--forward">
+          <div class="callout__title">Ready to Begin?</div>
+          <p>Continue to the next item in this module to begin SPA 1 — where we start at the physical foundation: the two voltage states that make everything possible.</p>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ==================== Footer ==================== -->
+  <footer class="sp-footer">
+    CSC210 — Computer Organization & Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <!-- ==================== Scripts ==================== -->
+  <script src="../../shared/nav.js"></script>
+
+  <!-- ==================== Click-to-Expand: Component Explorer + Abstraction Layers ==================== -->
+  <script>
+  (function () {
+    'use strict';
+
+    function wireToggleGroup(selector) {
+      document.querySelectorAll(selector).forEach(function (el) {
+        var toggle = function () {
+          var isActive = el.classList.contains('active');
+          el.classList.toggle('active', !isActive);
+          el.setAttribute('aria-expanded', String(!isActive));
+        };
+        el.addEventListener('click', toggle);
+        el.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+        });
+      });
+    }
+
+    wireToggleGroup('#component-explorer .component');
+    wireToggleGroup('#abstraction-layers .layer');
+  })();
+  </script>
+
+  <!-- ==================== Video + Transcript Sync (CSC210 Video Embed Standard) ==================== -->
+  <script>
+  (function () {
+    'use strict';
+
+    var VIDEO_ID = 'pdNLA1Hla9s';
+    var player, timeUpdater, parsedTranscript = [];
+
+    var vttContent = `WEBVTT
+Kind: captions
+Language: en-US
+
+00:00:00.000 --> 00:00:05.640
+Aloha so this is our introduction to module one and actually introduction to
+
+00:00:05.640 --> 00:00:13.200
+computer organization. In this course you're going to learn basically how a
+
+00:00:13.200 --> 00:00:21.060
+CPU works. So basically we're gonna go from bits we're gonna start out to a
+
+00:00:21.060 --> 00:00:26.480
+full CPU and we'll build a complete 8-bit CPU. I'll show you what it looks
+
+00:00:26.480 --> 00:00:32.600
+like at the end of this video that hopefully will help you understand
+
+00:00:32.600 --> 00:00:38.960
+better how the magic of the black box that's a computer works.
+
+00:00:42.760 --> 00:00:46.300
+Okay so
+
+00:00:47.580 --> 00:00:55.040
+so I've already said this but basically basic elements of a computer and
+
+00:00:55.040 --> 00:00:56.480
+understanding exactly how a CPU works.
+
+00:00:56.480 --> 00:01:10.640
+So why this matters okay. First if you're a programmer it can help you
+
+00:01:10.640 --> 00:01:14.160
+become a better programmer because understanding how the computer works
+
+00:01:14.160 --> 00:01:20.760
+help you optimize your code for performance and as the primary reason
+
+00:01:20.760 --> 00:01:25.960
+second reason is sometimes
+
+00:01:25.960 --> 00:01:30.160
+understand why you get a certain response from a computer like this
+
+00:01:30.160 --> 00:01:36.520
+example if I have an 8-bit computer and I have 127 I add one it's sometimes
+
+00:01:36.520 --> 00:01:41.620
+gonna give me a negative 128 as the output instead of 128 it can be negative
+
+00:01:41.620 --> 00:01:47.020
+one okay and that's a difference between what is called two's complement and not
+
+00:01:47.020 --> 00:01:53.920
+using two's complement to understand numbers all right another is career
+
+00:01:53.920 --> 00:02:00.700
+opportunities knowledge of the computer assembly language systems programming
+
+00:02:00.700 --> 00:02:07.900
+you know is essential for like embedded programming game development a lot of
+
+00:02:07.900 --> 00:02:13.360
+game development especially done in C but there's some that's done in assembly
+
+00:02:13.360 --> 00:02:19.540
+language the reason you would use assembly even though it's difficult to
+
+00:02:19.540 --> 00:02:23.900
+write code in is because it's optimized and super fast
+
+00:02:23.900 --> 00:02:30.140
+so the resulting program is very fast so real-time systems things that are like
+
+00:02:30.140 --> 00:02:33.380
+flight control systems on airplanes stuff will tend to be written in a
+
+00:02:33.380 --> 00:02:39.980
+lower-level language in order to ensure that you get the response times also if
+
+00:02:39.980 --> 00:02:44.880
+you're interested in cyber security understanding how computer works is
+
+00:02:44.880 --> 00:02:49.940
+super important especially if you're doing like malware analysis reverse
+
+00:02:49.940 --> 00:02:53.120
+malware because a lot of times the malware works
+
+00:02:53.120 --> 00:02:53.880
+at that point in time so that's why it's important to understand the
+
+00:02:53.900 --> 00:03:00.660
+operating system machine ones and zeros level so understanding that will help you
+
+00:03:00.660 --> 00:03:08.740
+there so the course is split up into four sections kind of went over this
+
+00:03:08.740 --> 00:03:13.220
+before but it's want to go for it again the first four weeks are fundamentals
+
+00:03:13.220 --> 00:03:18.740
+primarily you know what our numbers our logic gates some simple circuits the
+
+00:03:18.740 --> 00:03:23.840
+second four weeks will be spent in assembly language so how do you use
+
+00:03:23.840 --> 00:03:27.900
+the computer to actually tell the computer what you wanted to do and then
+
+00:03:27.900 --> 00:03:34.760
+the third module or section will be developing the CPU components like the
+
+00:03:34.760 --> 00:03:41.860
+ALU memory control unit and the last four to five weeks includes Thanksgiving
+
+00:03:41.860 --> 00:03:47.780
+so it's really a short four weeks and a third or something like that is finishing
+
+00:03:47.780 --> 00:03:53.840
+out that whole CPU and related topics okay we followed the book not the
+
+00:03:53.840 --> 00:03:59.720
+identical but a lot of this will follow a book called but how do it know there
+
+00:03:59.720 --> 00:04:04.700
+is one on reserve in the library however you can't check it out because it's in
+
+00:04:04.700 --> 00:04:10.220
+the library and read it if you'd like or it's not very expensive if you want to
+
+00:04:10.220 --> 00:04:15.220
+purchase the book it's not too expensive but you should be able to complete the
+
+00:04:15.220 --> 00:04:21.840
+course without the book but as a reference it's available
+
+00:04:21.840 --> 00:04:21.900
+you
+
+00:04:23.840 --> 00:04:28.460
+two concepts for module one or abstraction and CPU components we're
+
+00:04:28.460 --> 00:04:37.360
+gonna go over abstraction first idea of extraction is to simplify stuff for the
+
+00:04:37.360 --> 00:04:44.060
+user okay so we hide the complexity below it applications which are like
+
+00:04:44.060 --> 00:04:51.400
+word or you're watching this video in a video viewer those are those hide all
+
+00:04:51.400 --> 00:04:52.960
+the details of what's going on behind it
+
+00:04:52.960 --> 00:04:53.820
+you
+
+00:04:53.840 --> 00:04:59.660
+you for the user okay so if we look at the abstraction how it abstracts if we
+
+00:04:59.660 --> 00:05:04.400
+go to the bottom here it's layer level five on this diagram the digital
+
+00:05:04.400 --> 00:05:10.880
+circuits this is the how the ones and zeros yet process physically okay and we
+
+00:05:10.880 --> 00:05:15.140
+hide that behind machine code which is ones and zeros that is the actual code
+
+00:05:15.140 --> 00:05:21.620
+to do the things we want to do that's hidden by assembly language assembly
+
+00:05:21.620 --> 00:05:23.820
+language is a low-level language which is what we're going to do in the next
+
+00:05:23.820 --> 00:05:24.840
+video
+
+00:05:24.840 --> 00:05:30.480
+pretty much one-to-one between assembly and machine code where we've taken the
+
+00:05:30.480 --> 00:05:38.380
+ones and zeros and converted them to like symbol sort words parts of words
+
+00:05:38.380 --> 00:05:43.980
+things like that to write program using symbols rather than one than zeros and
+
+00:05:43.980 --> 00:05:52.300
+a high-level language like Python C c++ further hides assembly language and
+
+00:05:52.300 --> 00:05:53.280
+machine code by
+
+00:05:53.820 --> 00:06:00.220
+making it more english-like to write your programs you may not feel like it's english-like but it's
+
+00:06:00.220 --> 00:06:05.020
+more english-like to write your programs which will then get converted into assembly which can
+
+00:06:05.020 --> 00:06:07.980
+convert it into machine which gets run on the digital surface
+
+00:06:08.940 --> 00:06:13.500
+okay and then applications are built on those high level using those high level languages
+
+00:06:16.140 --> 00:06:20.300
+okay so that's abstraction it makes it easier at every level to do work
+
+00:06:20.300 --> 00:06:25.020
+at the core of computers everything's binary
+
+00:06:26.700 --> 00:06:34.700
+okay so binary means two there's two states either on off one zero true fault black white
+
+00:06:35.260 --> 00:06:38.700
+okay there's only two possibilities there's no gray there's nothing in between
+
+00:06:40.540 --> 00:06:47.420
+okay so that makes computers powerful because there's only it's only yes or no
+
+00:06:47.420 --> 00:06:49.900
+or one or zero and reliable because they're all binary so that's the core of computers
+
+00:06:50.300 --> 00:06:57.080
+they're repeatable okay so to do binary or to implement binary we use electrical
+
+00:06:57.080 --> 00:07:02.780
+circuits in a computer that's very reliable especially if we think of just
+
+00:07:02.780 --> 00:07:10.160
+two states okay how we do that is we use a voltage typically five volts and we
+
+00:07:10.160 --> 00:07:16.040
+set a threshold I think typically it's like three three and a half volts
+
+00:07:16.040 --> 00:07:20.400
+something like that is considered high that or higher is considered high and
+
+00:07:20.400 --> 00:07:27.500
+below that's considered low and the reason you it's not like has to be zero
+
+00:07:27.500 --> 00:07:33.860
+or has to be five is there's loss there's noise there's bleed over from
+
+00:07:33.860 --> 00:07:40.620
+one electrical circuit to the one next to it so having a threshold value really
+
+00:07:40.620 --> 00:07:46.020
+allows us to state this is really a one and this is a zero and there's very
+
+00:07:46.020 --> 00:07:55.080
+little cross-contamination from other circuits and by the same token it makes
+
+00:07:55.080 --> 00:08:02.520
+it excellent for noise resistance this is external signals modifying your ones
+
+00:08:02.520 --> 00:08:06.920
+and zeros inside your computer and it also simplifies our circuit design
+
+00:08:06.920 --> 00:08:11.340
+because we only have one or a zero doesn't mean the ultimate circuits are
+
+00:08:11.340 --> 00:08:22.460
+simple it's easier to think about the individual parts the major competence
+
+00:08:22.460 --> 00:08:26.940
+of the computer how we're gonna treat them there's four there's the CPU which
+
+00:08:26.940 --> 00:08:32.340
+is the brain there's memory which stores all our instructions and stores all the
+
+00:08:32.340 --> 00:08:38.580
+values that we need there's input output okay we need that so that we can
+
+00:08:38.580 --> 00:08:41.300
+interact with the computer
+
+00:08:41.340 --> 00:08:45.100
+but input into the computer it puts output back to us and that's a
+
+00:08:45.100 --> 00:08:49.540
+give-and-take back-and-forth kind of process and there's a thing called the
+
+00:08:49.540 --> 00:08:57.360
+bus and the bus is essentially it's like a highway or road or the wires that
+
+00:08:57.360 --> 00:09:03.180
+connect all the things of the computer together so it transfers all the data
+
+00:09:03.180 --> 00:09:09.300
+between the CPU and memory and input and output vice-versa right and you will
+
+00:09:09.300 --> 00:09:11.320
+have all these functions that we're going to use in the next few minutes
+
+00:09:11.320 --> 00:09:21.080
+and components in any digital device or computing device like your phone smart
+
+00:09:22.760 --> 00:09:28.980
+thermostat or if you have like a smart refrigerator things like that they all
+
+00:09:28.980 --> 00:09:34.460
+have a CPU some memory a bus connecting everything together they've been input
+
+00:09:34.460 --> 00:09:40.880
+output it might be display screen it might be audio visual might not so I'm
+
+00:09:41.320 --> 00:09:50.120
+not sure how people actually made these samples okay and then in Module 2 after
+
+00:09:50.120 --> 00:09:56.720
+we've done Module 1 are Module two this is the next module is really about how
+
+00:09:56.720 --> 00:10:02.980
+ほど your assessment numbers for this whole section focus week if you want to
+
+00:10:02.980 --> 00:10:07.620
+reference that we're basically covering kind of covering most of chapters one and
+
+00:10:07.620 --> 00:10:10.760
+two from but how do it know
+
+00:10:10.760 --> 00:10:15.480
+in the learning platform that go along with this section.
+
+00:10:15.680 --> 00:10:19.200
+So that's something you should do.
+
+00:10:20.100 --> 00:10:21.620
+And then for reflection,
+
+00:10:22.680 --> 00:10:24.300
+maybe think about what questions you have
+
+00:10:24.300 --> 00:10:25.700
+about how computers really work.
+
+00:10:26.340 --> 00:10:29.720
+What we're trying to do is do this course,
+
+00:10:29.880 --> 00:10:31.580
+is take this black box that's a computer
+
+00:10:31.580 --> 00:10:35.240
+and look under the hood and see how it actually works.
+
+00:10:37.000 --> 00:10:39.640
+Okay, so what I want to do right now
+
+00:10:39.640 --> 00:10:42.340
+is I want to show you a little bit about where we're going.
+
+00:10:43.200 --> 00:10:45.980
+Okay, so this is the Logisim software.
+
+00:10:47.180 --> 00:10:49.460
+And we're going to start with this, a blank sheet.
+
+00:10:50.520 --> 00:10:51.980
+And by the end of the semester,
+
+00:10:52.980 --> 00:11:02.980
+you will hopefully have this completed CPU.
+
+00:11:03.480 --> 00:11:06.120
+So let me show you what mine looks like.
+
+00:11:07.500 --> 00:11:08.600
+Show you what.
+
+00:11:09.640 --> 00:11:10.940
+How we're going to build this.
+
+00:11:10.980 --> 00:11:12.720
+So this is kind of the completed CPU.
+
+00:11:12.900 --> 00:11:14.300
+And this is where we run it from.
+
+00:11:14.440 --> 00:11:15.760
+This is kind of the control section,
+
+00:11:15.860 --> 00:11:18.660
+the input output, if you will, for our computer.
+
+00:11:19.700 --> 00:11:21.960
+And there's a lot of things up here.
+
+00:11:22.060 --> 00:11:24.300
+These are just showing what's in these memory locations
+
+00:11:24.300 --> 00:11:26.420
+and stuff to load.
+
+00:11:26.740 --> 00:11:28.540
+The external RAM is we put our program in here
+
+00:11:28.540 --> 00:11:31.720
+and then we load it onto our computer so that we can run it.
+
+00:11:32.440 --> 00:11:34.560
+But each of these, like in the CPU,
+
+00:11:34.860 --> 00:11:36.740
+we can look inside the CPU, okay?
+
+00:11:37.760 --> 00:11:39.200
+And the CPU has three major components.
+
+00:11:39.640 --> 00:11:43.140
+Okay, there's the ALU here on the left,
+
+00:11:43.640 --> 00:11:46.080
+the control section, which defines what are we doing,
+
+00:11:46.080 --> 00:11:47.760
+in the middle, and RAM on the right.
+
+00:11:48.640 --> 00:11:50.140
+You can see all these red lines.
+
+00:11:50.140 --> 00:11:50.660
+Don't worry about it.
+
+00:11:50.660 --> 00:11:54.060
+But there's this red rectangle of all these lines that go around.
+
+00:11:54.880 --> 00:11:56.180
+So they go around the whole thing.
+
+00:11:56.180 --> 00:11:58.260
+And this is the bus, okay?
+
+00:11:58.260 --> 00:12:00.120
+So there's eight wires, one for each bit.
+
+00:12:01.260 --> 00:12:04.340
+We're building an eight-bit computer, okay?
+
+00:12:04.340 --> 00:12:07.480
+And the bits that we need, the eight bits we need for our computer,
+
+00:12:07.480 --> 00:12:09.520
+are running around these wires on the outside.
+
+00:12:09.520 --> 00:12:09.640
+Okay?
+
+00:12:09.640 --> 00:12:11.940
+And then all these lines coming off our taps,
+
+00:12:11.940 --> 00:12:14.640
+essentially reading what's on that wire
+
+00:12:14.640 --> 00:12:16.340
+or putting stuff onto that wire.
+
+00:12:17.640 --> 00:12:19.460
+Okay, and then each of these sections,
+
+00:12:19.460 --> 00:12:21.140
+so let's just look in the ALU.
+
+00:12:21.140 --> 00:12:23.300
+We can look inside that,
+
+00:12:23.300 --> 00:12:28.080
+and you'll see the ALU takes two eight-bit values,
+
+00:12:28.080 --> 00:12:30.580
+and the bottom one is it adds them,
+
+00:12:30.580 --> 00:12:32.720
+shifts right, shifts left,
+
+00:12:32.720 --> 00:12:36.280
+takes the first one and just knots it, okay?
+
+00:12:36.280 --> 00:12:39.520
+Does a bitwise AND, a bitwise OR, and a bitwise...
+
+00:12:39.640 --> 00:12:44.820
+Exclusive OR, okay, for all eight bits, all right?
+
+00:12:44.820 --> 00:12:46.720
+And so we have two eight-bit inputs,
+
+00:12:46.720 --> 00:12:48.980
+we have one eight-bit output,
+
+00:12:48.980 --> 00:12:50.280
+and then again, you can drill down.
+
+00:12:50.280 --> 00:12:52.460
+And the reason I wanna drill down into these
+
+00:12:52.460 --> 00:12:54.340
+is to show you that, okay?
+
+00:12:54.340 --> 00:12:58.640
+So this is an adder, this is an eight-bit adder.
+
+00:12:58.640 --> 00:13:00.920
+It's comprised of eight one-bit adders
+
+00:13:00.920 --> 00:13:03.380
+that are ganged together or tied to each other,
+
+00:13:03.380 --> 00:13:05.180
+cascaded, if you will.
+
+00:13:05.180 --> 00:13:07.620
+And you can look inside this one-bit adder,
+
+00:13:07.620 --> 00:13:08.940
+and you will see,
+
+00:13:09.640 --> 00:13:13.100
+a one-bit adder circuit that we're gonna build,
+
+00:13:13.100 --> 00:13:14.860
+and this is based on gates.
+
+00:13:14.860 --> 00:13:16.940
+Each one of these things, this is a gate,
+
+00:13:16.940 --> 00:13:19.360
+these are two exclusive OR gates,
+
+00:13:19.360 --> 00:13:23.260
+this is an OR gate, and this is a two AND gates, okay?
+
+00:13:23.260 --> 00:13:26.420
+And that's how an adder, that's a circuit,
+
+00:13:26.420 --> 00:13:29.600
+that's a digital circuit that adds two bits together
+
+00:13:29.600 --> 00:13:30.860
+with a carry.
+
+00:13:30.860 --> 00:13:34.220
+So like, remember, when you add, you add right to left,
+
+00:13:34.220 --> 00:13:35.880
+and the sum of the right ones,
+
+00:13:36.780 --> 00:13:39.640
+if it's greater than the value that can be stored,
+
+00:13:39.640 --> 00:13:42.260
+you carry over to the next one.
+
+00:13:42.260 --> 00:13:43.980
+And that's what the carry in is,
+
+00:13:43.980 --> 00:13:46.140
+it's adding one from below it,
+
+00:13:46.140 --> 00:13:49.200
+and a carry out would be going to the next level higher.
+
+00:13:50.380 --> 00:13:52.980
+Okay, so this is kind of,
+
+00:13:52.980 --> 00:13:54.860
+everything we build is gonna be built
+
+00:13:54.860 --> 00:13:59.000
+based on this level of digital circuit.
+
+00:13:59.000 --> 00:14:03.240
+Memory, we're gonna build memory with NAND gates,
+
+00:14:03.240 --> 00:14:06.280
+or AND gates, or OR gates, or whatever we do.
+
+00:14:06.280 --> 00:14:08.960
+You know, multiplexers are gonna be built that way.
+
+00:14:08.960 --> 00:14:09.640
+Decoders are gonna be built that way.
+
+00:14:09.640 --> 00:14:14.260
+Registers, memory, all that kind of stuff.
+
+00:14:14.260 --> 00:14:16.360
+We're gonna build it at this level,
+
+00:14:17.380 --> 00:14:19.520
+and then we'll abstract it into
+
+00:14:23.800 --> 00:14:25.780
+these higher level forms,
+
+00:14:27.160 --> 00:14:30.460
+hide the details, but they're still there, okay?
+
+00:14:30.460 --> 00:14:32.380
+And you would have built this entire thing
+
+00:14:32.380 --> 00:14:35.800
+using all just the gates,
+
+00:14:37.160 --> 00:14:39.480
+the gates from our menu of gates,
+
+00:14:39.640 --> 00:14:43.300
+or pretty much just gonna use our menu of gates
+
+00:14:43.300 --> 00:14:44.260
+to build everything.
+
+00:14:46.260 --> 00:14:48.500
+All right, so that's where we're going in this class.
+
+00:14:49.680 --> 00:14:52.480
+Excited for it, I hope you are too.
+
+00:14:52.480 --> 00:14:53.780
+I think you'll learn a lot.
+
+00:14:57.880 --> 00:14:59.880
+Good luck, and hope you have a great semester.
+
+`;
+
+    function timeToSeconds(timeStr) {
+      if (!timeStr) return 0;
+      var parts = timeStr.trim().split(':');
+      if (parts.length === 2) {
+        return (parseInt(parts[0]) || 0) * 60 + (parseFloat(parts[1]) || 0);
+      } else if (parts.length === 3) {
+        return (parseInt(parts[0]) || 0) * 3600 + (parseInt(parts[1]) || 0) * 60 + (parseFloat(parts[2]) || 0);
+      }
+      return 0;
+    }
+
+    function parseVtt(vttText) {
+      var cues = vttText.trim().split(/\n\n+/);
+      var parsedCues = [];
+      cues.forEach(function (cueBlock) {
+        if (cueBlock.indexOf('WEBVTT') === 0 || cueBlock.trim() === '') return;
+        var lines = cueBlock.trim().split('\n');
+        var timeLine = lines.filter(function (l) { return l.indexOf('-->') !== -1; })[0];
+        if (!timeLine) return;
+        var parts = timeLine.split(' --> ');
+        var textLines = lines.slice(lines.indexOf(timeLine) + 1);
+        parsedCues.push({
+          start: timeToSeconds(parts[0]),
+          end: timeToSeconds(parts[1]),
+          text: textLines.join(' ').trim()
+        });
+      });
+      return parsedCues;
+    }
+
+    function populateTranscript() {
+      var container = document.getElementById('transcript-container');
+      container.innerHTML = '';
+      parsedTranscript.forEach(function (cue) {
+        var lineEl = document.createElement('div');
+        lineEl.className = 'transcript-line';
+        lineEl.dataset.start = cue.start;
+        lineEl.dataset.end = cue.end;
+        lineEl.textContent = cue.text;
+        lineEl.setAttribute('role', 'button');
+        lineEl.setAttribute('tabindex', '0');
+        var seekTo = function () {
+          if (player && player.seekTo) { player.seekTo(cue.start, true); player.playVideo(); }
+        };
+        lineEl.addEventListener('click', seekTo);
+        lineEl.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); seekTo(); }
+        });
+        container.appendChild(lineEl);
+      });
+    }
+
+    function highlightCurrentLine() {
+      if (!player || !player.getCurrentTime) return;
+      var currentTime = player.getCurrentTime();
+      var lines = document.querySelectorAll('#transcript-container .transcript-line');
+      lines.forEach(function (line) {
+        var start = parseFloat(line.dataset.start);
+        var end = parseFloat(line.dataset.end);
+        if (currentTime >= start && currentTime < end) {
+          if (!line.classList.contains('active-transcript-line')) {
+            var prev = document.querySelector('#transcript-container .active-transcript-line');
+            if (prev) prev.classList.remove('active-transcript-line');
+            line.classList.add('active-transcript-line');
+            line.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else {
+          line.classList.remove('active-transcript-line');
+        }
+      });
+    }
+
+    function syncTranscriptHeight() {
+      var videoContainer = document.getElementById('video-container');
+      var transcriptContainer = document.getElementById('transcript-container');
+      if (!videoContainer || !transcriptContainer) return;
+      if (window.matchMedia('(min-width: 1024px)').matches) {
+        transcriptContainer.style.maxHeight = videoContainer.offsetHeight + 'px';
+      } else {
+        transcriptContainer.style.maxHeight = '24rem';
+      }
+    }
+
+    window.onYouTubeIframeAPIReady = function () {
+      player = new YT.Player('youtube-player', {
+        videoId: VIDEO_ID,
+        events: {
+          onStateChange: function (event) {
+            clearInterval(timeUpdater);
+            if (event.data === YT.PlayerState.PLAYING) {
+              timeUpdater = setInterval(highlightCurrentLine, 300);
+            }
+          }
+        }
+      });
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      parsedTranscript = parseVtt(vttContent);
+      populateTranscript();
+      setTimeout(syncTranscriptHeight, 100);
+      if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+        var tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      } else {
+        window.onYouTubeIframeAPIReady();
+      }
+    });
+
+    var resizeTimeout;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(syncTranscriptHeight, 250);
+    });
+  })();
+  </script>
+
+</body>
+</html>

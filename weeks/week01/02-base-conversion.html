@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="02">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — SPA 2: Converting Between Bases</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+/* ---------- Widget 2: Base Conversion Practice ---------- */
+.widget-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-md);
+      margin-bottom: var(--space-md);
+    }
+.widget-field {
+      display: flex;
+      flex-direction: column;
+    }
+.widget-field label {
+      font-size: var(--fs-sm);
+      font-weight: 600;
+      margin-bottom: var(--space-xs);
+      color: var(--color-text);
+    }
+.widget-field input {
+      font-family: var(--font-mono);
+      font-size: var(--fs-base);
+      padding: var(--space-sm) var(--space-md);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      background: var(--color-bg);
+      color: var(--color-text);
+      transition: border-color .15s;
+    }
+.widget-field input:focus {
+      outline: none;
+      border-color: var(--color-primary-lt);
+      box-shadow: 0 0 0 2px rgba(41,128,185,.2);
+    }
+.widget-field input.error {
+      border-color: var(--color-danger);
+      background: #fdf0ef;
+    }
+.widget-field input.correct {
+      border-color: var(--color-success);
+      background: #f0faf4;
+    }
+.widget-actions {
+      display: flex;
+      gap: var(--space-sm);
+      flex-wrap: wrap;
+      margin-bottom: var(--space-md);
+    }
+.widget-btn:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+.widget-work {
+      background: var(--color-code-bg);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: var(--space-md);
+      margin-top: var(--space-md);
+      font-family: var(--font-mono);
+      font-size: var(--fs-sm);
+      line-height: 1.6;
+      display: none;
+    }
+.widget-work.visible {
+      display: block;
+    }
+.widget-work__step {
+      margin-bottom: var(--space-xs);
+    }
+.widget-work__label {
+      font-family: var(--font-sans);
+      font-weight: 600;
+      font-size: var(--fs-sm);
+      color: var(--color-primary);
+      margin-bottom: var(--space-xs);
+    }
+.widget-feedback {
+      padding: var(--space-md);
+      border-radius: var(--radius);
+      margin-top: var(--space-md);
+      font-size: var(--fs-sm);
+      display: none;
+    }
+.widget-feedback.visible {
+      display: block;
+    }
+.widget-feedback--success {
+      background: #f0faf4;
+      border: 1px solid var(--color-success);
+      color: var(--color-success);
+    }
+.widget-feedback--error {
+      background: #fdf0ef;
+      border: 1px solid var(--color-danger);
+      color: var(--color-danger);
+    }
+.widget-mode-toggle {
+      display: flex;
+      gap: 0;
+      margin-bottom: var(--space-md);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      width: fit-content;
+    }
+.widget-mode-toggle button {
+      font-family: var(--font-sans);
+      font-size: var(--fs-sm);
+      font-weight: 600;
+      padding: var(--space-sm) var(--space-lg);
+      border: none;
+      background: var(--color-bg);
+      color: var(--color-text-muted);
+      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+.widget-mode-toggle button.active {
+      background: var(--color-primary);
+      color: #fff;
+    }
+.widget-mode-toggle button:hover:not(.active) {
+      background: var(--color-code-bg);
+    }
+.quiz-prompt {
+      background: var(--color-code-bg);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: var(--space-md);
+      margin-bottom: var(--space-md);
+      font-size: var(--fs-sm);
+    }
+.quiz-prompt strong {
+      color: var(--color-primary);
+    }
+@media (max-width: 600px) {
+      .widget-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+/* ---------- Guided Step-by-Step Tutorial ---------- */
+.tutorial-step {
+      display: none;
+      background: var(--color-code-bg);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: var(--space-lg);
+      margin-top: var(--space-md);
+    }
+.tutorial-step.active { display: block; }
+.tutorial-step__count {
+      font-size: var(--fs-xs);
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: var(--space-xs);
+    }
+.tutorial-nav {
+      display: flex;
+      justify-content: space-between;
+      margin-top: var(--space-md);
+    }
+/* ---------- Practice Problems ---------- */
+.practice-problem {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: var(--space-md);
+      margin-bottom: var(--space-md);
+    }
+.practice-problem__prompt { font-weight: 600; margin-bottom: var(--space-sm); }
+.practice-problem__answer {
+      display: none;
+      font-family: var(--font-mono);
+      background: var(--color-code-bg);
+      border-radius: var(--radius);
+      padding: var(--space-sm) var(--space-md);
+      margin-top: var(--space-sm);
+    }
+.practice-problem__answer.visible { display: block; }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== Header ==================== -->
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization & Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 1 &rsaquo; <span>Converting Between Bases</span>
+    </nav>
+  </header>
+
+  <!-- ==================== Main Content (Single Column) ==================== -->
+  <main class="sp-main sp-main--full">
+
+      <h1>Converting Between Bases</h1>
+      <p><strong>Estimated time:</strong> ~1.5 hours &nbsp;|&nbsp; <strong>Sections:</strong> 1.4&ndash;1.5 &nbsp;|&nbsp; <strong>Prerequisite:</strong> SPA 1 (Why Binary?)</p>
+
+      <!-- Opening Prose -->
+      <div class="callout callout--hook">
+        <div class="callout__title">What We Have / What We Can't Do / What We Can Now Do</div>
+        <p><strong>What you already know:</strong> You understand the physical constraint (two voltage states), the vocabulary (bit, byte, word), and the three number systems (binary, hex, octal) from SPA 1.</p>
+        <p><strong>What you can't do yet:</strong> Take an arbitrary decimal number like 317 and convert it to binary. Or look at a hex value like <code>0xA3F</code> and quickly determine its binary representation.</p>
+        <p><strong>What you will be able to do by the end of this SPA:</strong> Convert fluently between decimal, binary, hexadecimal, and octal using mechanical techniques. Understand the range of unsigned integers and what happens when you exceed it (overflow).</p>
+      </div>
+
+      <p>In SPA 1 you learned <em>what</em> binary, hex, and octal look like. Now you need to learn <em>how to convert between them</em>&mdash;a mechanical skill that becomes automatic with practice. These are not optional skills. You will use them every week of this course, from reading memory dumps in MARS to tracing signal values in Logisim.</p>
+
+      <!-- ============================================================
+           Section 1.4 — Converting Between Bases
+           ============================================================ -->
+      <section id="sec-1-4">
+        <h2>1.4 — Converting Between Bases</h2>
+
+        <h3>Decimal &rarr; Binary (Repeated Division)</h3>
+        <p>Divide the decimal number by 2 repeatedly, recording the remainders. Read the remainders <strong>bottom to top</strong> (last remainder is the most significant bit).</p>
+
+        <p><strong>Example:</strong> Convert 66 to binary</p>
+        <pre><code>66 &divide; 2 = 33  remainder 0
+33 &divide; 2 = 16  remainder 1
+16 &divide; 2 =  8  remainder 0
+ 8 &divide; 2 =  4  remainder 0
+ 4 &divide; 2 =  2  remainder 0
+ 2 &divide; 2 =  1  remainder 0
+ 1 &divide; 2 =  0  remainder 1
+Read bottom&to;top: 1000010 &rarr; pad to 8 bits: 01000010</code></pre>
+
+        <h3>Binary &rarr; Decimal (Sum of Powers)</h3>
+        <p>Add up the powers of 2 for each position that has a 1.</p>
+
+        <p><strong>Example:</strong> <code>01000010</code></p>
+        <pre><code>= 0&times;128 + 1&times;64 + 0&times;32 + 0&times;16 + 0&times;8 + 0&times;4 + 1&times;2 + 0&times;1
+= 64 + 2
+= 66</code></pre>
+
+        <h3>Binary &harr; Hex (Grouping by 4)</h3>
+        <p>Group the binary bits into sets of 4 (from right to left), then look up each group in the hex-to-binary table from SPA 1.</p>
+
+        <p><strong>Example:</strong> <code>01000010</code> &rarr; <code>0100 0010</code> &rarr; <code>4 2</code> &rarr; <code>0x42</code></p>
+
+        <h3>Decimal &rarr; Hex (Divide by 16)</h3>
+        <p>Same as decimal &rarr; binary, but divide by 16.</p>
+
+        <p><strong>Example:</strong> 66 &rarr; hex</p>
+        <pre><code>66 &divide; 16 = 4  remainder 2
+ 4 &divide; 16 = 0  remainder 4
+Read bottom&to;top: 42 &rarr; 0x42</code></pre>
+
+        <div class="callout callout--forward">
+          <div class="callout__title">CS301 Reference</div>
+          <p>Base conversion techniques are covered in Saylor CS301 <strong>Unit 2</strong>. Log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> and navigate to Unit 2. The repeated-division and power-sum methods are standard and appear in the CS301 material.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Guided Step-by-Step Conversion Tutorial
+           ============================================================ -->
+      <section id="sec-guided-tutorial">
+        <h2>Guided Walkthrough: Converting 66 to Every Base</h2>
+        <p>Before trying the open-ended practice widget below, walk through one complete example step by step. Click "Next Step" to proceed at your own pace.</p>
+
+        <div id="tutorial-container">
+          <div class="tutorial-step active" data-step="1">
+            <div class="tutorial-step__count">Step 1 of 5</div>
+            <p><strong>Start:</strong> We'll convert the decimal number <strong>66</strong> into binary, hex, and octal.</p>
+          </div>
+          <div class="tutorial-step" data-step="2">
+            <div class="tutorial-step__count">Step 2 of 5</div>
+            <p><strong>Decimal &rarr; Binary</strong> (repeated division by 2):</p>
+            <pre><code>66 &divide; 2 = 33  remainder 0
+33 &divide; 2 = 16  remainder 1
+16 &divide; 2 =  8  remainder 0
+ 8 &divide; 2 =  4  remainder 0
+ 4 &divide; 2 =  2  remainder 0
+ 2 &divide; 2 =  1  remainder 0
+ 1 &divide; 2 =  0  remainder 1</code></pre>
+            <p>Read the remainders bottom to top: <code>1000010</code> &rarr; padded to a byte: <code>01000010</code></p>
+          </div>
+          <div class="tutorial-step" data-step="3">
+            <div class="tutorial-step__count">Step 3 of 5</div>
+            <p><strong>Verify: Binary &rarr; Decimal</strong> (sum of powers), to check Step 2's work:</p>
+            <pre><code>01000010 = 0&times;128 + 1&times;64 + 0&times;32 + 0&times;16 + 0&times;8 + 0&times;4 + 1&times;2 + 0&times;1
+         = 64 + 2 = 66 &check;</code></pre>
+          </div>
+          <div class="tutorial-step" data-step="4">
+            <div class="tutorial-step__count">Step 4 of 5</div>
+            <p><strong>Binary &rarr; Hex</strong> (group into 4s):</p>
+            <pre><code>01000010 &rarr; 0100 0010 &rarr; 4  2 &rarr; 0x42</code></pre>
+          </div>
+          <div class="tutorial-step" data-step="5">
+            <div class="tutorial-step__count">Step 5 of 5</div>
+            <p><strong>Decimal &rarr; Octal</strong> (repeated division by 8):</p>
+            <pre><code>66 &divide; 8 = 8  remainder 2
+ 8 &divide; 8 = 1  remainder 0
+ 1 &divide; 8 = 0  remainder 1</code></pre>
+            <p>Read bottom to top: <code>102</code> (octal)</p>
+            <p><strong>Summary:</strong> 66 (decimal) = 01000010 (binary) = 0x42 (hex) = 102 (octal). You've now seen the same value in all four bases. Try your own values in the widget below.</p>
+          </div>
+
+          <div class="tutorial-nav">
+            <button class="widget-btn widget-btn--outline" id="tutorial-prev" onclick="Tutorial.prev()" disabled>&larr; Previous</button>
+            <button class="widget-btn widget-btn--primary" id="tutorial-next" onclick="Tutorial.next()">Next Step &rarr;</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Widget 2 — Base Conversion Practice
+           ============================================================ -->
+      <section id="sec-widget-2">
+        <h2>Interactive: Base Conversion Practice</h2>
+
+        <div class="widget-card" id="widget-base-conversion">
+          <div class="widget-card__title">Widget 2: Base Conversion Practice</div>
+          <div class="widget-card__subtitle">Enter a value in any field to see the equivalent in all other bases. Then switch to Quiz Mode to test yourself.</div>
+
+          <!-- Mode Toggle -->
+          <div class="widget-mode-toggle">
+            <button class="active" id="btn-practice-mode" onclick="BaseConvWidget.setMode('practice')">Practice</button>
+            <button id="btn-quiz-mode" onclick="BaseConvWidget.setMode('quiz')">Quiz</button>
+          </div>
+
+          <!-- Practice Mode Fields -->
+          <div id="practice-panel">
+            <div class="widget-grid">
+              <div class="widget-field">
+                <label for="bc-decimal">Decimal (Base 10)</label>
+                <input type="text" id="bc-decimal" placeholder="e.g. 66" oninput="BaseConvWidget.convert('decimal')">
+              </div>
+              <div class="widget-field">
+                <label for="bc-binary">Binary (Base 2)</label>
+                <input type="text" id="bc-binary" placeholder="e.g. 01000010" oninput="BaseConvWidget.convert('binary')">
+              </div>
+              <div class="widget-field">
+                <label for="bc-hex">Hexadecimal (Base 16)</label>
+                <input type="text" id="bc-hex" placeholder="e.g. 42" oninput="BaseConvWidget.convert('hex')">
+              </div>
+              <div class="widget-field">
+                <label for="bc-octal">Octal (Base 8)</label>
+                <input type="text" id="bc-octal" placeholder="e.g. 102" oninput="BaseConvWidget.convert('octal')">
+              </div>
+            </div>
+
+            <div class="widget-actions">
+              <button class="widget-btn widget-btn--primary" onclick="BaseConvWidget.showWork()">Show Work</button>
+              <button class="widget-btn widget-btn--outline" onclick="BaseConvWidget.clear()">Clear</button>
+            </div>
+
+            <div class="widget-work" id="bc-work">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Quiz Mode Panel -->
+          <div id="quiz-panel" style="display:none;">
+            <div class="quiz-prompt" id="quiz-prompt">
+              <!-- Populated dynamically -->
+            </div>
+
+            <div class="widget-grid" id="quiz-inputs">
+              <!-- Populated dynamically -->
+            </div>
+
+            <div class="widget-actions">
+              <button class="widget-btn widget-btn--accent" id="btn-check-quiz" onclick="BaseConvWidget.checkQuiz()">Check Answer</button>
+              <button class="widget-btn widget-btn--outline" id="btn-new-quiz" onclick="BaseConvWidget.newQuiz()">New Question</button>
+            </div>
+
+            <div class="widget-feedback" id="quiz-feedback">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Additional Practice Problems
+           ============================================================ -->
+      <section id="sec-practice-problems">
+        <h2>Additional Practice Problems</h2>
+        <p>A few more worked problems to check your fluency. Try each one yourself before revealing the answer.</p>
+
+        <div class="practice-problem">
+          <div class="practice-problem__prompt">1. Convert 173 (decimal) to binary and hex.</div>
+          <button class="widget-btn widget-btn--outline widget-btn--small" onclick="this.nextElementSibling.classList.toggle('visible')">Show Answer</button>
+          <div class="practice-problem__answer">173 = 10101101 (binary) = 0xAD (hex)</div>
+        </div>
+
+        <div class="practice-problem">
+          <div class="practice-problem__prompt">2. Convert 0x7F (hex) to decimal and binary.</div>
+          <button class="widget-btn widget-btn--outline widget-btn--small" onclick="this.nextElementSibling.classList.toggle('visible')">Show Answer</button>
+          <div class="practice-problem__answer">0x7F = 01111111 (binary) = 127 (decimal)</div>
+        </div>
+
+        <div class="practice-problem">
+          <div class="practice-problem__prompt">3. Convert 11010110 (binary) to hex and octal.</div>
+          <button class="widget-btn widget-btn--outline widget-btn--small" onclick="this.nextElementSibling.classList.toggle('visible')">Show Answer</button>
+          <div class="practice-problem__answer">11010110 = 0xD6 (hex) = 326 (octal)</div>
+        </div>
+
+        <div class="practice-problem">
+          <div class="practice-problem__prompt">4. What is the largest value representable in 6 unsigned bits? What happens if you add 1 to it?</div>
+          <button class="widget-btn widget-btn--outline widget-btn--small" onclick="this.nextElementSibling.classList.toggle('visible')">Show Answer</button>
+          <div class="practice-problem__answer">2<sup>6</sup> &minus; 1 = 63 (111111 in binary). Adding 1 overflows/wraps to 0 (000000).</div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Section 1.5 — Unsigned Integer Representation
+           ============================================================ -->
+      <section id="sec-1-5">
+        <h2>1.5 — Unsigned Integer Representation</h2>
+
+        <p>An unsigned integer is the simplest form of data: a non-negative whole number stored as a binary value. The number of bits determines the range:</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Bits</th>
+              <th>Minimum</th>
+              <th>Maximum</th>
+              <th>Range Size</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>4</td>
+              <td>0</td>
+              <td>15</td>
+              <td>2&sup4; = 16 values</td>
+            </tr>
+            <tr>
+              <td>8</td>
+              <td>0</td>
+              <td>255</td>
+              <td>2&sup8; = 256 values</td>
+            </tr>
+            <tr>
+              <td>16</td>
+              <td>0</td>
+              <td>65,535</td>
+              <td>2&sup16; = 65,536 values</td>
+            </tr>
+            <tr>
+              <td>32</td>
+              <td>0</td>
+              <td>4,294,967,295</td>
+              <td>2&sup32; values</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>The maximum value for <em>n</em> bits is 2<sup>n</sup> &minus; 1 (all 1s). This formula appears repeatedly.</p>
+
+        <h3>What happens at the boundaries?</h3>
+        <p>If you add 1 to the maximum value (e.g., 255 + 1 in 8 bits), the result <strong>wraps around</strong> to 0. This is called <strong>overflow</strong>, and it is not an error &mdash; it is the natural behavior of fixed-width binary arithmetic. The CPU has an overflow flag it sets when this happens, but the bits still represent a valid (wrapped) value.</p>
+
+        <div class="callout callout--aha">
+          <div class="callout__title">Key Takeaway</div>
+          <p>Overflow is not a crash. It is a predictable consequence of fixed-width representation. The hardware sets a flag and keeps running. It is up to the program (or the programmer, in assembly) to check the flag and handle the condition.</p>
+        </div>
+
+        <div class="callout callout--forward">
+          <div class="callout__title">Forward Reference</div>
+          <p>You will see overflow flags in action when you build the ALU in Week 6 and examine MIPS status flags. The hardware doesn't "crash" on overflow &mdash; it sets a flag and keeps running.</p>
+        </div>
+
+        <div class="callout callout--forward">
+          <div class="callout__title">CS301 Reference</div>
+          <p>Unsigned binary representation is covered in Saylor CS301 <strong>Unit 2</strong>. Log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> and navigate to Unit 2.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           End-of-SPA Forward Reference
+           ============================================================ -->
+      <section id="sec-forward">
+        <h2>What Comes Next</h2>
+
+        <div class="callout callout--forward">
+          <div class="callout__title">Forward Reference</div>
+          <p>You now understand unsigned values and can convert fluently between bases. But what about negative numbers? The next SPA explores three historical approaches to representing signed integers&mdash;sign-magnitude, one's complement, and two's complement&mdash;and why only one survived. You will see why two's complement makes the hardware dramatically simpler, a concept that becomes critical when you build the ALU in Week 6.</p>
+        </div>
+
+        <div style="text-align:center;margin:var(--space-xl)0;">
+          <div class="spa-card__btn" style="font-size:var(--fs-md);padding:var(--space-md) var(--space-xl);">Continue to the next item in this module to begin SPA 3: Signed Integers & Two's Complement</div>
+        </div>
+      </section>
+
+  </main>
+
+  <!-- ==================== Footer ==================== -->
+  <footer class="sp-footer">
+    CSC210 — Computer Organization & Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <!-- ==================== Scripts ==================== -->
+  <script>
+  /* ============================================================
+     Widget 2: Base Conversion Practice
+     ============================================================
+     Self-contained widget module.  Provides live conversion
+     between Decimal, Binary, Hex, and Octal with "show work"
+     step-by-step output and a quiz mode with random questions.
+     ============================================================ */
+  (function () {
+    'use strict';
+
+    var BaseConvWidget = {
+      currentMode: 'practice',
+      quizValue: 0,
+      quizTarget: '',
+
+      /* ---------- Mode switching ---------- */
+      setMode: function (mode) {
+        this.currentMode = mode;
+        document.getElementById('practice-panel').style.display = (mode === 'practice') ? 'block' : 'none';
+        document.getElementById('quiz-panel').style.display = (mode === 'quiz') ? 'block' : 'none';
+        document.getElementById('btn-practice-mode').classList.toggle('active', mode === 'practice');
+        document.getElementById('btn-quiz-mode').classList.toggle('active', mode === 'quiz');
+        if (mode === 'quiz') {
+          this.newQuiz();
+        }
+      },
+
+      /* ---------- Core conversion helpers ---------- */
+      parseToDecimal: function (input, base) {
+        var trimmed = input.trim().replace(/^0[xXbBoO]/, '');
+        if (trimmed === '') return null;
+        var val = parseInt(trimmed, base);
+        if (isNaN(val) || val < 0) return null;
+        return val;
+      },
+
+      toBinary: function (val) {
+        if (val === null || val === undefined) return '';
+        return (val >>> 0).toString(2);
+      },
+
+      toHex: function (val) {
+        if (val === null || val === undefined) return '';
+        return (val >>> 0).toString(16).toUpperCase();
+      },
+
+      toOctal: function (val) {
+        if (val === null || val === undefined) return '';
+        return (val >>> 0).toString(8);
+      },
+
+      /* ---------- Live conversion (Practice Mode) ---------- */
+      convert: function (source) {
+        var fields = {
+          decimal: { el: document.getElementById('bc-decimal'), base: 10 },
+          binary:  { el: document.getElementById('bc-binary'),  base: 2 },
+          hex:     { el: document.getElementById('bc-hex'),     base: 16 },
+          octal:   { el: document.getElementById('bc-octal'),   base: 8 }
+        };
+
+        var inputVal = fields[source].el.value;
+        var decimal = this.parseToDecimal(inputVal, fields[source].base);
+
+        // Clear work panel
+        document.getElementById('bc-work').classList.remove('visible');
+
+        if (decimal === null) {
+          // Clear all fields if input is empty or invalid
+          if (inputVal.trim() === '') {
+            for (var key in fields) {
+              fields[key].el.value = '';
+              fields[key].el.classList.remove('error');
+            }
+          } else {
+            fields[source].el.classList.add('error');
+          }
+          return;
+        }
+
+        fields[source].el.classList.remove('error');
+
+        // Update other fields
+        for (var k in fields) {
+          if (k === source) continue;
+          fields[k].el.classList.remove('error');
+          if (k === 'decimal') fields[k].el.value = decimal;
+          else if (k === 'binary')  fields[k].el.value = this.toBinary(decimal);
+          else if (k === 'hex')     fields[k].el.value = this.toHex(decimal);
+          else if (k === 'octal')   fields[k].el.value = this.toOctal(decimal);
+        }
+      },
+
+      /* ---------- Show Work ---------- */
+      showWork: function () {
+        var decInput = document.getElementById('bc-decimal').value.trim();
+        var binInput = document.getElementById('bc-binary').value.trim();
+        var workEl = document.getElementById('bc-work');
+
+        if (!decInput && !binInput) {
+          workEl.innerHTML = '<em>Enter a value first, then click "Show Work".</em>';
+          workEl.classList.add('visible');
+          return;
+        }
+
+        var decimal = this.parseToDecimal(decInput, 10);
+        if (decimal === null) {
+          decimal = this.parseToDecimal(binInput, 2);
+        }
+        if (decimal === null) return;
+
+        var html = '';
+
+        // Decimal to Binary — repeated division
+        html += '<div class="widget-work__label">Decimal &rarr; Binary (Repeated Division by 2)</div>';
+        var n = decimal;
+        var steps = [];
+        if (n === 0) {
+          steps.push('0 &divide; 2 = 0  remainder 0');
+          steps.push('Result: 0');
+        } else {
+          var bits = '';
+          var temp = n;
+          while (temp > 0) {
+            var rem = temp % 2;
+            steps.push(temp + ' &divide; 2 = ' + Math.floor(temp / 2) + '  remainder ' + rem);
+            bits = rem + bits;
+            temp = Math.floor(temp / 2);
+          }
+          steps.push('Read remainders bottom&to;top: ' + bits);
+          // Pad to byte boundary
+          var paddedLen = Math.max(8, Math.ceil(bits.length / 8) * 8);
+          var padded = bits;
+          while (padded.length < paddedLen) padded = '0' + padded;
+          steps.push('Padded to ' + paddedLen + ' bits: ' + padded);
+        }
+        for (var i = 0; i < steps.length; i++) {
+          html += '<div class="widget-work__step">' + steps[i] + '</div>';
+        }
+
+        // Binary to Decimal — sum of powers
+        html += '<br><div class="widget-work__label">Binary &rarr; Decimal (Sum of Powers)</div>';
+        var binary = this.toBinary(decimal);
+        var powers = '';
+        for (var j = 0; j < binary.length; j++) {
+          var pos = binary.length - 1 - j;
+          if (binary[j] === '1') {
+            powers += (powers ? ' + ' : '') + '1&times;2<sup>' + pos + '</sup>';
+          }
+        }
+        html += '<div class="widget-work__step">' + binary + '</div>';
+        html += '<div class="widget-work__step">= ' + (powers || '0') + '</div>';
+        html += '<div class="widget-work__step">= ' + decimal + '</div>';
+
+        // Binary to Hex — grouping
+        html += '<br><div class="widget-work__label">Binary &rarr; Hex (Grouping by 4)</div>';
+        var binPadded = binary;
+        while (binPadded.length % 4 !== 0) binPadded = '0' + binPadded;
+        var groups = [];
+        for (var g = 0; g < binPadded.length; g += 4) {
+          groups.push(binPadded.substring(g, g + 4));
+        }
+        html += '<div class="widget-work__step">' + binPadded + ' &rarr; ' + groups.join(' ') + '</div>';
+        var hexMap = {'0000':'0','0001':'1','0010':'2','0011':'3','0100':'4','0101':'5','0110':'6','0111':'7',
+                      '1000':'8','1001':'9','1010':'A','1011':'B','1100':'C','1101':'D','1110':'E','1111':'F'};
+        var hexDigits = '';
+        for (var h = 0; h < groups.length; h++) {
+          hexDigits += hexMap[groups[h]];
+        }
+        html += '<div class="widget-work__step">&rarr; 0x' + hexDigits + '</div>';
+
+        // Decimal to Octal — repeated division by 8
+        html += '<br><div class="widget-work__label">Decimal &rarr; Octal (Repeated Division by 8)</div>';
+        var octSteps = [];
+        var octVal = decimal;
+        if (octVal === 0) {
+          octSteps.push('0 &divide; 8 = 0  remainder 0');
+          octSteps.push('Result: 0');
+        } else {
+          var octBits = '';
+          var oTemp = octVal;
+          while (oTemp > 0) {
+            var oRem = oTemp % 8;
+            octSteps.push(oTemp + ' &divide; 8 = ' + Math.floor(oTemp / 8) + '  remainder ' + oRem);
+            octBits = oRem + octBits;
+            oTemp = Math.floor(oTemp / 8);
+          }
+          octSteps.push('Read remainders bottom&to;top: ' + octBits);
+        }
+        for (var o = 0; o < octSteps.length; o++) {
+          html += '<div class="widget-work__step">' + octSteps[o] + '</div>';
+        }
+
+        workEl.innerHTML = html;
+        workEl.classList.add('visible');
+      },
+
+      /* ---------- Clear ---------- */
+      clear: function () {
+        document.getElementById('bc-decimal').value = '';
+        document.getElementById('bc-binary').value = '';
+        document.getElementById('bc-hex').value = '';
+        document.getElementById('bc-octal').value = '';
+        document.getElementById('bc-decimal').classList.remove('error');
+        document.getElementById('bc-binary').classList.remove('error');
+        document.getElementById('bc-hex').classList.remove('error');
+        document.getElementById('bc-octal').classList.remove('error');
+        document.getElementById('bc-work').classList.remove('visible');
+        document.getElementById('bc-work').innerHTML = '';
+      },
+
+      /* ---------- Quiz Mode ---------- */
+      newQuiz: function () {
+        // Generate random value 0-255
+        this.quizValue = Math.floor(Math.random() * 256);
+        // Pick random target base
+        var targets = ['decimal', 'binary', 'hex', 'octal'];
+        this.quizTarget = targets[Math.floor(Math.random() * targets.length)];
+
+        var sourceBase = ['decimal', 'binary', 'hex', 'octal'][Math.floor(Math.random() * 4)];
+        // Avoid same source and target
+        while (sourceBase === this.quizTarget) {
+          sourceBase = ['decimal', 'binary', 'hex', 'octal'][Math.floor(Math.random() * 4)];
+        }
+
+        var sourceLabel = {decimal: 'Decimal', binary: 'Binary', hex: 'Hexadecimal', octal: 'Octal'};
+        var targetLabel = {decimal: 'Decimal', binary: 'Binary', hex: 'Hexadecimal', octal: 'Octal'};
+        var sourceVal = '';
+        if (sourceBase === 'decimal') sourceVal = this.quizValue;
+        else if (sourceBase === 'binary') sourceVal = this.toBinary(this.quizValue);
+        else if (sourceBase === 'hex') sourceVal = '0x' + this.toHex(this.quizValue);
+        else if (sourceBase === 'octal') sourceVal = this.toOctal(this.quizValue);
+
+        document.getElementById('quiz-prompt').innerHTML =
+          '<strong>Convert</strong> ' + sourceLabel[sourceBase] + ' <code>' + sourceVal + '</code> <strong>to</strong> ' + targetLabel[this.quizTarget] + '.';
+
+        var inputId = 'bc-' + this.quizTarget;
+        document.getElementById('quiz-inputs').innerHTML =
+          '<div class="widget-field">' +
+            '<label for="quiz-answer">' + targetLabel[this.quizTarget] + ' Answer</label>' +
+            '<input type="text" id="quiz-answer" placeholder="Your answer" onkeydown="if(event.key===\'Enter\')BaseConvWidget.checkQuiz()">' +
+          '</div>';
+
+        document.getElementById('quiz-feedback').classList.remove('visible');
+        document.getElementById('quiz-feedback').className = 'widget-feedback';
+        document.getElementById('btn-check-quiz').disabled = false;
+
+        setTimeout(function () {
+          document.getElementById('quiz-answer').focus();
+        }, 100);
+      },
+
+      checkQuiz: function () {
+        var answerEl = document.getElementById('quiz-answer');
+        var feedbackEl = document.getElementById('quiz-feedback');
+        var userAnswer = answerEl.value.trim().replace(/^0[xXbBoO]/, '');
+        var correctAnswer = '';
+
+        if (this.quizTarget === 'decimal') correctAnswer = String(this.quizValue);
+        else if (this.quizTarget === 'binary') correctAnswer = this.toBinary(this.quizValue);
+        else if (this.quizTarget === 'hex') correctAnswer = this.toHex(this.quizValue);
+        else if (this.quizTarget === 'octal') correctAnswer = this.toOctal(this.quizValue);
+
+        // Case-insensitive comparison for hex
+        var isCorrect = userAnswer.toUpperCase() === correctAnswer.toUpperCase();
+
+        feedbackEl.classList.add('visible');
+        if (isCorrect) {
+          feedbackEl.className = 'widget-feedback widget-feedback--success visible';
+          feedbackEl.innerHTML = '<strong>&#10004; Correct!</strong> The answer is <code>' + correctAnswer + '</code>.';
+          answerEl.classList.remove('error');
+          answerEl.classList.add('correct');
+          document.getElementById('btn-check-quiz').disabled = true;
+        } else {
+          feedbackEl.className = 'widget-feedback widget-feedback--error visible';
+          feedbackEl.innerHTML = '<strong>&#10008; Not quite.</strong> Your answer: <code>' + (userAnswer || '(empty)') + '</code>. Correct answer: <code>' + correctAnswer + '</code>.';
+          answerEl.classList.remove('correct');
+          answerEl.classList.add('error');
+        }
+      }
+    };
+
+    window.BaseConvWidget = BaseConvWidget;
+
+  })();
+  </script>
+
+  <!-- ==================== Guided Tutorial Navigation ==================== -->
+  <script>
+  (function () {
+    'use strict';
+    var TOTAL_STEPS = 5;
+    var current = 1;
+
+    function render() {
+      document.querySelectorAll('.tutorial-step').forEach(function (step) {
+        step.classList.toggle('active', parseInt(step.dataset.step, 10) === current);
+      });
+      document.getElementById('tutorial-prev').disabled = (current === 1);
+      var nextBtn = document.getElementById('tutorial-next');
+      nextBtn.textContent = (current === TOTAL_STEPS) ? 'Restart \u2192' : 'Next Step \u2192';
+    }
+
+    var Tutorial = {
+      next: function () {
+        current = (current === TOTAL_STEPS) ? 1 : current + 1;
+        render();
+      },
+      prev: function () {
+        if (current > 1) current -= 1;
+        render();
+      }
+    };
+
+    window.Tutorial = Tutorial;
+  })();
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="04">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — SPA 4: Beyond Integers</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+/* ---------- Shared Widget Styles ---------- */
+.widget-input-group input[type="number"],
+    .widget-input-group input[type="text"] {
+      font-family: var(--font-mono);
+      font-size: var(--fs-base);
+      padding: var(--space-sm) var(--space-md);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      background: var(--color-bg);
+      color: var(--color-text);
+      width: 160px;
+      transition: border-color .15s;
+    }
+.widget-input-group input:focus {
+      outline: none;
+      border-color: var(--color-primary-lt);
+      box-shadow: 0 0 0 2px rgba(41,128,185,.2);
+    }
+.widget-input-group input.error {
+      border-color: var(--color-danger);
+      background: #fdf0ef;
+    }
+/* ---------- Widget 4: Memory Layout Visualizer ---------- */
+.mem-grid {
+      display: grid;
+      gap: 1px;
+      background: var(--color-border);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: var(--space-md);
+    }
+.mem-grid--bytes {
+      grid-template-columns: 80px repeat(16, 1fr);
+    }
+.mem-grid--halfwords {
+      grid-template-columns: 80px repeat(8, 1fr);
+    }
+.mem-grid--words {
+      grid-template-columns: 80px repeat(4, 1fr);
+    }
+.mem-cell {
+      background: var(--color-surface);
+      padding: var(--space-sm);
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: var(--fs-sm);
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+.mem-cell--header {
+      background: var(--color-code-bg);
+      font-weight: 700;
+      font-size: var(--fs-xs);
+      color: var(--color-text-muted);
+    }
+.mem-cell--address {
+      background: var(--color-code-bg);
+      font-weight: 600;
+      font-size: var(--fs-xs);
+      color: var(--color-primary);
+      justify-content: flex-start;
+      padding-left: var(--space-sm);
+    }
+.mem-cell--highlight {
+      background: #eef6fc;
+      border: 2px solid var(--color-primary-lt);
+    }
+.mem-cell--string {
+      color: var(--color-success);
+      font-weight: 600;
+    }
+.mem-cell--integer {
+      color: var(--color-primary);
+      font-weight: 600;
+    }
+.mem-cell--padding {
+      color: var(--color-text-muted);
+      font-style: italic;
+    }
+.mem-cell--null {
+      color: var(--color-danger);
+      font-weight: 600;
+    }
+.mem-view-toggle {
+      display: flex;
+      gap: var(--space-xs);
+      margin-bottom: var(--space-md);
+    }
+.mem-view-btn {
+      font-family: var(--font-sans);
+      font-size: var(--fs-sm);
+      font-weight: 600;
+      padding: var(--space-xs) var(--space-sm);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      background: var(--color-surface);
+      color: var(--color-text);
+      cursor: pointer;
+      transition: background .15s, border-color .15s;
+    }
+.mem-view-btn.active {
+      background: var(--color-primary);
+      color: #fff;
+      border-color: var(--color-primary);
+    }
+.mem-legend {
+      display: flex;
+      gap: var(--space-md);
+      flex-wrap: wrap;
+      margin-top: var(--space-sm);
+      font-size: var(--fs-xs);
+      color: var(--color-text-muted);
+    }
+.mem-legend__item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+.mem-legend__swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+    }
+/* ---------- Widget 1: Byte Explorer ---------- */
+.bit-cell {
+      width: 40px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius);
+      font-weight: 700;
+      font-size: var(--fs-lg);
+      background: var(--color-surface);
+      color: var(--color-text);
+      cursor: pointer;
+      user-select: none;
+      transition: background .15s, border-color .15s, color .15s;
+    }
+.bit-cell:hover {
+      border-color: var(--color-primary-lt);
+    }
+.bit-cell.one {
+      background: var(--color-primary);
+      color: #fff;
+      border-color: var(--color-primary);
+    }
+.bit-cell.sign-bit {
+      border-color: var(--color-danger);
+    }
+.bit-cell.sign-bit.one {
+      background: var(--color-danger);
+      color: #fff;
+      border-color: var(--color-danger);
+    }
+.bit-labels span {
+      width: 40px;
+      text-align: center;
+    }
+.byte-display-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-md);
+      margin-top: var(--space-md);
+    }
+.color-swatch {
+      width: 100%;
+      height: 40px;
+      border-radius: var(--radius);
+      border: 1px solid var(--color-border);
+      margin-top: var(--space-xs);
+    }
+.ascii-display {
+      font-family: var(--font-mono);
+      font-size: var(--fs-xl);
+      font-weight: 700;
+      text-align: center;
+      padding: var(--space-sm);
+      background: var(--color-code-bg);
+      border-radius: var(--radius);
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+@media (max-width: 768px) {
+      .display-grid,
+      .byte-display-grid {
+        grid-template-columns: 1fr;
+      }
+      .bit-cell {
+        width: 32px;
+        height: 36px;
+        font-size: var(--fs-md);
+      }
+      .bit-labels span {
+        width: 32px;
+      }
+      .mem-grid {
+        font-size: var(--fs-xs);
+      }
+    }
+/* ---------- Real-World Applications ---------- */
+.application-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-md); margin: var(--space-lg) 0;
+    }
+@media (max-width: 700px) { .application-grid { grid-template-columns: 1fr; } }
+.application-card {
+      background: var(--color-surface); border: 1px solid var(--color-border);
+      border-radius: var(--radius); padding: var(--space-md);
+    }
+.application-card__title { font-weight: 700; color: var(--color-primary); margin-bottom: var(--space-xs); }
+.application-card__body { font-size: var(--fs-sm); color: var(--color-text); }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== Header ==================== -->
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization & Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 1 &rsaquo; <span>Beyond Integers</span>
+    </nav>
+  </header>
+
+  <!-- ==================== Main Content (Single Column) ==================== -->
+  <main class="sp-main sp-main--full">
+
+      <h1>Beyond Integers</h1>
+      <p><strong>Estimated time:</strong> ~2.5 hours &nbsp;|&nbsp; <strong>Sections:</strong> 1.8&ndash;1.11 &nbsp;|&nbsp; <strong>Prerequisite:</strong> SPA 2 (Converting Between Bases)</p>
+
+      <!-- Opening Prose -->
+      <div class="callout callout--hook">
+        <div class="callout__title">What We Have / What We Can't Do / What We Can Now Do</div>
+        <p><strong>What you already know:</strong> You can represent any non-negative integer in binary, hex, and octal. You understand unsigned integer range and overflow from SPA 2. You may also have completed SPA 3 on signed integers and two's complement.</p>
+        <p><strong>What you can't do yet:</strong> Explain how a computer stores the number 3.14, the letter 'B', or the string "Hello". You also can't read a memory dump and tell what data is stored at a given address.</p>
+        <p><strong>What you will be able to do by the end of this SPA:</strong> Represent floating-point numbers in IEEE 754 format. Map characters to their ASCII/UTF-8 byte values. Read a memory layout and identify arrays, strings, and simple records. Most importantly, you will see that <em>the same byte pattern</em> can mean completely different things depending on context &mdash; the central idea of this entire course.</p>
+      </div>
+
+      <p>So far, you have learned how computers represent <strong>integers</strong> &mdash; both unsigned and signed. But integers are only one kind of data. A computer also needs to store:</p>
+      <ul>
+        <li>Fractional numbers (like 3.14 or 0.001)</li>
+        <li>Characters and strings (like 'A' or "Hello")</li>
+        <li>Complex data structures (arrays, records, structs)</li>
+      </ul>
+      <p>This SPA extends the "bits represent data" idea to all of these cases &mdash; and then ties everything together with a synthesis section that demonstrates the core principle: <strong>the bits don't carry meaning. The context does.</strong></p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Note on SPA 3</div>
+        <p>The synthesis section (1.11) at the end of this SPA references two's complement signed integers. If you have not yet completed <strong>SPA 3: Signed Integers & Two's Complement</strong>, it is recommended that you do so before reaching that section. The rest of this SPA (Sections 1.8&ndash;1.10) can be studied independently.</p>
+      </div>
+
+      <!-- ============================================================
+           Section 1.8 — Floating-Point Representation (IEEE 754)
+           ============================================================ -->
+      <section id="sec-1-8">
+        <h2>1.8 &mdash; Floating-Point Representation (IEEE 754, Conceptual)</h2>
+
+        <p>Not all numbers are integers. How does a computer represent 3.14, 0.001, or 6.022 &times; 10<sup>23</sup>?</p>
+
+        <p>The answer is <strong>scientific notation, but in binary.</strong> Just as 6.02 &times; 10<sup>23</sup> in decimal scientific notation has a mantissa (6.02) and an exponent (23), binary floating point stores a significand and an exponent &mdash; both in binary.</p>
+
+        <h3>IEEE 754 Single Precision (32-bit) Structure</h3>
+
+        <pre><code>| Sign (1 bit) | Exponent (8 bits) | Significand (23 bits) |
+|      S       |       E        |         M            |</code></pre>
+
+        <ul>
+          <li><strong>Sign bit:</strong> 0 = positive, 1 = negative</li>
+          <li><strong>Exponent:</strong> Stored with a <strong>bias of 127</strong> (so the range 1&ndash;254 maps to exponents &minus;126 to +127). This avoids needing a signed exponent field.</li>
+          <li><strong>Significand:</strong> The fractional part of the number. The leading 1 is <strong>implicit</strong> (not stored), giving an extra bit of precision.</li>
+        </ul>
+
+        <h3>Example: 6.5 in IEEE 754 Single Precision</h3>
+        <ol>
+          <li>6.5 in binary = 110.1</li>
+          <li>Normalize: 1.101 &times; 2<sup>2</sup></li>
+          <li>Sign = 0 (positive)</li>
+          <li>Exponent = 2 + 127 = 129 = <code>10000001</code></li>
+          <li>Significand = <code>10100000000000000000000</code> (the bits after the leading 1)</li>
+          <li>Full 32-bit pattern: <code>0 10000001 10100000000000000000000</code></li>
+        </ol>
+
+        <h3>Key Insight &mdash; Precision is Limited</h3>
+        <p>Just as you can't write 1/3 exactly in decimal (0.333...), you can't represent all fractional values exactly in binary. The number 0.1, for example, is an <strong>infinite repeating fraction</strong> in binary. This is why <code>0.1 + 0.2 != 0.3</code> in many programming languages &mdash; not a bug, but a consequence of finite binary representation.</p>
+
+        <div class="callout callout--aha">
+          <div class="callout__title">Why This Matters</div>
+          <p>The hardware for binary floating-point arithmetic is fundamentally different from integer arithmetic. The same "context determines meaning" principle applies: the CPU treats the 32 bits differently depending on whether the instruction says "add these as integers" or "add these as floats."</p>
+        </div>
+
+        <div class="callout callout--forward">
+          <div class="callout__title">CS301 Reference</div>
+          <p>IEEE 754 floating-point representation is covered in Saylor CS301 <strong>Unit 2</strong>. Log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> and navigate to Unit 2. This SPA provides the conceptual overview; for the full bit-level encoding rules (including denormalized numbers, infinity, and NaN), refer to CS301 Unit 2.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Section 1.9 — Character Encoding: ASCII and UTF-8
+           ============================================================ -->
+      <section id="sec-1-9">
+        <h2>1.9 &mdash; Character Encoding: ASCII and UTF-8</h2>
+
+        <p>How does the computer store the letter 'A'? It doesn't store a picture of the letter. It stores a number &mdash; specifically, the number 65, which in 8-bit binary is <code>01000001</code>.</p>
+
+        <h3>ASCII (American Standard Code for Information Interchange)</h3>
+        <p>A 7-bit encoding (stored in 8-bit bytes) that maps 128 values to English letters, digits, punctuation, and control characters:</p>
+
+        <table>
+          <thead>
+            <tr><th>Character</th><th>Decimal</th><th>Hex</th><th>Binary</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>'0'</td><td>48</td><td>0x30</td><td>00110000</td></tr>
+            <tr><td>'A'</td><td>65</td><td>0x41</td><td>01000001</td></tr>
+            <tr><td>'a'</td><td>97</td><td>0x61</td><td>01100001</td></tr>
+            <tr><td>' ' (space)</td><td>32</td><td>0x20</td><td>00100000</td></tr>
+          </tbody>
+        </table>
+
+        <p>Notice the patterns: 'A' through 'Z' are sequential (65&ndash;90). 'a' through 'z' are sequential (97&ndash;122). Digits '0'&ndash;'9' are sequential (48&ndash;57). These patterns are not accidents &mdash; they make character manipulation in code simpler.</p>
+
+        <h3>UTF-8</h3>
+        <p>ASCII only covers 128 characters &mdash; enough for English, but not for accented characters, Chinese, emoji, etc. UTF-8 is a <strong>variable-length encoding</strong> that is backward-compatible with ASCII (the first 128 code points are identical) and can represent over a million Unicode characters using 1&ndash;4 bytes per character.</p>
+
+        <p><strong>Key idea:</strong> In UTF-8, a single "character" (code point) may occupy multiple bytes in memory. The byte <code>0x41</code> is always 'A' &mdash; whether the file is ASCII or UTF-8. Non-ASCII characters use multi-byte sequences where the leading bits of each byte signal how many bytes are in the sequence.</p>
+
+        <div class="callout callout--forward">
+          <div class="callout__title">Forward Reference</div>
+          <p>In Week 8, when you write MIPS programs that manipulate strings, you will load individual bytes from memory using <code>lb</code> (load byte) and interpret them as ASCII character codes. The CPU doesn't know the difference between loading the byte <code>0x41</code> as the number 65 or as the character 'A' &mdash; the instruction you choose determines the interpretation.</p>
+        </div>
+
+        <div class="callout callout--forward">
+          <div class="callout__title">CS301 Reference</div>
+          <p>ASCII is briefly mentioned in Saylor CS301 <strong>Unit 2</strong> (log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> and navigate to Unit 2) but not explored in depth. UTF-8 is not covered in CS301. This SPA is the primary source for character encoding in this course.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Section 1.10 — Memory Layout: Arrays and Simple Records
+           ============================================================ -->
+      <section id="sec-1-10">
+        <h2>1.10 &mdash; Memory Layout: Arrays and Simple Records</h2>
+
+        <p>Memory is a long, flat array of bytes. Each byte has a unique address, starting from 0. When you store a multi-byte value (like a 32-bit integer or a string), it occupies <strong>consecutive bytes</strong>.</p>
+
+        <h3>Contiguous Layout</h3>
+        <p>An array of four 32-bit integers starting at address 1000:</p>
+
+        <table>
+          <thead>
+            <tr><th>Address</th><th>Content (hex)</th><th>Value (decimal, unsigned)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1000</td><td>00 00 00 05</td><td>5 (array[0])</td></tr>
+            <tr><td>1004</td><td>00 00 00 0A</td><td>10 (array[1])</td></tr>
+            <tr><td>1008</td><td>00 00 00 0F</td><td>15 (array[2])</td></tr>
+            <tr><td>1012</td><td>00 00 00 14</td><td>20 (array[3])</td></tr>
+          </tbody>
+        </table>
+
+        <p>Each integer is 4 bytes (32 bits = 1 word). The array elements are stored back-to-back with no gaps. To access <code>array[i]</code>, the CPU computes the address as <code>base_address + i &times; element_size</code>.</p>
+
+        <h3>Strings in Memory</h3>
+        <p>The C string "Hi" stored starting at address 2000:</p>
+
+        <table>
+          <thead>
+            <tr><th>Address</th><th>Content (hex)</th><th>ASCII Character</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>2000</td><td>48</td><td>'H'</td></tr>
+            <tr><td>2001</td><td>69</td><td>'i'</td></tr>
+            <tr><td>2002</td><td>00</td><td>'\0' (null terminator)</td></tr>
+          </tbody>
+        </table>
+
+        <p>Strings are arrays of bytes (characters), terminated by a null byte (<code>0x00</code>). This is how C and MIPS handle strings &mdash; there is no separate "string type" in memory. A string is just a sequence of bytes that happens to end with zero.</p>
+
+        <h3>Simple Records (Structs)</h3>
+        <p>A record with a character and an integer:</p>
+        <pre><code>struct { char c; int x; }</code></pre>
+        <p>Stored contiguously, starting at address 3000:</p>
+
+        <table>
+          <thead>
+            <tr><th>Address</th><th>Content (hex)</th><th>Field</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>3000</td><td>41</td><td>c = 'A' (1 byte)</td></tr>
+            <tr><td>3001</td><td>00</td><td>padding (alignment)</td></tr>
+            <tr><td>3002</td><td>00</td><td>padding (alignment)</td></tr>
+            <tr><td>3003</td><td>00</td><td>padding (alignment)</td></tr>
+            <tr><td>3004</td><td>00 00 00 1E</td><td>x = 30 (4 bytes)</td></tr>
+          </tbody>
+        </table>
+
+        <p>Note the <strong>padding bytes</strong> between <code>c</code> and <code>x</code>. MIPS requires word-aligned access for 32-bit integers (addresses must be multiples of 4). The compiler inserts padding to satisfy this alignment requirement.</p>
+
+        <div class="callout callout--aha">
+          <div class="callout__title">Decoder Preview</div>
+          <p>In later weeks, you will build the hardware that uses memory addresses to select specific bytes. We will use <strong>decoder circuits</strong> for this selection &mdash; not multiplexers. You will learn why in Week 3.</p>
+        </div>
+
+        <div class="callout callout--forward">
+          <div class="callout__title">Forward Reference</div>
+          <p>In Week 8, you will write MIPS <code>lw</code> and <code>sw</code> instructions that load and store values at computed memory addresses &mdash; exactly the <code>base + offset &times; size</code> arithmetic shown above. You will also use <code>lb</code> and <code>sb</code> for byte-level access (strings).</p>
+        </div>
+
+        <div class="callout callout--forward">
+          <div class="callout__title">CS301 Reference</div>
+          <p>Memory layout of arrays and records is not a dedicated topic in CS301 Unit 2. This SPA is the primary source for this concept. The concept reappears in CS301 Unit 5 (processor design) in the context of instruction formatting, but the data-layout perspective is unique to this SPA.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Widget 4 — Memory Layout Visualizer
+           ============================================================ -->
+      <section id="sec-widget-4">
+        <h2>Interactive: Memory Layout Visualizer</h2>
+
+        <div class="widget-card" id="widget-memory-layout">
+          <div class="widget-card__title">Widget 4: Memory Layout Visualizer</div>
+          <div class="widget-card__subtitle">Explore how data is laid out in memory. Store values and see how multi-byte values occupy consecutive addresses.</div>
+
+          <!-- View Toggle -->
+          <div class="mem-view-toggle">
+            <button class="mem-view-btn active" onclick="MemLayout.setView('bytes')">Bytes</button>
+            <button class="mem-view-btn" onclick="MemLayout.setView('halfwords')">Half-Words</button>
+            <button class="mem-view-btn" onclick="MemLayout.setView('words')">Words</button>
+          </div>
+
+          <!-- Memory Grid -->
+          <div class="mem-grid mem-grid--bytes" id="mem-grid"></div>
+
+          <!-- Store Controls -->
+          <div class="widget-input-row">
+            <div class="widget-input-group">
+              <label for="mem-type">Data Type</label>
+              <select id="mem-type" onchange="MemLayout.updateStoreHint()" style="font-family:var(--font-mono);font-size:var(--fs-base);padding:var(--space-sm) var(--space-md);border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-bg);color:var(--color-text);">
+                <option value="string">String</option>
+                <option value="int32">32-bit Integer</option>
+                <option value="byte">Single Byte</option>
+              </select>
+            </div>
+            <div class="widget-input-group">
+              <label for="mem-value">Value</label>
+              <input type="text" id="mem-value" placeholder="e.g. Hi or 42" oninput="MemLayout.updateStoreHint()">
+            </div>
+            <div class="widget-input-group">
+              <label for="mem-addr">Start Address</label>
+              <input type="number" id="mem-addr" min="0" max="15" value="0" style="width:80px;">
+            </div>
+            <button class="widget-btn widget-btn--primary" onclick="MemLayout.storeValue()">Store</button>
+            <button class="widget-btn widget-btn--outline" onclick="MemLayout.loadExample()">Load Example</button>
+            <button class="widget-btn widget-btn--outline" onclick="MemLayout.clear()">Clear</button>
+          </div>
+
+          <!-- Legend -->
+          <div class="mem-legend">
+            <div class="mem-legend__item"><span class="mem-legend__swatch" style="background:var(--color-success);"></span> String bytes</div>
+            <div class="mem-legend__item"><span class="mem-legend__swatch" style="background:var(--color-primary);"></span> Integer bytes</div>
+            <div class="mem-legend__item"><span class="mem-legend__swatch" style="background:var(--color-danger);"></span> Null terminator</div>
+            <div class="mem-legend__item"><span class="mem-legend__swatch" style="background:var(--color-text-muted);"></span> Padding</div>
+          </div>
+
+          <!-- Store Hint -->
+          <div id="mem-store-hint" style="margin-top:var(--space-md);font-size:var(--fs-sm);color:var(--color-text-muted);font-family:var(--font-mono);"></div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Section 1.11 — Synthesis: The Same Byte, Four Meanings
+           ============================================================ -->
+      <section id="sec-1-11">
+        <h2>1.11 &mdash; Synthesis: The Same Byte, Four Meanings</h2>
+
+        <h3>Video: Connecting the Concepts</h3>
+        <p>This synthesis video ties together everything from this week&mdash;number systems, two's complement, and how they enable computation&mdash;before the written synthesis below.</p>
+
+                <div class="video-breakout">
+        <div class="video-transcript-row">
+          <div class="video-col">
+            <div class="video-frame" id="video-container">
+              <iframe id="youtube-player"
+                      src="https://www.youtube.com/embed/pYDKIK6zGdA?enablejsapi=1&cc_load_policy=1&iv_load_policy=3&modestbranding=1&rel=0"
+                      title="CSC210 Week 1 Synthesis: From Bits to Programs"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allowfullscreen
+                      loading="lazy">
+              </iframe>
+            </div>
+            <div class="video-caption">Closed captions available. Use the transcript panel to jump to any point in the video.</div>
+          </div>
+          <div class="transcript-col">
+            <div class="transcript-panel" id="transcript-container">
+              <p class="transcript-loading">Loading transcript...</p>
+            </div>
+          </div>
+        </div>
+        </div>
+
+        <p>Here is the idea that holds the entire course together:</p>
+
+        <div class="callout callout--aha">
+          <div class="callout__title">The Core Principle</div>
+          <p><strong>The byte <code>01000010</code> can be:</strong></p>
+          <ul>
+            <li>The <strong>unsigned integer</strong> 66</li>
+            <li>The <strong>signed integer</strong> 66 (positive, since MSB is 0)</li>
+            <li>The <strong>ASCII character</strong> 'B'</li>
+            <li>The <strong>hex value</strong> 0x42</li>
+            <li>A <strong>color channel</strong> value (66 out of 255, a dim green in RGB)</li>
+            <li>Part of a <strong>MIPS instruction</strong> (the opcode or register field, depending on position)</li>
+          </ul>
+          <p>The bits are identical. The meaning changes based on <em>context</em> &mdash; specifically, on what the CPU is told to do with them.</p>
+        </div>
+
+        <p>When a MIPS instruction says <code>add $t0, $t1, $t2</code>, the CPU treats the 32-bit contents of registers $t1 and $t2 as signed integers. When the instruction says <code>lb $t0, 0($s0)</code>, it loads one byte from memory and sign-extends it &mdash; treating that byte as a signed 8-bit value. When the instruction says <code>lw $t0, 0($s0)</code>, it loads four bytes and treats them as a 32-bit word.</p>
+
+        <p><strong>The hardware doesn't know what your data is.</strong> It only follows the instructions you give it. This is why understanding data representation is not just a "first week topic" &mdash; it is the lens through which every subsequent topic in this course makes sense.</p>
+
+        <div class="callout callout--forward">
+          <div class="callout__title">Forward Reference: Von Neumann Architecture</div>
+          <p>In Week 9, you will learn about the fetch-decode-execute cycle. During the "fetch" phase, the CPU reads bytes from memory and interprets them as <em>instructions</em> &mdash; not data. The exact same byte pattern that means "66" as data means "execute this operation" as an instruction. This is the Von Neumann architecture: program and data share the same memory.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Real-World Applications
+           ============================================================ -->
+      <section id="sec-real-world">
+        <h2>Real-World Applications</h2>
+        <p>The "same bits, different meanings" idea isn't abstract&mdash;it shows up constantly in real systems, including in the topics covered earlier in this SPA.</p>
+
+        <div class="application-grid">
+          <div class="application-card">
+            <div class="application-card__title">💰 Financial Software &amp; Floating-Point</div>
+            <div class="application-card__body">IEEE 754 floating-point can't represent most decimal fractions exactly (0.1 in binary is a repeating fraction). This is why financial software typically stores money as integer cents rather than floating-point dollars&mdash;directly connects to Section 1.8's "precision is limited" key insight.</div>
+          </div>
+          <div class="application-card">
+            <div class="application-card__title">🌐 Emoji &amp; Multilingual Text</div>
+            <div class="application-card__body">Every emoji, accented character, and non-Latin script you see online is a UTF-8 multi-byte sequence (Section 1.9). The same byte <code>0x41</code> is always 'A'&mdash;but a 4-byte UTF-8 sequence can represent a single emoji character.</div>
+          </div>
+          <div class="application-card">
+            <div class="application-card__title">🖼️ Image Files &amp; Color Channels</div>
+            <div class="application-card__body">A pixel's color is often stored as three bytes (R, G, B). The byte <code>01000010</code> from this SPA's core example is also a plausible green-channel value (66 out of 255)&mdash;the same bits, read as color instead of character or integer.</div>
+          </div>
+          <div class="application-card">
+            <div class="application-card__title">📊 Arrays, Structs, and Memory Bugs</div>
+            <div class="application-card__body">Section 1.10's contiguous memory layout is exactly what makes buffer overflows possible&mdash;writing past the end of an array overwrites whatever bytes come next in memory, which might be another variable entirely. Understanding layout is understanding a whole class of real security vulnerabilities.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Widget 1 — Byte Explorer (Core "Aha" Widget)
+           ============================================================ -->
+      <section id="sec-widget-1">
+        <h2>Interactive: Byte Explorer</h2>
+
+        <div class="widget-card" id="widget-byte-explorer">
+          <div class="widget-card__title">Widget 1: Byte Explorer &mdash; The "Aha" Moment</div>
+          <div class="widget-card__subtitle">Toggle individual bits and watch how the same 8-bit pattern means different things in different contexts.</div>
+
+          <!-- Preset Demonstrations -->
+          <div style="margin-bottom:var(--space-sm);">
+            <span style="font-size:var(--fs-sm);font-weight:600;color:var(--color-text-muted);">Quick Demos:</span>
+            <div class="preset-row">
+              <button class="preset-btn" onclick="ByteExplorer.setPreset(0)">00000000</button>
+              <button class="preset-btn" onclick="ByteExplorer.setPreset(65)">01000001 ('A')</button>
+              <button class="preset-btn" onclick="ByteExplorer.setPreset(66)">01000010 ('B')</button>
+              <button class="preset-btn" onclick="ByteExplorer.setPreset(48)">00110000 ('0')</button>
+              <button class="preset-btn" onclick="ByteExplorer.setPreset(128)">10000000</button>
+              <button class="preset-btn" onclick="ByteExplorer.setPreset(255)">11111111</button>
+            </div>
+          </div>
+
+          <!-- Bit Labels -->
+          <div class="bit-labels" id="be-bit-labels"></div>
+
+          <!-- Bit Row -->
+          <div class="bit-row" id="be-bit-row"></div>
+
+          <!-- Display Grid -->
+          <div class="byte-display-grid" id="be-display-grid">
+            <div class="display-box">
+              <div class="display-box__label">Binary</div>
+              <div class="display-box__value" id="be-binary">01000010</div>
+            </div>
+            <div class="display-box">
+              <div class="display-box__label">Hexadecimal</div>
+              <div class="display-box__value" id="be-hex">0x42</div>
+            </div>
+            <div class="display-box">
+              <div class="display-box__label">Unsigned Decimal</div>
+              <div class="display-box__value" id="be-unsigned">66</div>
+            </div>
+            <div class="display-box">
+              <div class="display-box__label">Signed Decimal (Two's Complement)</div>
+              <div class="display-box__value" id="be-signed">66</div>
+            </div>
+            <div class="display-box">
+              <div class="display-box__label">ASCII Character</div>
+              <div class="ascii-display" id="be-ascii">'B'</div>
+            </div>
+            <div class="display-box">
+              <div class="display-box__label">RGB Color Channel (Green)</div>
+              <div class="color-swatch" id="be-color" style="background:rgb(0,66,0);"></div>
+              <div style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-top:var(--space-xs);font-family:var(--font-mono);" id="be-color-label">R=0, G=66, B=0</div>
+            </div>
+          </div>
+
+          <div style="margin-top:var(--space-md);text-align:center;">
+            <button class="widget-btn widget-btn--outline" onclick="ByteExplorer.clear()">Clear All Bits</button>
+            <button class="widget-btn widget-btn--outline" onclick="ByteExplorer.setAll()">Set All Bits</button>
+            <button class="widget-btn widget-btn--outline" onclick="ByteExplorer.flipMSB()">Flip MSB (Sign Bit)</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Forward Reference / Closing
+           ============================================================ -->
+      <section id="sec-forward">
+        <h2>Looking Ahead</h2>
+
+        <div class="callout callout--forward">
+          <div class="callout__title">End of Week 1</div>
+          <p>The byte <code>01000010</code> can be the number 66, the letter 'B', a color channel, or part of a MIPS instruction. The hardware doesn't know what your data <em>is</em>. It only follows the instructions you give it. This idea &mdash; that <strong>context determines meaning</strong> &mdash; is the foundation of everything that follows in this course.</p>
+        </div>
+
+        <div class="callout callout--forward">
+          <div class="callout__title">What Comes Next</div>
+          <p><strong>Week 2:</strong> You will start building digital circuits from primitive logic gates in Logisim. The binary concepts you learned this week become physical wires and switches.</p>
+          <p><strong>Week 6:</strong> You will build the ALU that adds two's complement values &mdash; and you will see why two's complement makes the hardware dramatically simpler.</p>
+          <p><strong>Week 8:</strong> You will write MIPS assembly programs in MARS that load and store the exact data formats you explored in this SPA.</p>
+        </div>
+
+        <div class="callout callout--forward">
+          <div class="callout__title">Before Week 2</div>
+          <p>Get set up for the rest of the course: <strong>enroll in Saylor CS301</strong> (your reference textbook), <strong>install MARS</strong> (the MIPS simulator you'll use starting Week 5), and <strong>install Logisim Classic 2.7.1</strong> (not Logisim Evolution &mdash; you'll build your first circuits with it next week). No written assignment is due this week &mdash; just come to Week 2 ready to go.</p>
+        </div>
+      </section>
+
+  </main>
+
+  <!-- ==================== Footer ==================== -->
+  <footer class="sp-footer">
+    CSC210 &mdash; Computer Organization & Architecture &nbsp;|&nbsp; Week 1: Binary & Number Representation &nbsp;|&nbsp; SPA 4 of 5
+  </footer>
+
+  <!-- ==================== Scripts ==================== -->
+  <!-- Widget 4: Memory Layout Visualizer -->
+  <script>
+  (function () {
+    'use strict';
+
+    var MemLayout = {
+      bytes: new Array(16).fill(0),
+      labels: new Array(16).fill(null),
+      viewMode: 'bytes',
+      baseAddr: 0x100,
+
+      init: function () {
+        this.renderGrid();
+        this.loadExample();
+      },
+
+      setView: function (mode) {
+        this.viewMode = mode;
+        var btns = document.querySelectorAll('.mem-view-btn');
+        for (var i = 0; i < btns.length; i++) {
+          btns[i].classList.remove('active');
+        }
+        event.target.classList.add('active');
+        this.renderGrid();
+      },
+
+      renderGrid: function () {
+        var grid = document.getElementById('mem-grid');
+        grid.innerHTML = '';
+        grid.className = 'mem-grid';
+
+        if (this.viewMode === 'bytes') {
+          grid.classList.add('mem-grid--bytes');
+          // Header row
+          var corner = document.createElement('div');
+          corner.className = 'mem-cell mem-cell--header';
+          corner.textContent = 'Address';
+          grid.appendChild(corner);
+          for (var i = 0; i < 16; i++) {
+            var hdr = document.createElement('div');
+            hdr.className = 'mem-cell mem-cell--header';
+            hdr.textContent = '0x' + this.toHex(this.baseAddr + i);
+            grid.appendChild(hdr);
+          }
+          // Data row
+          var addrCell = document.createElement('div');
+          addrCell.className = 'mem-cell mem-cell--address';
+          addrCell.textContent = 'Data';
+          grid.appendChild(addrCell);
+          for (var j = 0; j < 16; j++) {
+            var cell = document.createElement('div');
+            cell.className = 'mem-cell';
+            if (this.labels[j]) cell.classList.add(this.labels[j]);
+            cell.textContent = '0x' + this.toHex(this.bytes[j]);
+            grid.appendChild(cell);
+          }
+        } else if (this.viewMode === 'halfwords') {
+          grid.classList.add('mem-grid--halfwords');
+          var corner2 = document.createElement('div');
+          corner2.className = 'mem-cell mem-cell--header';
+          corner2.textContent = 'Address';
+          grid.appendChild(corner2);
+          for (var k = 0; k < 8; k++) {
+            var hdr2 = document.createElement('div');
+            hdr2.className = 'mem-cell mem-cell--header';
+            hdr2.textContent = '0x' + this.toHex(this.baseAddr + k * 2);
+            grid.appendChild(hdr2);
+          }
+          var addrCell2 = document.createElement('div');
+          addrCell2.className = 'mem-cell mem-cell--address';
+          addrCell2.textContent = 'Data';
+          grid.appendChild(addrCell2);
+          for (var l = 0; l < 8; l++) {
+            var cell2 = document.createElement('div');
+            cell2.className = 'mem-cell';
+            var hwVal = (this.bytes[l * 2] << 8) | this.bytes[l * 2 + 1];
+            cell2.textContent = '0x' + this.toHex16(hwVal);
+            grid.appendChild(cell2);
+          }
+        } else {
+          grid.classList.add('mem-grid--words');
+          var corner3 = document.createElement('div');
+          corner3.className = 'mem-cell mem-cell--header';
+          corner3.textContent = 'Address';
+          grid.appendChild(corner3);
+          for (var m = 0; m < 4; m++) {
+            var hdr3 = document.createElement('div');
+            hdr3.className = 'mem-cell mem-cell--header';
+            hdr3.textContent = '0x' + this.toHex(this.baseAddr + m * 4);
+            grid.appendChild(hdr3);
+          }
+          var addrCell3 = document.createElement('div');
+          addrCell3.className = 'mem-cell mem-cell--address';
+          addrCell3.textContent = 'Data';
+          grid.appendChild(addrCell3);
+          for (var n = 0; n < 4; n++) {
+            var cell3 = document.createElement('div');
+            cell3.className = 'mem-cell';
+            var wVal = (this.bytes[n * 4] << 24) | (this.bytes[n * 4 + 1] << 16) | (this.bytes[n * 4 + 2] << 8) | this.bytes[n * 4 + 3];
+            cell3.textContent = '0x' + this.toHex32(wVal);
+            grid.appendChild(cell3);
+          }
+        }
+      },
+
+      toHex: function (val) {
+        return (val & 0xFF).toString(16).toUpperCase().padStart(2, '0');
+      },
+      toHex16: function (val) {
+        return (val & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+      },
+      toHex32: function (val) {
+        return (val >>> 0).toString(16).toUpperCase().padStart(8, '0');
+      },
+
+      loadExample: function () {
+        this.clear();
+        // Store "Hi\0" at address 0x100
+        this.bytes[0] = 0x48; this.labels[0] = 'mem-cell--string'; // 'H'
+        this.bytes[1] = 0x69; this.labels[1] = 'mem-cell--string'; // 'i'
+        this.bytes[2] = 0x00; this.labels[2] = 'mem-cell--null';   // '\0'
+        // Padding for alignment
+        this.bytes[3] = 0x00; this.labels[3] = 'mem-cell--padding';
+        // Store integer 42 at address 0x104 (big-endian)
+        this.bytes[4] = 0x00; this.labels[4] = 'mem-cell--integer';
+        this.bytes[5] = 0x00; this.labels[5] = 'mem-cell--integer';
+        this.bytes[6] = 0x00; this.labels[6] = 'mem-cell--integer';
+        this.bytes[7] = 0x2A; this.labels[7] = 'mem-cell--integer';
+        this.renderGrid();
+      },
+
+      clear: function () {
+        this.bytes = new Array(16).fill(0);
+        this.labels = new Array(16).fill(null);
+        this.renderGrid();
+      },
+
+      storeValue: function () {
+        var type = document.getElementById('mem-type').value;
+        var value = document.getElementById('mem-value').value;
+        var addr = parseInt(document.getElementById('mem-addr').value) || 0;
+
+        if (type === 'string') {
+          for (var i = 0; i < value.length && (addr + i) < 16; i++) {
+            this.bytes[addr + i] = value.charCodeAt(i);
+            this.labels[addr + i] = 'mem-cell--string';
+          }
+          if ((addr + value.length) < 16) {
+            this.bytes[addr + value.length] = 0x00;
+            this.labels[addr + value.length] = 'mem-cell--null';
+          }
+        } else if (type === 'int32') {
+          var num = parseInt(value) || 0;
+          num = num & 0xFFFFFFFF;
+          if (addr + 3 < 16) {
+            this.bytes[addr] = (num >> 24) & 0xFF;
+            this.bytes[addr + 1] = (num >> 16) & 0xFF;
+            this.bytes[addr + 2] = (num >> 8) & 0xFF;
+            this.bytes[addr + 3] = num & 0xFF;
+            for (var j = 0; j < 4; j++) this.labels[addr + j] = 'mem-cell--integer';
+          }
+        } else if (type === 'byte') {
+          var b = parseInt(value) || 0;
+          this.bytes[addr] = b & 0xFF;
+          this.labels[addr] = 'mem-cell--integer';
+        }
+        this.renderGrid();
+      },
+
+      updateStoreHint: function () {
+        var type = document.getElementById('mem-type').value;
+        var value = document.getElementById('mem-value').value;
+        var hint = document.getElementById('mem-store-hint');
+        if (!value) { hint.textContent = ''; return; }
+
+        if (type === 'string') {
+          var bytes = [];
+          for (var i = 0; i < value.length; i++) {
+            bytes.push('0x' + this.toHex(value.charCodeAt(i)));
+          }
+          bytes.push('0x00 (null terminator)');
+          hint.textContent = 'Will store ' + (value.length + 1) + ' bytes: ' + bytes.join(', ');
+        } else if (type === 'int32') {
+          var num = parseInt(value) || 0;
+          hint.textContent = 'Will store 4 bytes: 0x' + this.toHex32(num >>> 0) + ' (big-endian)';
+        } else {
+          hint.textContent = 'Will store 1 byte: 0x' + this.toHex(parseInt(value) || 0);
+        }
+      }
+    };
+
+    window.MemLayout = MemLayout;
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function () { MemLayout.init(); });
+    } else {
+      MemLayout.init();
+    }
+
+  })();
+  </script>
+
+  <!-- Widget 1: Byte Explorer (Core "Aha" Widget) -->
+  <script>
+  (function () {
+    'use strict';
+
+    var ByteExplorer = {
+      bits: [0, 1, 0, 0, 0, 0, 1, 0], // Start with 01000010 = 66 = 'B'
+
+      init: function () {
+        this.renderBits();
+        this.updateDisplay();
+      },
+
+      renderBits: function () {
+        var row = document.getElementById('be-bit-row');
+        var labels = document.getElementById('be-bit-labels');
+        row.innerHTML = '';
+        labels.innerHTML = '';
+
+        var powers = [128, 64, 32, 16, 8, 4, 2, 1];
+        for (var i = 0; i < 8; i++) {
+          // Label
+          var lbl = document.createElement('span');
+          lbl.textContent = powers[i];
+          labels.appendChild(lbl);
+
+          // Bit cell
+          var cell = document.createElement('div');
+          cell.className = 'bit-cell';
+          if (i === 0) cell.classList.add('sign-bit');
+          if (this.bits[i]) cell.classList.add('one');
+          cell.textContent = this.bits[i];
+          cell.setAttribute('data-index', i);
+          cell.addEventListener('click', (function (idx) {
+            return function () { ByteExplorer.toggle(idx); };
+          })(i));
+          row.appendChild(cell);
+        }
+      },
+
+      toggle: function (index) {
+        this.bits[index] = this.bits[index] ? 0 : 1;
+        this.renderBits();
+        this.updateDisplay();
+      },
+
+      setPreset: function (value) {
+        for (var i = 0; i < 8; i++) {
+          this.bits[i] = ((value >> (7 - i)) & 1) ? 1 : 0;
+        }
+        this.renderBits();
+        this.updateDisplay();
+      },
+
+      clear: function () {
+        this.bits = [0, 0, 0, 0, 0, 0, 0, 0];
+        this.renderBits();
+        this.updateDisplay();
+      },
+
+      setAll: function () {
+        this.bits = [1, 1, 1, 1, 1, 1, 1, 1];
+        this.renderBits();
+        this.updateDisplay();
+      },
+
+      flipMSB: function () {
+        this.bits[0] = this.bits[0] ? 0 : 1;
+        this.renderBits();
+        this.updateDisplay();
+      },
+
+      getDecimal: function () {
+        var val = 0;
+        for (var i = 0; i < 8; i++) {
+          val = (val << 1) | this.bits[i];
+        }
+        return val;
+      },
+
+      updateDisplay: function () {
+        var unsignedVal = this.getDecimal();
+        var signedVal = unsignedVal >= 128 ? unsignedVal - 256 : unsignedVal;
+        var hexStr = '0x' + unsignedVal.toString(16).toUpperCase().padStart(2, '0');
+        var binStr = '';
+        for (var i = 0; i < 8; i++) binStr += this.bits[i];
+
+        // Binary
+        document.getElementById('be-binary').textContent = binStr;
+
+        // Hex
+        document.getElementById('be-hex').textContent = hexStr;
+
+        // Unsigned
+        document.getElementById('be-unsigned').textContent = unsignedVal;
+
+        // Signed
+        var signedEl = document.getElementById('be-signed');
+        signedEl.textContent = signedVal;
+        if (signedVal < 0) {
+          signedEl.style.color = 'var(--color-danger)';
+        } else {
+          signedEl.style.color = 'var(--color-primary)';
+        }
+
+        // ASCII
+        var asciiEl = document.getElementById('be-ascii');
+        if (unsignedVal >= 32 && unsignedVal <= 126) {
+          asciiEl.textContent = "'" + String.fromCharCode(unsignedVal) + "'";
+          asciiEl.style.color = 'var(--color-success)';
+        } else if (unsignedVal === 0) {
+          asciiEl.textContent = '\\0 (null)';
+          asciiEl.style.color = 'var(--color-danger)';
+        } else {
+          asciiEl.textContent = '.';
+          asciiEl.style.color = 'var(--color-text-muted)';
+        }
+
+        // Color
+        var colorEl = document.getElementById('be-color');
+        colorEl.style.background = 'rgb(0,' + unsignedVal + ',0)';
+        document.getElementById('be-color-label').textContent = 'R=0, G=' + unsignedVal + ', B=0';
+      }
+    };
+
+    window.ByteExplorer = ByteExplorer;
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function () { ByteExplorer.init(); });
+    } else {
+      ByteExplorer.init();
+    }
+
+  })();
+  </script>
+
+  <!-- ==================== Video + Transcript Sync (CSC210 Video Embed Standard) ==================== -->
+  <script>
+  (function () {
+    'use strict';
+
+    var VIDEO_ID = 'pYDKIK6zGdA';
+    var player, timeUpdater, parsedTranscript = [];
+
+    var vttContent = `WEBVTT
+Kind: captions
+Language: en-US
+
+00:00:00.000 --> 00:00:05.760
+Aloha, so I'm here just to wrap this up for this week one learning module
+
+00:00:05.760 --> 00:00:10.960
+to talk a little bit more about synthesis and real-world applications.
+
+00:00:16.240 --> 00:00:23.180
+Okay, so how number systems enable computation. So first we've talked about data representation
+
+00:00:23.180 --> 00:00:28.340
+so far. We've only really talked about binary, hexadecimal, and two's complement. So really
+
+00:00:28.340 --> 00:00:36.240
+only talking about integers at this point. So coming next will be processing, how we
+
+00:00:36.240 --> 00:00:40.300
+manipulate binary data, and then storage and retrieval will come later.
+
+00:00:41.080 --> 00:00:45.960
+That's kind of the cycle for data, if you will, or for ones and zeros.
+
+00:00:48.860 --> 00:00:55.960
+And then the first Telia bit, I haven't really discussed it, but the same pattern of bits can
+
+00:00:55.960 --> 00:00:57.980
+represent more than one thing in a computer.
+
+00:00:58.340 --> 00:01:05.720
+Okay, for instance, it could be a signed number or an unsigned number. Signed meanings
+
+00:01:05.720 --> 00:01:13.000
+two's complement, unsigned meaning everything's a positive integer. Okay, and the same bit
+
+00:01:13.000 --> 00:01:20.860
+pattern represents two different things in those two number systems, if you will. Characters,
+
+00:01:20.860 --> 00:01:25.620
+it can represent ASCII characters, Unicode characters.
+
+00:01:25.620 --> 00:01:27.940
+Okay, colors.
+
+00:01:28.340 --> 00:01:36.700
+We'll be talking about colors. It can represent part of a network address. It can be a machine
+
+00:01:36.700 --> 00:01:43.980
+code instruction, like do this. Okay, so it can be a lot of things. And for example, decimal,
+
+00:01:44.220 --> 00:01:53.120
+the 65, decimal 65 is this bit pattern 011000011. Okay, that is decimal 65. It's also
+
+00:01:53.120 --> 00:01:57.340
+the capital, the letter A, the capital letter A.
+
+00:01:58.340 --> 00:02:05.460
+And you're dealing with characters. Okay, so your computer, your CPU needs to know, am I dealing with
+
+00:02:05.460 --> 00:02:10.340
+characters? Is this a character or is it a number? If it's a number, is it a signed number or an
+
+00:02:10.340 --> 00:02:16.540
+unsigned number? Okay, or is this a machine instruction? So all those things have to go into
+
+00:02:16.540 --> 00:02:25.740
+deciphering our bit patterns. But a single bit pattern can by itself, you don't know what it
+
+00:02:25.740 --> 00:02:28.300
+means because you need the context of what it is.
+
+00:02:28.340 --> 00:02:43.720
+Okay, so one application is colors. So we represent colors using the RGB model, which is not
+
+00:02:43.720 --> 00:02:54.420
+the same as art. Art has different model. We represent red, green, blue. That's what RGB stands
+
+00:02:54.420 --> 00:02:58.320
+for. And what we do is we have eight bits of color. And we have eight bits of color. And we have
+
+00:02:58.340 --> 00:03:04.280
+eight bits of each channel. So we have eight bits to represent how much red we have in the color of
+
+00:03:04.280 --> 00:03:10.280
+eight bits to represent how much green we have in the color and eight bits to represent how much blue
+
+00:03:10.280 --> 00:03:19.220
+we have in the color. Okay, so that's a total of 24 bits per pixel. Okay, think about your monitor,
+
+00:03:19.220 --> 00:03:26.060
+how many pixels your monitor? Well, we have 24 bits per pixel to represent every single color, or
+
+00:03:26.060 --> 00:03:28.280
+the colors that are represented by your monitor.
+
+00:03:28.340 --> 00:03:38.180
+Okay. And there's 16 points. So 24 bits means there are 16.7 million different combinations of 24 bits.
+
+00:03:38.180 --> 00:03:46.400
+So that's how many different colors we can represent. Typically, we use as a web in web, especially but a lot of
+
+00:03:46.400 --> 00:03:56.280
+other places we use hexadecimal notation to represent our colors, not numerical. Because the hexadecimal
+
+00:03:56.280 --> 00:03:58.280
+is closer to the binary.
+
+00:03:58.340 --> 00:04:01.540
+But it's not exactly the binary. Okay.
+
+00:04:01.540 --> 00:04:14.100
+So, if we look at the little graphic on the right here, we have a color BB22FF, we have a cube here that's supposed to represent
+
+00:04:14.100 --> 00:04:19.920
+how red green and blue are the three sides and how much of each gives you a different color.
+
+00:04:19.920 --> 00:04:28.180
+So BB22FF in hex would be 187 red.
+
+00:04:28.340 --> 00:04:38.860
+with a max it goes from 0 to 255 so max of CD 534 green and 255 blue so it's
+
+00:04:38.860 --> 00:04:42.500
+gonna be on the blue side because there's more blue than anything else so
+
+00:04:42.500 --> 00:04:51.780
+blue then red and a little green right and hex that's a BB 2 2 FF and in binary
+
+00:04:51.780 --> 00:04:57.300
+that's this number here I'm not gonna read it out loud but you have 24 ones
+
+00:04:57.300 --> 00:05:02.540
+and zeros or represent the same number obviously we don't want to always try to
+
+00:05:02.540 --> 00:05:08.520
+write out 24 ones and zeros so using hacks is a shortcut to writing those 24
+
+00:05:08.520 --> 00:05:16.400
+bits and that's why we use hex so much
+
+00:05:19.060 --> 00:05:24.480
+okay another application is network addressing no I should increase the
+
+00:05:24.480 --> 00:05:27.200
+size of these but
+
+00:05:27.300 --> 00:05:34.580
+so network IPV4 networks we use for oct heads or four bytes where each bite is
+
+00:05:34.580 --> 00:05:40.920
+eight bits to represent our network address on the internet okay
+
+00:05:40.920 --> 00:05:46.800
+so each section is eight bits which means eight section can represent 256
+
+00:05:46.800 --> 00:05:52.920
+different values which is two to the eighth okay give it come eight
+
+00:05:52.920 --> 00:05:57.100
+combinations of one or zero there's 256 combinations
+
+00:05:57.300 --> 00:06:04.220
+So our maximum value is 2 to the 8th minus 1, or 255, because we started 0, not 1.
+
+00:06:05.120 --> 00:06:11.860
+Okay, so 0 to 255 is our range of address for each octave.
+
+00:06:12.500 --> 00:06:19.420
+Typically, we use decimal IP addresses, like 192.168.1.254.
+
+00:06:20.580 --> 00:06:21.800
+Okay, we usually don't use hex.
+
+00:06:21.800 --> 00:06:27.380
+We could use hex, but normally we use what's called dotted decimal notation.
+
+00:06:29.280 --> 00:06:37.740
+Okay, that same address here in item 2 is how you would display that same address in binary.
+
+00:06:38.100 --> 00:06:42.160
+Now, the computer displays it in binary to itself, okay?
+
+00:06:43.640 --> 00:06:47.700
+But we don't want to try to remember all the 1s and 0s and do some kind of conversion,
+
+00:06:47.700 --> 00:06:50.800
+so we typically use dotted decimal notation.
+
+00:06:51.800 --> 00:06:58.420
+Now, the practical impact of using binary for network addressing is every network address,
+
+00:06:58.740 --> 00:07:01.960
+every internet network address, is broken into two parts.
+
+00:07:02.560 --> 00:07:11.180
+There's a network part and a host part, meaning how much of these 32-bits represent the network.
+
+00:07:11.780 --> 00:07:17.860
+Every computer on that same network will have identical first sets of bits, okay?
+
+00:07:18.700 --> 00:07:21.700
+So the network, for every, the network part of every computer,
+
+00:07:21.800 --> 00:07:23.320
+on that network, is identical.
+
+00:07:24.440 --> 00:07:26.740
+And the host part is a little different, and that's how you find it.
+
+00:07:26.980 --> 00:07:31.740
+So to route, you really, from one location to another, you really only want the network part.
+
+00:07:33.740 --> 00:07:38.160
+Okay, and you only need the host part at the end point where it's on the network,
+
+00:07:38.280 --> 00:07:45.080
+so it knows which host to, that you want to talk to, okay?
+
+00:07:45.080 --> 00:07:48.260
+So that's, when you do networking and network addressing,
+
+00:07:48.920 --> 00:07:51.060
+there's a network and a host and a network part.
+
+00:07:51.800 --> 00:07:57.140
+It just simplifies finding the right network to find the device you're trying to reach.
+
+00:07:58.440 --> 00:08:03.120
+Okay, and subnetting relies on this same bit manipulation kind of process.
+
+00:08:04.320 --> 00:08:07.720
+Security protocols depend on the binary operations as well.
+
+00:08:08.740 --> 00:08:12.800
+When I'm trying to restrict usage and stuff like that,
+
+00:08:12.920 --> 00:08:16.920
+it all goes through these IP addresses or MAC addresses if we're using those.
+
+00:08:17.240 --> 00:08:20.440
+And a MAC address is just a physical address on a wire.
+
+00:08:20.440 --> 00:08:26.400
+They're much like an IP, but it's, what is it?
+
+00:08:26.480 --> 00:08:30.620
+It's instead of four octets, it's six octets or something like that.
+
+00:08:30.960 --> 00:08:32.240
+Anyway, six or eight.
+
+00:08:34.480 --> 00:08:37.480
+Okay, but entire internet addressing system is based on this.
+
+00:08:38.580 --> 00:08:41.520
+Okay, so network addressing is important.
+
+00:08:42.420 --> 00:08:44.160
+Use ones and zeros to represent those.
+
+00:08:47.080 --> 00:08:49.560
+All right, so where we're at is,
+
+00:08:50.440 --> 00:08:53.880
+for next week, now that we know what ones and zeros are,
+
+00:08:53.940 --> 00:08:54.780
+we can do the conversions.
+
+00:08:56.040 --> 00:08:59.020
+We are going to look at more logic gate fundamentals.
+
+00:08:59.320 --> 00:09:00.080
+What's an AND gate?
+
+00:09:00.260 --> 00:09:01.080
+What's an OR gate?
+
+00:09:03.700 --> 00:09:04.820
+What's a NOT gate?
+
+00:09:07.180 --> 00:09:11.620
+And, you know, how we put those together to process bits.
+
+00:09:12.580 --> 00:09:14.760
+And then in week three, we'll start looking at
+
+00:09:14.760 --> 00:09:17.860
+how to build useful components from those gates.
+
+00:09:20.200 --> 00:09:20.400
+Okay.
+
+00:09:20.520 --> 00:09:22.260
+And eventually we'll get to the CPU architecture.
+
+00:09:23.680 --> 00:09:32.580
+Okay, so we're going to take, build from these simple ones and zeros
+
+00:09:32.580 --> 00:09:36.020
+and adding ones and zeros and learn how to add them.
+
+00:09:36.020 --> 00:09:41.820
+And we're going to build a series of behaviors that your computer can do
+
+00:09:41.820 --> 00:09:43.680
+based on having all binary stuff.
+
+00:09:45.680 --> 00:09:47.220
+Okay, so that's where we're going.
+
+00:09:47.880 --> 00:09:49.160
+Hopefully you're ready to get there.
+
+00:09:50.440 --> 00:09:56.020
+And I'm not going to even talk about this,
+
+00:09:56.120 --> 00:09:57.140
+but maybe I will.
+
+00:09:59.160 --> 00:10:01.620
+So when we finish our CPU,
+
+00:10:01.760 --> 00:10:03.860
+we're going to store numbers and registers using binary.
+
+00:10:04.120 --> 00:10:05.380
+We're going to perform arithmetic.
+
+00:10:07.120 --> 00:10:09.500
+Okay, we'll do, if we do subtraction,
+
+00:10:09.560 --> 00:10:11.000
+we use two's complement to do that.
+
+00:10:11.500 --> 00:10:14.020
+We'll make decisions like what are we going to do?
+
+00:10:14.020 --> 00:10:15.020
+And we'll execute programs.
+
+00:10:18.520 --> 00:10:20.200
+Okay, and everything you do is really,
+
+00:10:20.200 --> 00:10:21.820
+you're going to be manipulating ones and zeros.
+
+00:10:31.360 --> 00:10:33.960
+Okay, and then lastly, mastering these fundamentals is important.
+
+00:10:34.220 --> 00:10:40.080
+Okay, you should be very conversant with understanding
+
+00:10:40.080 --> 00:10:42.580
+the different number systems and how they interact.
+
+00:10:43.840 --> 00:10:47.540
+You should also, at this point, have some insight into file sizes.
+
+00:10:47.540 --> 00:10:49.960
+So like when you say, hey, I have a,
+
+00:10:49.960 --> 00:10:55.240
+you know, 64 gigabyte thumb drive.
+
+00:10:55.740 --> 00:10:57.500
+Why is it not really 64 gigabytes?
+
+00:10:58.400 --> 00:11:05.740
+And the reason is because one kilobyte is actually 101024 bytes,
+
+00:11:05.880 --> 00:11:06.940
+not 1000 bytes.
+
+00:11:07.680 --> 00:11:11.420
+Because 1024 is essentially a multiple of two.
+
+00:11:11.560 --> 00:11:13.880
+And that's how, because everything's in eights, right?
+
+00:11:14.640 --> 00:11:16.520
+Gangs of eight, a byte is eight bits.
+
+00:11:17.140 --> 00:11:17.860
+They're gangs of eight.
+
+00:11:18.200 --> 00:11:19.880
+So it has to, it never,
+
+00:11:19.960 --> 00:11:23.140
+it can be exactly a thousand because that doesn't make sense.
+
+00:11:25.460 --> 00:11:27.700
+Okay, and so that's why when you plug it in,
+
+00:11:27.700 --> 00:11:29.400
+it'll say, oh, you have some other number.
+
+00:11:29.500 --> 00:11:30.500
+It won't say 64.
+
+00:11:30.500 --> 00:11:33.500
+It'll say 62 or 65 or whatever it'll say.
+
+00:11:34.900 --> 00:11:35.400
+Okay.
+
+00:11:35.940 --> 00:11:40.340
+Whenever you use color pickers, if you're doing web design,
+
+00:11:40.700 --> 00:11:42.720
+a lot of times you'll use color pictures,
+
+00:11:43.100 --> 00:11:44.940
+pickers, I mean, pick the color,
+
+00:11:44.940 --> 00:11:48.020
+or you want to change the font in Word or PowerPoint,
+
+00:11:48.020 --> 00:11:49.040
+you use a color picker.
+
+00:11:49.040 --> 00:11:50.120
+Okay.
+
+00:11:50.120 --> 00:11:56.800
+And they use text, usually notation for those colors.
+
+00:11:57.620 --> 00:12:02.180
+And now that you know, it's three sets of eight bits for every color,
+
+00:12:02.180 --> 00:12:04.820
+you, oh, a little more red, you can up the red number.
+
+00:12:05.900 --> 00:12:06.860
+You don't have to use the picker.
+
+00:12:06.860 --> 00:12:10.080
+You can up the red number manually if you want.
+
+00:12:10.080 --> 00:12:11.880
+Network configurations, like I already mentioned,
+
+00:12:12.780 --> 00:12:18.780
+and these things are going to help you understand basically
+
+00:12:18.780 --> 00:12:21.440
+every aspect of computing, how the hardware works,
+
+00:12:21.440 --> 00:12:24.120
+how it integrates with the programming languages,
+
+00:12:24.540 --> 00:12:29.340
+how they interact with a monitor to display what they're trying to display,
+
+00:12:30.340 --> 00:12:31.100
+and all that kind of stuff.
+
+00:12:31.100 --> 00:12:35.880
+So that's why we go for it first.
+
+00:12:35.880 --> 00:12:37.860
+It's foundational and we'll build from here.
+
+00:12:42.560 --> 00:12:42.880
+All right.
+
+00:12:42.880 --> 00:12:48.480
+So you should be able to explain why computers use binary and how negative numbers work.
+
+00:12:48.780 --> 00:12:53.620
+You should understand a little bit about colors, representation.
+
+00:12:53.620 --> 00:12:58.040
+At some point, we probably won't do it today or yet,
+
+00:12:58.040 --> 00:13:00.780
+but you'll understand when you hear the term buffer overflow,
+
+00:13:00.780 --> 00:13:04.500
+you know what that'll mean and what the implications of that are.
+
+00:13:06.780 --> 00:13:10.340
+So at this point, you need to complete your assignment one,
+
+00:13:10.340 --> 00:13:14.380
+which is really the quiz and your reflection questions.
+
+00:13:14.380 --> 00:13:17.780
+And then if you have other things, post them in the discussion forum.
+
+00:13:18.780 --> 00:13:21.080
+And then next week, we'll start working on logic gates.
+
+00:13:25.580 --> 00:13:28.400
+Hopefully you've had a good week and we'll talk to you next week.
+
+`;
+
+    function timeToSeconds(timeStr) {
+      if (!timeStr) return 0;
+      var parts = timeStr.trim().split(':');
+      if (parts.length === 2) {
+        return (parseInt(parts[0]) || 0) * 60 + (parseFloat(parts[1]) || 0);
+      } else if (parts.length === 3) {
+        return (parseInt(parts[0]) || 0) * 3600 + (parseInt(parts[1]) || 0) * 60 + (parseFloat(parts[2]) || 0);
+      }
+      return 0;
+    }
+
+    function parseVtt(vttText) {
+      var cues = vttText.trim().split(/\n\n+/);
+      var parsedCues = [];
+      cues.forEach(function (cueBlock) {
+        if (cueBlock.indexOf('WEBVTT') === 0 || cueBlock.trim() === '') return;
+        var lines = cueBlock.trim().split('\n');
+        var timeLine = lines.filter(function (l) { return l.indexOf('-->') !== -1; })[0];
+        if (!timeLine) return;
+        var parts = timeLine.split(' --> ');
+        var textLines = lines.slice(lines.indexOf(timeLine) + 1);
+        parsedCues.push({
+          start: timeToSeconds(parts[0]),
+          end: timeToSeconds(parts[1]),
+          text: textLines.join(' ').trim()
+        });
+      });
+      return parsedCues;
+    }
+
+    function populateTranscript() {
+      var container = document.getElementById('transcript-container');
+      container.innerHTML = '';
+      parsedTranscript.forEach(function (cue) {
+        var lineEl = document.createElement('div');
+        lineEl.className = 'transcript-line';
+        lineEl.dataset.start = cue.start;
+        lineEl.dataset.end = cue.end;
+        lineEl.textContent = cue.text;
+        lineEl.setAttribute('role', 'button');
+        lineEl.setAttribute('tabindex', '0');
+        var seekTo = function () {
+          if (player && player.seekTo) { player.seekTo(cue.start, true); player.playVideo(); }
+        };
+        lineEl.addEventListener('click', seekTo);
+        lineEl.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); seekTo(); }
+        });
+        container.appendChild(lineEl);
+      });
+    }
+
+    function highlightCurrentLine() {
+      if (!player || !player.getCurrentTime) return;
+      var currentTime = player.getCurrentTime();
+      var lines = document.querySelectorAll('#transcript-container .transcript-line');
+      lines.forEach(function (line) {
+        var start = parseFloat(line.dataset.start);
+        var end = parseFloat(line.dataset.end);
+        if (currentTime >= start && currentTime < end) {
+          if (!line.classList.contains('active-transcript-line')) {
+            var prev = document.querySelector('#transcript-container .active-transcript-line');
+            if (prev) prev.classList.remove('active-transcript-line');
+            line.classList.add('active-transcript-line');
+            line.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else {
+          line.classList.remove('active-transcript-line');
+        }
+      });
+    }
+
+    function syncTranscriptHeight() {
+      var videoContainer = document.getElementById('video-container');
+      var transcriptContainer = document.getElementById('transcript-container');
+      if (!videoContainer || !transcriptContainer) return;
+      if (window.matchMedia('(min-width: 1024px)').matches) {
+        transcriptContainer.style.maxHeight = videoContainer.offsetHeight + 'px';
+      } else {
+        transcriptContainer.style.maxHeight = '24rem';
+      }
+    }
+
+    window.onYouTubeIframeAPIReady = function () {
+      player = new YT.Player('youtube-player', {
+        videoId: VIDEO_ID,
+        events: {
+          onStateChange: function (event) {
+            clearInterval(timeUpdater);
+            if (event.data === YT.PlayerState.PLAYING) {
+              timeUpdater = setInterval(highlightCurrentLine, 300);
+            }
+          }
+        }
+      });
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      parsedTranscript = parseVtt(vttContent);
+      populateTranscript();
+      setTimeout(syncTranscriptHeight, 100);
+      if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+        var tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      } else {
+        window.onYouTubeIframeAPIReady();
+      }
+    });
+
+    var resizeTimeout;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(syncTranscriptHeight, 250);
+    });
+  })();
+  </script>
+
+</body>
+</html>
