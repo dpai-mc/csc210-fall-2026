@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w2-a2">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Assignment 2: Logic Gates and NAND Universality</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- Assignment-specific ---------- */
+    .points-badge {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: var(--fs-xs);
+      font-weight: 700;
+      padding: 2px var(--space-sm);
+      border-radius: 999px;
+      background: var(--color-accent);
+      color: #fff;
+      vertical-align: middle;
+      margin-left: var(--space-sm);
+    }
+    .q {
+      border-left: 3px solid var(--color-border);
+      padding-left: var(--space-lg);
+      margin-bottom: var(--space-xl);
+    }
+    .q__num {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--color-primary);
+    }
+    .q__pts {
+      font-family: var(--font-mono);
+      font-size: var(--fs-xs);
+      color: var(--color-text-muted);
+    }
+    .q ol { margin-top: var(--space-sm); }
+
+    /* Blank truth tables students fill in */
+    .tt-blank td.fill {
+      background: var(--color-code-bg);
+      min-width: 46px;
+      height: 30px;
+    }
+
+    /* Checklist glyphs — not live inputs. Submission is through Canvas,
+       so a real checkbox would imply state we do not persist. */
+    .checklist { list-style: none; padding-left: 0; }
+    .checklist li {
+      position: relative;
+      padding-left: var(--space-xl);
+      margin-bottom: var(--space-sm);
+    }
+    .checklist li::before {
+      content: "";
+      position: absolute;
+      left: 0; top: 3px;
+      width: 16px; height: 16px;
+      border: 2px solid var(--color-text-muted);
+      border-radius: 3px;
+    }
+
+    .rubric-table { font-size: var(--fs-sm); }
+    .rubric-table th:first-child { width: 22%; }
+
+    /* Print: students often work from paper for the written parts */
+    @media print {
+      .sp-header, .sp-footer, .no-print { display: none; }
+      .q { break-inside: avoid; }
+      a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 2 &rsaquo; <span>Assignment 2</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Assignment 2: Logic Gates and NAND Universality</h1>
+    <p><strong>Points:</strong> 100 &nbsp;|&nbsp;
+       <strong>Estimated time:</strong> ~3 hours &nbsp;|&nbsp;
+       <strong>Assesses:</strong> SLO1 &nbsp;|&nbsp;
+       <strong>Due:</strong> see the due date on this assignment in the course menu</p>
+
+    <div class="callout callout--hook">
+      <div class="callout__title">What this assignment is for</div>
+      <p>Two things. First, it checks that you can actually <em>use</em> the logic from this week &mdash; truth tables, Boolean algebra, and the NAND derivations &mdash; rather than just recognize it.</p>
+      <p>Second, and less obviously: <strong>this is where your Logisim habits get set.</strong> The single-file discipline you establish here is the one you will still be using in Week 14 when that file contains a working CPU. It is much easier to start correctly than to reorganize later.</p>
+      <p><strong>Quiz 1</strong> in Week 4 covers Weeks 1&ndash;4, and its problems look very much like Parts A through D. Treat this as quiz preparation, not just as points.</p>
+    </div>
+
+    <!-- ============================================================
+         Setup
+         ============================================================ -->
+    <section id="setup">
+      <h2>Before You Start: Logisim Setup</h2>
+
+      <p>If you already did this during the Week 2 orientation, skip to the notation guide.</p>
+
+      <div class="callout">
+        <div class="callout__title">Logisim Classic 2.7.1 &mdash; not Evolution</div>
+        <p>Download <strong>Logisim Classic 2.7.1</strong> from the SharePoint link in this module. Logisim needs a Java runtime; if you do not have one, the installer will tell you.</p>
+        <p>There is a newer program called Logisim Evolution. <strong>Do not use it.</strong> This course uses Classic because subcircuits render with their actual gate-level shape, so you can see a circuit's structure at a glance. Evolution draws them as featureless boxes, which becomes a real problem by Week 13.</p>
+      </div>
+
+      <ol class="logisim-steps">
+        <li>Launch Logisim Classic 2.7.1.</li>
+        <li><strong>File &rsaquo; New</strong>.</li>
+        <li>Save immediately as <code>CSC210_YourName.circ</code> &mdash; your actual name, not the literal word "YourName."</li>
+        <li>Add a circuit tab with <strong>Project &rsaquo; Add Circuit</strong>. Name each tab <em>exactly</em> as specified in Part E. The grader looks for those names.</li>
+      </ol>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">One file. All semester. Read this carefully.</div>
+        <p><strong>All circuits for this course must live inside a single <code>.circ</code> file.</strong> Every checkpoint from now through Week 17 adds a new <em>circuit tab</em> to the file you create today &mdash; never a new file, and never a link to an external file.</p>
+        <p><strong>Submissions that reference external Logisim files are graded as incomplete</strong>, because the grader cannot open circuits that are not in the file you handed in.</p>
+      </div>
+
+      <p>Stuck on the tool itself? The nine-minute walkthrough on Week 2 page 4 covers installation, placing gates, wiring, and the poke tool. The official <a href="https://cburch.com/logisim/docs.html" target="_blank" rel="noopener">Logisim documentation</a> is worth bookmarking too.</p>
+    </section>
+
+    <!-- ============================================================
+         Notation guide
+         ============================================================ -->
+    <section id="notation">
+      <h2>Boolean Notation: Read This Before Part B</h2>
+
+      <p>Parts B and C live or die on reading these symbols correctly. Two minutes here saves an hour later.</p>
+
+      <table>
+        <thead><tr><th>Written as</th><th>Means</th><th>Also written</th></tr></thead>
+        <tbody>
+          <tr><td><code>AB</code></td><td>A AND B</td><td><code>A &middot; B</code>, <code>A * B</code></td></tr>
+          <tr><td><code>A + B</code></td><td>A OR B</td><td><code>A | B</code></td></tr>
+          <tr><td><code>A'</code></td><td>NOT A</td><td><code>&not;A</code>, <code>!A</code>, A&#772;</td></tr>
+          <tr><td><code>A &oplus; B</code></td><td>A XOR B</td><td><code>A ^ B</code></td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">The prime applies to ONE variable &mdash; read it like an exponent</div>
+        <p>In <code>A'B</code>, the prime applies <strong>only to the variable it immediately follows</strong>.</p>
+        <ul>
+          <li><code>A'B</code> = (NOT A) AND B</li>
+          <li><code>AB'</code> = A AND (NOT B)</li>
+          <li><code>A'B'</code> = (NOT A) AND (NOT B)</li>
+        </ul>
+        <p>To negate an entire expression, parenthesize it first: <code>(AB)'</code> means NOT (A AND B).</p>
+        <p><strong>And these are not the same thing.</strong> Try A = 1, B = 0: <code>A'B'</code> = 0 &middot; 1 = <strong>0</strong>, while <code>(AB)'</code> = (1&middot;0)' = 0' = <strong>1</strong>. The relationship between them <em>is</em> De Morgan's law &mdash; which is the entire subject of Part C.</p>
+      </div>
+
+      <p>Also: <strong><code>+</code> is OR, not addition.</strong> In Boolean algebra <code>1 + 1 = 1</code>. There is one bit of output; it is either on or it is not.</p>
+    </section>
+
+    <!-- ============================================================
+         PART A
+         ============================================================ -->
+    <section id="part-a">
+      <h2>Part A &mdash; Truth Tables and Gate Identification <span class="points-badge">20 points</span></h2>
+
+      <div class="q">
+        <p><span class="q__num">1.</span> <span class="q__pts">(5 pts)</span> Complete the truth tables for the following two-input gates.</p>
+        <p><strong>a.</strong> XOR &nbsp;&nbsp; <strong>b.</strong> XNOR &nbsp;&nbsp; <strong>c.</strong> NOR</p>
+        <table class="tt-blank" style="max-width:420px;">
+          <thead><tr><th>A</th><th>B</th><th>A &oplus; B</th><th>A XNOR B</th><th>A NOR B</th></tr></thead>
+          <tbody>
+            <tr><td>0</td><td>0</td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+            <tr><td>0</td><td>1</td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+            <tr><td>1</td><td>0</td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+            <tr><td>1</td><td>1</td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="q">
+        <p><span class="q__num">2.</span> <span class="q__pts">(5 pts)</span> For each output pattern below, name the gate that produces it.</p>
+        <ol type="a">
+          <li>A <strong>two-input</strong> gate whose output is 1 only when the two inputs differ</li>
+          <li>Output is 0 only when all inputs are 1</li>
+          <li>Output is 1 only when all inputs are 0</li>
+          <li>Output is the opposite of the single input</li>
+        </ol>
+      </div>
+
+      <div class="q">
+        <p><span class="q__num">3.</span> <span class="q__pts">(5 pts)</span> A <strong>three-input</strong> AND gate has inputs A=1, B=0, C=1. What is its output? What about a three-input OR gate with the same inputs? A three-input NAND gate?</p>
+        <p style="font-size:var(--fs-sm);color:var(--color-text-muted);">Careful with the NAND: a three-input NAND computes <code>(ABC)'</code> &mdash; the AND of all three, inverted <em>once</em> at the end. It is not two chained two-input NANDs.</p>
+      </div>
+
+      <div class="q">
+        <p><span class="q__num">4.</span> <span class="q__pts">(5 pts)</span> Draw the standard circuit symbol for each of these gates: <strong>AND, OR, NOT, NAND, NOR</strong>. Label which element of the symbol represents inversion.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART B
+         ============================================================ -->
+    <section id="part-b">
+      <h2>Part B &mdash; Boolean Algebra <span class="points-badge">25 points</span></h2>
+
+      <p style="font-size:var(--fs-sm);color:var(--color-text-muted);">
+        For every simplification: <strong>show each step and name the law you used.</strong> An unexplained correct answer earns partial credit at best &mdash; the reasoning is what is being assessed.
+      </p>
+
+      <div class="q">
+        <p><span class="q__num">5.</span> <span class="q__pts">(5 pts)</span> Simplify each expression. Show every step and name the identity or law applied.</p>
+        <ol type="a">
+          <li><code>A + AB</code></li>
+          <li><code>(A + B)(A + B')</code></li>
+          <li><code>A(B + A'B)</code></li>
+          <li><code>(A + B + C)(A' + B)</code></li>
+        </ol>
+      </div>
+
+      <div class="q">
+        <p><span class="q__num">6.</span> <span class="q__pts">(5 pts)</span> Apply De Morgan's laws to find the complement of each expression. Give your answer with the primes applied <strong>directly to individual variables</strong>, not to sub-expressions.</p>
+        <ol type="a">
+          <li><code>(AB + C)'</code></li>
+          <li><code>(A + BC)'</code></li>
+          <li><code>(A'B + AB')'</code></li>
+        </ol>
+      </div>
+
+      <div class="q">
+        <p><span class="q__num">7.</span> <span class="q__pts">(5 pts)</span> Prove each pair equivalent by simplifying both sides to the same form.</p>
+        <ol type="a">
+          <li><code>AB + AB'</code> &nbsp;and&nbsp; <code>A</code></li>
+          <li><code>(A + B)(A' + B)</code> &nbsp;and&nbsp; <code>B</code></li>
+          <li><code>A'B' + A'B + AB</code> &nbsp;and&nbsp; <code>A' + B</code></li>
+        </ol>
+      </div>
+
+      <div class="q">
+        <p><span class="q__num">8.</span> <span class="q__pts">(5 pts)</span> Convert this circuit description into a Boolean expression, then simplify it:</p>
+        <blockquote>The output is 1 when A and B are both 1, or when C is 0 and A is 1.</blockquote>
+        <p>Write the expression, simplify it, and then explain <strong>in plain English</strong> what the simplified circuit actually does. The plain-English part is worth real points &mdash; a simplification you cannot describe is a simplification you have not understood.</p>
+      </div>
+
+      <div class="q">
+        <p><span class="q__num">9.</span> <span class="q__pts">(5 pts)</span> Explain in your own words why De Morgan's laws are the mathematical foundation of NAND universality. Specifically, show how De Morgan's law explains why <code>OR(A, B) = NAND(NOT A, NOT B)</code>.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART C
+         ============================================================ -->
+    <section id="part-c">
+      <h2>Part C &mdash; NAND Universality Derivations <span class="points-badge">20 points</span></h2>
+
+      <div class="q">
+        <p><span class="q__num">10.</span> <span class="q__pts">(5 pts)</span> Show the Boolean algebra proving <code>NAND(A, A) = NOT(A)</code>. Start from the definition of NAND and show each step.</p>
+      </div>
+
+      <div class="q">
+        <p><span class="q__num">11.</span> <span class="q__pts">(5 pts)</span> Show the Boolean algebra proving <code>NAND(NAND(A, B), NAND(A, B)) = AND(A, B)</code>. Explain what circuit this corresponds to.</p>
+      </div>
+
+      <div class="q">
+        <p><span class="q__num">12.</span> <span class="q__pts">(5 pts)</span> Show the Boolean algebra proving <code>NAND(NAND(A, A), NAND(B, B)) = OR(A, B)</code>. Explain what circuit this corresponds to, and <strong>identify the exact step where De Morgan's law is applied</strong>.</p>
+      </div>
+
+      <div class="q">
+        <p><span class="q__num">13.</span> <span class="q__pts">(5 pts)</span> Build a <strong>NOR</strong> gate using only NAND gates. Provide all three of:</p>
+        <ol>
+          <li>The Boolean derivation, starting from the definition of NOR</li>
+          <li>The circuit diagram &mdash; and state how many NAND gates it needs</li>
+          <li>Truth table verification</li>
+        </ol>
+        <p style="font-size:var(--fs-sm);color:var(--color-text-muted);">Hint: you already know how to build OR from NAND. NOR is OR with the output inverted, and you know how to invert with a NAND too.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART D
+         ============================================================ -->
+    <section id="part-d">
+      <h2>Part D &mdash; Circuit Design <span class="points-badge">15 points</span></h2>
+
+      <div class="q">
+        <p><span class="q__num">14.</span> <span class="q__pts">(5 pts)</span> Given <code>F = (A + B)C</code>, draw the circuit diagram using standard gate symbols. How many gates are needed?</p>
+      </div>
+
+      <div class="q">
+        <p><span class="q__num">15.</span> <span class="q__pts">(5 pts)</span> Derive the Boolean expression for the truth table below in <strong>sum-of-products</strong> form, then draw the circuit.</p>
+        <table style="max-width:340px;">
+          <thead><tr><th>A</th><th>B</th><th>C</th><th>F</th></tr></thead>
+          <tbody>
+            <tr><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+            <tr><td>0</td><td>0</td><td>1</td><td>1</td></tr>
+            <tr><td>0</td><td>1</td><td>0</td><td>0</td></tr>
+            <tr><td>0</td><td>1</td><td>1</td><td>1</td></tr>
+            <tr><td>1</td><td>0</td><td>0</td><td>1</td></tr>
+            <tr><td>1</td><td>0</td><td>1</td><td>1</td></tr>
+            <tr><td>1</td><td>1</td><td>0</td><td>0</td></tr>
+            <tr><td>1</td><td>1</td><td>1</td><td>1</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:var(--fs-sm);color:var(--color-text-muted);">Sum-of-products: write one AND term for every row where F is 1, then OR those terms together.</p>
+      </div>
+
+      <div class="q">
+        <p><span class="q__num">16.</span> <span class="q__pts">(5 pts)</span> Simplify the expression from Problem 15 as far as you can. If you believe no simplification is possible, explain why. Compare the gate count before and after.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART E
+         ============================================================ -->
+    <section id="part-e">
+      <h2>Part E &mdash; Logisim Submission <span class="points-badge">20 points</span></h2>
+
+      <p><span class="q__num">17.</span> <span class="q__pts">(20 pts)</span> Build all five circuits below as separate tabs in your single <code>CSC210_YourName.circ</code> file.</p>
+
+      <div class="callout">
+        <div class="callout__title">Rules for every circuit in this part</div>
+        <ul>
+          <li><strong>Primitive gates only</strong> &mdash; AND, OR, NOT, NAND, NOR, XOR, XNOR, plus input and output pins. No Adder, Multiplexer, Decoder, or anything else from the other library panels.</li>
+          <li><strong>Label every pin.</strong> Unlabeled pins cost points and make your circuit hard to grade.</li>
+          <li><strong>Test every input combination with the poke tool</strong> before you submit. Two-input circuits have 4; three-input circuits have 8.</li>
+          <li>A wire showing <strong>blue</strong> means undefined &mdash; something is unconnected. Trace it back and fix it.</li>
+        </ul>
+      </div>
+
+      <h3>Circuit 1 &mdash; <code>NAND_NOT</code> <span class="q__pts">(2 pts)</span></h3>
+      <p>A NOT gate built from <strong>one</strong> NAND gate.</p>
+      <ul>
+        <li>Place one NAND gate and <strong>one</strong> input pin. This circuit has a single input &mdash; do not place a second pin; an unconnected pin floats and Logisim will flag it.</li>
+        <li>Wire the input pin to <em>both</em> inputs of the NAND gate.</li>
+        <li>Label the input <code>A</code> and the output <code>NOT A</code>.</li>
+      </ul>
+      <p><strong>Verify:</strong> A=0 &rarr; output 1; A=1 &rarr; output 0.</p>
+
+      <h3>Circuit 2 &mdash; <code>NAND_AND</code> <span class="q__pts">(3 pts)</span></h3>
+      <p>An AND gate built from <strong>two</strong> NAND gates.</p>
+      <ul>
+        <li>Wire inputs A and B into the first NAND.</li>
+        <li>Wire that NAND's output into <em>both</em> inputs of the second NAND, which acts as a NOT.</li>
+        <li>Label pins <code>A</code>, <code>B</code>, and <code>A AND B</code>.</li>
+      </ul>
+      <p><strong>Verify</strong> against the AND truth table: output is 1 only for A=1, B=1.</p>
+
+      <h3>Circuit 3 &mdash; <code>NAND_OR</code> <span class="q__pts">(3 pts)</span></h3>
+      <p>An OR gate built from <strong>three</strong> NAND gates.</p>
+      <ul>
+        <li>NAND 1: both inputs tied to A, producing <code>A'</code>.</li>
+        <li>NAND 2: both inputs tied to B, producing <code>B'</code>.</li>
+        <li>NAND 3: fed by the outputs of NAND 1 and NAND 2.</li>
+        <li>Label pins <code>A</code>, <code>B</code>, and <code>A OR B</code>.</li>
+      </ul>
+      <p><strong>Verify</strong> against the OR truth table: output is 0 only for A=0, B=0.</p>
+
+      <h3>Circuit 4 &mdash; <code>BOOLEAN_EXPR</code> <span class="q__pts">(3 pts)</span></h3>
+      <p>Implement <code>F = (A AND B) OR (NOT C)</code> using primitive gates.</p>
+      <ul>
+        <li>Three input pins <code>A</code>, <code>B</code>, <code>C</code>; one output pin <code>F</code>.</li>
+        <li>Decompose it: one AND for <code>AB</code>, one NOT for <code>C'</code>, one OR to combine them. Three gates.</li>
+      </ul>
+      <p><strong>Verify</strong> all <strong>eight</strong> input combinations against this table:</p>
+      <table style="max-width:460px;">
+        <thead><tr><th>A</th><th>B</th><th>C</th><th>AB</th><th>C'</th><th>F</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>0</td><td>0</td><td>0</td><td>1</td><td>1</td></tr>
+          <tr><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+          <tr><td>0</td><td>1</td><td>0</td><td>0</td><td>1</td><td>1</td></tr>
+          <tr><td>0</td><td>1</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+          <tr><td>1</td><td>0</td><td>0</td><td>0</td><td>1</td><td>1</td></tr>
+          <tr><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+          <tr><td>1</td><td>1</td><td>0</td><td>1</td><td>1</td><td>1</td></tr>
+          <tr><td>1</td><td>1</td><td>1</td><td>1</td><td>0</td><td>1</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Circuit 5 &mdash; <code>DEMORGAN_CHECK</code> <span class="q__pts">(4 pts)</span></h3>
+      <p>Prove De Morgan's first law &mdash; <code>(AB)' = A' + B'</code> &mdash; by building <em>both sides</em> in one circuit and letting the circuit itself confirm they agree.</p>
+      <ul>
+        <li>Two input pins <code>A</code> and <code>B</code>. <strong>Both halves share these same two pins</strong> &mdash; that is what makes the comparison meaningful.</li>
+        <li><strong>Upper half:</strong> AND gate on A and B, then a NOT. Output pin <code>LEFT_SIDE</code>.</li>
+        <li><strong>Lower half:</strong> NOT on A, NOT on B, then an OR. Output pin <code>RIGHT_SIDE</code>.</li>
+        <li>Align the two output pins vertically so you can read them together.</li>
+        <li><strong>Comparison harness:</strong> feed <code>LEFT_SIDE</code> and <code>RIGHT_SIDE</code> into an XOR gate. Its output goes to a third pin, <code>EQUAL</code>.</li>
+      </ul>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Why the XOR is the clever part</div>
+        <p>XOR outputs 1 when its inputs <em>differ</em>. So <code>EQUAL</code> reads <strong>0</strong> whenever the two sides agree, and jumps to <strong>1</strong> the instant they disagree.</p>
+        <p>Toggle all four input combinations. If <code>EQUAL</code> never leaves 0, you have <em>demonstrated</em> De Morgan's law in hardware rather than just asserted it on paper. And if you miswire something, <code>EQUAL</code> goes high and tells you immediately &mdash; the circuit grades itself.</p>
+      </div>
+
+      <p><strong>Verify:</strong></p>
+      <table style="max-width:520px;">
+        <thead><tr><th>A</th><th>B</th><th>LEFT_SIDE <code>(AB)'</code></th><th>RIGHT_SIDE <code>A' + B'</code></th><th>EQUAL</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>0</td><td>1</td><td>1</td><td>0</td></tr>
+          <tr><td>0</td><td>1</td><td>1</td><td>1</td><td>0</td></tr>
+          <tr><td>1</td><td>0</td><td>1</td><td>1</td><td>0</td></tr>
+          <tr><td>1</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+        </tbody>
+      </table>
+      <p>Seven gates total: 1 AND, 3 NOT, 1 OR, 1 XOR.</p>
+
+      <div class="callout">
+        <div class="callout__title">Optional challenge &mdash; no points, some insight</div>
+        <p>Rebuild Circuit 4 using <strong>only NAND gates</strong>. How many do you need?</p>
+        <p>You will find it takes considerably more than the three mixed gates. That is exactly why real chips use several gate types even though NAND alone is provably sufficient: universality is about what is <em>possible</em>, not about what is efficient.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Submission
+         ============================================================ -->
+    <section id="submission">
+      <h2>What to Submit</h2>
+
+      <ol>
+        <li><strong>Your written work</strong> for Parts A&ndash;D &mdash; typed or legibly handwritten and scanned. Show your steps.</li>
+        <li><strong>One Logisim file:</strong> <code>CSC210_YourName.circ</code>, containing all five circuit tabs.</li>
+      </ol>
+
+      <h3>Checklist</h3>
+      <ul class="checklist">
+        <li>All five circuits (<code>NAND_NOT</code>, <code>NAND_AND</code>, <code>NAND_OR</code>, <code>BOOLEAN_EXPR</code>, <code>DEMORGAN_CHECK</code>) are present as separate tabs in the <code>.circ</code> file</li>
+        <li>Each circuit is verified against its truth table using the poke tool</li>
+        <li><code>DEMORGAN_CHECK</code> holds <code>EQUAL</code> at 0 for all four input combinations</li>
+        <li>Input and output pins are clearly labeled</li>
+        <li><strong>All circuits are contained within this single .circ file &mdash; no external file links</strong></li>
+        <li>Only primitive gates and I/O pins are used (no built-in library components)</li>
+        <li>Written work shows steps and names the laws used, not just final answers</li>
+      </ul>
+    </section>
+
+    <!-- ============================================================
+         Rubric
+         ============================================================ -->
+    <section id="rubric">
+      <h2>Grading Rubric</h2>
+
+      <p>Every criterion assesses <strong>SLO1</strong> &mdash; describe basic computer architecture, organization, and design. Logic gates are the foundational building blocks of that architecture.</p>
+
+      <table class="rubric-table">
+        <thead>
+          <tr>
+            <th>Criterion</th>
+            <th>Excellent (90&ndash;100%)</th>
+            <th>Proficient (75&ndash;89%)</th>
+            <th>Developing (60&ndash;74%)</th>
+            <th>Inadequate (&lt;60%)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Gate behavior and truth tables</strong><br><span class="q__pts">Part A &mdash; 20 pts</span></td>
+            <td>All truth tables complete and correct. Gate identification accurate. Symbols drawn correctly with inversion clearly indicated.</td>
+            <td>Most truth tables correct. Minor errors in identification or symbols.</td>
+            <td>Several truth table errors. Struggles with multi-input gates or inversion symbols.</td>
+            <td>Fundamental misunderstanding of gate behavior. Tables largely incorrect.</td>
+          </tr>
+          <tr>
+            <td><strong>Boolean algebra and simplification</strong><br><span class="q__pts">Part B &mdash; 25 pts</span></td>
+            <td>All simplifications correct with clear step-by-step work. De Morgan's applied correctly. Equivalence proofs rigorous and well explained.</td>
+            <td>Most simplifications correct. Minor errors applying identities. De Morgan's mostly correct.</td>
+            <td>Several simplification errors. Work partially shown. Struggles with De Morgan's.</td>
+            <td>Cannot apply Boolean identities. Simplifications incorrect or absent.</td>
+          </tr>
+          <tr>
+            <td><strong>NAND universality</strong><br><span class="q__pts">Part C &mdash; 20 pts</span></td>
+            <td>All derivations correct with clear algebra. NOR-from-NAND complete with diagram and truth table verification.</td>
+            <td>Most derivations correct. NOR construction may be missing one element.</td>
+            <td>Partial derivations. Struggles to connect algebra to circuit structure.</td>
+            <td>Cannot derive basic gates from NAND. Universality not understood.</td>
+          </tr>
+          <tr>
+            <td><strong>Circuit design</strong><br><span class="q__pts">Part D &mdash; 15 pts</span></td>
+            <td>Expressions correctly translated to circuits. Sum-of-products derivation correct. Simplification attempted with clear reasoning.</td>
+            <td>Most designs correct. Sum-of-products may have minor errors.</td>
+            <td>Several design errors. Struggles with sum-of-products form.</td>
+            <td>Cannot translate between expressions and circuits.</td>
+          </tr>
+          <tr>
+            <td><strong>Logisim implementation</strong><br><span class="q__pts">Part E &mdash; 20 pts</span></td>
+            <td>All five circuits present, correctly named, functionally correct, primitive gates only, single file. <code>DEMORGAN_CHECK</code> holds EQUAL at 0.</td>
+            <td>Circuits functionally correct with minor labeling or organization issues.</td>
+            <td>One or more circuits missing or incorrect.</td>
+            <td>Submission incomplete, missing, or uses prohibited components.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Part E point breakdown</h3>
+      <table style="max-width:520px;">
+        <thead><tr><th>Item</th><th>Points</th></tr></thead>
+        <tbody>
+          <tr><td><code>NAND_NOT</code> &mdash; named correctly, correct for all inputs</td><td>2</td></tr>
+          <tr><td><code>NAND_AND</code> &mdash; named correctly, correct for all inputs</td><td>3</td></tr>
+          <tr><td><code>NAND_OR</code> &mdash; named correctly, correct for all inputs</td><td>3</td></tr>
+          <tr><td><code>BOOLEAN_EXPR</code> &mdash; named correctly, correct for all 8 inputs</td><td>3</td></tr>
+          <tr><td><code>DEMORGAN_CHECK</code> &mdash; both halves, XOR harness, EQUAL stays 0</td><td>4</td></tr>
+          <tr><td>Only primitive gates and I/O pins used throughout</td><td>3</td></tr>
+          <tr><td>Single <code>.circ</code> file, no external links</td><td>2</td></tr>
+          <tr><td><strong>Total</strong></td><td><strong>20</strong></td></tr>
+        </tbody>
+      </table>
+
+      <p style="font-size:var(--fs-sm);color:var(--color-text-muted);">
+        Points are weighted by build effort, not split evenly &mdash; <code>NAND_NOT</code> is one gate and two pins; <code>DEMORGAN_CHECK</code> is seven gates plus a comparison harness. Correct output is part of each circuit's points: a correctly named tab containing a circuit that does not work earns nothing for that row.
+      </p>
+    </section>
+
+    <!-- ============================================================
+         Help
+         ============================================================ -->
+    <section id="help">
+      <h2>Getting Help</h2>
+
+      <div class="callout">
+        <div class="callout__title">Before you get stuck for an hour</div>
+        <ul>
+          <li><strong>Conceptual trouble in Parts B or C?</strong> Re-read the notation guide above. In my experience most Part B errors are precedence errors, not algebra errors.</li>
+          <li><strong>Circuit gives the wrong answer?</strong> Build the truth table first, then find the <em>first</em> row where the circuit disagrees. That row tells you which gate to look at.</li>
+          <li><strong>Blue wire in Logisim?</strong> Something is unconnected. Blue means undefined, not zero.</li>
+          <li><strong>Tool trouble?</strong> Week 2 page 4 has the nine-minute Logisim walkthrough, and the <a href="https://cburch.com/logisim/docs.html" target="_blank" rel="noopener">official documentation</a> is thorough.</li>
+          <li><strong>Still stuck?</strong> Ask &mdash; during class, office hours, or the course discussion. Getting unstuck on Week 2 matters more than usual, because everything after this builds on it.</li>
+        </ul>
+      </div>
+
+      <div class="callout">
+        <div class="callout__title">Academic integrity</div>
+        <p>Discuss concepts with classmates freely &mdash; that is how people learn this material. <strong>The work you submit must be your own:</strong> your own circuits, your own algebra, your own explanations.</p>
+        <p>Submitting a circuit you cannot explain is worth nothing to you in Week 4, when Quiz 1 asks you to do it again alone.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+</body>
+</html>

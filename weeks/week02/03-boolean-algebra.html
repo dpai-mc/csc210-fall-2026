@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w2-03">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 2, Page 3: Boolean Algebra</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- Page-specific: notation guide ---------- */
+    .notation-table td:first-child {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      white-space: nowrap;
+      width: 1%;
+    }
+    .notation-warn {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-md);
+      margin: var(--space-md) 0;
+    }
+    @media (max-width: 640px) { .notation-warn { grid-template-columns: 1fr; } }
+    .notation-warn > div {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: var(--space-md);
+      background: var(--color-surface);
+    }
+    .notation-warn code { font-size: var(--fs-md); }
+
+    /* ---------- Page-specific: expression playground ---------- */
+    .expr-input {
+      width: 100%;
+      font-family: var(--font-mono);
+      font-size: var(--fs-md);
+      padding: var(--space-sm) var(--space-md);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      background: var(--color-bg);
+      color: var(--color-text);
+    }
+    .expr-input:focus {
+      outline: none;
+      border-color: var(--color-primary-lt);
+      box-shadow: 0 0 0 2px rgba(41,128,185,.2);
+    }
+    .expr-input.error { border-color: var(--color-danger); background: #fdf0ef; }
+    .expr-panel {
+      border-top: 1px solid var(--color-border);
+      padding-top: var(--space-md);
+      margin-top: var(--space-md);
+    }
+    .expr-panel__label {
+      font-size: var(--fs-xs);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-sm);
+    }
+    .expr-error {
+      color: var(--color-danger);
+      font-size: var(--fs-sm);
+      margin-top: var(--space-sm);
+    }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 2 &rsaquo; <span>Boolean Algebra</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Boolean Algebra</h1>
+    <p><strong>Estimated time:</strong> ~1.5 hours &nbsp;|&nbsp;
+       <strong>Section:</strong> 2.4 &nbsp;|&nbsp;
+       <strong>Prerequisite:</strong> Page 2 (NAND and NOR)</p>
+
+    <div class="callout callout--hook">
+      <div class="callout__title">What We Have / What We Can't Do / What We Can Now Do</div>
+      <p><strong>What you already know:</strong> NAND is universal, and you have watched all three derivations work.</p>
+      <p><strong>What you can't do yet:</strong> Prove it. The OR-from-NAND circuit works, but you took that on evidence rather than argument.</p>
+      <p><strong>What you will be able to do by the end of this page:</strong> Manipulate Boolean expressions with the standard identities, apply De Morgan's laws, prove why the NAND derivations must work, and simplify a circuit before you ever build it.</p>
+    </div>
+
+    <p>Boolean algebra is the mathematics of logic gates. Just as ordinary algebra lets you simplify a mathematical expression, Boolean algebra lets you simplify a <em>circuit</em>. A simpler expression means fewer gates, which means faster, cheaper, more reliable hardware.</p>
+
+    <!-- ============================================================
+         Notation Guide  (must come before anything else)
+         ============================================================ -->
+    <section id="sec-notation">
+      <h2>First: How to Read the Notation</h2>
+
+      <p>Before any of the laws below will make sense, you need to read Boolean expressions correctly. This section takes two minutes and will save you hours.</p>
+
+      <table class="notation-table">
+        <thead><tr><th>Written as</th><th>Means</th><th>Also written</th></tr></thead>
+        <tbody>
+          <tr><td>AB</td><td>A AND B</td><td><code>A &middot; B</code>, <code>A * B</code>, <code>A &amp;&amp; B</code></td></tr>
+          <tr><td>A + B</td><td>A OR B</td><td><code>A | B</code>, <code>A || B</code></td></tr>
+          <tr><td>A'</td><td>NOT A</td><td><code>&not;A</code>, <code>!A</code>, <code>A</code> with a bar over it</td></tr>
+        </tbody>
+      </table>
+
+      <p>Two things trip people up every single semester.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">The prime applies to ONE variable — read it like an exponent</div>
+        <p>In an expression like <code>A'B</code>, the prime applies <strong>only to the variable it immediately follows</strong>. Nothing else.</p>
+        <ul>
+          <li><code>A'B</code> = (NOT A) AND B</li>
+          <li><code>AB'</code> = A AND (NOT B)</li>
+          <li><code>A'B'</code> = (NOT A) AND (NOT B)</li>
+        </ul>
+        <p>To negate a whole expression you must parenthesize it first: <code>(AB)'</code> means NOT (A AND B).</p>
+      </div>
+
+      <div class="notation-warn">
+        <div>
+          <div class="expr-panel__label">These look similar</div>
+          <p><code>A'B'</code><br><span style="font-size:var(--fs-sm);color:var(--color-text-muted);">NOT A, ANDed with NOT B</span></p>
+          <p><code>(AB)'</code><br><span style="font-size:var(--fs-sm);color:var(--color-text-muted);">NOT of (A AND B)</span></p>
+        </div>
+        <div>
+          <div class="expr-panel__label">They are not the same</div>
+          <p style="font-size:var(--fs-sm);">Try A = 1, B = 0.<br>
+             <code>A'B'</code> = 0 &middot; 1 = <strong>0</strong><br>
+             <code>(AB)'</code> = (1&middot;0)' = 0' = <strong>1</strong></p>
+          <p style="font-size:var(--fs-sm);color:var(--color-text-muted);">The relationship between them <em>is</em> De Morgan's law, which is the heart of this page.</p>
+        </div>
+      </div>
+
+      <p>The second thing: <strong><code>+</code> is OR, not addition.</strong> In Boolean algebra <code>1 + 1 = 1</code>. If that looks wrong, you are reading it as arithmetic. There is only one bit of output; it is either on or it is not.</p>
+    </section>
+
+    <!-- ============================================================
+         Section 2.4 — the laws
+         ============================================================ -->
+    <section id="sec-2-4">
+      <h2>2.4 &mdash; The Laws</h2>
+
+      <p>These are the tools. You do not need to memorize all of them today &mdash; you need to recognize them well enough to look them up and apply them. De Morgan's laws are the two you should know cold.</p>
+
+      <div class="law-grid">
+        <div class="law-card">
+          <h4>Identity</h4>
+          <div class="formula">A + 0 = A</div>
+          <div class="formula">A &middot; 1 = A</div>
+        </div>
+        <div class="law-card">
+          <h4>Null</h4>
+          <div class="formula">A + 1 = 1</div>
+          <div class="formula">A &middot; 0 = 0</div>
+        </div>
+        <div class="law-card">
+          <h4>Idempotent</h4>
+          <div class="formula">A + A = A</div>
+          <div class="formula">A &middot; A = A</div>
+        </div>
+        <div class="law-card">
+          <h4>Complement</h4>
+          <div class="formula">A + A' = 1</div>
+          <div class="formula">A &middot; A' = 0</div>
+        </div>
+        <div class="law-card">
+          <h4>Commutative</h4>
+          <div class="formula">A + B = B + A</div>
+          <div class="formula">A &middot; B = B &middot; A</div>
+        </div>
+        <div class="law-card">
+          <h4>Associative</h4>
+          <div class="formula">(A + B) + C = A + (B + C)</div>
+          <div class="formula">(A &middot; B) &middot; C = A &middot; (B &middot; C)</div>
+        </div>
+        <div class="law-card">
+          <h4>Distributive</h4>
+          <div class="formula">A &middot; (B + C) = AB + AC</div>
+          <div class="formula">A + (B &middot; C) = (A + B)(A + C)</div>
+        </div>
+        <div class="law-card">
+          <h4>Double negation</h4>
+          <div class="formula">(A')' = A</div>
+        </div>
+        <div class="law-card law-card--key">
+          <h4>De Morgan's Laws</h4>
+          <div class="formula">(A &middot; B)' = A' + B'</div>
+          <div class="formula">(A + B)' = A' &middot; B'</div>
+        </div>
+      </div>
+
+      <p>The second Distributive form &mdash; <code>A + BC = (A + B)(A + C)</code> &mdash; has no analogue in ordinary algebra and looks wrong the first several times you see it. Check it with a truth table in the widget below if you do not believe it.</p>
+
+      <h3>De Morgan's Laws, and Why They Are the Point</h3>
+
+      <p>In words:</p>
+
+      <ul>
+        <li><strong>(A &middot; B)' = A' + B'</strong> &mdash; "the NOT of an AND is the OR of the NOTs"</li>
+        <li><strong>(A + B)' = A' &middot; B'</strong> &mdash; "the NOT of an OR is the AND of the NOTs"</li>
+      </ul>
+
+      <p>Negating an expression does not just flip the answer. It flips the <em>operator</em> too. AND becomes OR; OR becomes AND.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">This is why the NAND derivations work</div>
+        <p>On the last page you built OR from three NAND gates and confirmed it against the truth table. Here is the proof you were promised.</p>
+        <p>The first two NAND gates produce <code>A'</code> and <code>B'</code>. The third NAND computes:</p>
+        <p style="font-family:var(--font-mono);padding-left:var(--space-lg);">
+          NAND(A', B') &nbsp;=&nbsp; (A' &middot; B')'
+        </p>
+        <p>And by De Morgan's second law, <code>(A' &middot; B')'</code> = <code>(A')' + (B')'</code> = <code>A + B</code>.</p>
+        <p>So the circuit computes OR &mdash; not by coincidence, but because De Morgan's law says a NAND fed with inverted inputs <em>is</em> an OR gate. The AND derivation is the same story: <code>AB = ((AB)')'</code>, which is a NAND followed by an inverter.</p>
+        <p><strong>De Morgan's laws are not simplification tricks. They are the mathematical foundation that makes NAND universality possible.</strong></p>
+      </div>
+
+      <h3>Simplification: Fewer Gates Is Faster Hardware</h3>
+
+      <p>Consider this expression:</p>
+
+      <pre><code>F = AB + AB'</code></pre>
+
+      <p>Apply the distributive law, then the complement law, then identity:</p>
+
+      <pre><code>F = A(B + B')      distributive
+F = A(1)           complement:  B + B' = 1
+F = A              identity:    A · 1 = A</code></pre>
+
+      <p>An expression that appears to require an AND gate, a NOT gate, and an OR gate &mdash; three gates and their propagation delay &mdash; is <strong>a piece of wire</strong>. The B input is irrelevant. The output always equals A.</p>
+
+      <p>This is the practical payoff of Boolean algebra. Every gate you remove is a gate that does not have to be fabricated, powered, or waited on.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Forward reference</div>
+        <p>In <strong>Week 6</strong>, when you build the ALU, you will use Boolean simplification to reduce the gate count in the control logic. A simplified expression means fewer gates, which means the ALU produces its result sooner. The same laws you are learning today are what separate a bloated circuit from an efficient one.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         WIDGET 2 — Expression Builder & Evaluator (AFTER Section 2.4)
+         ============================================================ -->
+    <section id="widget-expr">
+      <div class="widget-card">
+        <div class="widget-card__title">Interactive: Expression Builder and Simplification Checker</div>
+        <div class="widget-card__subtitle">
+          Type any Boolean expression in A, B, and C. You can use this course's notation
+          (<code>AB + AC'</code>) or programmer notation (<code>A*B + A*!C</code>) &mdash; both work.
+        </div>
+
+        <div class="expr-panel" style="border-top:none;padding-top:0;">
+          <div class="expr-panel__label">1. Your expression</div>
+          <label class="sr-only" for="expr-main">Boolean expression</label>
+          <input type="text" id="expr-main" class="expr-input" value="AB + AB'"
+                 placeholder="e.g. AB + AB'" autocomplete="off" spellcheck="false">
+          <div class="expr-error" id="expr-main-error" role="alert"></div>
+
+          <div class="preset-row" style="margin-top:var(--space-md);">
+            <span style="font-size:var(--fs-sm);color:var(--color-text-muted);align-self:center;margin-right:var(--space-xs);">Try:</span>
+            <button type="button" class="preset-btn js-preset" data-expr="AB + AB'">AB + AB'</button>
+            <button type="button" class="preset-btn js-preset" data-expr="(A + B)(A + B')">(A + B)(A + B')</button>
+            <button type="button" class="preset-btn js-preset" data-expr="(AB)'">(AB)'</button>
+            <button type="button" class="preset-btn js-preset" data-expr="A'B' + A'B + AB">A'B' + A'B + AB</button>
+            <button type="button" class="preset-btn js-preset" data-expr="A + BC">A + BC</button>
+          </div>
+        </div>
+
+        <div class="expr-panel">
+          <div class="expr-panel__label">2. Truth table</div>
+          <div id="expr-table"></div>
+        </div>
+
+        <div class="expr-panel">
+          <div class="expr-panel__label">3. Check a simplification</div>
+          <p style="font-size:var(--fs-sm);color:var(--color-text-muted);">
+            Simplify the expression above by hand, then type your answer here. Two expressions are
+            equivalent if and only if their truth tables match &mdash; that is exactly what this checks,
+            so it will accept any correct form, not just the one I had in mind.
+          </p>
+          <label class="sr-only" for="expr-simplified">Your simplified expression</label>
+          <input type="text" id="expr-simplified" class="expr-input" placeholder="e.g. A" autocomplete="off" spellcheck="false">
+          <div style="margin-top:var(--space-md);">
+            <button type="button" class="widget-btn widget-btn--primary" id="expr-check">Check my answer</button>
+          </div>
+          <div class="quiz-feedback" id="expr-feedback" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Self-check
+         ============================================================ -->
+    <section id="self-check">
+      <h2>Check Yourself</h2>
+
+      <div class="widget-card">
+        <div class="tab-navigation" role="tablist" aria-label="Self-check categories">
+          <button type="button" class="tab-button active" role="tab" aria-selected="true"
+                  aria-controls="panel-laws" id="tab-laws">Boolean Laws</button>
+          <button type="button" class="tab-button" role="tab" aria-selected="false"
+                  aria-controls="panel-demorgan" id="tab-demorgan">De Morgan's</button>
+        </div>
+
+        <div class="tab-panel active" id="panel-laws" role="tabpanel" aria-labelledby="tab-laws">
+          <p class="quiz-question">Which law lets you go from <code>A + AB</code> directly to <code>A</code>?</p>
+          <div class="quiz-options" data-quiz="q1">
+            <button type="button" class="quiz-option" data-correct="false">De Morgan's law</button>
+            <button type="button" class="quiz-option" data-correct="true">Distributive, then null and identity</button>
+            <button type="button" class="quiz-option" data-correct="false">Idempotent law alone</button>
+            <button type="button" class="quiz-option" data-correct="false">It cannot be simplified</button>
+          </div>
+          <div class="quiz-feedback" id="feedback-q1" role="status" aria-live="polite"></div>
+        </div>
+
+        <div class="tab-panel" id="panel-demorgan" role="tabpanel" aria-labelledby="tab-demorgan">
+          <p class="quiz-question">What is <code>(A + BC)'</code> written with the primes applied only to individual variables?</p>
+          <div class="quiz-options" data-quiz="q2">
+            <button type="button" class="quiz-option" data-correct="false">A' + B'C'</button>
+            <button type="button" class="quiz-option" data-correct="true">A'(B' + C')</button>
+            <button type="button" class="quiz-option" data-correct="false">A'B'C'</button>
+            <button type="button" class="quiz-option" data-correct="false">A' + (BC)'</button>
+          </div>
+          <div class="quiz-feedback" id="feedback-q2" role="status" aria-live="polite"></div>
+          <p style="font-size:var(--fs-sm);color:var(--color-text-muted);margin-top:var(--space-md);">
+            You can verify any answer here by putting both expressions into the checker above.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Resources + forward
+         ============================================================ -->
+    <section id="sec-resources">
+      <h2>If This Page Did Not Click</h2>
+
+      <div class="callout">
+        <div class="callout__title">A second explanation</div>
+        <p>Boolean algebra is one of those topics where a different author's phrasing sometimes does what re-reading cannot. GeeksforGeeks has a solid walkthrough of the same laws with additional worked examples: <a href="https://www.geeksforgeeks.org/digital-logic/boolean-algebra/" target="_blank" rel="noopener">Boolean Algebra on GeeksforGeeks</a>.</p>
+        <p>Use it as a supplement, not a replacement &mdash; it does not cover the NAND-universality connection that this course is built around.</p>
+      </div>
+
+      <div class="callout">
+        <div class="callout__title">CS301 coverage</div>
+        <p>Boolean algebra, including the identities and De Morgan's laws, is covered in Saylor CS301 <strong>Unit 3: Fundamentals of Digital Logic Design</strong> &mdash; log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> and navigate to Unit 3. The CS301 treatment of the laws themselves is good. The specific framing here &mdash; De Morgan's laws as the foundation of NAND universality &mdash; is course-specific and is provided on this page.</p>
+      </div>
+    </section>
+
+    <section id="sec-forward">
+      <h2>What Comes Next</h2>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Forward reference</div>
+        <p>You have the vocabulary (page 1), the key idea (page 2), and now the mathematics (page 3). What you have not done is build anything.</p>
+        <p>On the next page you open Logisim for the first time, learn the process for turning a Boolean expression into a working circuit, and see where this week sits in the seventeen-week arc toward a complete CPU.</p>
+      </div>
+
+      <div style="text-align:center;margin:var(--space-xl) 0;">
+        <div class="spa-card__btn" style="font-size:var(--fs-md);padding:var(--space-md) var(--space-xl);">
+          Continue to the next item in this module to begin Page 4: Building Circuits
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+
+  <!-- ==================== Widget 2: Expression Builder ==================== -->
+  <script>
+  (function () {
+    'use strict';
+
+    var L = window.CSCLogic;
+
+    var elMain     = document.getElementById('expr-main');
+    var elMainErr  = document.getElementById('expr-main-error');
+    var elTable    = document.getElementById('expr-table');
+    var elSimp     = document.getElementById('expr-simplified');
+    var elCheck    = document.getElementById('expr-check');
+    var elFeedback = document.getElementById('expr-feedback');
+
+    function renderTable() {
+      var src = elMain.value.trim();
+      elMainErr.textContent = '';
+      elMain.classList.remove('error');
+
+      if (!src) { elTable.innerHTML = '<p style="color:var(--color-text-muted);">Enter an expression above.</p>'; return; }
+
+      var t;
+      try {
+        t = L.truthTable(src);
+      } catch (e) {
+        elMain.classList.add('error');
+        elMainErr.textContent = e.message;
+        elTable.innerHTML = '';
+        return;
+      }
+
+      if (!t.vars.length) {
+        elTable.innerHTML = '<p style="color:var(--color-text-muted);">That expression is a constant — it has no variables.</p>';
+        return;
+      }
+
+      var head = '<tr>' + t.vars.map(function (v) { return '<th>' + v + '</th>'; }).join('') + '<th>F</th></tr>';
+      var body = t.rows.map(function (r) {
+        return '<tr' + (r.out ? ' class="tt__row--true"' : '') + '>' +
+               r.inputs.map(function (b) { return '<td>' + b + '</td>'; }).join('') +
+               '<td><strong>' + r.out + '</strong></td></tr>';
+      }).join('');
+
+      var ones = t.rows.filter(function (r) { return r.out; }).length;
+      elTable.innerHTML =
+        '<table class="tt"><thead>' + head + '</thead><tbody>' + body + '</tbody></table>' +
+        '<p style="font-size:var(--fs-sm);color:var(--color-text-muted);margin-top:var(--space-sm);">' +
+        'Output is 1 in ' + ones + ' of ' + t.rows.length + ' rows (tinted).</p>';
+    }
+
+    function check() {
+      var orig = elMain.value.trim();
+      var mine = elSimp.value.trim();
+
+      if (!mine) {
+        elFeedback.className = 'quiz-feedback visible quiz-feedback--incorrect';
+        elFeedback.textContent = 'Type your simplified expression first.';
+        return;
+      }
+
+      var r = L.simplifyCheck(orig, mine);
+
+      if (r.reason === 'parse-error-original') {
+        elFeedback.className = 'quiz-feedback visible quiz-feedback--incorrect';
+        elFeedback.textContent = 'The expression in box 1 could not be read: ' + r.message;
+        return;
+      }
+      if (r.reason === 'parse-error-student') {
+        elFeedback.className = 'quiz-feedback visible quiz-feedback--incorrect';
+        elFeedback.textContent = 'I could not read your answer: ' + r.message;
+        return;
+      }
+
+      if (!r.equivalent) {
+        elFeedback.className = 'quiz-feedback visible quiz-feedback--incorrect';
+        elFeedback.innerHTML =
+          '<strong>Not equivalent.</strong> Your expression and the original disagree on at least one row ' +
+          'of the truth table. Generate the truth table for each and compare them row by row — the first ' +
+          'row where they differ will tell you which step went wrong.';
+        return;
+      }
+
+      elFeedback.className = 'quiz-feedback visible quiz-feedback--correct';
+      if (r.simpler) {
+        elFeedback.innerHTML =
+          '<strong>Correct.</strong> Equivalent to the original, and simpler: ' +
+          r.origLiterals + ' literals down to ' + r.studentLiterals + '.';
+      } else {
+        elFeedback.innerHTML =
+          '<strong>Equivalent — but not actually simpler.</strong> Your expression has ' +
+          r.studentLiterals + ' literals against the original\'s ' + r.origLiterals + '. ' +
+          'It is a correct rewrite, so keep going: there is a shorter form.';
+      }
+    }
+
+    elMain.addEventListener('input', renderTable);
+    elCheck.addEventListener('click', check);
+    elSimp.addEventListener('keydown', function (e) { if (e.key === 'Enter') check(); });
+
+    Array.prototype.forEach.call(document.querySelectorAll('.js-preset'), function (b) {
+      b.addEventListener('click', function () {
+        elMain.value = b.dataset.expr;
+        elSimp.value = '';
+        elFeedback.className = 'quiz-feedback';
+        elFeedback.textContent = '';
+        renderTable();
+        elSimp.focus();
+      });
+    });
+
+    renderTable();
+  })();
+  </script>
+
+  <!-- ==================== Self-check ==================== -->
+  <script>
+  (function () {
+    'use strict';
+
+    var tabs = document.querySelectorAll('.tab-button');
+    Array.prototype.forEach.call(tabs, function (tab) {
+      tab.addEventListener('click', function () {
+        Array.prototype.forEach.call(tabs, function (t) {
+          t.classList.remove('active'); t.setAttribute('aria-selected', 'false');
+        });
+        Array.prototype.forEach.call(document.querySelectorAll('.tab-panel'), function (p) {
+          p.classList.remove('active');
+        });
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+        document.getElementById(tab.getAttribute('aria-controls')).classList.add('active');
+      });
+    });
+
+    var EXPLAIN = {
+      q1: {
+        yes: "Correct. A + AB = A(1 + B) by distributive; 1 + B = 1 by the null law; A · 1 = A by identity. This one is common enough that it has its own name — the absorption law.",
+        no:  "Not quite. Factor the A out first: A + AB = A(1 + B). Now the null law says 1 + B = 1, so you have A · 1, which identity reduces to A."
+      },
+      q2: {
+        yes: "Correct. De Morgan's on the outer OR gives A'(BC)', and a second application on (BC)' gives A'(B' + C').",
+        no:  "You need De Morgan twice. First on the outer OR: (A + BC)' = A'(BC)'. Then on the inner AND: (BC)' = B' + C'. Putting them together gives A'(B' + C')."
+      }
+    };
+
+    Array.prototype.forEach.call(document.querySelectorAll('.quiz-options'), function (group) {
+      var quizId = group.dataset.quiz;
+      var feedback = document.getElementById('feedback-' + quizId);
+      Array.prototype.forEach.call(group.querySelectorAll('.quiz-option'), function (opt) {
+        opt.addEventListener('click', function () {
+          var right = opt.dataset.correct === 'true';
+          Array.prototype.forEach.call(group.querySelectorAll('.quiz-option'), function (o) {
+            o.classList.remove('correct', 'incorrect');
+          });
+          opt.classList.add(right ? 'correct' : 'incorrect');
+          feedback.className = 'quiz-feedback visible ' + (right ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+          feedback.textContent = right ? EXPLAIN[quizId].yes : EXPLAIN[quizId].no;
+        });
+      });
+    });
+  })();
+  </script>
+
+</body>
+</html>

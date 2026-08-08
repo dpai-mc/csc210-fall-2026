@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w2-01">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 2, Page 1: From Voltage to Decision</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- Page-specific: transistor schematic ---------- */
+    .transistor-fig {
+      max-width: 340px;
+      margin: var(--space-lg) auto;
+    }
+    .transistor-fig .terminal-label {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      fill: var(--color-text-muted);
+    }
+    /* ---------- Page-specific: inverter stage schematic ---------- */
+    .inverter-fig { max-width: 420px; margin: var(--space-lg) auto; }
+    .inverter-fig .terminal-label {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      fill: var(--color-text-muted);
+    }
+    .inverter-fig .rail-label {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      fill: var(--color-text);
+    }
+    .inverter-fig .resistor { fill: none; stroke: var(--color-text); stroke-width: 2.5; }
+    .inverter-fig .ground { stroke: var(--color-text); stroke-width: 2.5; }
+    /* ---------- Page-specific: side-by-side gate reference ---------- */
+    .gate-ref {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-lg);
+      align-items: center;
+      margin: var(--space-md) 0 var(--space-lg);
+    }
+    @media (max-width: 640px) { .gate-ref { grid-template-columns: 1fr; } }
+    .gate-ref .gate-svg { max-width: 200px; }
+    .gate-ref table { margin-bottom: 0; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 2 &rsaquo; <span>From Voltage to Decision</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>From Voltage to Decision</h1>
+    <p><strong>Estimated time:</strong> ~1.75 hours (includes an 8-minute video) &nbsp;|&nbsp;
+       <strong>Sections:</strong> 2.1&ndash;2.2 &nbsp;|&nbsp;
+       <strong>Prerequisite:</strong> Week 2 Orientation</p>
+
+    <div class="callout callout--hook">
+      <div class="callout__title">What We Have / What We Can't Do / What We Can Now Do</div>
+      <p><strong>What you already know:</strong> Data is stored as patterns of 0s and 1s, where 0 means no voltage and 1 means voltage present.</p>
+      <p><strong>What you can't do yet:</strong> Explain what sits between "voltage on a wire" and "the machine decided something." Right now that is a black box.</p>
+      <p><strong>What you will be able to do by the end of this page:</strong> Describe the transistor as a voltage-controlled switch, explain why a single transistor behaves as a NOT gate, read and write truth tables for all seven logic gates with any number of inputs, and recognize their circuit symbols on sight.</p>
+    </div>
+
+    <p>Last week you learned that any data can be represented as 0s and 1s. You converted between binary, hexadecimal, and decimal. You saw that the same byte pattern can mean an integer, a character, or a color &mdash; depending on how the CPU interprets it.</p>
+
+    <p><strong>But representation is passive. The bits just sit there.</strong></p>
+
+    <p>How does the computer actually <em>do</em> anything with those bits? How does it add two numbers, compare values, or decide whether to execute one instruction or another? How does voltage &mdash; which is either present or absent &mdash; become a <em>decision</em>?</p>
+
+    <p>The answer is the <strong>logic gate</strong>. A logic gate is a tiny circuit that takes one or more binary inputs and produces a binary output according to a fixed rule. These rules seem trivial, but they are the atoms of computation. Every operation your computer performs &mdash; from rendering this page to running a compiler &mdash; is the result of billions of logic gates making billions of tiny decisions per second.</p>
+
+    <!-- ============================================================
+         Section 2.1 — Transistors as Switches
+         ============================================================ -->
+    <section id="sec-2-1">
+      <h2>2.1 &mdash; From Voltage to Decision: Transistors as Switches</h2>
+
+      <p>Last week we said that 0 means "no voltage" and 1 means "voltage present." But how does voltage become a decision? The bridge is the <strong>transistor</strong>.</p>
+
+      <h3>Watch This First</h3>
+
+      <p>Eight minutes on what a transistor is and how one works, built up from a 5-volt source, a ground connection, and a switch. It ends somewhere that may surprise you &mdash; and that ending is the point of this section, so watch before you read on.</p>
+
+      <div class="video-breakout">
+        <div class="video-transcript-row">
+          <div class="video-col">
+            <div class="video-frame" id="video-container">
+              <iframe id="youtube-player"
+                      src="https://www.youtube.com/embed/nJTPsotd_nc?enablejsapi=1&amp;cc_load_policy=1&amp;iv_load_policy=3&amp;modestbranding=1&amp;rel=0"
+                      title="CSC210 — How a transistor works"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allowfullscreen
+                      loading="lazy">
+              </iframe>
+            </div>
+            <div class="video-caption">
+              Closed captions available. Click any line of the transcript to jump to that point.
+            </div>
+          </div>
+          <div class="transcript-col">
+            <div class="transcript-panel" id="transcript-container">
+              <p class="transcript-loading">Loading transcript...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3>The Transistor as a Switch</h3>
+
+      <p>A transistor is a tiny electronic switch. In its simplest role in digital logic, it has three terminals:</p>
+
+      <ul>
+        <li><strong>Gate</strong> &mdash; the control input. Voltage here determines whether the switch is open or closed. This is the <em>voltage in</em> of the video.</li>
+        <li><strong>Source</strong> &mdash; where current enters, from the 5-volt supply.</li>
+        <li><strong>Drain</strong> &mdash; where current exits, toward ground.</li>
+      </ul>
+
+      <div class="callout">
+        <div class="callout__title">Two names for the same thing</div>
+        <p>The video says "voltage in" and "voltage out"; the schematic below says "gate" and labels a separate output node. They describe the same circuit. <strong>Gate = voltage in.</strong> The output is not a terminal of the transistor at all &mdash; it is a point on the wire, which is exactly why the next few paragraphs matter.</p>
+      </div>
+
+      <div class="circuit-canvas">
+        <svg class="transistor-fig" viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg"
+             role="img" aria-label="Schematic of a transistor: a gate terminal on the left controls whether current flows from the source terminal at top to the drain terminal at bottom.">
+          <!-- channel -->
+          <line class="wire wire--lo" x1="200" y1="20" x2="200" y2="140"/>
+          <!-- gate lead -->
+          <line class="wire wire--lo" x1="90" y1="80" x2="165" y2="80"/>
+          <!-- gate plate -->
+          <line x1="175" y1="45" x2="175" y2="115" stroke="var(--color-text)" stroke-width="5"/>
+          <!-- terminals -->
+          <circle class="node node--lo" cx="200" cy="20" r="6"/>
+          <circle class="node node--lo" cx="200" cy="140" r="6"/>
+          <circle class="node node--lo" cx="90" cy="80" r="6"/>
+          <text class="terminal-label" x="215" y="24">Source (current in)</text>
+          <text class="terminal-label" x="215" y="144">Drain (current out)</text>
+          <text class="terminal-label" x="30" y="72">Gate</text>
+          <text class="terminal-label" x="12" y="92">(control)</text>
+        </svg>
+        <div class="circuit-canvas__caption">A transistor used as a switch. Voltage on the gate decides whether current may pass from source to drain.</div>
+      </div>
+
+      <p>When voltage is applied to the gate, the transistor <strong>conducts</strong> &mdash; current flows from source to drain, and the switch is closed. When no voltage is applied, the transistor <strong>blocks</strong> &mdash; no current flows, and the switch is open. That is the whole behavior of the device.</p>
+
+      <p><strong>This is the entire physical mechanism.</strong> A transistor converts a voltage signal into a decision: let current through, or don't. Modern CPUs contain billions of transistors, each making this binary decision billions of times per second.</p>
+
+      <h3>But Where Is the Output?</h3>
+
+      <p>Notice what the paragraph above did <em>not</em> say. It said whether current flows. It did not say what the output is &mdash; because a transistor by itself has no output. To read a 1 or a 0 you have to build a small circuit around it and measure the voltage at a particular point on a wire. <strong>Which point you pick determines the answer.</strong></p>
+
+      <p>Here is the circuit the video draws. The 5-volt supply reaches the output node through a <strong>resistor</strong>, and the transistor sits between that node and ground:</p>
+
+      <div class="circuit-canvas">
+        <svg class="inverter-fig" viewBox="0 0 420 265" xmlns="http://www.w3.org/2000/svg"
+             role="img" aria-label="An inverter built from one transistor. Five volts flows down through a resistor to an output node. Below that node the transistor connects to ground. When the gate is low the transistor blocks and the output sits at five volts, a 1. When the gate is high the transistor conducts and pulls the output down to ground, a 0.">
+          <!-- 5V rail -->
+          <text class="rail-label" x="172" y="18">+5 V</text>
+          <line class="wire wire--hi" x1="200" y1="26" x2="200" y2="48"/>
+          <!-- resistor (zigzag) -->
+          <polyline class="resistor" points="200,48 186,55 214,66 186,77 214,88 200,95"/>
+          <text class="terminal-label" x="226" y="76">resistor</text>
+          <!-- node down to output -->
+          <line class="wire wire--hi" x1="200" y1="95" x2="200" y2="140"/>
+          <!-- output tap -->
+          <line class="wire wire--hi" x1="200" y1="118" x2="345" y2="118"/>
+          <circle class="node node--hi" cx="200" cy="118" r="6"/>
+          <text class="rail-label" x="352" y="122">Vout</text>
+          <text class="terminal-label" x="238" y="108">the output is a point on this wire</text>
+          <!-- transistor channel -->
+          <line class="wire wire--lo" x1="200" y1="140" x2="200" y2="228"/>
+          <!-- gate plate -->
+          <line x1="176" y1="152" x2="176" y2="216" stroke="var(--color-text)" stroke-width="5"/>
+          <!-- gate lead -->
+          <line class="wire wire--lo" x1="72" y1="184" x2="166" y2="184"/>
+          <circle class="node node--lo" cx="72" cy="184" r="6"/>
+          <text class="rail-label" x="14" y="176">Vin</text>
+          <text class="terminal-label" x="8" y="196">(gate)</text>
+          <!-- ground symbol -->
+          <line class="ground" x1="176" y1="230" x2="224" y2="230"/>
+          <line class="ground" x1="184" y1="239" x2="216" y2="239"/>
+          <line class="ground" x1="192" y1="248" x2="208" y2="248"/>
+          <text class="terminal-label" x="232" y="243">ground</text>
+        </svg>
+        <div class="circuit-canvas__caption">One transistor, one resistor. The output is the wire between them &mdash; and it reads the <em>opposite</em> of the input.</div>
+      </div>
+
+      <p>Now trace it, and watch the output rather than the current:</p>
+
+      <ul>
+        <li><strong>Input 0.</strong> No voltage on the gate, so the transistor blocks. Current cannot reach ground, so the output node is pulled up to the supply through the resistor. <strong>Vout = 5 V = 1.</strong></li>
+        <li><strong>Input 1.</strong> Voltage on the gate, so the transistor conducts. It connects the output node straight to ground, and electricity takes that path. <strong>Vout = 0 V = 0.</strong></li>
+      </ul>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">A single transistor is a NOT gate</div>
+        <p>0 in gives 1 out. 1 in gives 0 out. You have not built anything yet and inversion has already appeared for free &mdash; it falls out of the wiring, because the transistor's job is to <em>pull the output down</em>.</p>
+        <p>This is worth holding onto. It is easy to assume the simplest gate must be AND or OR, since those are the ones that read like ordinary language. In actual silicon the simplest thing is the one that says <em>no</em>.</p>
+      </div>
+
+      <p>That asymmetry runs deeper than it looks. Because transistors naturally pull an output <em>down</em>, the gates that come cheapest in hardware are the inverting ones &mdash; NAND and NOR. A non-inverting AND is built by making a NAND and then inverting it, which costs <em>more</em> transistors, not fewer.</p>
+
+      <p>Keep that in your pocket. In section 2.3 you will learn that NAND alone can build every other gate, and it can look like an algebraic curiosity. It is not. It is a fact about what silicon does easily, and you have just watched where it comes from.</p>
+
+      <h3>What to Carry Forward</h3>
+
+      <p>Gates with more than one input work the same way, with more transistors. Wire two in series and current only reaches ground when <em>both</em> gates are on; wire them in parallel and <em>either</em> one is enough. Those two arrangements are already NAND and NOR &mdash; which is where the next section picks up.</p>
+
+      <p>We do not need to understand semiconductor physics to work with digital logic. We need exactly four things:</p>
+
+      <ol>
+        <li>A transistor is a voltage-controlled switch.</li>
+        <li>Its output is a voltage on a wire, and the natural arrangement <strong>inverts</strong> &mdash; one transistor is a NOT gate.</li>
+        <li>Transistors can be wired together, in series and in parallel, to form logic gates.</li>
+        <li>Logic gates are the building blocks of all digital computation.</li>
+      </ol>
+
+      <p>That is the last we will say about physics. From here on, the transistor is a switch and we build upward &mdash; at the gate level, with the transistors abstracted away.</p>
+
+      <div class="callout">
+        <div class="callout__title">CS301 coverage</div>
+        <p>Transistors as switches are briefly introduced at the start of Saylor CS301 <strong>Unit 3: Fundamentals of Digital Logic Design</strong>. Log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> and navigate to Unit 3. The CS301 treatment is brief and conceptual, consistent with this course's approach &mdash; the course-specific framing connecting transistors back to Week 1's binary concepts is provided here.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Section 2.2 — The Basic Gates
+         ============================================================ -->
+    <section id="sec-2-2">
+      <h2>2.2 &mdash; The Basic Gates</h2>
+
+      <p>Logic gates are the vocabulary of digital computation. Every complex circuit &mdash; from a simple adder to a complete CPU &mdash; is built from combinations of a small set of basic gates. There are <strong>seven</strong> of them, and you will meet all seven on this page.</p>
+
+      <p>Start with the three most intuitive, because they map directly onto logic you already use when you write code.</p>
+
+      <h3>The AND Gate</h3>
+
+      <p>The AND gate outputs 1 if and only if <strong>all</strong> of its inputs are 1. Think of it as a circuit that requires every condition to be met.</p>
+
+      <div class="gate-ref">
+        <svg class="gate-svg" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AND gate symbol: a shape with a flat left side and a rounded right side.">
+          <path class="gate-body" d="M50,10 H100 A40,40 0 0 1 100,90 H50 Z"/>
+          <line class="wire wire--lo" x1="0" y1="30" x2="50" y2="30"/>
+          <line class="wire wire--lo" x1="0" y1="70" x2="50" y2="70"/>
+          <line class="wire wire--lo" x1="140" y1="50" x2="200" y2="50"/>
+          <text x="10" y="24">A</text><text x="10" y="64">B</text>
+        </svg>
+        <table>
+          <thead><tr><th>A</th><th>B</th><th>A AND B</th></tr></thead>
+          <tbody>
+            <tr><td>0</td><td>0</td><td>0</td></tr>
+            <tr><td>0</td><td>1</td><td>0</td></tr>
+            <tr><td>1</td><td>0</td><td>0</td></tr>
+            <tr><td>1</td><td>1</td><td>1</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>In Boolean algebra, A AND B is written <code>A &middot; B</code> or simply <code>AB</code>.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">You already know this from programming</div>
+        <p>When you write a compound conditional in code &mdash; <code>if (loggedIn &amp;&amp; hasPermission)</code> &mdash; you are describing an AND gate. The body runs only when both conditions are true. An AND gate is exactly that, in hardware: two wires in, one wire out, output high only when both inputs are high.</p>
+        <p>The <code>||</code> operator is an OR gate. The <code>!</code> operator is a NOT gate. You have been programming with logic gates the whole time; you just were not holding one.</p>
+      </div>
+
+      <h3>The OR Gate</h3>
+
+      <p>The OR gate outputs 1 if <strong>at least one</strong> of its inputs is 1.</p>
+
+      <div class="gate-ref">
+        <svg class="gate-svg" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="OR gate symbol: a curved left side and a pointed right side.">
+          <path class="gate-body" d="M25,10 Q70,50 25,90 H50 Q120,50 50,10 Z"/>
+          <line class="wire wire--lo" x1="0" y1="30" x2="38" y2="30"/>
+          <line class="wire wire--lo" x1="0" y1="70" x2="38" y2="70"/>
+          <line class="wire wire--lo" x1="105" y1="50" x2="200" y2="50"/>
+          <text x="6" y="24">A</text><text x="6" y="64">B</text>
+        </svg>
+        <table>
+          <thead><tr><th>A</th><th>B</th><th>A OR B</th></tr></thead>
+          <tbody>
+            <tr><td>0</td><td>0</td><td>0</td></tr>
+            <tr><td>0</td><td>1</td><td>1</td></tr>
+            <tr><td>1</td><td>0</td><td>1</td></tr>
+            <tr><td>1</td><td>1</td><td>1</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>In Boolean algebra, A OR B is written <code>A + B</code>. Note that this <strong>+ does not mean addition</strong> &mdash; 1 + 1 = 1 here, not 2. It is the OR operator, and the resemblance to arithmetic is a historical accident you will get used to.</p>
+
+      <h3>The NOT Gate (Inverter)</h3>
+
+      <p>The NOT gate has one input and one output. It flips the input.</p>
+
+      <div class="gate-ref">
+        <svg class="gate-svg" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="NOT gate symbol: a triangle with a small circle at its output.">
+          <path class="gate-body" d="M50,10 L100,50 L50,90 Z"/>
+          <circle class="gate-body" cx="110" cy="50" r="10"/>
+          <line class="wire wire--lo" x1="0" y1="50" x2="50" y2="50"/>
+          <line class="wire wire--lo" x1="120" y1="50" x2="200" y2="50"/>
+          <text x="10" y="44">A</text>
+        </svg>
+        <table>
+          <thead><tr><th>A</th><th>NOT A</th></tr></thead>
+          <tbody>
+            <tr><td>0</td><td>1</td></tr>
+            <tr><td>1</td><td>0</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>In Boolean algebra, NOT A is written <code>A'</code> or <code>&not;A</code>. This course uses the prime notation <code>A'</code> almost everywhere.</p>
+
+      <h3>The Inverted Gates: NAND, NOR, XNOR</h3>
+
+      <p>Before the symbols, one piece of notation that unlocks four more gates at once.</p>
+
+      <p><strong>A small circle on a gate's output means "inverted."</strong> That is the whole convention. An AND symbol with a circle is a <strong>NAND</strong> (NOT-AND). An OR symbol with a circle is a <strong>NOR</strong> (NOT-OR). Once you know that, you can read gates you have never seen before.</p>
+
+      <div class="gate-ref">
+        <svg class="gate-svg" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="NAND gate symbol: an AND shape with a small circle at the output.">
+          <path class="gate-body" d="M50,10 H100 A40,40 0 0 1 100,90 H50 Z"/>
+          <circle class="gate-body" cx="150" cy="50" r="10"/>
+          <line class="wire wire--lo" x1="0" y1="30" x2="50" y2="30"/>
+          <line class="wire wire--lo" x1="0" y1="70" x2="50" y2="70"/>
+          <line class="wire wire--lo" x1="160" y1="50" x2="200" y2="50"/>
+          <text x="10" y="24">A</text><text x="10" y="64">B</text>
+        </svg>
+        <table>
+          <thead><tr><th>A</th><th>B</th><th>A NAND B</th></tr></thead>
+          <tbody>
+            <tr><td>0</td><td>0</td><td>1</td></tr>
+            <tr><td>0</td><td>1</td><td>1</td></tr>
+            <tr><td>1</td><td>0</td><td>1</td></tr>
+            <tr><td>1</td><td>1</td><td>0</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Every output is the exact opposite of the AND table. NAND outputs 0 <em>only</em> when both inputs are 1.</p>
+
+      <div class="gate-ref">
+        <svg class="gate-svg" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="NOR gate symbol: an OR shape with a small circle at the output.">
+          <path class="gate-body" d="M25,10 Q70,50 25,90 H50 Q120,50 50,10 Z"/>
+          <circle class="gate-body" cx="115" cy="50" r="10"/>
+          <line class="wire wire--lo" x1="0" y1="30" x2="38" y2="30"/>
+          <line class="wire wire--lo" x1="0" y1="70" x2="38" y2="70"/>
+          <line class="wire wire--lo" x1="125" y1="50" x2="200" y2="50"/>
+          <text x="6" y="24">A</text><text x="6" y="64">B</text>
+        </svg>
+        <table>
+          <thead><tr><th>A</th><th>B</th><th>A NOR B</th></tr></thead>
+          <tbody>
+            <tr><td>0</td><td>0</td><td>1</td></tr>
+            <tr><td>0</td><td>1</td><td>0</td></tr>
+            <tr><td>1</td><td>0</td><td>0</td></tr>
+            <tr><td>1</td><td>1</td><td>0</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>NOR outputs 1 <em>only</em> when both inputs are 0. Again, the exact opposite of OR.</p>
+
+      <h3>The Exclusive Gates: XOR and XNOR</h3>
+
+      <p><strong>XOR</strong> (exclusive OR) outputs 1 when the inputs are <em>different</em>. Its symbol is an OR symbol with a second curved line across the inputs.</p>
+
+      <div class="gate-ref">
+        <svg class="gate-svg" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="XOR gate symbol: an OR shape with an extra curved line across the inputs.">
+          <path class="gate-body" d="M35,10 Q80,50 35,90 H60 Q130,50 60,10 Z"/>
+          <path class="gate-body" d="M22,10 Q67,50 22,90" fill="none"/>
+          <line class="wire wire--lo" x1="0" y1="30" x2="34" y2="30"/>
+          <line class="wire wire--lo" x1="0" y1="70" x2="34" y2="70"/>
+          <line class="wire wire--lo" x1="115" y1="50" x2="200" y2="50"/>
+          <text x="4" y="24">A</text><text x="4" y="64">B</text>
+        </svg>
+        <table>
+          <thead><tr><th>A</th><th>B</th><th>A XOR B</th></tr></thead>
+          <tbody>
+            <tr><td>0</td><td>0</td><td>0</td></tr>
+            <tr><td>0</td><td>1</td><td>1</td></tr>
+            <tr><td>1</td><td>0</td><td>1</td></tr>
+            <tr><td>1</td><td>1</td><td>0</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Compare this with OR. They differ in exactly one row: when both inputs are 1, OR says 1 but XOR says 0. Plain OR means "at least one"; XOR means "one but not both." In Boolean algebra XOR is written <code>A &oplus; B</code>.</p>
+
+      <p><strong>XNOR</strong> is XOR with a bubble &mdash; outputs 1 when the inputs are the <em>same</em>. It is the equality detector: feed it two bits and it tells you whether they match. You will use exactly this in Week 3 to build a comparator.</p>
+
+      <div class="gate-ref">
+        <svg class="gate-svg" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="XNOR gate symbol: an XOR shape with a small circle at the output.">
+          <path class="gate-body" d="M35,10 Q80,50 35,90 H60 Q130,50 60,10 Z"/>
+          <path class="gate-body" d="M22,10 Q67,50 22,90" fill="none"/>
+          <circle class="gate-body" cx="125" cy="50" r="10"/>
+          <line class="wire wire--lo" x1="0" y1="30" x2="34" y2="30"/>
+          <line class="wire wire--lo" x1="0" y1="70" x2="34" y2="70"/>
+          <line class="wire wire--lo" x1="135" y1="50" x2="200" y2="50"/>
+          <text x="4" y="24">A</text><text x="4" y="64">B</text>
+        </svg>
+        <table>
+          <thead><tr><th>A</th><th>B</th><th>A XNOR B</th></tr></thead>
+          <tbody>
+            <tr><td>0</td><td>0</td><td>1</td></tr>
+            <tr><td>0</td><td>1</td><td>0</td></tr>
+            <tr><td>1</td><td>0</td><td>0</td></tr>
+            <tr><td>1</td><td>1</td><td>1</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>All Seven at a Glance</h3>
+
+      <p>That is the complete set. Every circuit in this course &mdash; up to and including the CPU &mdash; is built from these seven.</p>
+
+      <table>
+        <thead><tr><th>Gate</th><th>Symbol cue</th><th>Outputs 1 when&hellip;</th><th>Written</th></tr></thead>
+        <tbody>
+          <tr><td><strong>AND</strong></td><td>flat back, round nose</td><td>both inputs are 1</td><td><code>AB</code></td></tr>
+          <tr><td><strong>OR</strong></td><td>curved back, pointed nose</td><td>at least one input is 1</td><td><code>A + B</code></td></tr>
+          <tr><td><strong>NOT</strong></td><td>triangle + bubble</td><td>the input is 0</td><td><code>A'</code></td></tr>
+          <tr><td><strong>NAND</strong></td><td>AND + bubble</td><td>not both inputs are 1</td><td><code>(AB)'</code></td></tr>
+          <tr><td><strong>NOR</strong></td><td>OR + bubble</td><td>both inputs are 0</td><td><code>(A + B)'</code></td></tr>
+          <tr><td><strong>XOR</strong></td><td>OR + extra curve</td><td>the inputs differ</td><td><code>A &oplus; B</code></td></tr>
+          <tr><td><strong>XNOR</strong></td><td>XOR + bubble</td><td>the inputs match</td><td><code>(A &oplus; B)'</code></td></tr>
+        </tbody>
+      </table>
+
+      <p>Notice that four of the seven are just another gate with a bubble. If you can remember AND, OR, NOT, and XOR, and you remember that a bubble inverts, you have all seven.</p>
+
+      <div class="callout">
+        <div class="callout__title">CS301 coverage</div>
+        <p>All seven gates, their truth tables, and their circuit symbols are covered in Saylor CS301 <strong>Unit 3: Fundamentals of Digital Logic Design</strong>. Log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> and navigate to Unit 3. This page adds the course-specific framing and the connection back to Week 1's binary concepts.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Section 2.2.1 — Gates With More Than Two Inputs
+         ============================================================ -->
+    <section id="sec-2-2-1">
+      <h2>2.2.1 &mdash; Gates with More Than Two Inputs</h2>
+
+      <p>Every truth table so far has had two inputs. Real gates are not limited to two, and neither is Logisim &mdash; when you place a gate you can set its input count to 3, 4, 5 or more. So what does a three-input AND gate do?</p>
+
+      <p>For most gates the answer is exactly what you would guess.</p>
+
+      <table>
+        <thead><tr><th>Gate</th><th>With any number of inputs, outputs 1 when&hellip;</th></tr></thead>
+        <tbody>
+          <tr><td><strong>AND</strong></td><td>every input is 1</td></tr>
+          <tr><td><strong>OR</strong></td><td>at least one input is 1</td></tr>
+          <tr><td><strong>NAND</strong></td><td>at least one input is 0 &nbsp;<span style="color:var(--color-text-muted);">(i.e. NOT all-ones)</span></td></tr>
+          <tr><td><strong>NOR</strong></td><td>every input is 0</td></tr>
+          <tr><td><strong>NOT</strong></td><td colspan="1">&mdash; NOT always has exactly one input; there is nothing to generalize</td></tr>
+        </tbody>
+      </table>
+
+      <p>Nothing surprising. A three-input AND needs all three high; a five-input OR needs only one.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">XOR and XNOR are the odd ones — literally</div>
+        <p>With two inputs you can describe XOR as "the inputs are different," or equivalently "exactly one input is 1." Both descriptions give the right answer, so it is easy to assume they mean the same thing.</p>
+        <p><strong>They do not.</strong> With three or more inputs the "exactly one" description breaks, and the correct rule is:</p>
+        <p style="font-size:var(--fs-md);padding-left:var(--space-lg);">
+          <strong>XOR outputs 1 when the sum of all its inputs is <em>odd</em>, and 0 when the sum is <em>even</em>.</strong>
+        </p>
+        <p>XNOR is the mirror image: 1 when the sum is <strong>even</strong>, 0 when it is odd.</p>
+        <p>Check it against the two-input table above and you will see the two-input case was the parity rule all along: 0+1 = 1 (odd, output 1); 1+1 = 2 (even, output 0).</p>
+      </div>
+
+      <h3>Where the "exactly one" idea falls apart</h3>
+
+      <p>Take a three-input XOR with all three inputs set to 1:</p>
+
+      <ul>
+        <li>"Exactly one input is 1" &rarr; false, so this rule would predict <strong>0</strong>.</li>
+        <li>"The sum is odd" &rarr; 1 + 1 + 1 = 3, which is odd, so the parity rule predicts <strong>1</strong>.</li>
+      </ul>
+
+      <p>The gate outputs <strong>1</strong>. The parity rule is right; the "exactly one" shortcut is wrong. Set the simulator below to XOR with three inputs and confirm it yourself.</p>
+
+      <p>This property has a name: XOR computes the <strong>parity</strong> of its inputs. It is genuinely useful &mdash; parity is the basis of the simplest error-detection schemes in memory and data transmission, where an extra bit is set to make the total number of 1s always odd (or always even) so a single flipped bit can be detected.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Forward reference</div>
+        <p>In <strong>Week 3</strong> you will build a <strong>full adder</strong>, which adds three bits: two operands plus a carry-in. Its sum output is a three-input XOR &mdash; and now you know why. Adding three bits, the sum bit is 1 exactly when an odd number of them are 1. The parity rule is not a curiosity; it is how binary addition works.</p>
+      </div>
+
+      <div class="callout">
+        <div class="callout__title">One thing to watch in Logisim</div>
+        <p>A three-input NAND is <strong>not</strong> the same as chaining two two-input NANDs. A three-input NAND computes <code>(ABC)'</code> &mdash; the AND of all three, inverted once at the end. Chaining gives you <code>((AB)'C)'</code>, which is a different function.</p>
+        <p>When a circuit needs a three-input gate, set the gate's input count in its properties panel rather than wiring two gates together. The same caution applies to NOR.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         WIDGET 1 — Gate Simulator  (INSERT AFTER Section 2.2)
+         ============================================================ -->
+    <section id="widget-gate-sim">
+      <div class="widget-card">
+        <div class="widget-card__title">Interactive: Gate Simulator</div>
+        <div class="widget-card__subtitle">
+          Pick a gate, then click the input switches to toggle them between 0 and 1. Watch the wires change color as signal flows, and watch the highlighted row move through the truth table.
+          Switch to <strong>3 inputs</strong> to check the parity rule for XOR and XNOR.
+        </div>
+
+        <div class="gate-selector" role="group" aria-label="Select a logic gate">
+          <button type="button" class="gate-btn active" data-gate="AND">AND</button>
+          <button type="button" class="gate-btn" data-gate="OR">OR</button>
+          <button type="button" class="gate-btn" data-gate="NOT">NOT</button>
+          <button type="button" class="gate-btn" data-gate="NAND">NAND</button>
+          <button type="button" class="gate-btn" data-gate="NOR">NOR</button>
+          <button type="button" class="gate-btn" data-gate="XOR">XOR</button>
+          <button type="button" class="gate-btn" data-gate="XNOR">XNOR</button>
+        </div>
+
+        <div class="gate-selector" role="group" aria-label="Number of inputs" style="margin-bottom:var(--space-lg);">
+          <span style="align-self:center;font-size:var(--fs-sm);color:var(--color-text-muted);margin-right:var(--space-xs);">Inputs:</span>
+          <button type="button" class="gate-btn active" data-inputs="2">2</button>
+          <button type="button" class="gate-btn" data-inputs="3">3</button>
+        </div>
+
+        <div class="gate-sim">
+          <div>
+            <div class="gate-sim__col-title">Inputs</div>
+            <button type="button" class="input-switch" id="switch-a">A: 0</button>
+            <button type="button" class="input-switch" id="switch-b">B: 0</button>
+            <button type="button" class="input-switch" id="switch-c">C: 0</button>
+          </div>
+
+          <div class="gate-sim__display">
+            <div class="gate-sim__name" id="gate-name">AND Gate</div>
+            <div id="gate-svg-slot"></div>
+          </div>
+
+          <div>
+            <div class="gate-sim__col-title">Output</div>
+            <div class="output-light" id="gate-output">Y: 0</div>
+          </div>
+        </div>
+
+        <p class="gate-sim__rule" id="gate-rule">Output is 1 only when ALL inputs are 1</p>
+
+        <!-- Screen-reader state announcement. The widget conveys state through
+             colour; this gives the same information as text. -->
+        <p class="sr-only" id="gate-status" aria-live="polite"></p>
+
+        <h3 id="tt-heading" style="margin-top:var(--space-lg);">Truth table for the <span id="tt-gate-name">AND</span> gate</h3>
+        <p style="font-size:var(--fs-sm);color:var(--color-text-muted);">
+          Rows that produce an output of 1 are tinted. The row matching your current inputs is outlined.
+        </p>
+        <table class="tt" id="truth-table">
+          <thead id="tt-head"></thead>
+          <tbody id="tt-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SELF-CHECK  (INSERT AFTER Widget 1)
+         ============================================================ -->
+    <section id="self-check">
+      <h2>Check Yourself</h2>
+      <p>These are not graded and nothing is recorded. They are here so you find out now, rather than on the quiz, whether the last two sections actually landed.</p>
+
+      <div class="widget-card">
+        <div class="tab-navigation" role="tablist" aria-label="Self-check categories">
+          <button type="button" class="tab-button active" role="tab" aria-selected="true"
+                  aria-controls="panel-recognition" id="tab-recognition">Gate Recognition</button>
+          <button type="button" class="tab-button" role="tab" aria-selected="false"
+                  aria-controls="panel-truthtable" id="tab-truthtable">Truth Tables</button>
+          <button type="button" class="tab-button" role="tab" aria-selected="false"
+                  aria-controls="panel-multi" id="tab-multi">Multi-Input Gates</button>
+        </div>
+
+        <div class="tab-panel active" id="panel-recognition" role="tabpanel" aria-labelledby="tab-recognition">
+          <p class="quiz-question">A gate outputs 1 <strong>only</strong> when every one of its inputs is 0. Which gate is it?</p>
+          <div class="quiz-options" data-quiz="q1">
+            <button type="button" class="quiz-option" data-correct="false">AND</button>
+            <button type="button" class="quiz-option" data-correct="false">NAND</button>
+            <button type="button" class="quiz-option" data-correct="true">NOR</button>
+            <button type="button" class="quiz-option" data-correct="false">XOR</button>
+          </div>
+          <div class="quiz-feedback" id="feedback-q1" role="status" aria-live="polite"></div>
+          <p style="font-size:var(--fs-sm);color:var(--color-text-muted);margin-top:var(--space-md);">
+            Stuck? Set the simulator above to each candidate and toggle both inputs to 0.
+          </p>
+        </div>
+
+        <div class="tab-panel" id="panel-truthtable" role="tabpanel" aria-labelledby="tab-truthtable">
+          <p class="quiz-question">A <strong>three-input XOR</strong> gate has all three inputs set to 1. What is the output?</p>
+          <div class="quiz-options" data-quiz="q2">
+            <button type="button" class="quiz-option" data-correct="true">1</button>
+            <button type="button" class="quiz-option" data-correct="false">0</button>
+            <button type="button" class="quiz-option" data-correct="false">Undefined &mdash; XOR only takes two inputs</button>
+          </div>
+          <div class="quiz-feedback" id="feedback-q2" role="status" aria-live="polite"></div>
+          <p style="font-size:var(--fs-sm);color:var(--color-text-muted);margin-top:var(--space-md);">
+            Set the simulator to XOR, switch it to 3 inputs, and turn all three on.
+          </p>
+        </div>
+
+        <div class="tab-panel" id="panel-multi" role="tabpanel" aria-labelledby="tab-multi">
+          <p class="quiz-question">A <strong>three-input NAND</strong> gate has inputs A=1, B=0, C=1. What is the output?</p>
+          <div class="quiz-options" data-quiz="q3">
+            <button type="button" class="quiz-option" data-correct="true">1</button>
+            <button type="button" class="quiz-option" data-correct="false">0</button>
+          </div>
+          <div class="quiz-feedback" id="feedback-q3" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Forward Reference
+         ============================================================ -->
+    <section id="sec-forward">
+      <h2>What Comes Next</h2>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Forward reference</div>
+        <p>You now have all seven gates. That should raise a question: do we actually <em>need</em> seven?</p>
+        <p>AND, OR, and NOT are the gates that match how humans think, and the other four are conveniences built from them. But chip factories did not want seven kinds of gate, or even three. On the next page you will find out that <strong>one</strong> of these seven &mdash; the NAND gate &mdash; can be wired together to produce every one of the others, and therefore any circuit whatsoever, including a complete CPU.</p>
+        <p>That one gate type is sufficient for all of computing is the most important idea in this week, and arguably in this course.</p>
+      </div>
+
+      <div style="text-align:center;margin:var(--space-xl) 0;">
+        <div class="spa-card__btn" style="font-size:var(--fs-md);padding:var(--space-md) var(--space-xl);">
+          Continue to the next item in this module to begin Page 2: NAND and NOR &mdash; The Universal Gates
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+
+  <!-- ==================== Widget 1: Gate Simulator ==================== -->
+  <script>
+  (function () {
+    'use strict';
+
+    var L = window.CSCLogic;
+
+    /* Gate symbol geometry. Ported from the Fall 2025 Week 2 simulator and
+       retargeted onto shared/style.css tokens; XNOR is new for Fall 2026
+       (the legacy widget shipped only six gates, but the spec and Assignment 2
+       Part A both require seven). Wires carry js- hooks so signal state is a
+       class swap rather than an inline style. */
+    var SYMBOLS = {
+      AND: '<path class="gate-body" d="M50,10 H100 A40,40 0 0 1 100,90 H50 Z"/>' +
+           '<line class="wire js-wire-a" x1="0" y1="30" x2="50" y2="30"/>' +
+           '<line class="wire js-wire-b" x1="0" y1="70" x2="50" y2="70"/>' +
+           '<line class="wire js-wire-out" x1="140" y1="50" x2="196" y2="50"/>',
+      OR:  '<path class="gate-body" d="M25,10 Q70,50 25,90 H50 Q120,50 50,10 Z"/>' +
+           '<line class="wire js-wire-a" x1="0" y1="30" x2="38" y2="30"/>' +
+           '<line class="wire js-wire-b" x1="0" y1="70" x2="38" y2="70"/>' +
+           '<line class="wire js-wire-out" x1="105" y1="50" x2="196" y2="50"/>',
+      NOT: '<path class="gate-body" d="M50,10 L100,50 L50,90 Z"/>' +
+           '<circle class="gate-body" cx="110" cy="50" r="10"/>' +
+           '<line class="wire js-wire-a" x1="0" y1="50" x2="50" y2="50"/>' +
+           '<line class="wire js-wire-out" x1="120" y1="50" x2="196" y2="50"/>',
+      NAND:'<path class="gate-body" d="M50,10 H100 A40,40 0 0 1 100,90 H50 Z"/>' +
+           '<circle class="gate-body" cx="150" cy="50" r="10"/>' +
+           '<line class="wire js-wire-a" x1="0" y1="30" x2="50" y2="30"/>' +
+           '<line class="wire js-wire-b" x1="0" y1="70" x2="50" y2="70"/>' +
+           '<line class="wire js-wire-out" x1="160" y1="50" x2="196" y2="50"/>',
+      NOR: '<path class="gate-body" d="M25,10 Q70,50 25,90 H50 Q120,50 50,10 Z"/>' +
+           '<circle class="gate-body" cx="115" cy="50" r="10"/>' +
+           '<line class="wire js-wire-a" x1="0" y1="30" x2="38" y2="30"/>' +
+           '<line class="wire js-wire-b" x1="0" y1="70" x2="38" y2="70"/>' +
+           '<line class="wire js-wire-out" x1="125" y1="50" x2="196" y2="50"/>',
+      XOR: '<path class="gate-body" d="M35,10 Q80,50 35,90 H60 Q130,50 60,10 Z"/>' +
+           '<path class="gate-body" d="M22,10 Q67,50 22,90" fill="none"/>' +
+           '<line class="wire js-wire-a" x1="0" y1="30" x2="34" y2="30"/>' +
+           '<line class="wire js-wire-b" x1="0" y1="70" x2="34" y2="70"/>' +
+           '<line class="wire js-wire-out" x1="115" y1="50" x2="196" y2="50"/>',
+      XNOR:'<path class="gate-body" d="M35,10 Q80,50 35,90 H60 Q130,50 60,10 Z"/>' +
+           '<path class="gate-body" d="M22,10 Q67,50 22,90" fill="none"/>' +
+           '<circle class="gate-body" cx="125" cy="50" r="10"/>' +
+           '<line class="wire js-wire-a" x1="0" y1="30" x2="34" y2="30"/>' +
+           '<line class="wire js-wire-b" x1="0" y1="70" x2="34" y2="70"/>' +
+           '<line class="wire js-wire-out" x1="135" y1="50" x2="196" y2="50"/>'
+    };
+
+    /* A third input needs a third wire stub. Rather than maintain a parallel
+       set of 3-input symbols, we insert one into the existing symbol and
+       nudge the two-input stubs apart — the gate body is tall enough. */
+    function symbolFor(gate, n) {
+      var s = SYMBOLS[gate];
+      if (n < 3 || L.maxInputs(gate) === 1) return s;
+      var isRound = (gate === 'OR' || gate === 'NOR' || gate === 'XOR' || gate === 'XNOR');
+      var xEnd = isRound ? (gate === 'XOR' || gate === 'XNOR' ? 34 : 38) : 50;
+      return s.replace(/y1="30" x2="(\d+)" y2="30"/, 'y1="22" x2="$1" y2="22"')
+              .replace(/y1="70" x2="(\d+)" y2="70"/, 'y1="78" x2="$1" y2="78"') +
+             '<line class="wire js-wire-c" x1="0" y1="50" x2="' + xEnd + '" y2="50"/>' +
+             '<text x="' + (isRound ? 4 : 10) + '" y="46">C</text>';
+    }
+
+    var state = { gate: 'AND', n: 2, a: 0, b: 0, c: 0 };
+
+    var el = {
+      slot:     document.getElementById('gate-svg-slot'),
+      name:     document.getElementById('gate-name'),
+      rule:     document.getElementById('gate-rule'),
+      switchA:  document.getElementById('switch-a'),
+      switchB:  document.getElementById('switch-b'),
+      switchC:  document.getElementById('switch-c'),
+      output:   document.getElementById('gate-output'),
+      status:   document.getElementById('gate-status'),
+      ttHead:   document.getElementById('tt-head'),
+      ttBody:   document.getElementById('tt-body'),
+      ttName:   document.getElementById('tt-gate-name')
+    };
+
+    /* Effective input count: NOT is always 1, everything else follows the toggle. */
+    function arity() { return L.maxInputs(state.gate) === 1 ? 1 : state.n; }
+
+    function bits() {
+      var n = arity();
+      return n === 1 ? [state.a] : (n === 2 ? [state.a, state.b] : [state.a, state.b, state.c]);
+    }
+
+    function renderSymbol() {
+      el.slot.innerHTML =
+        '<svg class="gate-svg" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg" ' +
+        'role="img" aria-label="' + state.gate + ' gate diagram with ' + arity() +
+        ' input' + (arity() === 1 ? '' : 's') + '. Signal state is also given in the output field.">' +
+        symbolFor(state.gate, arity()) + '</svg>';
+    }
+
+    function renderTable() {
+      var n = arity();
+      var rows = L.gateTable(state.gate, n);
+      var heads = ['A', 'B', 'C'].slice(0, n);
+
+      el.ttHead.innerHTML = '<tr>' + heads.map(function (h) { return '<th>' + h + '</th>'; }).join('') + '<th>Y</th></tr>';
+
+      el.ttBody.innerHTML = rows.map(function (r) {
+        var out = r[r.length - 1];
+        var key = r.slice(0, n).join('');
+        return '<tr data-key="' + key + '"' + (out ? ' class="tt__row--true"' : '') + '>' +
+               r.map(function (c) { return '<td>' + c + '</td>'; }).join('') +
+               '</tr>';
+      }).join('');
+    }
+
+    function paint() {
+      var g = L.gates[state.gate];
+      var n = arity();
+      var ins = bits();
+      var out = L.gateEval(state.gate, ins);
+
+      el.name.textContent = g.label + ' Gate' + (n > 2 ? ' (' + n + ' inputs)' : '');
+      el.rule.textContent = L.gateRule(state.gate, n);
+      el.ttName.textContent = g.label + (n > 2 ? ' (' + n + '-input)' : '');
+
+      var switches = [
+        { el: el.switchA, key: 'a', label: 'A' },
+        { el: el.switchB, key: 'b', label: 'B' },
+        { el: el.switchC, key: 'c', label: 'C' }
+      ];
+      switches.forEach(function (s, i) {
+        var shown = i < n;
+        s.el.style.display = shown ? '' : 'none';
+        if (!shown) return;
+        s.el.textContent = s.label + ': ' + state[s.key];
+        s.el.classList.toggle('on', !!state[s.key]);
+        s.el.setAttribute('aria-pressed', String(!!state[s.key]));
+        s.el.setAttribute('aria-label', 'Input ' + s.label + ', currently ' + state[s.key] + '. Click to toggle.');
+      });
+
+      el.output.textContent = 'Y: ' + out;
+      el.output.classList.toggle('on', !!out);
+
+      var svg = el.slot.querySelector('svg');
+      if (svg) {
+        var setWire = function (sel, hi) {
+          Array.prototype.forEach.call(svg.querySelectorAll(sel), function (w) {
+            w.classList.toggle('wire--hi', !!hi);
+            w.classList.toggle('wire--lo', !hi);
+          });
+        };
+        setWire('.js-wire-a', state.a);
+        setWire('.js-wire-b', state.b);
+        setWire('.js-wire-c', state.c);
+        setWire('.js-wire-out', out);
+      }
+
+      var key = ins.join('');
+      Array.prototype.forEach.call(el.ttBody.querySelectorAll('tr'), function (tr) {
+        tr.classList.toggle('tt__row--active', tr.dataset.key === key);
+      });
+
+      var names = ['A', 'B', 'C'].slice(0, n);
+      var spoken = names.map(function (nm, i) { return 'input ' + nm + ' is ' + ins[i]; }).join(', ');
+      var parity = (state.gate === 'XOR' || state.gate === 'XNOR')
+        ? ' Sum of inputs is ' + ins.reduce(function (x, y) { return x + y; }, 0) + '.'
+        : '';
+      el.status.textContent = state.gate + ' gate with ' + n + ' input' + (n === 1 ? '' : 's') +
+                              '. ' + spoken.charAt(0).toUpperCase() + spoken.slice(1) +
+                              '.' + parity + ' Output is ' + out + '.';
+    }
+
+    function refresh() { renderSymbol(); renderTable(); paint(); }
+
+    function selectGate(name) {
+      state.gate = name;
+      Array.prototype.forEach.call(document.querySelectorAll('[data-gate]'), function (b) {
+        var on = b.dataset.gate === name;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-pressed', String(on));
+      });
+      refresh();
+    }
+
+    function selectInputCount(n) {
+      state.n = n;
+      Array.prototype.forEach.call(document.querySelectorAll('[data-inputs]'), function (b) {
+        var on = +b.dataset.inputs === n;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-pressed', String(on));
+      });
+      refresh();
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-gate]'), function (b) {
+      b.addEventListener('click', function () { selectGate(b.dataset.gate); });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-inputs]'), function (b) {
+      b.addEventListener('click', function () { selectInputCount(+b.dataset.inputs); });
+    });
+    el.switchA.addEventListener('click', function () { state.a = state.a ? 0 : 1; paint(); });
+    el.switchB.addEventListener('click', function () { state.b = state.b ? 0 : 1; paint(); });
+    el.switchC.addEventListener('click', function () { state.c = state.c ? 0 : 1; paint(); });
+
+    selectGate('AND');
+  })();
+  </script>
+
+  <!-- ==================== Self-check ==================== -->
+  <script>
+  (function () {
+    'use strict';
+
+    // Tabs
+    var tabs = document.querySelectorAll('.tab-button');
+    Array.prototype.forEach.call(tabs, function (tab) {
+      tab.addEventListener('click', function () {
+        Array.prototype.forEach.call(tabs, function (t) {
+          t.classList.remove('active');
+          t.setAttribute('aria-selected', 'false');
+        });
+        Array.prototype.forEach.call(document.querySelectorAll('.tab-panel'), function (p) {
+          p.classList.remove('active');
+        });
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+        document.getElementById(tab.getAttribute('aria-controls')).classList.add('active');
+      });
+    });
+
+    var EXPLAIN = {
+      q1: {
+        yes: 'Correct. NOR is the inverse of OR: OR gives 0 only when both inputs are 0, so NOR gives 1 only there.',
+        no:  'Not quite. Work it backwards: you want output 1 when A and B are both 0. OR outputs 0 in exactly that case, so you want the inverse of OR — which is NOR.'
+      },
+      q2: {
+        yes: 'Correct. 1 + 1 + 1 = 3, which is odd, so the output is 1. This is exactly where the "exactly one input is 1" shortcut fails — it would have predicted 0.',
+        no:  'Use the parity rule, not the "exactly one" shortcut. The sum of the inputs is 1 + 1 + 1 = 3. Three is odd, so XOR outputs 1.'
+      },
+      q3: {
+        yes: 'Correct. A three-input NAND is NOT(A·B·C). Here A·B·C = 1·0·1 = 0, and NOT 0 = 1.',
+        no:  'Work the AND first: 1 · 0 · 1 = 0, because not every input is 1. Then invert once: NOT 0 = 1. A NAND only outputs 0 when every input is 1.'
+      }
+    };
+
+    Array.prototype.forEach.call(document.querySelectorAll('.quiz-options'), function (group) {
+      var quizId = group.dataset.quiz;
+      var feedback = document.getElementById('feedback-' + quizId);
+
+      Array.prototype.forEach.call(group.querySelectorAll('.quiz-option'), function (opt) {
+        opt.addEventListener('click', function () {
+          var right = opt.dataset.correct === 'true';
+
+          Array.prototype.forEach.call(group.querySelectorAll('.quiz-option'), function (o) {
+            o.classList.remove('correct', 'incorrect');
+          });
+          opt.classList.add(right ? 'correct' : 'incorrect');
+
+          feedback.className = 'quiz-feedback visible ' +
+            (right ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+          feedback.textContent = right ? EXPLAIN[quizId].yes : EXPLAIN[quizId].no;
+        });
+      });
+    });
+  })();
+  </script>
+
+  <!-- ==================== Video + Transcript Sync (CSC210 Video Embed Standard) ==================== -->
+  <script>
+  (function () {
+    'use strict';
+
+    var VIDEO_ID = 'nJTPsotd_nc';
+    var player, timeUpdater, parsedTranscript = [];
+
+    var vttContent = `WEBVTT
+Kind: captions
+Language: en-US
+
+00:00:00.000 --> 00:00:09.000
+Aloha. So what I want to talk a little bit about in this video is how a transistor works.
+
+00:00:09.000 --> 00:00:15.000
+Now in the big scheme of things, it's not critical that you understand transistors.
+
+00:00:15.000 --> 00:00:20.000
+Okay, what you need to know is that transistors are kind of the base unit.
+
+00:00:20.000 --> 00:00:26.000
+Okay, and we put transistors together or we use transistors to make gates.
+
+00:00:26.000 --> 00:00:35.000
+Okay, and then we take gates, which for us is going to be our fundamental or atomic unit of stuff,
+
+00:00:35.000 --> 00:00:39.000
+and we use those gates to make digital circuits to do stuff.
+
+00:00:39.000 --> 00:00:45.000
+Okay, so I'm just going to explore a little bit about a transistor, what it is, how it works.
+
+00:00:45.000 --> 00:00:50.000
+Okay, and I'm going to simplify it a little bit just to make it easier to understand.
+
+00:00:50.000 --> 00:00:56.000
+Okay, so let's look at this and let's call this our transistor.
+
+00:00:56.000 --> 00:01:05.000
+Okay, so a transistor has a bunch of connections,
+
+00:01:05.000 --> 00:01:08.000
+but there's two primary ones that we're concerned with first,
+
+00:01:08.000 --> 00:01:15.000
+and one is to a 5-volt source voltage.
+
+00:01:15.000 --> 00:01:24.000
+Okay, so V source equals 5 volts.
+
+00:01:24.000 --> 00:01:26.000
+Okay, 5 volts.
+
+00:01:26.000 --> 00:01:32.000
+The other side of the transistor here connects to ground.
+
+00:01:32.000 --> 00:01:35.000
+Okay, and what ground is,
+
+00:01:35.000 --> 00:01:40.000
+ground is just like a big energy sink.
+
+00:01:40.000 --> 00:01:42.000
+So electricity will flow to ground.
+
+00:01:42.000 --> 00:01:46.000
+Okay, so electricity always follows the path of least resistance.
+
+00:01:46.000 --> 00:01:50.000
+It's like water flowing downhill.
+
+00:01:50.000 --> 00:01:55.000
+And so if it can get to ground, it'll go to ground because the ground is a huge potential.
+
+00:01:55.000 --> 00:02:01.000
+It'll absorb all the electricity there's known to man and be happy.
+
+00:02:01.000 --> 00:02:06.000
+Now, we have two more critical things to the transistor.
+
+00:02:06.000 --> 00:02:10.000
+We have our voltage in, which is going to be our 0 or 1, right?
+
+00:02:10.000 --> 00:02:15.000
+And we have our voltage out, which is going to be our 0 or 1 going out.
+
+00:02:15.000 --> 00:02:23.000
+Okay, and we know that typically a 1 equals, you know, 5 volts,
+
+00:02:23.000 --> 00:02:38.000
+and a 0 equals 0 volts.
+
+00:02:38.000 --> 00:02:44.000
+So we have our voltage in.
+
+00:02:44.000 --> 00:02:52.000
+This is our voltage in, which will be our 0 or 1 coming in.
+
+00:02:52.000 --> 00:02:58.000
+And then we have a voltage out.
+
+00:02:58.000 --> 00:03:02.000
+Except what we do, or what we used to do, we don't do this anymore,
+
+00:03:02.000 --> 00:03:14.000
+but what we used to do is we had a resistor here.
+
+00:03:14.000 --> 00:03:20.000
+This is our voltage out, and this is a resistor.
+
+00:03:20.000 --> 00:03:24.000
+And what a resistor does is it resists the flow of electricity.
+
+00:03:24.000 --> 00:03:28.000
+So if this electricity here, this 5 volts, if it can go to ground,
+
+00:03:28.000 --> 00:03:32.000
+it's going to all go to ground, and none of it's going to go that way.
+
+00:03:32.000 --> 00:03:33.000
+It can't go to ground.
+
+00:03:33.000 --> 00:03:35.000
+It's all going to go through this resistor.
+
+00:03:35.000 --> 00:03:39.000
+It'll go, well, there's no place else for it to go,
+
+00:03:39.000 --> 00:03:43.000
+so it'll go across the resistor.
+
+00:03:43.000 --> 00:03:47.000
+And so what we have in here, inside the resistor,
+
+00:03:47.000 --> 00:03:53.000
+we have kind of a little, switch, okay,
+
+00:03:53.000 --> 00:03:58.000
+that may or may not, it may be connected or it may not be connected.
+
+00:03:58.000 --> 00:03:59.000
+And that's what it is.
+
+00:03:59.000 --> 00:04:02.000
+A transistor is just a little switch.
+
+00:04:02.000 --> 00:04:09.000
+That's going to either let that flow there or make it flow there.
+
+00:04:09.000 --> 00:04:12.000
+when we have a zero input,
+
+00:04:12.000 --> 00:04:17.000
+which means zero volts,
+
+00:04:17.000 --> 00:04:26.000
+what happens is the switch is open.
+
+00:04:26.000 --> 00:04:33.000
+meaning all the electricity is going to flow this way,
+
+00:04:33.000 --> 00:04:36.000
+right, and it's going to run into dead end,
+
+00:04:36.000 --> 00:04:43.000
+and then it's going to go up and go through the resistor.
+
+00:04:43.000 --> 00:04:49.000
+So, when voltage is zero in,
+
+00:04:49.000 --> 00:05:10.000
+zero signals in, our Vout equals five volts, which is one.
+
+00:05:10.000 --> 00:05:14.000
+the same as a one.
+
+00:05:14.000 --> 00:05:22.000
+Now, when we have a one in, that means five volts in.
+
+00:05:22.000 --> 00:05:27.000
+our transistor is closed.
+
+00:05:27.000 --> 00:05:39.000
+So now it makes a connection and all the voltage comes here and flows straight through and goes to ground.
+
+00:05:39.000 --> 00:05:52.000
+in this case, Vout equals zero volts, which is a zero.
+
+00:05:52.000 --> 00:06:04.000
+a simple transistor is a NOT gate
+
+00:06:04.000 --> 00:06:09.000
+because when we have zero in, we get one out,
+
+00:06:09.000 --> 00:06:15.000
+and when we have a one in, we get zero out.
+
+00:06:15.000 --> 00:06:21.000
+all a transistor is, an electrical switch.
+
+00:06:21.000 --> 00:06:33.000
+sort of a mechanical silicon switch that when I have voltage in, it closes so that electricity from the source flows to ground.
+
+00:06:33.000 --> 00:06:42.000
+And when I don't have electricity in on this side, it opens, not letting any of this source voltage flow through.
+
+00:06:42.000 --> 00:06:47.000
+So the source voltage will go on the output.
+
+00:06:47.000 --> 00:06:49.000
+So that's kind of a transistor, how it works.
+
+00:06:49.000 --> 00:06:53.000
+And that's really all I want to talk about, about transistors.
+
+00:06:53.000 --> 00:07:02.000
+Other than you can take transistors, you know, for two inputs, we need a minimum of two transistors, one for each input.
+
+00:07:02.000 --> 00:07:16.000
+And we put them in different configurations, parallel to the source voltage, series to the source voltage, to get different results going outward.
+
+00:07:16.000 --> 00:07:33.000
+And we can add other, more transistors on the outputs and mix the outputs together and stuff like that to get more, to create different gates, to get the responses that we want for the different types of gates.
+
+00:07:33.000 --> 00:07:44.000
+And in the discussion below, it talks about how to build a a NOT gate, an AND gate, a NAND gate, a NOR gate, an OR gate, all those kind of things.
+
+00:07:44.000 --> 00:07:49.000
+that's transistor.
+
+00:07:49.000 --> 00:07:56.000
+And, it's our base unit of stuff because it's what gates are made from.
+
+00:07:56.000 --> 00:07:58.000
+But we're going to work at the gate level.
+
+00:07:58.000 --> 00:08:03.000
+So, we're going to hide the details of transistors, you know, abstract away from transistors and use gates.
+`;
+
+    function timeToSeconds(timeStr) {
+      if (!timeStr) return 0;
+      var parts = timeStr.trim().split(':');
+      if (parts.length === 2) {
+        return (parseInt(parts[0]) || 0) * 60 + (parseFloat(parts[1]) || 0);
+      } else if (parts.length === 3) {
+        return (parseInt(parts[0]) || 0) * 3600 + (parseInt(parts[1]) || 0) * 60 + (parseFloat(parts[2]) || 0);
+      }
+      return 0;
+    }
+
+    function parseVtt(vttText) {
+      var cues = vttText.trim().split(/\n\n+/);
+      var parsedCues = [];
+      cues.forEach(function (cueBlock) {
+        if (cueBlock.indexOf('WEBVTT') === 0 || cueBlock.trim() === '') return;
+        var lines = cueBlock.trim().split('\n');
+        var timeLine = lines.filter(function (l) { return l.indexOf('-->') !== -1; })[0];
+        if (!timeLine) return;
+        var parts = timeLine.split(' --> ');
+        var textLines = lines.slice(lines.indexOf(timeLine) + 1);
+        parsedCues.push({
+          start: timeToSeconds(parts[0]),
+          end: timeToSeconds(parts[1]),
+          text: textLines.join(' ').trim()
+        });
+      });
+      return parsedCues;
+    }
+
+    function populateTranscript() {
+      var container = document.getElementById('transcript-container');
+      if (!container) return;
+      container.innerHTML = '';
+      parsedTranscript.forEach(function (cue) {
+        var lineEl = document.createElement('div');
+        lineEl.className = 'transcript-line';
+        lineEl.dataset.start = cue.start;
+        lineEl.dataset.end = cue.end;
+        lineEl.textContent = cue.text;
+        lineEl.setAttribute('role', 'button');
+        lineEl.setAttribute('tabindex', '0');
+        var seekTo = function () {
+          if (player && player.seekTo) { player.seekTo(cue.start, true); player.playVideo(); }
+        };
+        lineEl.addEventListener('click', seekTo);
+        lineEl.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); seekTo(); }
+        });
+        container.appendChild(lineEl);
+      });
+    }
+
+    function highlightCurrentLine() {
+      if (!player || !player.getCurrentTime) return;
+      var currentTime = player.getCurrentTime();
+      var lines = document.querySelectorAll('#transcript-container .transcript-line');
+      lines.forEach(function (line) {
+        var start = parseFloat(line.dataset.start);
+        var end = parseFloat(line.dataset.end);
+        if (currentTime >= start && currentTime < end) {
+          if (!line.classList.contains('active-transcript-line')) {
+            var prev = document.querySelector('#transcript-container .active-transcript-line');
+            if (prev) prev.classList.remove('active-transcript-line');
+            line.classList.add('active-transcript-line');
+            line.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else {
+          line.classList.remove('active-transcript-line');
+        }
+      });
+    }
+
+    function syncTranscriptHeight() {
+      var videoContainer = document.getElementById('video-container');
+      var transcriptContainer = document.getElementById('transcript-container');
+      if (!videoContainer || !transcriptContainer) return;
+      if (window.matchMedia('(min-width: 1024px)').matches) {
+        transcriptContainer.style.maxHeight = videoContainer.offsetHeight + 'px';
+      } else {
+        transcriptContainer.style.maxHeight = '24rem';
+      }
+    }
+
+    window.onYouTubeIframeAPIReady = function () {
+      player = new YT.Player('youtube-player', {
+        videoId: VIDEO_ID,
+        events: {
+          onStateChange: function (event) {
+            clearInterval(timeUpdater);
+            if (event.data === YT.PlayerState.PLAYING) {
+              timeUpdater = setInterval(highlightCurrentLine, 300);
+            }
+          }
+        }
+      });
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      parsedTranscript = parseVtt(vttContent);
+      populateTranscript();
+      setTimeout(syncTranscriptHeight, 100);
+      if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+        var tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      } else {
+        window.onYouTubeIframeAPIReady();
+      }
+    });
+
+    var resizeTimeout;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(syncTranscriptHeight, 250);
+    });
+  })();
+  </script>
+
+</body>
+</html>

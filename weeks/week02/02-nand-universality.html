@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w2-02">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 2, Page 2: NAND and NOR, The Universal Gates</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- Page-specific: derivation panels ---------- */
+    .deriv {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: var(--space-lg);
+      margin-bottom: var(--space-lg);
+    }
+    .deriv__head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-sm);
+    }
+    .deriv__title { font-weight: 700; color: var(--color-primary); font-size: var(--fs-md); }
+    .deriv__count {
+      font-family: var(--font-mono);
+      font-size: var(--fs-xs);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--color-text-muted);
+    }
+    .deriv__controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-md);
+    }
+    .deriv__svg { width: 100%; height: auto; overflow: visible; }
+    .deriv__svg .gate-body {
+      fill: var(--color-surface);
+      stroke: var(--color-text);
+      stroke-width: 3;
+      stroke-linejoin: round;
+    }
+    .deriv__svg text { font-family: var(--font-mono); font-size: 15px; fill: var(--color-text); }
+    .deriv__svg .pin { fill: var(--color-surface); stroke: var(--color-text); stroke-width: 2.5; }
+
+    /* Step mode: everything not in play fades back */
+    .deriv__svg.stepping .deriv-gate { opacity: .22; transition: opacity .2s; }
+    .deriv__svg.stepping .deriv-gate.lit { opacity: 1; }
+
+    .deriv__readout {
+      font-family: var(--font-mono);
+      font-size: var(--fs-sm);
+      background: var(--color-code-bg);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: var(--space-md);
+      margin-top: var(--space-md);
+      line-height: 1.7;
+    }
+    .deriv__readout strong { font-family: var(--font-sans); color: var(--color-primary); }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 2 &rsaquo; <span>NAND and NOR: The Universal Gates</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>NAND and NOR: The Universal Gates</h1>
+    <p><strong>Estimated time:</strong> ~1.5 hours &nbsp;|&nbsp;
+       <strong>Section:</strong> 2.3 &nbsp;|&nbsp;
+       <strong>Prerequisite:</strong> Page 1 (From Voltage to Decision)</p>
+
+    <div class="callout callout--hook">
+      <div class="callout__title">What We Have / What We Can't Do / What We Can Now Do</div>
+      <p><strong>What you already know:</strong> All seven gates, their truth tables with two or more inputs, and their symbols. You know that a circle on an output means "inverted."</p>
+      <p><strong>What you can't do yet:</strong> Explain why a chip factory would want to build only <em>one</em> kind of gate &mdash; or how that could possibly be enough.</p>
+      <p><strong>What you will be able to do by the end of this page:</strong> Derive AND, OR, and NOT using nothing but NAND gates, and explain why that single fact underwrites every circuit you will build for the rest of this course.</p>
+    </div>
+
+    <p>This is the most important page of the week. Everything before it was vocabulary. This is the idea.</p>
+
+    <!-- ============================================================
+         Section 2.3
+         ============================================================ -->
+    <section id="sec-2-3">
+      <h2>2.3 &mdash; NAND and NOR: The Universal Gates</h2>
+
+      <h3>A Reminder, Then the Point</h3>
+
+      <p>You met NAND and NOR on the last page. As a refresher:</p>
+
+      <table style="max-width:420px;">
+        <thead><tr><th>A</th><th>B</th><th>A NAND B</th><th>A NOR B</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>0</td><td>1</td><td>1</td></tr>
+          <tr><td>0</td><td>1</td><td>1</td><td>0</td></tr>
+          <tr><td>1</td><td>0</td><td>1</td><td>0</td></tr>
+          <tr><td>1</td><td>1</td><td>0</td><td>0</td></tr>
+        </tbody>
+      </table>
+
+      <p>NAND outputs 0 only when all inputs are 1. NOR outputs 1 only when all inputs are 0. Nothing new so far &mdash; they are AND and OR with a bubble.</p>
+
+      <p><strong>This page is not about what these gates do. It is about a property they have that the other five do not.</strong></p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">The critical insight</div>
+        <p>The NAND gate is <strong>universal</strong>. You can build <em>any</em> logic function &mdash; no matter how complex &mdash; using nothing but NAND gates.</p>
+        <p>You can build AND from NAND. You can build OR from NAND. You can build NOT from NAND. And since AND, OR, and NOT together can express any logic function at all, NAND alone can build any circuit that has ever been built or ever will be.</p>
+      </div>
+
+      <h3>The Three Derivations</h3>
+
+      <p>Here is how each one works. Build these in the widget below before you read further &mdash; the point lands better when you have toggled the inputs yourself.</p>
+
+      <p><strong>NOT from NAND.</strong> Tie both inputs of a single NAND gate together. A NAND outputs 0 only when both inputs are 1; with the inputs tied, that means it outputs 0 exactly when the input is 1, and 1 exactly when the input is 0. That is inversion.</p>
+
+      <ul>
+        <li>NAND(0, 0) = 1 &nbsp; &rarr; &nbsp; NOT 0 = 1</li>
+        <li>NAND(1, 1) = 0 &nbsp; &rarr; &nbsp; NOT 1 = 0</li>
+      </ul>
+
+      <p><strong>AND from NAND.</strong> A NAND is an AND with the output inverted. So invert it back: feed the NAND's output into a second NAND wired as a NOT. Two gates total.</p>
+
+      <p><strong>OR from NAND.</strong> Invert both inputs with NAND-as-NOT gates, then feed those into a third NAND. Three gates total.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Why does the OR derivation work?</div>
+        <p>The AND and NOT derivations are easy to see. The OR one is not obvious, and it should not feel obvious yet &mdash; it follows from <strong>De Morgan's laws</strong>, which are the subject of the next page.</p>
+        <p>For now, take the result on evidence: build it in the widget below, toggle all four input combinations, and confirm it matches the OR truth table. On the next page you will prove why it must.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         WIDGET 3 — NAND Universality Demonstrator  (AFTER Section 2.3)
+         ============================================================ -->
+    <section id="widget-universality">
+      <div class="widget-card">
+        <div class="widget-card__title">Interactive: NAND Universality Demonstrator</div>
+        <div class="widget-card__subtitle">
+          Three circuits, built from NAND gates only. Toggle the inputs and watch the signal propagate.
+          Use <strong>Step through</strong> to walk one gate at a time and see the intermediate values.
+        </div>
+        <div id="deriv-host"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Why it matters
+         ============================================================ -->
+    <section id="sec-why">
+      <h2>Why This Mattered Enough to Build Computers Around</h2>
+
+      <p>Early computer chips were manufactured almost entirely from NAND gates. Three reasons:</p>
+
+      <ol>
+        <li><strong>Manufacturing simplicity.</strong> A chip factory only needs to produce one type of gate. Fewer variations means fewer process steps, fewer defects, and lower cost.</li>
+        <li><strong>Speed.</strong> NAND gates are cheaper to fabricate than AND gates, because an AND is physically built as a NAND followed by an inverter. The NAND is the primitive; the AND costs extra.</li>
+        <li><strong>It works.</strong> If one gate type can build any function, you never need a second one.</li>
+      </ol>
+
+      <p>This is not a historical curiosity. The <strong>Intel 4004</strong>, the first commercial microprocessor, shipped in 1971 built largely from NAND logic. The Apple I used chips built the same way. The CPU in the machine you are reading this on uses a mix of gate types for efficiency &mdash; but it <em>could</em> have been built from NAND alone, and nothing would have changed about what it can compute.</p>
+
+      <h3>NOR Is Also Universal</h3>
+
+      <p>NAND is not special in this respect. NOR &mdash; whose table you saw at the top of this page &mdash; is universal for exactly the same reasons, and the derivations work the same way with the roles of AND and OR swapped.</p>
+
+      <p>Deriving AND, OR, and NOT from NOR is a good exercise, and you will do one case of it in Assignment 2.</p>
+
+      <div class="callout">
+        <div class="callout__title">Why this course emphasizes NAND over NOR</div>
+        <p>Both gates are universal, so the choice is partly arbitrary. Ours is not: in <strong>Week 4</strong> you will build an S-R latch &mdash; the first circuit in this course that can <em>remember</em> a bit, and the foundation of all computer memory &mdash; from two cross-coupled <strong>NAND</strong> gates.</p>
+        <p>NAND universality is not an academic aside here. It is the thread that runs from this page to the end of the course.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Synthesis / forward
+         ============================================================ -->
+    <section id="sec-forward">
+      <h2>What You Just Learned</h2>
+
+      <p>Every circuit you will build in this course &mdash; the adder in Week 3, the S-R latch in Week 4, the register in Week 5, the ALU in Week 6, the RAM in Week 8, and the CPU you assemble across Weeks 13 and 14 and submit as your final project &mdash; can be built from nothing but NAND gates.</p>
+
+      <p>You have already seen the single most important fact about digital hardware. The rest of this course is applying it.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Forward reference</div>
+        <p>You now know <em>that</em> the derivations work, because you tested them. Next you will learn <em>why</em> they work. Boolean algebra &mdash; and specifically De Morgan's laws &mdash; turns the OR-from-NAND construction from a trick you verified into a result you can prove.</p>
+        <p>That same algebra is what lets you shrink a circuit before you build it: fewer gates, faster hardware. In Week 6 you will use it to cut gate count in the ALU's control logic.</p>
+      </div>
+
+      <div style="text-align:center;margin:var(--space-xl) 0;">
+        <div class="spa-card__btn" style="font-size:var(--fs-md);padding:var(--space-md) var(--space-xl);">
+          Continue to the next item in this module to begin Page 3: Boolean Algebra
+        </div>
+      </div>
+
+      <div class="callout">
+        <div class="callout__title">CS301 coverage</div>
+        <p>NAND and NOR gates are introduced in Saylor CS301 <strong>Unit 3: Fundamentals of Digital Logic Design</strong> &mdash; log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> and navigate to Unit 3.</p>
+        <p><strong>However, CS301 does not treat NAND universality with the depth this course requires.</strong> It mentions that universality exists but does not walk through the gate-by-gate derivations. Those derivations, the widget above, and the connection to this course's circuit-building approach are provided here and are not available in CS301. This page is your primary source for them.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+
+  <!-- ==================== Widget 3: NAND Universality Demonstrator ==================== -->
+  <script>
+  (function () {
+    'use strict';
+
+    var nand = window.CSCLogic.gates.NAND.fn;
+
+    /* A NAND symbol whose input edge sits at x, centred on y.
+       Geometry mirrors the gate symbols on page 1 so the two pages
+       read as the same visual language. Returns the markup plus the
+       coordinates callers need to attach wires. */
+    function nandSym(x, y, idx) {
+      var bodyEnd = x + 35, bubbleCx = x + 73;
+      return {
+        markup: '<g class="deriv-gate" data-idx="' + idx + '">' +
+                  '<path class="gate-body" d="M' + x + ',' + (y - 30) +
+                    ' H' + bodyEnd + ' A30,30 0 0 1 ' + bodyEnd + ',' + (y + 30) +
+                    ' H' + x + ' Z"/>' +
+                  '<circle class="gate-body" cx="' + bubbleCx + '" cy="' + y + '" r="8"/>' +
+                '</g>',
+        inTop: { x: x, y: y - 15 },
+        inBot: { x: x, y: y + 15 },
+        out:   { x: x + 81, y: y }
+      };
+    }
+
+    function pin(x, y, label, anchorDx, anchorDy) {
+      return '<circle class="pin" cx="' + x + '" cy="' + y + '" r="7"/>' +
+             '<text x="' + (x + (anchorDx || -22)) + '" y="' + (y + (anchorDy || -14)) + '">' + label + '</text>';
+    }
+
+    function wire(cls, pts) {
+      return '<polyline class="wire ' + cls + '" points="' + pts + '" fill="none"/>';
+    }
+
+    /* ---------- The three derivations ---------- */
+
+    var DERIVATIONS = [
+      {
+        id: 'not',
+        title: 'NOT from NAND',
+        count: '1 NAND gate',
+        inputs: ['A'],
+        viewBox: '0 0 340 140',
+        expect: function (a) { return a ? 0 : 1; },
+        expectLabel: 'NOT A',
+        svg: function () {
+          var g = nandSym(130, 70, 0);
+          return pin(24, 70, 'A') +
+                 wire('js-w-a', '32,70 100,70 100,55 130,55') +
+                 wire('js-w-a', '100,70 100,85 130,85') +
+                 g.markup +
+                 wire('js-w-out', '211,70 300,70') +
+                 pin(308, 70, "NOT A", -60, -14);
+        },
+        compute: function (a) {
+          var y = nand(a, a);
+          return {
+            wires: { 'js-w-a': a, 'js-w-out': y },
+            out: y,
+            steps: [
+              { lit: [0], text: '<strong>Step 1.</strong> Input A = ' + a + ' feeds BOTH inputs of the NAND.\n' +
+                                'NAND(' + a + ', ' + a + ') = ' + y + '\n' +
+                                'A NAND outputs 0 only when both inputs are 1 — so with the inputs tied together it inverts.' }
+            ]
+          };
+        }
+      },
+      {
+        id: 'and',
+        title: 'AND from NAND',
+        count: '2 NAND gates',
+        inputs: ['A', 'B'],
+        viewBox: '0 0 500 140',
+        expect: function (a, b) { return a & b; },
+        expectLabel: 'A AND B',
+        svg: function () {
+          var g1 = nandSym(100, 70, 0), g2 = nandSym(270, 70, 1);
+          return pin(24, 45, 'A') + pin(24, 95, 'B') +
+                 wire('js-w-a', '32,45 70,45 70,55 100,55') +
+                 wire('js-w-b', '32,95 70,95 70,85 100,85') +
+                 g1.markup +
+                 wire('js-w-n1', '181,70 240,70 240,55 270,55') +
+                 wire('js-w-n1', '240,70 240,85 270,85') +
+                 g2.markup +
+                 wire('js-w-out', '351,70 440,70') +
+                 pin(448, 70, 'A AND B', -78, -14);
+        },
+        compute: function (a, b) {
+          var n1 = nand(a, b), y = nand(n1, n1);
+          return {
+            wires: { 'js-w-a': a, 'js-w-b': b, 'js-w-n1': n1, 'js-w-out': y },
+            out: y,
+            steps: [
+              { lit: [0], text: '<strong>Step 1.</strong> The first NAND takes A and B directly.\n' +
+                                'NAND(' + a + ', ' + b + ') = ' + n1 + '\n' +
+                                'This is AND with the answer backwards.' },
+              { lit: [1], text: '<strong>Step 2.</strong> The second NAND has both inputs tied to that result, so it acts as a NOT.\n' +
+                                'NAND(' + n1 + ', ' + n1 + ') = ' + y + '\n' +
+                                'Inverting the inverted AND gives AND: ' + a + ' AND ' + b + ' = ' + y + '.' }
+            ]
+          };
+        }
+      },
+      {
+        id: 'or',
+        title: 'OR from NAND',
+        count: '3 NAND gates',
+        inputs: ['A', 'B'],
+        viewBox: '0 0 520 220',
+        expect: function (a, b) { return a | b; },
+        expectLabel: 'A OR B',
+        svg: function () {
+          var g1 = nandSym(90, 40, 0), g2 = nandSym(90, 180, 1), g3 = nandSym(300, 110, 2);
+          return pin(24, 40, 'A') + pin(24, 180, 'B') +
+                 wire('js-w-a', '32,40 60,40 60,25 90,25') +
+                 wire('js-w-a', '60,40 60,55 90,55') +
+                 wire('js-w-b', '32,180 60,180 60,165 90,165') +
+                 wire('js-w-b', '60,180 60,195 90,195') +
+                 g1.markup + g2.markup +
+                 wire('js-w-n1', '171,40 240,40 240,95 300,95') +
+                 wire('js-w-n2', '171,180 240,180 240,125 300,125') +
+                 g3.markup +
+                 wire('js-w-out', '381,110 470,110') +
+                 pin(478, 110, 'A OR B', -68, -14);
+        },
+        compute: function (a, b) {
+          var n1 = nand(a, a), n2 = nand(b, b), y = nand(n1, n2);
+          return {
+            wires: { 'js-w-a': a, 'js-w-b': b, 'js-w-n1': n1, 'js-w-n2': n2, 'js-w-out': y },
+            out: y,
+            steps: [
+              { lit: [0], text: '<strong>Step 1.</strong> The top NAND has both inputs tied to A, so it inverts.\n' +
+                                "NAND(" + a + ', ' + a + ") = " + n1 + "  →  A' = " + n1 },
+              { lit: [1], text: '<strong>Step 2.</strong> The bottom NAND does the same for B.\n' +
+                                "NAND(" + b + ', ' + b + ") = " + n2 + "  →  B' = " + n2 },
+              { lit: [2], text: '<strong>Step 3.</strong> The third NAND combines the two inverted inputs.\n' +
+                                "NAND(" + n1 + ', ' + n2 + ") = " + y + "\n" +
+                                "That is (A'B')', which De Morgan's law says equals A + B. You will prove this on the next page." }
+            ]
+          };
+        }
+      }
+    ];
+
+    /* ---------- Render ---------- */
+
+    var host = document.getElementById('deriv-host');
+
+    DERIVATIONS.forEach(function (d) {
+      var state = { a: 0, b: 0, step: -1 };   // step -1 = free-run mode
+
+      var wrap = document.createElement('div');
+      wrap.className = 'deriv';
+      wrap.innerHTML =
+        '<div class="deriv__head">' +
+          '<span class="deriv__title">' + d.title + '</span>' +
+          '<span class="deriv__count">' + d.count + '</span>' +
+        '</div>' +
+        '<div class="deriv__controls">' +
+          '<button type="button" class="input-switch js-a" style="display:inline-block;margin:0;">A: 0</button>' +
+          (d.inputs.length > 1 ? '<button type="button" class="input-switch js-b" style="display:inline-block;margin:0;">B: 0</button>' : '') +
+          '<button type="button" class="widget-btn widget-btn--outline widget-btn--small js-step">Step through</button>' +
+          '<button type="button" class="widget-btn widget-btn--outline widget-btn--small js-reset" hidden>Back to free play</button>' +
+        '</div>' +
+        '<div class="circuit-canvas">' +
+          '<svg class="deriv__svg" viewBox="' + d.viewBox + '" xmlns="http://www.w3.org/2000/svg" role="img" ' +
+               'aria-label="' + d.title + ' circuit diagram. Signal values are given in the readout below.">' +
+            d.svg() +
+          '</svg>' +
+        '</div>' +
+        '<div class="step-nav js-stepnav" hidden></div>' +
+        '<div class="deriv__readout js-readout" role="status" aria-live="polite"></div>';
+
+      host.appendChild(wrap);
+
+      var svg      = wrap.querySelector('.deriv__svg');
+      var btnA     = wrap.querySelector('.js-a');
+      var btnB     = wrap.querySelector('.js-b');
+      var btnStep  = wrap.querySelector('.js-step');
+      var btnReset = wrap.querySelector('.js-reset');
+      var stepNav  = wrap.querySelector('.js-stepnav');
+      var readout  = wrap.querySelector('.js-readout');
+
+      function paint() {
+        var r = d.inputs.length > 1 ? d.compute(state.a, state.b) : d.compute(state.a);
+
+        // wire colouring
+        Object.keys(r.wires).forEach(function (cls) {
+          var hi = !!r.wires[cls];
+          Array.prototype.forEach.call(svg.querySelectorAll('.' + cls), function (w) {
+            w.classList.toggle('wire--hi', hi);
+            w.classList.toggle('wire--lo', !hi);
+          });
+        });
+
+        // input buttons
+        btnA.textContent = 'A: ' + state.a;
+        btnA.classList.toggle('on', !!state.a);
+        btnA.setAttribute('aria-pressed', String(!!state.a));
+        btnA.setAttribute('aria-label', 'Input A, currently ' + state.a + '. Click to toggle.');
+        if (btnB) {
+          btnB.textContent = 'B: ' + state.b;
+          btnB.classList.toggle('on', !!state.b);
+          btnB.setAttribute('aria-pressed', String(!!state.b));
+          btnB.setAttribute('aria-label', 'Input B, currently ' + state.b + '. Click to toggle.');
+        }
+
+        // step dots
+        if (state.step >= 0) {
+          stepNav.hidden = false;
+          stepNav.innerHTML = r.steps.map(function (s, i) {
+            return '<button type="button" class="step-nav__dot' +
+                   (i === state.step ? ' active' : (i < state.step ? ' done' : '')) +
+                   '" data-step="' + i + '" aria-label="Step ' + (i + 1) + '">' + (i + 1) + '</button>';
+          }).join('');
+          Array.prototype.forEach.call(stepNav.querySelectorAll('.step-nav__dot'), function (dot) {
+            dot.addEventListener('click', function () { state.step = +dot.dataset.step; paint(); });
+          });
+        } else {
+          stepNav.hidden = true;
+          stepNav.innerHTML = '';
+        }
+
+        // gate dimming
+        svg.classList.toggle('stepping', state.step >= 0);
+        Array.prototype.forEach.call(svg.querySelectorAll('.deriv-gate'), function (g) {
+          var lit = state.step >= 0 && r.steps[state.step].lit.indexOf(+g.dataset.idx) !== -1;
+          g.classList.toggle('lit', lit);
+        });
+
+        // readout
+        var expected = d.inputs.length > 1 ? d.expect(state.a, state.b) : d.expect(state.a);
+        var matches  = expected === r.out;
+        var verdict  = '<strong>Result.</strong> ' + d.expectLabel + ' = ' + r.out +
+                       (matches ? '  ✓ matches the ' + d.expectLabel.replace(/^NOT A$/, 'NOT') + ' truth table'
+                                : '  ✗ MISMATCH — expected ' + expected);
+
+        if (state.step >= 0) {
+          readout.innerHTML = r.steps[state.step].text.replace(/\n/g, '<br>') +
+                              '<br><br>' + verdict;
+        } else {
+          readout.innerHTML = r.steps.map(function (s) {
+            return s.text.replace(/\n/g, '<br>');
+          }).join('<br><br>') + '<br><br>' + verdict;
+        }
+      }
+
+      btnA.addEventListener('click', function () { state.a = state.a ? 0 : 1; paint(); });
+      if (btnB) btnB.addEventListener('click', function () { state.b = state.b ? 0 : 1; paint(); });
+
+      btnStep.addEventListener('click', function () {
+        var r = d.inputs.length > 1 ? d.compute(state.a, state.b) : d.compute(state.a);
+        state.step = (state.step + 1) % r.steps.length;
+        btnReset.hidden = false;
+        btnStep.textContent = 'Next step';
+        paint();
+      });
+
+      btnReset.addEventListener('click', function () {
+        state.step = -1;
+        btnReset.hidden = true;
+        btnStep.textContent = 'Step through';
+        paint();
+      });
+
+      paint();
+    });
+  })();
+  </script>
+
+</body>
+</html>

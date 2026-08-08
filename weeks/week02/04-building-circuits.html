@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w2-04">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 2, Page 4: Building Circuits — Logisim and Synthesis</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- Page-specific: design-process cards ---------- */
+    .process-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: var(--space-md);
+      margin: var(--space-lg) 0;
+    }
+    .process-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-top: 3px solid var(--color-primary-lt);
+      border-radius: var(--radius);
+      padding: var(--space-md);
+    }
+    .process-card__step {
+      font-family: var(--font-mono);
+      font-size: var(--fs-xs);
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .process-card__title { font-weight: 700; margin: var(--space-xs) 0; }
+    .process-card__body { font-size: var(--fs-sm); color: var(--color-text-muted); }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 2 &rsaquo; <span>Building Circuits</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Building Circuits: Logisim and Synthesis</h1>
+    <p><strong>Estimated time:</strong> ~1.5 hours reading &nbsp;|&nbsp;
+       <strong>Sections:</strong> 2.5&ndash;2.8 &nbsp;|&nbsp;
+       <strong>Prerequisite:</strong> Page 3 (Boolean Algebra)</p>
+
+    <div class="callout callout--hook">
+      <div class="callout__title">What We Have / What We Can't Do / What We Can Now Do</div>
+      <p><strong>What you already know:</strong> Seven gates, NAND universality, and the Boolean algebra that proves it.</p>
+      <p><strong>What you can't do yet:</strong> Any of it with your hands. Everything so far has been on paper and on screen.</p>
+      <p><strong>What you will be able to do by the end of this page:</strong> Open Logisim, place gates, wire them, and test a circuit against its truth table &mdash; then take an arbitrary Boolean expression and turn it into a working circuit by a repeatable process.</p>
+    </div>
+
+    <!-- ============================================================
+         Section 2.5 — First Logisim Circuits
+         ============================================================ -->
+    <section id="sec-2-5">
+      <h2>2.5 &mdash; First Logisim Circuits: Building Gates from Gates</h2>
+
+      <p>Now you transition from paper truth tables to working circuits. This is the first time you open Logisim, and the first time you see voltage make a decision in real time.</p>
+
+      <h3>Watch This First</h3>
+
+      <p>A walkthrough of the Logisim interface: downloading and extracting it, the Java requirement, adding a circuit, placing a gate, drawing wires, and testing with the poke tool. Nine minutes, and it will save you considerably more than nine minutes of confusion.</p>
+
+      <div class="video-breakout">
+        <div class="video-transcript-row">
+          <div class="video-col">
+            <div class="video-frame" id="video-container">
+              <iframe id="youtube-player"
+                      src="https://www.youtube.com/embed/yrFZyOp5Gv0?enablejsapi=1&amp;cc_load_policy=1&amp;iv_load_policy=3&amp;modestbranding=1&amp;rel=0"
+                      title="CSC210 — Getting started with Logisim 2.7.1"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allowfullscreen
+                      loading="lazy">
+              </iframe>
+            </div>
+            <div class="video-caption">
+              Closed captions available. Click any line of the transcript to jump to that point.
+              <br><strong>Note:</strong> this was recorded as a walkthrough for an earlier version of the Week&nbsp;2 assignment, so the first half-minute references assignment details that have since changed. Everything it shows about <em>Logisim itself</em> is current. Follow Assignment&nbsp;2 as written for the actual requirements.
+            </div>
+          </div>
+          <div class="transcript-col">
+            <div class="transcript-panel" id="transcript-container">
+              <p class="transcript-loading">Loading transcript...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Opening Logisim and Creating Your Course File</h3>
+
+      <p>If you did this during orientation, skip ahead. If not, do it now.</p>
+
+      <ol class="logisim-steps">
+        <li>Launch <strong>Logisim Classic 2.7.1</strong>. Not Logisim Evolution.</li>
+        <li>Choose <strong>File &rsaquo; New</strong>.</li>
+        <li>Save immediately as <code>CSC210_YourName.circ</code>. This is the only Logisim file you will create for this course.</li>
+        <li>To add a circuit tab: <strong>Project &rsaquo; Add Circuit</strong>. Name each one exactly as the assignment specifies &mdash; <code>NAND_NOT</code>, <code>NAND_AND</code>, and so on. The grader looks for those names.</li>
+      </ol>
+
+      <h3>The Primitive Gate Library</h3>
+
+      <p>Open the <strong>Gates</strong> library in the panel on the left. The gates you will use are the seven you already know: NAND, AND, OR, NOT, NOR, XOR, XNOR.</p>
+
+      <div class="callout">
+        <div class="callout__title">Primitive gates only</div>
+        <p><strong>Do not use</strong> the built-in Adder, Multiplexer, Decoder, Register, RAM, or any other composite component from the other library panels. Every circuit in this course is built from primitive gates.</p>
+        <p>The only exceptions are Input pins, Output pins, and (later in the course) the Clock source. Using a built-in Adder in Week 3 would mean skipping the part where you learn what an adder <em>is</em>.</p>
+      </div>
+
+      <h3>Building Your First Circuit: NOT from NAND</h3>
+
+      <ol class="logisim-steps">
+        <li>Select the NAND gate from the Gates library and place it on the canvas.</li>
+        <li>Select the Input pin and place <strong>one</strong>. This circuit has a single input &mdash; do not place a second pin. An unconnected input pin floats, and Logisim will flag it as an error.</li>
+        <li>Select the Output pin and place one.</li>
+        <li>Using the wiring tool, connect the input pin to <strong>both</strong> inputs of the NAND gate. Draw a wire to the first input, then draw a second wire from the same pin to the second input.</li>
+        <li>Connect the NAND's output to the output pin.</li>
+        <li>Label the input pin <code>A</code> and the output pin <code>NOT A</code>.</li>
+        <li>Switch to the <strong>poke</strong> tool (the hand icon) and click the input pin to toggle it between 0 and 1. Watch the output change.</li>
+      </ol>
+
+      <p><strong>What you are seeing:</strong> when you toggle the input from 0 to 1, voltage propagates through the NAND gate and the output flips from 1 to 0. You have built a NOT gate &mdash; a decision-making circuit &mdash; from a single NAND. That is the physical mechanism behind every computation your computer performs.</p>
+
+      <div class="callout">
+        <div class="callout__title">Watch for the three-state warning</div>
+        <p>If a wire shows blue instead of green or dark green, it is carrying an <em>undefined</em> value &mdash; usually because something is unconnected. Blue means "nothing is driving this wire," not "zero." Trace it back and connect it.</p>
+        <p>This is the single most common thing that goes wrong on a first Logisim circuit, and it is why step 2 above says one input pin rather than two.</p>
+      </div>
+
+      <div class="callout">
+        <div class="callout__title">Reference and CS301 coverage</div>
+        <p>The official Logisim documentation is worth bookmarking now &mdash; you will use this tool every week until December: <a href="https://cburch.com/logisim/docs.html" target="_blank" rel="noopener">Logisim documentation (cburch.com)</a>.</p>
+        <p><strong>Logisim is not covered in CS301 at all.</strong> This section and the assignment's circuit specifications are entirely course-specific. The underlying Boolean algebra comes from CS301 <strong>Unit 3</strong> &mdash; log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> &mdash; but the hands-on implementation exists only here.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Section 2.6 — From Expression to Circuit
+         ============================================================ -->
+    <section id="sec-2-6">
+      <h2>2.6 &mdash; From Expression to Circuit: A Design Exercise</h2>
+
+      <p>You can build individual gates from NAND. Now take a complete Boolean expression and design a circuit that computes it. This is a process, not an act of inspiration &mdash; follow the same five steps every time and it will work every time.</p>
+
+      <div class="process-grid">
+        <div class="process-card">
+          <div class="process-card__step">Step 1</div>
+          <div class="process-card__title">Read</div>
+          <div class="process-card__body">Identify the operations and the order they apply in. Watch the primes carefully.</div>
+        </div>
+        <div class="process-card">
+          <div class="process-card__step">Step 2</div>
+          <div class="process-card__title">Tabulate</div>
+          <div class="process-card__body">Write the truth table for every input combination. This is your target &mdash; and later, your test.</div>
+        </div>
+        <div class="process-card">
+          <div class="process-card__step">Step 3</div>
+          <div class="process-card__title">Decompose</div>
+          <div class="process-card__body">Break the expression into sub-expressions, each of which maps to exactly one gate.</div>
+        </div>
+        <div class="process-card">
+          <div class="process-card__step">Step 4</div>
+          <div class="process-card__title">Build</div>
+          <div class="process-card__body">Place the gates and wire them according to the decomposition.</div>
+        </div>
+        <div class="process-card">
+          <div class="process-card__step">Step 5</div>
+          <div class="process-card__title">Verify</div>
+          <div class="process-card__body">Poke every input combination. Confirm each one against step 2. Every one, not a sample.</div>
+        </div>
+      </div>
+
+      <h3>Worked Example</h3>
+
+      <p>Take the expression:</p>
+
+      <pre><code>F = (A AND B) OR (NOT C)</code></pre>
+
+      <p><strong>Decomposed:</strong></p>
+
+      <ul>
+        <li><code>A AND B</code> &rarr; one AND gate</li>
+        <li><code>NOT C</code> &rarr; one NOT gate</li>
+        <li>OR the two results together &rarr; one OR gate</li>
+      </ul>
+
+      <p>Three gates total. Now the truth table &mdash; note that with three inputs there are eight rows, not four:</p>
+
+      <table style="max-width:520px;">
+        <thead><tr><th>A</th><th>B</th><th>C</th><th>A AND B</th><th>NOT C</th><th>F</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>0</td><td>0</td><td>0</td><td>1</td><td>1</td></tr>
+          <tr><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+          <tr><td>0</td><td>1</td><td>0</td><td>0</td><td>1</td><td>1</td></tr>
+          <tr><td>0</td><td>1</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+          <tr><td>1</td><td>0</td><td>0</td><td>0</td><td>1</td><td>1</td></tr>
+          <tr><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+          <tr><td>1</td><td>1</td><td>0</td><td>1</td><td>1</td><td>1</td></tr>
+          <tr><td>1</td><td>1</td><td>1</td><td>1</td><td>0</td><td>1</td></tr>
+        </tbody>
+      </table>
+
+      <p>You will build exactly this circuit in Assignment 2. Notice that F is 1 in six of the eight rows &mdash; if your circuit produces something with a different shape, the truth table tells you which row to investigate first.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Forward reference</div>
+        <p>In <strong>Week 3</strong> you apply this same five-step process to build a <strong>half adder</strong> &mdash; a circuit that adds two bits. The sum output is <code>A XOR B</code> and the carry output is <code>A AND B</code>. The process is identical: expression, truth table, decomposition, build, verify. Only the expression changes.</p>
+      </div>
+
+      <div class="callout">
+        <div class="callout__title">CS301 coverage</div>
+        <p>Translating Boolean expressions into circuits is covered in Saylor CS301 <strong>Unit 3</strong> &mdash; log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> and navigate to Unit 3. The five-step process above and the Logisim implementation are course-specific.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Section 2.7 — Synthesis
+         ============================================================ -->
+    <section id="sec-2-7">
+      <h2>2.7 &mdash; Synthesis: The Single Molecule of Computation</h2>
+
+      <p>Let's connect the dots.</p>
+
+      <p>You started this week with a question: how does voltage become a decision? You learned that a transistor is a voltage-controlled switch. You learned that transistors wire together into logic gates. You learned that the NAND gate is universal &mdash; any logic function at all can be built from NAND gates alone. And you proved why, using De Morgan's laws.</p>
+
+      <p><strong>Here is what that means.</strong> Every circuit you will build in this course &mdash; the adder in Week 3, the S-R latch in Week 4, the register in Week 5, the ALU in Week 6, the RAM in Week 8, and the CPU you assemble across Weeks 13 and 14 and submit as your final project &mdash; can be built from nothing but NAND gates.</p>
+
+      <p>The CPU in your laptop was not built from NAND gates alone; modern chips use a mix of gate types for efficiency. But it <em>could</em> have been, and nothing about what it can compute would change. The NAND gate is the single molecule of computation. Every piece of software you have ever run &mdash; every game, every browser tab, every line of code you have written &mdash; ultimately executed as voltage flowing through gates like the one you just built.</p>
+
+      <p>This is not a metaphor. The <strong>Intel 4004</strong>, the first commercial microprocessor (1971), was built almost entirely from NAND logic. The Apple I used chips made the same way. You are learning the same physical principle that powered the first computers, and you are about to build with it.</p>
+
+      <div class="callout">
+        <div class="callout__title">CS301 coverage</div>
+        <p>The historical connection between NAND universality and early chip manufacturing is not covered in CS301. This synthesis is provided here.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Section 2.8 — Looking Ahead
+         ============================================================ -->
+    <section id="sec-2-8">
+      <h2>2.8 &mdash; Looking Ahead: From Single Gates to Useful Circuits</h2>
+
+      <p>You now know the alphabet of digital logic. You can build any single gate from NAND gates alone, and you can translate a Boolean expression into a working circuit.</p>
+
+      <p>But single gates are like individual letters. They are the vocabulary, and they do not say much on their own.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Where this goes</div>
+        <p><strong>What we have:</strong> individual logic gates that compute simple functions.</p>
+        <p><strong>What we can't do yet:</strong> build circuits that compute anything <em>useful</em> &mdash; add numbers, select between values, decode an address. Single gates are not enough.</p>
+        <p><strong>What you will be able to do next week:</strong> build combinational circuits that perform arithmetic and selection on multi-bit values. The adder you build in Week 3 is made of the same gates you learned this week, wired together in a pattern that performs binary addition.</p>
+      </div>
+
+      <div class="callout">
+        <div class="callout__title">CS301 coverage</div>
+        <p>The preview of combinational circuits &mdash; adders, multiplexers, decoders &mdash; opens Saylor CS301 <strong>Unit 3</strong>. Log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> and navigate to Unit 3 if you want to read ahead.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Assignment + assessment
+         ============================================================ -->
+    <section id="sec-assignment">
+      <h2>Your Work This Week</h2>
+
+      <div class="callout callout--hook">
+        <div class="callout__title">Assignment 2: Logic Gates and NAND Universality &mdash; 100 points</div>
+        <p>A written problem set covering truth tables, Boolean algebra, and the NAND universality derivations, plus <strong>five circuits built in Logisim</strong> and submitted as a single <code>.circ</code> file.</p>
+        <p>This is your first graded Logisim work. Budget about three hours, and start it before the end of the week rather than on the last day &mdash; the circuits are not hard, but installing and learning a new tool always takes longer than you expect.</p>
+        <p>Open the assignment from the next item in this module.</p>
+      </div>
+
+      <div class="callout">
+        <div class="callout__title">How this is assessed</div>
+        <p><strong>Quiz 1</strong> in Week 4 covers all of Phase 1 &mdash; Weeks 1 through 4. Assignment 2 is formative practice for it: the problem types and difficulty deliberately mirror what the quiz will ask. The Logisim submission is the first hands-on assessment of SLO1 in this course.</p>
+      </div>
+
+      <div class="callout">
+        <div class="callout__title">Optional further reading</div>
+        <p><strong>Plantz</strong> becomes useful reading from this week onward, now that circuit building has started. If you are curious about the physical implementation of logic gates at the transistor level, Plantz's treatment of digital logic complements what is here. No specific chapter is assigned &mdash; this is a general recommendation for the curious.</p>
+      </div>
+
+      <div style="text-align:center;margin:var(--space-xl) 0;">
+        <div class="spa-card__btn" style="font-size:var(--fs-md);padding:var(--space-md) var(--space-xl);">
+          Continue to the next item in this module to open Assignment 2
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <!-- ==================== Video + Transcript Sync (CSC210 Video Embed Standard) ==================== -->
+  <script>
+  (function () {
+    'use strict';
+
+    var VIDEO_ID = 'yrFZyOp5Gv0';
+    var player, timeUpdater, parsedTranscript = [];
+
+    var vttContent = `WEBVTT
+Kind: captions
+Language: en-US
+
+00:00:00.000 --> 00:00:06.240
+Aloha so this is week 2's assignment for Boolean logic and digital circuits and I
+
+00:00:06.240 --> 00:00:10.620
+just wanted to go over the assignment a little bit in terms of really Logisim
+
+00:00:10.620 --> 00:00:19.680
+so you need Logisim 2.7.1 it's linked into both here in the in the
+
+00:00:19.680 --> 00:00:25.020
+assignment it's also linked onto the syllabus but what you want to do so I'm
+
+00:00:25.020 --> 00:00:28.920
+gonna do it for Windows is you want to download Logisim for Windows if you're
+
+00:00:28.920 --> 00:00:37.500
+on a Mac you download for Mac okay it's a zip file I'm gonna download it I'm
+
+00:00:37.500 --> 00:00:48.900
+gonna open a folder where it's stored I'm going to extract it doesn't matter
+
+00:00:48.900 --> 00:00:56.240
+where I extract it to okay and so you're gonna get a file let me
+
+00:00:58.920 --> 00:01:44.600
+include file name extensions it's a exe file okay so wherever you put it put it
+
+00:01:44.600 --> 00:01:48.340
+on your desktop put it in downloads doesn't matter where you put it on your
+
+00:01:48.340 --> 00:01:52.920
+computer to run it all you have to do is double click on it to run it it's an exe
+
+00:01:52.920 --> 00:02:01.480
+file but it does require Java run so okay so it's gonna say requires a the
+
+00:02:01.480 --> 00:02:06.040
+Java runtime environment one point five point zero or later okay so you can say
+
+00:02:06.040 --> 00:02:08.420
+okay and in my case what it's going to do it's going to open a word file so let's just say
+
+00:02:08.920 --> 00:02:19.160
+up know why this let me but it's gonna open up our browser and says download
+
+00:02:19.160 --> 00:02:24.660
+Java someone else download job for desktop should do the same on your Mac
+
+00:02:24.660 --> 00:02:30.940
+okay and then you're gonna open that file to install it you can install the
+
+00:02:30.940 --> 00:02:38.020
+Java runtime environment and then once it's finished installing which depending
+
+00:02:38.020 --> 00:02:42.820
+upon your computer for download and your CPU for processing how fast it'll
+
+00:02:42.820 --> 00:02:56.320
+process once it's done you can go back to your exe file double click on it and
+
+00:02:56.320 --> 00:03:01.060
+it should run okay and so this is your environment this is what it looks like
+
+00:03:01.060 --> 00:03:07.580
+the right side here is where you draw stuff the left side down the left you
+
+00:03:07.580 --> 00:03:08.000
+have these
+
+00:03:08.000 --> 00:03:14.060
+folders we are going to only use gates and wiring we're not gonna use anything
+
+00:03:14.060 --> 00:03:19.520
+from end of the rest okay these are pre-built things in the software we're
+
+00:03:19.520 --> 00:03:27.020
+gonna use gates okay and then up here you have some icons to do stuff and then
+
+00:03:27.020 --> 00:03:32.420
+you have your menu all right so what we're gonna do is use gates and so how
+
+00:03:32.420 --> 00:03:37.000
+we use this is if we want to NOT gate for instance we want to put a NOT gate
+
+00:03:38.000 --> 00:03:43.900
+for instance we're going to use gates here and then we're gonna add an icon
+
+00:03:43.900 --> 00:03:49.060
+okay what we're gonna do is you see this me says Main so Main is our basic
+
+00:03:49.060 --> 00:03:56.100
+environment I want to add a new circuit or a subcircuit to this so I can add a
+
+00:03:56.100 --> 00:04:02.600
+project I can go project add circuit the first one okay so the first thing I
+
+00:04:02.600 --> 00:04:07.800
+probably save it you want to save your file
+
+00:04:08.000 --> 00:04:14.240
+know give it a name whatever it's supposed to be
+
+00:04:15.200 --> 00:04:17.520
+you know
+
+00:04:18.480 --> 00:04:22.080
+okay you don't have to add the dot carc because that's the default
+
+00:04:22.080 --> 00:04:24.560
+save it
+
+00:04:25.200 --> 00:04:31.040
+and if I go to my documents now
+
+00:04:32.160 --> 00:04:36.720
+I should have my assignment name.circ and I can always open it because it's
+
+00:04:36.720 --> 00:04:40.960
+stored there okay and so what I want to do is I want
+
+00:04:40.960 --> 00:04:44.160
+to add a circuit so go project add circuit
+
+00:04:44.160 --> 00:04:47.280
+I'm going to add a NOT gate
+
+00:04:49.120 --> 00:04:54.480
+whatever it's supposed to be named name it and now what I want to do is see
+
+00:04:54.480 --> 00:04:57.600
+that the um magnifying glass is on NOT gate
+
+00:04:57.600 --> 00:05:01.440
+circuit okay so then I will go to the gate
+
+00:05:01.440 --> 00:05:06.720
+itself and I will grab a NOT gate
+
+00:05:07.360 --> 00:05:10.320
+there it is it's hard to read these because
+
+00:05:10.320 --> 00:05:13.600
+they're so small
+
+00:05:14.960 --> 00:05:18.880
+actually let's see actually I'm going to grab this one up here but it's a not
+
+00:05:18.880 --> 00:05:21.840
+gate should be in here I can't read those but
+
+00:05:21.840 --> 00:05:29.040
+there's an icon up here for add NOT gate and click on it to select it and drop it
+
+00:05:29.040 --> 00:05:31.840
+in now if it's hard to see down here in
+
+00:05:31.840 --> 00:05:36.560
+this at the very bottom left hand corner you'll see this 100 percent
+
+00:05:37.040 --> 00:05:41.120
+and these up and down arrows and I can click the arrow to
+
+00:05:41.120 --> 00:05:46.400
+blow it up okay and if I don't like those grid points next to it there's a
+
+00:05:46.400 --> 00:05:50.400
+little patch and I can turn them off but typically I leave them on
+
+00:05:50.400 --> 00:05:54.400
+so you can blow it up so you can see it and what I want you to notice is that
+
+00:05:54.400 --> 00:06:00.800
+the NOT gate has a red dot that when I put my mouse over it
+
+00:06:00.800 --> 00:06:06.640
+when the mouse is on the arrow okay it puts a green circle around it okay that's the out
+
+00:06:06.640 --> 00:06:10.240
+bit of the knot gate so I can draw a line I can click and
+
+00:06:10.240 --> 00:06:15.440
+drag and that's my wire again there's a blue
+
+00:06:15.440 --> 00:06:19.680
+one which is my input side that's the input
+
+00:06:19.680 --> 00:06:23.600
+okay and now what I want to do is connect the input to an input
+
+00:06:23.600 --> 00:06:27.760
+pin and the output to an output pin so the square up here is an
+
+00:06:27.760 --> 00:06:31.840
+input pin so I can click on that and drop one in
+
+00:06:31.840 --> 00:06:43.120
+okay I did that on purpose moved it I didn't connect it on purpose and the round ones is an output pin.
+
+00:06:43.120 --> 00:06:49.580
+I can click on that and then drop one of those in. okay. When I click on any item, there is a, it says what it is, selection pin, and then there's some attributes for that
+
+00:06:49.580 --> 00:06:59.880
+item.
+
+00:06:59.880 --> 00:07:05.760
+okay. Facing east means this connection point is to the east or right side. So I want to change that. I can change it to north and it'll be on the top. okay.
+
+00:07:05.760 --> 00:07:15.180
+But I want it on the right side. It's the default output. No, because it's an input pin.
+
+00:07:15.180 --> 00:07:21.180
+I said, yes, then it becomes round because of an output pin. And we want it.
+
+00:07:21.180 --> 00:07:27.640
+No, because input pin data bits one, because we're just using one bit right now. three-state.
+
+00:07:27.640 --> 00:07:33.080
+No, it should always, you want to always be no, you never want three-state.
+
+00:07:33.080 --> 00:07:35.740
+And for now we leave the rest. If I want to label, like I want to label this input A, I can type capital A.
+
+00:07:35.760 --> 00:07:42.300
+And I'll put an input there. okay. And then I can grab, oops, as long as the arrow is selected,
+
+00:07:42.300 --> 00:07:52.340
+I can click on it and drag it wherever I want.
+
+00:07:52.340 --> 00:07:59.560
+okay. And what I want to do is connect this to the input side. okay.
+
+00:07:59.560 --> 00:08:05.740
+So I want to make sure that that dot on the square is connected to the wire.
+
+00:08:05.740 --> 00:08:13.360
+It's connected to the input of my NOT gate and my output. Click on output, same idea, right? I can rotate this west, north, south, east.
+
+00:08:13.360 --> 00:08:23.100
+I'll put, yes, data bit one, three-state. I'm going to change that to no. okay.
+
+00:08:23.100 --> 00:08:25.160
+And then we can put out if we want.
+
+00:08:25.160 --> 00:08:30.580
+Similarly, I'm going to grab and drag this.
+
+00:08:30.580 --> 00:08:35.680
+okay. And I'm going to connect this to this wire. All right.
+
+00:08:35.680 --> 00:08:41.840
+And now I can click on this hand and I can go, this simulation mode so I can toggle the one A and see what happens to output.
+
+00:08:41.840 --> 00:08:48.620
+When A is zero, output's one. When A is one, output's zero. okay.
+
+00:08:48.620 --> 00:08:53.420
+And you can do this multiple things. okay. A couple of things that I want to point out when you're doing things like, let's say you have an
+
+00:08:53.420 --> 00:09:01.780
+AND gate. So I have an AND gate. I put in this AND gate. okay.`;
+
+    function timeToSeconds(timeStr) {
+      if (!timeStr) return 0;
+      var parts = timeStr.trim().split(':');
+      if (parts.length === 2) {
+        return (parseInt(parts[0]) || 0) * 60 + (parseFloat(parts[1]) || 0);
+      } else if (parts.length === 3) {
+        return (parseInt(parts[0]) || 0) * 3600 + (parseInt(parts[1]) || 0) * 60 + (parseFloat(parts[2]) || 0);
+      }
+      return 0;
+    }
+
+    function parseVtt(vttText) {
+      var cues = vttText.trim().split(/\n\n+/);
+      var parsedCues = [];
+      cues.forEach(function (cueBlock) {
+        if (cueBlock.indexOf('WEBVTT') === 0 || cueBlock.trim() === '') return;
+        var lines = cueBlock.trim().split('\n');
+        var timeLine = lines.filter(function (l) { return l.indexOf('-->') !== -1; })[0];
+        if (!timeLine) return;
+        var parts = timeLine.split(' --> ');
+        var textLines = lines.slice(lines.indexOf(timeLine) + 1);
+        parsedCues.push({
+          start: timeToSeconds(parts[0]),
+          end: timeToSeconds(parts[1]),
+          text: textLines.join(' ').trim()
+        });
+      });
+      return parsedCues;
+    }
+
+    function populateTranscript() {
+      var container = document.getElementById('transcript-container');
+      if (!container) return;
+      container.innerHTML = '';
+      parsedTranscript.forEach(function (cue) {
+        var lineEl = document.createElement('div');
+        lineEl.className = 'transcript-line';
+        lineEl.dataset.start = cue.start;
+        lineEl.dataset.end = cue.end;
+        lineEl.textContent = cue.text;
+        lineEl.setAttribute('role', 'button');
+        lineEl.setAttribute('tabindex', '0');
+        var seekTo = function () {
+          if (player && player.seekTo) { player.seekTo(cue.start, true); player.playVideo(); }
+        };
+        lineEl.addEventListener('click', seekTo);
+        lineEl.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); seekTo(); }
+        });
+        container.appendChild(lineEl);
+      });
+    }
+
+    function highlightCurrentLine() {
+      if (!player || !player.getCurrentTime) return;
+      var currentTime = player.getCurrentTime();
+      var lines = document.querySelectorAll('#transcript-container .transcript-line');
+      lines.forEach(function (line) {
+        var start = parseFloat(line.dataset.start);
+        var end = parseFloat(line.dataset.end);
+        if (currentTime >= start && currentTime < end) {
+          if (!line.classList.contains('active-transcript-line')) {
+            var prev = document.querySelector('#transcript-container .active-transcript-line');
+            if (prev) prev.classList.remove('active-transcript-line');
+            line.classList.add('active-transcript-line');
+            line.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else {
+          line.classList.remove('active-transcript-line');
+        }
+      });
+    }
+
+    function syncTranscriptHeight() {
+      var videoContainer = document.getElementById('video-container');
+      var transcriptContainer = document.getElementById('transcript-container');
+      if (!videoContainer || !transcriptContainer) return;
+      if (window.matchMedia('(min-width: 1024px)').matches) {
+        transcriptContainer.style.maxHeight = videoContainer.offsetHeight + 'px';
+      } else {
+        transcriptContainer.style.maxHeight = '24rem';
+      }
+    }
+
+    window.onYouTubeIframeAPIReady = function () {
+      player = new YT.Player('youtube-player', {
+        videoId: VIDEO_ID,
+        events: {
+          onStateChange: function (event) {
+            clearInterval(timeUpdater);
+            if (event.data === YT.PlayerState.PLAYING) {
+              timeUpdater = setInterval(highlightCurrentLine, 300);
+            }
+          }
+        }
+      });
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      parsedTranscript = parseVtt(vttContent);
+      populateTranscript();
+      setTimeout(syncTranscriptHeight, 100);
+      if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+        var tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      } else {
+        window.onYouTubeIframeAPIReady();
+      }
+    });
+
+    var resizeTimeout;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(syncTranscriptHeight, 250);
+    });
+  })();
+  </script>
+
+</body>
+</html>
