@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w3-00">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 3 Orientation: These Are Your Parts</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- Orientation-specific: branching path map ----------
+       Week 3's chain is not linear, unlike Week 2's. Pages 2 and 3 are
+       independent of each other, and the map has to show that or the
+       accommodation it represents is invisible to the student it was
+       built for. */
+    .path-step {
+      display: flex;
+      gap: var(--space-md);
+      align-items: flex-start;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: var(--space-md) var(--space-lg);
+      box-shadow: var(--shadow);
+    }
+    .path-step--assignment {
+      border-left: 4px solid var(--color-accent);
+      background: #fef9f3;
+    }
+    .path-step__num {
+      flex-shrink: 0;
+      width: 40px; height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--color-primary);
+      color: #fff;
+      border-radius: 50%;
+      font-family: var(--font-mono);
+      font-weight: 700;
+    }
+    .path-step--assignment .path-step__num { background: var(--color-accent); }
+    .path-step__body { flex: 1; min-width: 0; }
+    .path-step__title {
+      font-weight: 700;
+      font-size: var(--fs-md);
+      color: var(--color-primary);
+    }
+    .path-step--assignment .path-step__title { color: var(--color-accent-hov); }
+    .path-step__meta {
+      font-size: var(--fs-sm);
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-xs);
+    }
+    .path-step__desc { font-size: var(--fs-sm); margin: 0; }
+
+    /* The parallel pair. Two columns on a wide viewport, stacked on a
+       narrow one -- stacking is fine, because the prose says outright
+       that the order between them does not matter. */
+    .path-branch {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-md);
+    }
+    @media (max-width: 720px) {
+      .path-branch { grid-template-columns: 1fr; }
+    }
+    .path-branch__note {
+      text-align: center;
+      font-size: var(--fs-sm);
+      color: var(--color-text-muted);
+      font-style: italic;
+      margin: var(--space-xs) 0;
+    }
+
+    /* Placeholder styling for the not-yet-recorded overview video */
+    .video-pending {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      height: 100%;
+      padding: var(--space-xl);
+      background: var(--color-code-bg);
+      color: var(--color-text-muted);
+      font-size: var(--fs-sm);
+    }
+
+    /* The six components, listed as a compact reference on the frame page */
+    .part-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: var(--space-sm);
+      margin: var(--space-md) 0;
+    }
+    .part-list__item {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-left: 3px solid var(--color-primary-lt);
+      border-radius: var(--radius);
+      padding: var(--space-sm) var(--space-md);
+    }
+    .part-list__name {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: var(--fs-sm);
+      color: var(--color-primary);
+    }
+    .part-list__where {
+      font-size: var(--fs-xs);
+      color: var(--color-text-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== Header ==================== -->
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 3 &rsaquo; <span>Orientation</span>
+    </nav>
+  </header>
+
+  <!-- ==================== Main Content ==================== -->
+  <main class="sp-main sp-main--full">
+
+    <h1>Week 3: These Are Your Parts</h1>
+    <p><strong>Estimated time for this page:</strong> ~30 minutes &nbsp;|&nbsp;
+       <strong>Estimated time for the full week:</strong> ~9 hours &nbsp;|&nbsp;
+       <strong>Topic:</strong> Combinational Logic</p>
+
+    <!-- ============================================================
+         Section A — The Gap (Hook)
+         ============================================================ -->
+    <section id="sec-gap">
+      <div class="callout callout--hook">
+        <div class="callout__title">What We Have / What We Can't Do / What We Can Now Do</div>
+        <p><strong>What you learned last week:</strong> Individual logic gates that compute simple functions. You know all seven gates, you know NAND is universal, and you have the Boolean algebra to prove why. You have built circuits in Logisim from primitive gates.</p>
+        <p><strong>What you can't do yet:</strong> Compute anything <em>useful</em>. A single gate answers one yes-or-no question about one or two bits. Nothing you have built can add two numbers, decide which of several values to act on, or work with a multi-bit quantity as a whole. Gates are the alphabet; you cannot yet write a word.</p>
+        <p><strong>What you will be able to do by the end of this week:</strong> Build circuits that perform real arithmetic and real selection on 8-bit values. You will build an adder that adds two 8-bit numbers, and decoders that turn a binary code into a one-of-N selection. These are not exercises &mdash; they are the first components of the CPU you will finish this course with, and you will use them unchanged for the rest of the semester.</p>
+      </div>
+
+      <p>Last week ended with a proof: one gate type can build everything. This week collects on it. You will spend most of Week 3 wiring gates you already understand into arrangements that do something a gate cannot do alone.</p>
+
+      <p>Nothing new is added to the toolbox. The adder is XOR, AND, and OR. The decoder is NOT and AND. That is worth saying plainly at the start, because it <em>is</em> the point:</p>
+
+      <blockquote>
+        Complexity in hardware comes from composition, not from new primitives.
+      </blockquote>
+    </section>
+
+    <!-- ============================================================
+         Section B — These Are Parts, Not Exercises
+         ============================================================ -->
+    <section id="sec-parts">
+      <h2>These Are Parts, Not Exercises</h2>
+
+      <p>Something changes this week, and it is worth understanding before you start rather than discovering in Week 6.</p>
+
+      <p>Weeks 1 and 2 were preparation. The circuits you built in Week 2 &mdash; NOT from a NAND, AND from two NANDs &mdash; were there to prove a point, and once the point was made you were free to forget them.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Week 3 is where this course stops doing exercises and starts building the machine</div>
+        <p><strong>Every circuit you build this week is a component of the CPU you finish this course with.</strong> Not practice for it. A part of it.</p>
+        <p>The <code>FULL_ADDER</code> you build gets instantiated eight times to make <code>ADDER_8BIT</code>. That <code>ADDER_8BIT</code> drops into the ALU in Week 6 &mdash; not rebuilt, not redesigned, the same circuit. The decoders you build show up in memory addressing and in the control section.</p>
+        <p>When you finish the CPU at the end of this course, these exact circuits will be inside it.</p>
+      </div>
+
+      <h3>Two consequences you should act on this week</h3>
+
+      <p><strong>First: names are an interface.</strong> Tab names and pin names are specified exactly in the assignment, and they are specified exactly for a reason. Later weeks look for them. A component whose pins are named differently than expected is not reusable, and you pay that cost in Week 13 &mdash; when the CPU will not wire up and the reason is a decision you made in September.</p>
+
+      <p><strong>Second: build the small thing once and use it eight times.</strong> When you get to the 8-bit adder, you will place eight copies of your own <code>FULL_ADDER</code> subcircuit rather than hand-wiring forty individual gates. Both approaches produce a circuit that adds. Only one produces a circuit you can drop into the ALU in three weeks.</p>
+
+      <p>Here is what you will own by Sunday:</p>
+
+      <div class="part-list">
+        <div class="part-list__item">
+          <div class="part-list__name">HALF_ADDER</div>
+          <div class="part-list__where">The smallest thing that adds</div>
+        </div>
+        <div class="part-list__item">
+          <div class="part-list__name">FULL_ADDER</div>
+          <div class="part-list__where">The reusable atom of every adder in the course</div>
+        </div>
+        <div class="part-list__item">
+          <div class="part-list__name">ADDER_8BIT</div>
+          <div class="part-list__where">Becomes the arithmetic core of the ALU</div>
+        </div>
+        <div class="part-list__item">
+          <div class="part-list__name">DECODER_2TO4</div>
+          <div class="part-list__where">Register selection, later</div>
+        </div>
+        <div class="part-list__item">
+          <div class="part-list__name">DECODER_3TO8</div>
+          <div class="part-list__where">Selects which ALU operation runs</div>
+        </div>
+        <div class="part-list__item">
+          <div class="part-list__name">DECODER_4TO16</div>
+          <div class="part-list__where">Two of these address the rows and columns of RAM</div>
+        </div>
+      </div>
+
+      <p>You will see exactly how each one lands when we build the circuits that consume them. For now the only thing you need from that list is a reason to build them carefully.</p>
+    </section>
+
+    <!-- ============================================================
+         Section G — Week Overview Video
+         ============================================================ -->
+    <section id="sec-video">
+      <h2>Week 3 Overview</h2>
+      <p>Watch this before you start the material below. It walks through the whole week in about ten minutes: why gates alone are not enough, how a half adder becomes a full adder becomes an 8-bit adder, what a decoder does, and how all of it ends up inside the processor you build later.</p>
+
+      <div class="video-breakout">
+        <div class="video-transcript-row">
+          <div class="video-col">
+            <div class="video-frame" id="video-container">
+              <!-- PLACEHOLDER: replace with the standard iframe and set VIDEO_ID
+                   below once the Fall 2026 recording exists.
+                   See docs/CSC210-Week3-VideoBrief.md. -->
+              <div class="video-pending">
+                <p><strong>Video coming soon.</strong><br>
+                The Week 3 overview video is being recorded and will appear here before the module opens.</p>
+              </div>
+            </div>
+            <div class="video-caption">Closed captions available. Use the transcript panel to jump to any point in the video.</div>
+          </div>
+          <div class="transcript-col">
+            <div class="transcript-panel" id="transcript-container">
+              <p class="transcript-loading">Transcript will appear here once the video is posted.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Section C — This Week's Learning Path
+         ============================================================ -->
+    <section id="sec-path">
+      <h2>This Week's Learning Path</h2>
+
+      <p>Week 3 has <strong>two independent tracks</strong>, which is a change from Week 2. Pages 2 and 3 do not depend on each other &mdash; adders and decoders are different circuits solving different problems, and neither needs the other.</p>
+
+      <p><strong>This is deliberate, and you should know it is there.</strong> The adder sequence on page 2 is the harder half of the week. If you get stuck on carry propagation, you are not blocked &mdash; go do decoders, then come back. Being stuck on one idea should not stop you making progress on an unrelated one.</p>
+
+      <div style="display:flex;flex-direction:column;gap:var(--space-sm);margin:var(--space-lg) 0;">
+
+        <div class="path-step">
+          <div class="path-step__num">1</div>
+          <div class="path-step__body">
+            <div class="path-step__title">From Gates to Adders</div>
+            <div class="path-step__meta">Sections 3.1&ndash;3.3 &nbsp;|&nbsp; ~1.75 hours</div>
+            <p class="path-step__desc">Why a gate is not enough, then the two adder atoms: the half adder that adds two bits, and the full adder that also accepts a carry from the column to its right. Two interactive simulators and a self-check.</p>
+          </div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+
+        <p class="path-branch__note">These two are independent &mdash; either order is fine</p>
+
+        <div class="path-branch">
+          <div class="path-step">
+            <div class="path-step__num">2</div>
+            <div class="path-step__body">
+              <div class="path-step__title">The Ripple-Carry Adder</div>
+              <div class="path-step__meta">Section 3.4 &nbsp;|&nbsp; ~0.7 hours</div>
+              <p class="path-step__desc">Eight full adders chained end to end. The shortest page of the week, and the one worth remembering &mdash; the circuit does not <em>perform</em> addition, it <em>is</em> addition.</p>
+            </div>
+          </div>
+
+          <div class="path-step">
+            <div class="path-step__num">3</div>
+            <div class="path-step__body">
+              <div class="path-step__title">Circuits That Select</div>
+              <div class="path-step__meta">Sections 3.5&ndash;3.6 &nbsp;|&nbsp; ~1.45 hours</div>
+              <p class="path-step__desc">Decoders turn a binary code into a one-of-N selection, and scale by extending one pattern. Then the distinction between a decoder and a multiplexer, which is worth getting right the first time.</p>
+            </div>
+          </div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+
+        <div class="path-step">
+          <div class="path-step__num">4</div>
+          <div class="path-step__body">
+            <div class="path-step__title">Encoders, Comparators, and What You Now Own</div>
+            <div class="path-step__meta">Sections 3.7&ndash;3.9 &nbsp;|&nbsp; ~1.5 hours</div>
+            <p class="path-step__desc">The rest of the selection family, then the week's synthesis &mdash; where each part you built goes, and the one thing none of these circuits can do. Needs both pages above.</p>
+          </div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+
+        <div class="path-step path-step--assignment">
+          <div class="path-step__num">A</div>
+          <div class="path-step__body">
+            <div class="path-step__title">Assignment 3: Combinational Circuits</div>
+            <div class="path-step__meta">100 points &nbsp;|&nbsp; ~3.5 hours &nbsp;|&nbsp; Six circuits</div>
+            <p class="path-step__desc">Written work on adder behaviour and selection logic, plus six Logisim circuits built as new tabs in the file you started in Week 2. Every circuit is a component you keep.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <p>Move between these using the course menu for this module.</p>
+    </section>
+
+    <!-- ============================================================
+         Section D — Your .circ File Continues
+         ============================================================ -->
+    <section id="sec-setup">
+      <h2>Your Circuit File Continues</h2>
+
+      <p><strong>There is nothing to install this week.</strong> You set Logisim up in Week 2, and you already have the file this week's work goes into.</p>
+
+      <div class="tool-card">
+        <div class="tool-card__icon" aria-hidden="true">&#9881;</div>
+        <div>
+          <div class="tool-card__name">Open <code>CSC210_YourName.circ</code></div>
+          <p class="tool-card__desc">The same file you created in Week 2, with your Week 2 circuits still in it. Logisim Classic 2.7.1 &mdash; not Evolution.</p>
+        </div>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Six new tabs, same file</div>
+        <p>Week 3's six circuits are <strong>new circuit tabs inside the file you already have</strong>. Do not create a new <code>.circ</code> file, and do not delete or replace your Week 2 circuits &mdash; they stay where they are.</p>
+        <p><strong>All circuits for this course live inside that single <code>.circ</code> file.</strong> No external file links, no zip archives, no second file. By the end of the course this one file contains a working CPU, and a submission that points at circuits stored elsewhere cannot be graded, because the grader cannot open circuits that are not there.</p>
+      </div>
+
+      <p>One habit worth starting now, while there are only eight tabs and not thirty: name each tab exactly as the assignment specifies, the first time. Renaming later is easy; finding out in Week 13 that a subcircuit you have instantiated in four places has the wrong pin names is not.</p>
+    </section>
+
+    <!-- ============================================================
+         Section E — Where Week 3 Fits
+         ============================================================ -->
+    <section id="sec-progression">
+      <h2>Where Week 3 Fits</h2>
+
+      <p>Phase 1 of this course &mdash; the first four weeks &mdash; builds the digital foundations everything else rests on. Each week answers a question the previous week could not:</p>
+
+      <div class="progression">
+        <div class="progression__item completed">
+          <div class="progression__label">Week 1 &mdash; Representation</div>
+          <div class="progression__detail">How can data be stored as voltage? Binary, hex, two's complement, floating point, character encoding. <em>Complete.</em></div>
+        </div>
+        <div class="progression__item completed">
+          <div class="progression__label">Week 2 &mdash; Mechanism</div>
+          <div class="progression__detail">How does voltage make a decision? Transistors, logic gates, NAND universality, Boolean algebra. <em>Complete.</em></div>
+        </div>
+        <div class="progression__item active">
+          <div class="progression__label">Week 3 &mdash; Computation <strong>(you are here)</strong></div>
+          <div class="progression__detail">How do decisions become arithmetic? Adders, decoders, multiplexers, encoders, comparators.</div>
+        </div>
+        <div class="progression__item">
+          <div class="progression__label">Week 4 &mdash; Memory</div>
+          <div class="progression__detail">How does a circuit remember? Latches and flip-flops &mdash; built, as it happens, from cross-coupled NAND gates.</div>
+        </div>
+      </div>
+
+      <p>The thread is: <strong>representation &rarr; mechanism &rarr; computation &rarr; memory.</strong> Week 2 gave you gates that decide. This week arranges them into circuits that calculate and choose.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Assessment note</div>
+        <p><strong>Quiz 1</strong> falls in Week 4 and covers all of Phase 1 &mdash; Weeks 1 through 4 together. Assignment 3's written sections are deliberately written in the style of quiz questions, so treat them as preparation rather than just as points.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Section F — Administrative Note
+         ============================================================ -->
+    <section id="sec-admin">
+      <h2>One Scheduling Note</h2>
+
+      <div class="callout">
+        <div class="callout__title">Finish Assignment 3 inside this week</div>
+        <p>No deadlines fall during Week 3 itself. <strong>Week 4 has less room than it looks.</strong> Labor Day is Monday, September 7 &mdash; no class &mdash; and Quiz 1 lands the same week, covering all four weeks of Phase 1.</p>
+        <p>Assignment 3 is sized to be finishable inside Week 3, and it is worth treating that as real rather than optimistic. Work that slides into Week 4 arrives in the week you most want free for review.</p>
+      </div>
+
+      <p>If the adder sequence is where you slow down, that is the expected place. Carry propagation is the single most common sticking point in this material, and page 2 has a simulator built specifically to make it visible. Use it before deciding you do not understand it.</p>
+    </section>
+
+    <!-- ============================================================
+         Closing
+         ============================================================ -->
+    <section id="sec-next">
+      <h2>Ready to Start</h2>
+
+      <p>You have gates that decide. You are about to build circuits that count.</p>
+
+      <div style="text-align:center;margin:var(--space-xl) 0;">
+        <div class="spa-card__btn" style="font-size:var(--fs-md);padding:var(--space-md) var(--space-xl);">
+          Continue to the next item in this module to begin Page 1: From Gates to Adders
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== Footer ==================== -->
+  <footer class="sp-footer">
+    CSC210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <!-- ==================== Video + Transcript Sync (CSC210 Video Embed Standard) ==================== -->
+  <!-- PLACEHOLDER STATE.  To activate once the Fall 2026 recording exists:
+       1. Set VIDEO_ID below to the new YouTube id.
+       2. Paste the cleaned VTT into vttContent.
+       3. Replace the .video-pending div in the video section with the standard iframe:
+          <iframe id="youtube-player"
+                  src="https://www.youtube.com/embed/VIDEO_ID?enablejsapi=1&cc_load_policy=1&iv_load_policy=3&modestbranding=1&rel=0"
+                  title="CSC210 Week 3 Overview"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerpolicy="strict-origin-when-cross-origin"
+                  allowfullscreen loading="lazy"></iframe>
+       The script below already handles all three and no-ops until then. -->
+  <script>
+  (function () {
+    'use strict';
+
+    var VIDEO_ID = '';          // <-- set once recorded
+    var vttContent = ``;        // <-- paste cleaned VTT once available
+
+    var player, timeUpdater, parsedTranscript = [];
+
+    function timeToSeconds(timeStr) {
+      if (!timeStr) return 0;
+      var parts = timeStr.trim().split(':');
+      if (parts.length === 2) {
+        return (parseInt(parts[0]) || 0) * 60 + (parseFloat(parts[1]) || 0);
+      } else if (parts.length === 3) {
+        return (parseInt(parts[0]) || 0) * 3600 + (parseInt(parts[1]) || 0) * 60 + (parseFloat(parts[2]) || 0);
+      }
+      return 0;
+    }
+
+    function parseVtt(vttText) {
+      var cues = vttText.trim().split(/\n\n+/);
+      var parsedCues = [];
+      cues.forEach(function (cueBlock) {
+        if (cueBlock.indexOf('WEBVTT') === 0 || cueBlock.trim() === '') return;
+        var lines = cueBlock.trim().split('\n');
+        var timeLine = lines.filter(function (l) { return l.indexOf('-->') !== -1; })[0];
+        if (!timeLine) return;
+        var parts = timeLine.split(' --> ');
+        var textLines = lines.slice(lines.indexOf(timeLine) + 1);
+        parsedCues.push({
+          start: timeToSeconds(parts[0]),
+          end: timeToSeconds(parts[1]),
+          text: textLines.join(' ').trim()
+        });
+      });
+      return parsedCues;
+    }
+
+    function populateTranscript() {
+      var container = document.getElementById('transcript-container');
+      if (!container) return;
+      container.innerHTML = '';
+      parsedTranscript.forEach(function (cue) {
+        var lineEl = document.createElement('div');
+        lineEl.className = 'transcript-line';
+        lineEl.dataset.start = cue.start;
+        lineEl.dataset.end = cue.end;
+        lineEl.textContent = cue.text;
+        lineEl.setAttribute('role', 'button');
+        lineEl.setAttribute('tabindex', '0');
+        var seekTo = function () {
+          if (player && player.seekTo) { player.seekTo(cue.start, true); player.playVideo(); }
+        };
+        lineEl.addEventListener('click', seekTo);
+        lineEl.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); seekTo(); }
+        });
+        container.appendChild(lineEl);
+      });
+    }
+
+    function highlightCurrentLine() {
+      if (!player || !player.getCurrentTime) return;
+      var currentTime = player.getCurrentTime();
+      var lines = document.querySelectorAll('#transcript-container .transcript-line');
+      lines.forEach(function (line) {
+        var start = parseFloat(line.dataset.start);
+        var end = parseFloat(line.dataset.end);
+        if (currentTime >= start && currentTime < end) {
+          if (!line.classList.contains('active-transcript-line')) {
+            var prev = document.querySelector('#transcript-container .active-transcript-line');
+            if (prev) prev.classList.remove('active-transcript-line');
+            line.classList.add('active-transcript-line');
+            line.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else {
+          line.classList.remove('active-transcript-line');
+        }
+      });
+    }
+
+    function syncTranscriptHeight() {
+      var videoContainer = document.getElementById('video-container');
+      var transcriptContainer = document.getElementById('transcript-container');
+      if (!videoContainer || !transcriptContainer) return;
+      if (window.matchMedia('(min-width: 1024px)').matches) {
+        transcriptContainer.style.maxHeight = videoContainer.offsetHeight + 'px';
+      } else {
+        transcriptContainer.style.maxHeight = '24rem';
+      }
+    }
+
+    window.onYouTubeIframeAPIReady = function () {
+      if (!VIDEO_ID || !document.getElementById('youtube-player')) return;
+      player = new YT.Player('youtube-player', {
+        videoId: VIDEO_ID,
+        events: {
+          onStateChange: function (event) {
+            clearInterval(timeUpdater);
+            if (event.data === YT.PlayerState.PLAYING) {
+              timeUpdater = setInterval(highlightCurrentLine, 300);
+            }
+          }
+        }
+      });
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      // No video yet: leave the placeholder copy in place and skip the API.
+      if (!VIDEO_ID || !vttContent.trim()) { syncTranscriptHeight(); return; }
+
+      parsedTranscript = parseVtt(vttContent);
+      populateTranscript();
+      setTimeout(syncTranscriptHeight, 100);
+      if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+        var tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      } else {
+        window.onYouTubeIframeAPIReady();
+      }
+    });
+
+    var resizeTimeout;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(syncTranscriptHeight, 250);
+    });
+  })();
+  </script>
+
+</body>
+</html>
