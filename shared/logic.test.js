@@ -104,6 +104,97 @@ eq("(A+B)C","AC + BC","distributive");
 eq("A''","A","double prime = identity");
 eq("A'''","A'","triple prime");
 
+/* ============================================================
+   WEEK 3 — combinational primitives
+   ============================================================ */
+
+function ok(cond,label){ if(cond){pass++;console.log('ok   '+label);} else {fail++;console.log('FAIL '+label);} }
+
+console.log('\n--- Week 3: half adder (spec Deliverable 2, Circuit 1) ---');
+[[0,0,0,0],[0,1,1,0],[1,0,1,0],[1,1,0,1]].forEach(function(r){
+  var h=L.halfAdder(r[0],r[1]);
+  ok(h.sum===r[2]&&h.carry===r[3],'HALF_ADDER a='+r[0]+' b='+r[1]+' -> sum '+r[2]+' carry '+r[3]);
+});
+// The half adder is XOR and AND side by side — assert that against the parser,
+// so the two halves of the kernel cannot drift apart.
+ok([[0,0],[0,1],[1,0],[1,1]].every(function(p){
+  var h=L.halfAdder(p[0],p[1]);
+  return h.sum===L.evaluate(L.parse("A^B"),{A:p[0],B:p[1]}) &&
+         h.carry===L.evaluate(L.parse("AB"),{A:p[0],B:p[1]});
+}),'half adder agrees with parsed A^B / AB');
+
+console.log('\n--- Week 3: full adder (spec Deliverable 2, Circuit 2 — all 8 rows) ---');
+// cin, a, b, sum, cout — transcribed from the spec table
+[[0,0,0,0,0],[0,0,1,1,0],[0,1,0,1,0],[0,1,1,0,1],
+ [1,0,0,1,0],[1,0,1,0,1],[1,1,0,0,1],[1,1,1,1,1]].forEach(function(r){
+  var f=L.fullAdder(r[1],r[2],r[0]);
+  ok(f.sum===r[3]&&f.cout===r[4],'FULL_ADDER cin='+r[0]+' a='+r[1]+' b='+r[2]+' -> sum '+r[3]+' cout '+r[4]);
+});
+ok([0,1].every(function(c){return [0,1].every(function(a){return [0,1].every(function(b){
+    var f=L.fullAdder(a,b,c);
+    return f.sum===L.evaluate(L.parse("A^B^C"),{A:a,B:b,C:c}) &&
+           f.cout===L.evaluate(L.parse("AB + C(A^B)"),{A:a,B:b,C:c});
+  });});}),'full adder agrees with parsed A^B^C / AB+C(A^B)');
+
+console.log('\n--- Week 3: ripple() exhaustive, all 65,536 8-bit pairs ---');
+var bad=0, worstCarries=0;
+for(var a=0;a<256;a++){
+  for(var b=0;b<256;b++){
+    var r=L.ripple(L.intToBits(a,8),L.intToBits(b,8),0);
+    if(L.bitsToInt(r.sum)+(r.cout<<8) !== a+b) bad++;
+    if(r.stages.length!==8) bad++;
+  }
+}
+ok(bad===0,'ripple matches integer addition for all 65,536 pairs (mismatches: '+bad+')');
+
+// cin is honoured
+ok((function(){var r=L.ripple(L.intToBits(5,8),L.intToBits(9,8),1);
+   return L.bitsToInt(r.sum)===15 && r.cout===0;})(),'ripple honours cin=1  (5+9+1=15)');
+
+console.log('\n--- Week 3: the three SPA presets (spec §3.4) ---');
+function preset(a,b,label){
+  var r=L.ripple(L.intToBits(a,8),L.intToBits(b,8),0);
+  var carried=r.stages.filter(function(s){return s.cout===1;}).length;
+  return {sum:L.bitsToInt(r.sum),cout:r.cout,carried:carried,label:label};
+}
+var p1=preset(0xFF,0x01,'worst case');
+ok(p1.sum===0&&p1.cout===1&&p1.carried===8,'preset 11111111+00000001 -> sum 0, cout 1, carry through all 8 stages');
+var p2=preset(0x81,0x81,'Part A Q5');
+ok(p2.sum===2&&p2.cout===1,'preset 10000001+10000001 -> sum 00000010, cout 1  (unsigned 129+129=258)');
+// Standards Section 2: this same pair is ALSO signed overflow. Assert both readings
+// so nobody "fixes" the labelling by quietly changing the example.
+ok((function(){var s=function(x){return x>=128?x-256:x;};
+   return s(0x81)+s(0x81) === -254 && (s(0x81)+s(0x81) < -128);
+  })(),'and IS signed overflow too: -127 + -127 = -254, outside [-128,127]');
+var p3=preset(0x4D,0x26,'plain');
+ok(p3.sum===115&&p3.cout===0&&p3.carried===2,'preset 01001101+00100110 -> 115, no cout, 2 stages carry');
+
+console.log('\n--- Week 3: decode() (spec Deliverable 2, Circuits 4-6) ---');
+[2,3,4].forEach(function(n){
+  var allOk=true;
+  for(var v=0; v<(1<<n); v++){
+    var outs=L.decode(L.intToBits(v,n));
+    var hot=outs.reduce(function(s,x){return s+x;},0);
+    if(outs.length!==(1<<n) || hot!==1 || outs[v]!==1) allOk=false;
+  }
+  ok(allOk,'DECODER_'+n+'TO'+(1<<n)+': every input raises exactly one output, and it is out'+'[value]');
+});
+// Pin ordering is part of the component interface (spec: sel 00 -> out0).
+ok(L.decode([0,0])[0]===1,'sel=00 raises out0');
+ok(L.decode([1,0])[1]===1,'sel=01 raises out1   (LSB-first: [1,0] is 01)');
+ok(L.decode([0,1])[2]===1,'sel=10 raises out2');
+ok(L.decode([1,1])[3]===1,'sel=11 raises out3');
+
+console.log('\n--- Week 3: decoderCost() (the SPA prose claims) ---');
+ok(L.decoderCost(2).andGates===4  && L.decoderCost(2).andInputs===2,'2x4  = 4 AND gates of 2 inputs');
+ok(L.decoderCost(3).andGates===8  && L.decoderCost(3).andInputs===3,'3x8  = 8 AND gates of 3 inputs');
+ok(L.decoderCost(4).andGates===16 && L.decoderCost(4).andInputs===4,'4x16 = 16 AND gates of 4 inputs');
+ok(L.decoderCost(16).andGates===65536,'16-bit address would need 65,536 AND gates (the SPA prose figure)');
+
+console.log('\n--- Week 3: bit-array convention ---');
+ok(L.intToBits(3,8).join('')==='11000000','intToBits is LSB-first: 3 -> 11000000');
+ok(L.bitsToInt(L.intToBits(200,8))===200,'bitsToInt round-trips');
+
 console.log('\n============================');
 console.log('PASS '+pass+'   FAIL '+fail);
 process.exit(fail?1:0);

@@ -1131,3 +1131,184 @@ th {
   font-size: var(--fs-sm);
   padding: var(--space-xs) 0;
 }
+
+/* ============================================================
+   WEEK 3 — Combinational logic
+   ============================================================
+   Added 2026-08-08. Per Standards Section 8 the existing rules were
+   diffed before anything was written here, and most of what Week 3
+   needs already existed. Reused unchanged, with no new selectors:
+
+     .circuit-canvas / __caption   diagram containers
+     .gate-svg, .wire--hi/--lo     gate symbols and signal colouring
+     .tt, .tt__row--active         interactive truth tables
+     .step-nav, .step-nav__dot     step-through controls
+     .input-switch, .output-light  clickable inputs and output lamps
+     .bit-row, .bit-labels         multi-bit rows (Week 1)
+     .tab-navigation, .quiz-*      unscored self-checks
+     table, .callout--*, .widget-* everything else
+
+   What follows is only what genuinely did not exist.
+   ============================================================ */
+
+/* ---------- Static diagrams ---------- */
+/* Used by: 01-adders (8 images), 02-ripple-carry (3), 03-decoders (3).
+   Week 3 is the first week with exported bitmap diagrams, so the image
+   itself needed a rule; the surrounding container and caption did not --
+   .circuit-canvas already does that job for inline SVG and works here
+   unchanged.
+
+   max-height matters more than it looks. Each SPA is embedded in a fixed
+   1200px Canvas iframe, and an image taller than the frame cannot be seen
+   whole no matter how the student scrolls. Capping here rather than
+   raising every embed's height keeps the constraint in one place. */
+.circuit-canvas__img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 900px;
+  object-fit: contain;
+  margin: 0 auto;
+}
+/* Diagrams that are wide rather than tall read better without the cap
+   fighting them -- the 8-bit adder screenshot in particular. */
+.circuit-canvas__img--wide { max-height: none; }
+
+/* Half-adder diagrams sit INSIDE truth-table rows (one per row), not in a
+   gallery below the table. They need to be small and to not inherit the
+   full-width image rule above. */
+.tt .circuit-canvas__img {
+  max-width: 190px;
+  max-height: 120px;
+  margin: 0;
+}
+
+/* ---------- Multi-bit operand rows ---------- */
+/* Used by: 02-ripple-carry (Widget 3), assignment3.
+   Pairs with Week 1's existing .bit-row / .bit-labels containers, which
+   already provide the flex row and the monospace label strip -- only the
+   individual toggleable cell was missing. Deliberately NOT named .bit-cell:
+   that name was used for a Week 1 inline rule with different sizing, and
+   Standards Section 8 warns against assuming similar-looking rules are the
+   same rule. */
+.bus-bit {
+  width: 34px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-code-bg);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  user-select: none;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.bus-bit:hover { border-color: var(--color-primary-lt); }
+.bus-bit--hi {
+  border-color: var(--color-success);
+  background: #f0faf4;
+  color: var(--color-success);
+}
+.bus-bit--readonly { cursor: default; }
+.bus-bit--readonly:hover { border-color: var(--color-border); }
+.bus-bit:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ---------- Chained identical stages ---------- */
+/* Used by: 02-ripple-carry (the eight full-adder stages),
+   04-components-and-synthesis (the comparator chain).
+   Chaining identical stages and passing status along is a course-wide
+   technique -- it appears in the adder here, in the ALU's comparator in
+   Week 6, and again in the datapath. Shared from the start for that
+   reason rather than because two files happen to need it this week. */
+.stage-chain {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  align-items: stretch;
+  margin: var(--space-md) 0;
+}
+.stage-chain__stage {
+  flex: 1 1 92px;
+  min-width: 82px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  padding: var(--space-sm) var(--space-xs);
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  opacity: .45;
+  transition: opacity .2s, border-color .2s, background .2s;
+}
+/* Three states, and the distinction is the pedagogical point: a stage
+   that has not yet received its carry-in is not the same as one that has
+   settled. Instant mode simply marks every stage settled at once. */
+.stage-chain__stage--active {
+  opacity: 1;
+  border-color: var(--color-accent);
+  background: #fdf3e6;
+}
+.stage-chain__stage--settled { opacity: 1; }
+.stage-chain__label {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-xs);
+}
+.stage-chain__carry {
+  display: block;
+  font-size: var(--fs-xs);
+  margin-top: var(--space-xs);
+  color: var(--color-text-muted);
+}
+.stage-chain__carry--hi { color: var(--color-success); font-weight: 700; }
+
+/* ---------- One-hot output columns ---------- */
+/* Used by: 03-decoders (Widget 4), and Week 8's RAM addressing.
+   A 4x16 decoder needs sixteen indicators in view at once, which the
+   existing 78px .output-light cannot do -- hence a compact modifier on
+   that component rather than a parallel one. Same visual language, same
+   on-state colours, smaller footprint. */
+.output-light--compact {
+  width: auto;
+  min-width: 44px;
+  font-size: var(--fs-sm);
+  padding: var(--space-xs) var(--space-sm);
+}
+.lamp-column {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: var(--space-xs);
+  margin: var(--space-md) 0;
+}
+.lamp-column__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+}
+
+/* ---------- Decoder cost readout ---------- */
+/* Used by: 03-decoders. Small enough to inline, shared because the same
+   "here is what this costs in gates" readout recurs in Weeks 6 and 8. */
+.cost-readout {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+  background: var(--color-code-bg);
+  border-radius: var(--radius);
+  padding: var(--space-sm) var(--space-md);
+  margin: var(--space-sm) 0;
+}
+.cost-readout strong { color: var(--color-text); }

@@ -19,6 +19,15 @@
      equivalent(a, b)       -> boolean
      simplifyCheck(orig, student) -> { ok, reason, ... }
 
+   Combinational primitives (added Week 3) — bit arrays are
+   LSB-first, i.e. index 0 is the least significant bit:
+     halfAdder(a, b)              -> { sum, carry }
+     fullAdder(a, b, cin)         -> { sum, cout, stage1, stage2 }
+     ripple(aBits, bBits, cin)    -> { sum, cout, stages }
+     decode(selBits)              -> one-hot array of length 2^n
+     decoderCost(n)               -> { outputs, andGates, andInputs, notGates }
+     bitsToInt(bits) / intToBits(value, width)
+
    Notation accepted (Standards Section 8 requires all of these):
      NOT   A'   !A   ~A   NOT A      (postfix prime OR prefix)
      AND   AB   A*B  A.B  A&B  A AND B
@@ -333,6 +342,123 @@
     };
   }
 
+  /* ============================================================
+     Combinational-circuit primitives — added for Week 3
+     ============================================================
+     Still pure computation: no DOM, no events, no network. These
+     exist because Week 3's ripple-carry widget, Week 6's ALU and
+     Week 8's RAM addressing all need the same two operations, and
+     Section 8 of the Course Standards exists to stop that logic
+     being written three times.
+
+     Bit-array convention, and it is worth stating once because
+     getting it backwards is the classic ripple-carry bug:
+
+         index 0 is the LEAST significant bit.
+
+     So the 8-bit value 00000011 (decimal 3) is [1,1,0,0,0,0,0,0].
+     Carries propagate from index 0 upward, which is the order a
+     stepped display should reveal them in.
+     ============================================================ */
+
+  /* halfAdder(a, b) -> { sum, carry }
+     sum = a XOR b, carry = a AND b. */
+  function halfAdder(a, b) {
+    a = a ? 1 : 0; b = b ? 1 : 0;
+    return { sum: a ^ b, carry: a & b };
+  }
+
+  /* fullAdder(a, b, cin) -> { sum, cout, stage1, stage2 }
+     Two half adders and an OR. stage1/stage2 are exposed so a
+     widget can highlight the construction one half-adder at a
+     time without recomputing anything. */
+  function fullAdder(a, b, cin) {
+    a = a ? 1 : 0; b = b ? 1 : 0; cin = cin ? 1 : 0;
+    var h1 = halfAdder(a, b);
+    var h2 = halfAdder(h1.sum, cin);
+    return {
+      sum: h2.sum,
+      cout: h1.carry | h2.carry,
+      stage1: h1,
+      stage2: h2
+    };
+  }
+
+  /* ripple(aBits, bBits, cin) -> { sum, cout, stages }
+
+     aBits/bBits are arrays of 0|1, index 0 = LSB. Widths may differ;
+     the shorter is zero-extended. Returns the sum as a bit array of
+     the same convention, the final carry-out, and per-stage detail:
+
+       stages[i] = { i, a, b, cin, sum, cout }
+
+     The per-stage array is the reason this lives here rather than in
+     a widget: stepped propagation needs each stage's carry-in as well
+     as its result, and reconstructing that from the final answer is
+     both awkward and easy to get subtly wrong. */
+  function ripple(aBits, bBits, cin) {
+    var n = Math.max(aBits.length, bBits.length);
+    var c = cin ? 1 : 0;
+    var sum = [], stages = [], i, a, b, fa;
+
+    for (i = 0; i < n; i++) {
+      a = aBits[i] ? 1 : 0;
+      b = bBits[i] ? 1 : 0;
+      fa = fullAdder(a, b, c);
+      stages.push({ i: i, a: a, b: b, cin: c, sum: fa.sum, cout: fa.cout });
+      sum.push(fa.sum);
+      c = fa.cout;
+    }
+    return { sum: sum, cout: c, stages: stages };
+  }
+
+  /* decode(selBits) -> array of length 2^n, exactly one entry = 1.
+
+     selBits index 0 = LSB, matching ripple(). So [1,0] is sel=01,
+     which raises out1 — the pin ordering the Week 3 spec fixes as
+     part of the component interface (sel 00 -> out0 ... 11 -> out3).
+
+     Deliberately computed as an AND of input polarities rather than
+     as an array index, because that is the construction the SPA prose
+     describes: each output is one AND gate fed by the combination of
+     true and inverted inputs that selects it. A lookup would give the
+     right answer while demonstrating nothing. */
+  function decode(selBits) {
+    var n = selBits.length;
+    var outs = [], i, j, match, bit, want;
+
+    for (i = 0; i < (1 << n); i++) {
+      match = 1;
+      for (j = 0; j < n; j++) {
+        bit  = selBits[j] ? 1 : 0;          // actual input bit j
+        want = (i >> j) & 1;                // what output i requires
+        if (bit !== want) { match = 0; break; }
+      }
+      outs.push(match);
+    }
+    return outs;
+  }
+
+  /* Gate count for an n-input decoder, for the widget's live readout.
+     n AND gates of n inputs each, plus n inverters. */
+  function decoderCost(n) {
+    return { outputs: 1 << n, andGates: 1 << n, andInputs: n, notGates: n };
+  }
+
+  /* bitsToInt / intToBits — LSB-first, to keep the convention in one
+     place rather than re-derived in each widget. */
+  function bitsToInt(bits) {
+    var v = 0, i;
+    for (i = 0; i < bits.length; i++) { if (bits[i]) v += (1 << i); }
+    return v;
+  }
+
+  function intToBits(value, width) {
+    var bits = [], i;
+    for (i = 0; i < width; i++) { bits.push((value >> i) & 1); }
+    return bits;
+  }
+
   /* ---------- Export ---------- */
 
   root.CSCLogic = {
@@ -348,7 +474,16 @@
     truthTable: truthTable,
     equivalent: equivalent,
     literalCount: literalCount,
-    simplifyCheck: simplifyCheck
+    simplifyCheck: simplifyCheck,
+
+    /* Week 3 additions — combinational circuit primitives */
+    halfAdder: halfAdder,
+    fullAdder: fullAdder,
+    ripple: ripple,
+    decode: decode,
+    decoderCost: decoderCost,
+    bitsToInt: bitsToInt,
+    intToBits: intToBits
   };
 
 })(typeof window !== 'undefined' ? window : this);
