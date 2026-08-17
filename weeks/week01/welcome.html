@@ -1390,9 +1390,25 @@ thanks`;
       var videoContainer = document.getElementById('video-container');
       var transcriptContainer = document.getElementById('transcript-container');
       if (!videoContainer || !transcriptContainer) return;
-      if (window.matchMedia('(min-width: 1024px)').matches) {
+      // Match the transcript panel's height to the video only when the two
+      // columns are ACTUALLY side by side. Detected by comparing their rendered
+      // positions rather than by a viewport-width test, so this stays in sync
+      // with the flex-wrap rule in shared/style.css regardless of how wide the
+      // Canvas iframe happens to be. (The old matchMedia('(min-width: 1024px)')
+      // test measured the iframe, not the browser window, and disagreed with
+      // the CSS whenever Canvas gave the page less than 1024px.)
+      var videoCol = videoContainer.closest('.video-col');
+      var transcriptCol = transcriptContainer.closest('.transcript-col');
+      var sideBySide = !!(videoCol && transcriptCol) && Math.abs(
+        transcriptCol.getBoundingClientRect().top - videoCol.getBoundingClientRect().top) < 2;
+      // Both height and max-height are set: .transcript-panel carries a fixed
+      // height: 24rem, so setting max-height alone could only ever shrink the
+      // panel, never grow it to match a taller video.
+      if (sideBySide) {
+        transcriptContainer.style.height = videoContainer.offsetHeight + 'px';
         transcriptContainer.style.maxHeight = videoContainer.offsetHeight + 'px';
       } else {
+        transcriptContainer.style.height = '24rem';
         transcriptContainer.style.maxHeight = '24rem';
       }
     }
