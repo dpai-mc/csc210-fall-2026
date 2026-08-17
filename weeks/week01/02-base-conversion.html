@@ -228,7 +228,7 @@
  4 &divide; 2 =  2  remainder 0
  2 &divide; 2 =  1  remainder 0
  1 &divide; 2 =  0  remainder 1
-Read bottom&to;top: 1000010 &rarr; pad to 8 bits: 01000010</code></pre>
+Read bottom-to-top: 1000010 &rarr; pad to 8 bits: 01000010</code></pre>
 
         <h3>Binary &rarr; Decimal (Sum of Powers)</h3>
         <p>Add up the powers of 2 for each position that has a 1.</p>
@@ -249,7 +249,7 @@ Read bottom&to;top: 1000010 &rarr; pad to 8 bits: 01000010</code></pre>
         <p><strong>Example:</strong> 66 &rarr; hex</p>
         <pre><code>66 &divide; 16 = 4  remainder 2
  4 &divide; 16 = 0  remainder 4
-Read bottom&to;top: 42 &rarr; 0x42</code></pre>
+Read bottom-to-top: 42 &rarr; 0x42</code></pre>
 
         <div class="callout callout--forward">
           <div class="callout__title">CS301 Reference</div>
@@ -630,7 +630,7 @@ Read bottom&to;top: 42 &rarr; 0x42</code></pre>
             bits = rem + bits;
             temp = Math.floor(temp / 2);
           }
-          steps.push('Read remainders bottom&to;top: ' + bits);
+          steps.push('Read remainders bottom-to-top: ' + bits);
           // Pad to byte boundary
           var paddedLen = Math.max(8, Math.ceil(bits.length / 8) * 8);
           var padded = bits;
@@ -688,7 +688,7 @@ Read bottom&to;top: 42 &rarr; 0x42</code></pre>
             octBits = oRem + octBits;
             oTemp = Math.floor(oTemp / 8);
           }
-          octSteps.push('Read remainders bottom&to;top: ' + octBits);
+          octSteps.push('Read remainders bottom-to-top: ' + octBits);
         }
         for (var o = 0; o < octSteps.length; o++) {
           html += '<div class="widget-work__step">' + octSteps[o] + '</div>';
