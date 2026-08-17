@@ -1,33 +1,1436 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <title>Welcome to CSC210 for the Fall 2026 Semester</title>
-    </head>
-    <body>
-        <h2>Aloha and Welcome to CSC 210</h2>
-<p><span style="font-size: 18pt;">** Insert Welcome video here</span></p>
-<table style="border-collapse: collapse; width: 99.9858%; background-color: #fbeeb8;" border="0" cellspacing="0" cellpadding="4">
-    <tbody>
-        <tr>
-            <td style="width: 99.9573%;">
-                <h3>## LAB COURSE ##</h3>
-            </td>
-        </tr>
-        <tr>
-            <td style="width: 99.9573%;">
-                <p><span style="font-size: 18pt;">I highly recommend you consider taking the 1-credit Lab course, CSC-210L. In this course, weekly we cover additional supporting activities for each week. We spend a lot of time working with Logisim to create digital circuits and MARS to work on assembly programming.</span></p>
-            </td>
-        </tr>
-        <tr>
-            <td style="width: 99.9573%;">
-                <p><span style="font-size: 18pt;">Lab course meets on Tuesday, 8/18/2026 @ 2:00pm</span></p>
-                <p><span style="font-size: 18pt;"><a class="inline_disabled" title="Link" href="https://mendocino-edu.zoom.us/j/86135333458?pwd=faSTCXN2zNVYvQehi5Dpue2aJsCEab.1" target="_blank" rel="noopener">CSC210 Lab Meeting on Zoom</a></span></p>
-            </td>
-        </tr>
-    </tbody>
-</table>
-<p>&nbsp;</p>
-<p>&nbsp;</p>
-<p>*NOTE: I'm a little late in getting everything&nbsp; posted but will get it up soon!</p>
-    </body>
+<html lang="en" data-spa-id="welcome">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 &mdash; Welcome to Fall 2026</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+/* ---------- Page-specific: Welcome checklist & key-dates table ---------- */
+.welcome-checklist {
+      list-style: none;
+      margin-left: 0;
+    }
+.welcome-checklist li {
+      position: relative;
+      padding-left: 2rem;
+      margin-bottom: var(--space-md);
+    }
+.welcome-checklist li::before {
+      content: "\2610";
+      position: absolute;
+      left: 0;
+      top: -0.1em;
+      font-size: 1.25em;
+      color: var(--color-primary-lt);
+    }
+.dates-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: var(--space-md) 0;
+      font-size: var(--fs-sm);
+    }
+.dates-table th,
+.dates-table td {
+      text-align: left;
+      padding: var(--space-sm) var(--space-md);
+      border-bottom: 1px solid var(--color-border);
+    }
+.dates-table th {
+      background: var(--color-code-bg);
+      color: var(--color-primary);
+      font-weight: 700;
+    }
+.dates-table td:first-child {
+      font-family: var(--font-mono);
+      white-space: nowrap;
+    }
+.contact-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-md);
+      margin: var(--space-md) 0;
+    }
+@media (max-width: 600px) { .contact-grid { grid-template-columns: 1fr; } }
+.contact-item {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: var(--space-md);
+    }
+.contact-item__label {
+      font-size: var(--fs-xs);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-xs);
+    }
+.contact-item__value { font-weight: 600; }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== Header ==================== -->
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 &mdash; Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 1 &rsaquo; <span>Welcome</span>
+    </nav>
+  </header>
+
+  <!-- ==================== Main Content (Single Column) ==================== -->
+  <main class="sp-main sp-main--full">
+
+    <h1>Aloha and Welcome to CSC 210</h1>
+    <p><strong>Fall 2026</strong> &nbsp;|&nbsp; <strong>Format:</strong> Fully asynchronous online &nbsp;|&nbsp; <strong>Credits:</strong> 3 (lecture) &nbsp;|&nbsp; <strong>Instructor:</strong> David Pai</p>
+
+    <div class="callout callout--hook">
+      <div class="callout__title">Start Here</div>
+      <p>Welcome to Computer Organization and Architecture. Over the next seventeen weeks you will work your way down from a web page to a voltage and back up again&mdash;and by the end of the semester you will have built a working 8-bit CPU simulator out of nothing but primitive logic gates. The video below is your orientation to how the course is laid out, what tools you need, and what to do first. Watch it before you start the Week 1 modules.</p>
+    </div>
+
+    <!-- ============================================================
+         Video: Course Welcome (CSC210 Video Embed Standard)
+         ============================================================ -->
+    <h2>Course Welcome Video</h2>
+    <p>A walkthrough of the syllabus, the four-phase course outline, the software you will install, the reference textbook, and this week's work. Roughly 28 minutes.</p>
+
+    <div class="video-breakout">
+      <div class="video-transcript-row">
+        <div class="video-col">
+          <div class="video-frame" id="video-container">
+            <iframe id="youtube-player"
+                    src="https://www.youtube.com/embed/shuWyL2MAxo?enablejsapi=1&amp;cc_load_policy=1&amp;iv_load_policy=3&amp;modestbranding=1&amp;rel=0"
+                    title="CSC210 Fall 2026: Course Welcome"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    referrerpolicy="strict-origin-when-cross-origin"
+                    allowfullscreen
+                    loading="lazy">
+            </iframe>
+          </div>
+          <div class="video-caption">Closed captions available. Click any line in the transcript panel to jump to that point in the video.</div>
+        </div>
+        <div class="transcript-col">
+          <div class="transcript-panel" id="transcript-container">
+            <p class="transcript-loading">Loading transcript&hellip;</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         Lab Course
+         ============================================================ -->
+    <h2>The Companion Lab Course: CSC-210L</h2>
+
+    <div class="callout callout--forward">
+      <div class="callout__title">Highly Recommended &mdash; 1 Credit</div>
+      <p>CSC-210L meets weekly and covers hands-on supporting activities for each week of this lecture course. We spend most of our time in <strong>Logisim</strong> building digital circuits and in <strong>MARS</strong> writing MIPS assembly&mdash;the two things that are hardest to learn from written material alone. It is a separate 1-credit enrollment, and it is optional, but it is where the "here is how you actually do it" happens.</p>
+      <p><strong>Meets:</strong> Tuesdays at 2:00 PM &nbsp;|&nbsp; <strong>First meeting:</strong> Tuesday, August 18, 2026<br>
+      <a href="https://mendocino-edu.zoom.us/j/86135333458?pwd=faSTCXN2zNVYvQehi5Dpue2aJsCEab.1" target="_blank" rel="noopener">Join the CSC210 Lab meeting on Zoom &rarr;</a></p>
+      <p>The first lab installs Logisim and MARS, verifies they run, and gets everyone enrolled in the Saylor reference textbook. <strong>If you cannot attend, that is fine</strong>&mdash;every lab session is recorded and posted, and the setup walkthrough will also be posted in this lecture course so nobody is stuck.</p>
+    </div>
+
+    <!-- ============================================================
+         What To Do This Week
+         ============================================================ -->
+    <h2>What To Do This Week</h2>
+    <p>There is no graded problem set this week. Week 1 is about getting your environment set up and starting the reading&mdash;so use the time to do those carefully rather than quickly.</p>
+
+    <ul class="welcome-checklist">
+      <li><strong>Watch the welcome video above.</strong> It covers the syllabus, course policies, and how the semester is structured.</li>
+      <li><strong>Download and install Logisim Classic 2.7.1 and MARS.</strong> Links are posted in this week's module. Windows builds are executables; Mac requires a few extra steps, which the lab session covers. If a download will not open, let me know.</li>
+      <li><strong>Create a Saylor Academy account and self-enroll in CS301: Computer Architecture.</strong> Create the account at saylor.org, then find the course under Courses and Programs &rarr; Computer Science &rarr; CS301, and click Enroll. It is free. Until you enroll, you only see the syllabus, not the unit content.</li>
+      <li><strong>Work through this week's learning modules in order.</strong> The Week 1 sequence is: Why Binary &rarr; Converting Between Bases &rarr; Signed Integers and Two's Complement &rarr; Beyond Integers (floating point). Do signed integers before floating point&mdash;the second builds on the first. Move to them through the Canvas module list, and take your time; do not try to rush them all in one sitting.</li>
+      <li><strong>Optional:</strong> try the Cisco Binary Game linked in this week's module. It is a timed decimal&harr;binary drill and a painless way to get fluent at conversions.</li>
+    </ul>
+
+    <!-- ============================================================
+         Course Materials & Tools
+         ============================================================ -->
+    <h2>Course Materials &amp; Tools</h2>
+    <p>Everything below is free except the optional reference book. You need a Mac, PC, or Linux machine and reliable internet access.</p>
+
+    <div class="tool-card">
+      <div class="tool-card__icon">&#128268;</div>
+      <div>
+        <div class="tool-card__name">Logisim Classic 2.7.1</div>
+        <div class="tool-card__desc">Our digital circuit simulator, starting Week 2. Use <strong>Classic 2.7.1 only</strong>&mdash;not Logisim Evolution. Everything you build lives in a single <code>.circ</code> file for the whole semester, because each week's circuit becomes a component of the final 8-bit CPU.</div>
+      </div>
+    </div>
+
+    <div class="tool-card">
+      <div class="tool-card__icon">&#128223;</div>
+      <div>
+        <div class="tool-card__name">MARS MIPS Simulator</div>
+        <div class="tool-card__desc">Our assembly language environment, starting in Phase 2. MARS gives you an assembler, a debugger, and a memory viewer, so you can watch your code turn into machine-level operations. Runs on Mac, Windows, and Linux.</div>
+      </div>
+    </div>
+
+    <div class="tool-card">
+      <div class="tool-card__icon">&#128214;</div>
+      <div>
+        <div class="tool-card__name">Saylor Academy &mdash; CS301: Computer Architecture (reference textbook)</div>
+        <div class="tool-card__desc">Free, online, and openly licensed. It maps closely to our four-phase progression. The way to use it: read the course pages here first, and when one points you to a CS301 unit, go read (or skim) that unit&mdash;in detail wherever something did not click. <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">Open the CS301 course page &rarr;</a> and log in, then create your account and self-enroll.</div>
+      </div>
+    </div>
+
+    <div class="tool-card">
+      <div class="tool-card__icon">&#129302;</div>
+      <div>
+        <div class="tool-card__name">CSC210 AI Tutor</div>
+        <div class="tool-card__desc">A course-tuned AI tutor is being set up and will be posted shortly. It knows this course's content, sequence, and conventions. <strong>Use it rather than a general-purpose chatbot</strong>&mdash;it is the approved AI tool for this course. See the AI policy in the syllabus for what it may and may not be used for.</div>
+      </div>
+    </div>
+
+    <div class="tool-card">
+      <div class="tool-card__icon">&#128218;</div>
+      <div>
+        <div class="tool-card__name">"But How Do It Know?" by J. Clark Scott (optional)</div>
+        <div class="tool-card__desc">Not required and not assigned. It is roughly $10 on Kindle, $20 in paperback, and it explains the 8-bit CPU architecture we build in a very approachable way. Worth having if you find yourself stuck on how the pieces fit together.</div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         How the Course Is Organized
+         ============================================================ -->
+    <h2>How the Course Is Organized</h2>
+    <p>Everything is delivered through Canvas modules, and the semester runs in four phases:</p>
+
+    <div class="progression">
+      <div class="progression__item active">
+        <div class="progression__label">Phase 1 &mdash; Digital Foundations (Weeks 1&ndash;4)</div>
+        <div class="progression__detail">Binary and number systems, two's complement, floating point; transistors, gates, and your first circuits; combinational logic&mdash;adders, decoders, comparators; and how a single bit gets stored.</div>
+      </div>
+      <div class="progression__item">
+        <div class="progression__label">Phase 2 &mdash; MIPS Assembly Language</div>
+        <div class="progression__detail">Instruction formats, registers, memory access, control flow, and procedures&mdash;written and debugged in MARS.</div>
+      </div>
+      <div class="progression__item">
+        <div class="progression__label">Phase 3 &mdash; CPU Design</div>
+        <div class="progression__detail">Datapath and control, the instruction cycle, control signals, and the bus&mdash;while you assemble your 8-bit CPU simulator piece by piece from the circuits you already built.</div>
+      </div>
+      <div class="progression__item">
+        <div class="progression__label">Phase 4 &mdash; Integration &amp; Modern Topics</div>
+        <div class="progression__detail">Memory hierarchy, I/O, performance, and current directions in architecture&mdash;plus the final 8-bit simulator project.</div>
+      </div>
+    </div>
+
+    <div class="callout callout--aha">
+      <div class="callout__title">About the Final Project</div>
+      <p>The 8-bit CPU simulator is the spine of this course, not a last-minute deliverable. It is submitted in staged checkpoints across the semester, and <strong>those checkpoint submissions are not accepted late</strong>&mdash;the whole point of the staging is to keep you from discovering in December that a semester's worth of circuit-building cannot be done in a week. Every circuit you build from Week 3 onward is a part you will reuse.</p>
+    </div>
+
+    <!-- ============================================================
+         Contacting Me
+         ============================================================ -->
+    <h2>Office Hours &amp; Contact</h2>
+    <p>This is a fully asynchronous course&mdash;we do not meet as a class&mdash;so office hours and Canvas messages are the main ways we talk. Assignments are currently due on Sundays.</p>
+
+    <div class="contact-grid">
+      <div class="contact-item">
+        <div class="contact-item__label">Best way to reach me</div>
+        <div class="contact-item__value">Canvas Inbox</div>
+        <p style="font-size:var(--fs-sm);color:var(--color-text-muted);margin-top:var(--space-xs);">Messages forward to my email and I usually reply from there. My reply still lands in your Canvas inbox.</p>
+      </div>
+      <div class="contact-item">
+        <div class="contact-item__label">Office hours</div>
+        <div class="contact-item__value">Mondays &amp; Tuesdays</div>
+        <p style="font-size:var(--fs-sm);color:var(--color-text-muted);margin-top:var(--space-xs);">Mondays 4:30&ndash;5:30 PM and 6:50&ndash;7:50 PM; Tuesdays immediately before and after the 2:00 PM lab. Held in my Zoom room.</p>
+      </div>
+      <div class="contact-item">
+        <div class="contact-item__label">By appointment</div>
+        <div class="contact-item__value">Wednesdays &amp; Thursdays</div>
+        <p style="font-size:var(--fs-sm);color:var(--color-text-muted);margin-top:var(--space-xs);">Book a half-hour slot on my scheduling calendar (link posted in the syllabus). Meetings default to Zoom&mdash;note in the booking if you would rather meet in person.</p>
+      </div>
+      <div class="contact-item">
+        <div class="contact-item__label">Support services</div>
+        <div class="contact-item__value">DRC, tutoring, wellness</div>
+        <p style="font-size:var(--fs-sm);color:var(--color-text-muted);margin-top:var(--space-xs);">If you need accommodations, start with the Disability Resource Center. The full Fall 2026 student services list is in the syllabus&mdash;please look through it.</p>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         Key Dates
+         ============================================================ -->
+    <h2>Key Dates &mdash; Fall 2026</h2>
+    <table class="dates-table">
+      <thead>
+        <tr><th>Date</th><th>What happens</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Aug 17</td><td>Semester begins</td></tr>
+        <tr><td>Aug 18</td><td>First CSC-210L lab meeting, 2:00 PM (Zoom)</td></tr>
+        <tr><td>Aug 28</td><td>Last day to add &middot; last day to drop without a notation &middot; last day for an enrollment-fee refund</td></tr>
+        <tr><td>Sep 7</td><td>Campus holiday</td></tr>
+        <tr><td>Sep 25</td><td>Campus holiday</td></tr>
+        <tr><td>Nov 6</td><td>Last day to drop with a "W"</td></tr>
+        <tr><td>Nov 11</td><td>Campus holiday</td></tr>
+        <tr><td>Nov 25&ndash;29</td><td>Campus holiday</td></tr>
+        <tr><td>Dec 11</td><td>Last day of class &middot; last day to apply for pass/no-pass grading</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ============================================================
+         Closing
+         ============================================================ -->
+    <div class="callout callout--forward">
+      <div class="callout__title">Where To Go Next</div>
+      <p>Head to the Week 1 module and start with the orientation page, then work through the four learning modules in sequence. If anything in the setup does not work&mdash;a download that will not open, a Saylor enrollment that will not take&mdash;message me rather than losing an evening to it. I hope you are ready for a great semester.</p>
+    </div>
+
+  </main>
+
+  <!-- ==================== Footer ==================== -->
+  <footer class="sp-footer">
+    CSC210 &mdash; Computer Organization &amp; Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <!-- ==================== Video + Transcript Sync (CSC210 Video Embed Standard) ==================== -->
+  <script>
+  (function () {
+    'use strict';
+
+    var VIDEO_ID = 'shuWyL2MAxo';
+    var player, timeUpdater, parsedTranscript = [];
+
+    var vttContent = `WEBVTT
+
+00:00.320 --> 00:07.040
+Aloha and welcome to CSC 210, Computer Organization and Architecture.
+
+00:08.140 --> 00:11.660
+This video is going to obviously be inserted on this page that you see here.
+
+00:12.620 --> 00:19.300
+I did want to mention that there is a one-credit lab course that meets on Tuesdays.
+
+00:19.680 --> 00:23.820
+I posted the link here, so anybody is welcome to come tomorrow.
+
+00:23.820 --> 00:32.460
+So primarily what we're going to do tomorrow is to install Mars and install Logisim
+
+00:32.460 --> 00:36.020
+and also connect to our textbook.
+
+00:37.280 --> 00:39.800
+If you can't go, that's fine. Don't worry about it.
+
+00:39.820 --> 00:45.400
+I will post that video in this lecture class so that everybody has it
+
+00:45.400 --> 00:50.040
+so you can see what the steps are and how it should look and how it should operate.
+
+00:50.040 --> 00:52.980
+But that will be tomorrow at 2.
+
+00:53.820 --> 00:55.580
+Or Tuesday at 2.
+
+00:57.920 --> 01:04.220
+Okay, and so what I have here is I just have the stuff for this week
+
+01:04.220 --> 01:05.320
+and the stuff for the syllabus.
+
+01:06.360 --> 01:09.160
+I did post the lab syllabus.
+
+01:10.420 --> 01:14.380
+So if you want to see it, want to see what we're going to do in that class,
+
+01:14.460 --> 01:18.020
+the one-credit lab, you can see the course outline.
+
+01:19.160 --> 01:23.760
+What we're going to do, the first lab obviously is set up Logisim, install Mars,
+
+01:23.820 --> 01:26.140
+make sure they work, do some little things like that.
+
+01:26.800 --> 01:29.020
+And we'll have a little assignment that goes with that.
+
+01:30.800 --> 01:34.480
+And then week two, we'll do some gates and some Logisim stuff.
+
+01:34.860 --> 01:42.640
+So I really want to make it a hands-on, here's how you do it, ask questions,
+
+01:43.160 --> 01:46.640
+here's how you, here's what happens, here's what happens,
+
+01:46.640 --> 01:53.000
+here's what pull-up, pull-down means in the software, some things like that that are in.
+
+01:53.820 --> 01:59.200
+It's a lecture course, but sometimes because it's written and it's words,
+
+01:59.380 --> 02:00.920
+it doesn't really come across as well.
+
+02:01.900 --> 02:03.240
+Okay, anyway, that's the lab.
+
+02:04.020 --> 02:04.880
+If you can make it, great.
+
+02:05.060 --> 02:06.500
+If you can't make it, that's fine.
+
+02:08.520 --> 02:11.980
+If you feel like it's something you want, but you can't make the 2 o'clock,
+
+02:11.980 --> 02:16.960
+I will post within the lab itself, I'll post all our videos and stuff,
+
+02:17.100 --> 02:20.900
+so you could always go back and watch them if you're in the lab.
+
+02:22.300 --> 02:22.940
+All right.
+
+02:23.820 --> 02:26.500
+Everything's going to be in modules for this class.
+
+02:26.500 --> 02:30.100
+Let's quickly take a quick look at the syllabus.
+
+02:30.100 --> 02:33.860
+I don't want to get bogged down in it, but there's a couple things.
+
+02:34.060 --> 02:39.800
+On the course description, student learning outcomes, why take this course,
+
+02:39.800 --> 02:44.740
+there's some information there, instructor, so you contact me, my email.
+
+02:45.200 --> 02:53.380
+You can also do it through the inbox in Canvas.
+
+02:53.380 --> 02:53.700
+I haven't deleted it yet.
+
+02:53.700 --> 02:53.800
+Okay.
+
+02:53.820 --> 02:55.060
+I haven't deleted it last semester.
+
+02:55.060 --> 03:00.140
+I tend to answer, not through the inbox, but through email.
+
+03:00.340 --> 03:06.180
+Basically, the inbox will send it to my email, answer it, it'll go to your inbox on Canvas,
+
+03:06.180 --> 03:08.700
+but then it shows up on Canvas as I didn't do it, so.
+
+03:08.700 --> 03:11.440
+And this is my office phone.
+
+03:11.440 --> 03:13.140
+I won't be in my office very often.
+
+03:13.140 --> 03:23.700
+I'm in my Zoom room, so if you have a scheduled meeting with me, you should go to my Zoom room.
+
+03:23.700 --> 03:24.200
+Okay.
+
+03:24.200 --> 03:27.600
+We are fully asynchronous, meaning everything's online.
+
+03:27.600 --> 03:28.380
+We don't meet.
+
+03:28.380 --> 03:31.260
+Right now, everything's due on Sundays.
+
+03:31.260 --> 03:35.260
+It's three credits, so three lecture credits.
+
+03:35.260 --> 03:44.020
+The prereq is programming and algorithms one, which means you've done some programming.
+
+03:44.020 --> 03:51.740
+Office hours will be, right now, they're Mondays, 430 to 530 and 650 to 750.
+
+03:51.740 --> 03:53.580
+Basically, that's it.
+
+03:53.580 --> 03:56.400
+That's around the course I have on Monday nights.
+
+03:56.400 --> 04:01.360
+And Tuesdays, they'll be right before our lab and right after our lab.
+
+04:01.360 --> 04:01.960
+Okay.
+
+04:01.960 --> 04:08.000
+And then I have to fix this because I also, you can also use Wednesday, Thursday,
+
+04:08.000 --> 04:11.140
+you can get me by appointment.
+
+04:11.140 --> 04:13.520
+Also, some on Monday and Tuesday, but Wednesday and Thursday,
+
+04:13.520 --> 04:18.340
+you can get me by appointment on my calendar, so I'll add that to this page.
+
+04:18.340 --> 04:22.800
+So, you can see that and you could go to my calendar.
+
+04:22.800 --> 04:23.460
+I don't know if I had just.
+
+04:23.460 --> 04:29.840
+Adjusted it yet or not, but it'll be up here and then you can go like, today's the 17th.
+
+04:29.840 --> 04:36.620
+So, let's say you want to meet with me on Wednesday, you go pick a time and we can meet.
+
+04:36.620 --> 04:40.880
+All meetings are a half hour, but I set start times as 15 minutes apart.
+
+04:40.880 --> 04:48.840
+But if you set a 12 o'clock meeting, no one can set a 12, 15, it'll go away.
+
+04:48.840 --> 04:49.840
+Okay.
+
+04:49.840 --> 04:51.840
+So, and then these all set up on Zoom.
+
+04:51.840 --> 04:52.800
+If you want to meet with me in person.
+
+04:52.800 --> 04:53.340
+Okay.
+
+04:53.340 --> 04:59.720
+You could create a meeting using this calendar and just in the notes, say, Hey, I want to meet in person.
+
+04:59.720 --> 05:06.720
+I don't want to be on Zoom and we can meet in person.
+
+05:06.720 --> 05:07.220
+Okay.
+
+05:07.220 --> 05:11.300
+So, that's Office Hours Materials.
+
+05:11.300 --> 05:14.840
+We're using Logisim Classic 2.7.1.
+
+05:14.840 --> 05:21.460
+There is a newer version called Evolution, which I do not like, so we're not going to use it.
+
+05:21.460 --> 05:22.680
+We use Mars as our assembly.
+
+05:22.680 --> 05:36.560
+I'm setting up an AI Tutor, which is going to be tuned for this course, so you should use that for AI stuff or to help you.
+
+05:36.560 --> 05:44.060
+Obviously, you need a Mac, PC, Linux, and internet access.
+
+05:44.060 --> 05:46.060
+There's a textbook.
+
+05:46.060 --> 05:48.060
+We do have a reference textbook.
+
+05:48.060 --> 05:50.060
+It's an online book.
+
+05:50.060 --> 05:51.560
+So, you can use that.
+
+05:51.560 --> 05:52.560
+Okay.
+
+05:52.560 --> 05:59.560
+It's an online course called Computer Architecture.
+
+05:59.560 --> 06:01.560
+It's at Saylor Academy.
+
+06:01.560 --> 06:11.560
+And, again, I will go through that in the lab class, but this is the online syllabus for that course.
+
+06:11.560 --> 06:20.560
+And what you have to do is you have to create an account at Saylor.org and then enroll yourself in this course tomorrow and it will be posted.
+
+06:20.560 --> 06:21.560
+It's fairly simple.
+
+06:21.560 --> 06:22.560
+Okay.
+
+06:22.560 --> 06:29.560
+It's straightforward.
+
+06:29.560 --> 06:30.560
+Okay.
+
+06:30.560 --> 06:38.560
+One of the big things we're doing in this class is we're going to build an 8-bit simulator, a CPU simulator using Logisim.
+
+06:38.560 --> 06:46.560
+So, it's an 8-bit circuit built all from NAND gates and gates or gates.
+
+06:46.560 --> 06:49.560
+And we'll talk more about that, obviously, as we go through.
+
+06:49.560 --> 06:50.560
+But it's a base part.
+
+06:50.560 --> 06:59.560
+A lot of it's based on this book from Plants called Introduction.
+
+06:59.560 --> 07:00.560
+Not this book.
+
+07:00.560 --> 07:01.560
+I'm sorry.
+
+07:01.560 --> 07:02.560
+This is the wrong book.
+
+07:02.560 --> 07:09.560
+I don't like this book.
+
+07:09.560 --> 07:12.560
+There is a book called.
+
+07:12.560 --> 07:15.560
+There's a book I use.
+
+07:15.560 --> 07:18.560
+That is especially useful for this 8-bit circuit.
+
+07:18.560 --> 07:26.560
+It's called How Do It Know.
+
+07:26.560 --> 07:29.560
+I think it's how do it know.
+
+07:29.560 --> 07:37.560
+This guy.
+
+07:37.560 --> 07:44.560
+This one.
+
+07:44.560 --> 07:45.560
+But how do it know?
+
+07:45.560 --> 07:47.560
+The basic principles of computers for everyone.
+
+07:47.560 --> 07:57.000
+everyone. It's $10 on Kindle, $20 for paperback. It's not required, you don't need it, but it's a good
+
+07:57.000 --> 08:16.760
+reference for get stuck on some stuff. It might help be helpful. Okay, so let's see where we are.
+
+08:16.760 --> 08:25.740
+Course materials, course outline. It's broken into four phases. First four weeks are digital
+
+08:25.740 --> 08:26.460
+foundations.
+
+08:27.000 --> 08:34.200
+So we're getting started right away this week with binary numbers, two to complement negative
+
+08:34.200 --> 08:43.520
+numbers, voting point numbers. Okay. There's really no assignment this week, per se, other than to get
+
+08:43.520 --> 08:51.020
+your software installed and get registered for that online course that we're going to use as our
+
+08:51.020 --> 08:56.620
+reference. Next week, transistors, gates, circuits, our first circuit.
+
+08:57.000 --> 09:09.880
+Week three, adders. How do you add? Multiplexers, decoders, comparators. These are combinational logic circuits.
+
+09:09.880 --> 09:25.000
+And then week four is memory. So we'll do a little bit on memory. How do you store a bit? And it's electricity. How do you store a bit of electricity?
+
+09:25.000 --> 09:25.460
+Okay.
+
+09:27.000 --> 09:36.500
+All right. And then we move on to phase two, which will be all assembly language. It'll be all MIPS assembly language.
+
+09:36.500 --> 09:54.560
+We'll be using Mars, so it'll be all that basic programming. And then we'll jump back into CPU design, where we'll look at different cycles, control signals, the bus, and we'll start building our 8-bit simulator again.
+
+09:54.560 --> 09:55.680
+So we'll build stuff.
+
+09:55.680 --> 09:56.060
+Okay.
+
+09:56.060 --> 09:56.980
+And we'll kind of take a look at the other stuff.
+
+09:57.000 --> 10:11.500
+We'll take a little break when we do Mars, and then we'll go back to working on our 8-bit simulator as we work our way through the different phases and parts and assemblies of the CPU.
+
+10:11.500 --> 10:15.500
+Okay.
+
+10:15.500 --> 10:26.000
+And then phase four is integration and modern topics. So this is to integrate it all, bring it all together, and have some modern topics in terms of...
+
+10:26.000 --> 10:26.500
+Okay.
+
+10:27.000 --> 10:28.280
+New thoughts, new things.
+
+10:36.980 --> 10:37.420
+Okay.
+
+10:37.480 --> 10:44.060
+And then the last part is the policies and resources for the class and for college in general.
+
+10:44.460 --> 10:45.780
+So the first is AI policy.
+
+10:46.540 --> 10:52.000
+And I'm going to say you're going to have this one improved tool, which will be the AI tutor, which I'll post next week.
+
+10:54.700 --> 10:56.860
+So you're supposed to use that, not chat.
+
+10:56.860 --> 11:08.740
+This is a frontier language model, meaning it is usually I use Claude because I like Claude the best.
+
+11:08.740 --> 11:26.000
+I typically use Claude for this, but I might use ChatGPT, I might use Gemini, but I typically use Claude and I make an interface such that it knows everything about our course, about what we're doing in the course.
+
+11:26.860 --> 11:37.680
+And it can help you answer questions, give you prompts, help you get stuck on something, something you don't understand, things like that.
+
+11:39.140 --> 11:39.300
+Okay.
+
+11:41.300 --> 11:43.940
+So I have some things you can do, what you can't do.
+
+11:48.280 --> 11:48.800
+Okay.
+
+11:48.840 --> 11:54.000
+Obviously, Canvas, there's a self-enrollment to learn how to use Canvas better.
+
+11:54.000 --> 11:56.000
+We're using the Canvas interface.
+
+11:56.860 --> 12:01.740
+Inbox primarily as our primary communication medium.
+
+12:02.340 --> 12:04.700
+So go there.
+
+12:05.700 --> 12:07.180
+Typically, I say no late submissions.
+
+12:07.500 --> 12:09.300
+I'd like you to try to stick to that.
+
+12:10.640 --> 12:12.340
+I will obviously make exceptions.
+
+12:12.760 --> 12:17.840
+There are things like the major project, like the 8-bit simulator.
+
+12:18.840 --> 12:26.300
+There's going to be like three different, two different, three total submissions, two over the course of the semester.
+
+12:26.300 --> 12:31.380
+And then the final submission, those are no late submissions because those are a work in progress.
+
+12:31.380 --> 12:34.480
+Yes, I want to see you have gotten to a certain point.
+
+12:34.480 --> 12:43.480
+But ideally, the idea here is if you try to wait till the very end, you won't be able to complete it.
+
+12:43.480 --> 12:48.680
+And that's just kind of how it is.
+
+12:48.680 --> 12:50.680
+Let me see.
+
+12:50.680 --> 12:52.680
+Okay.
+
+12:52.680 --> 12:54.680
+Okay.
+
+12:54.680 --> 12:57.180
+Let me show you.
+
+12:57.180 --> 13:01.280
+Let me show you.
+
+13:01.280 --> 13:03.280
+Let me show you.
+
+13:03.280 --> 13:11.280
+I don't have it.
+
+13:11.280 --> 13:13.280
+And I put it.
+
+13:13.280 --> 13:15.240
+I don't have it.
+
+13:15.240 --> 13:17.240
+I put it.
+
+13:18.440 --> 13:19.280
+Let's see.
+
+13:19.280 --> 13:21.280
+Let's see.
+
+13:21.280 --> 13:23.280
+I don't remember where I put Logisim.
+
+13:23.280 --> 13:24.460
+I don't remember where I put Logisim.
+
+13:24.460 --> 13:32.020
+So I could open it up.
+
+13:32.080 --> 13:33.480
+I should have pre-planned this.
+
+13:33.480 --> 13:36.480
+But, you know.
+
+13:43.260 --> 13:49.460
+Anyway.
+
+13:54.460 --> 14:03.360
+So, yeah.
+
+14:03.360 --> 14:09.400
+Anyway, I'll show it to you in a second as soon as this comes back up.
+
+14:10.820 --> 14:13.520
+So anyway, try to keep you on track with that final project.
+
+14:13.800 --> 14:16.540
+That's kind of the biggest thing.
+
+14:17.820 --> 14:21.840
+If you need special assistance, you need to go to the Disability Resource Center
+
+14:21.840 --> 14:23.960
+and they will make that determination of what you need
+
+14:23.960 --> 14:24.440
+and send it to you.
+
+14:24.460 --> 14:30.780
+So you can go to Conduct, Academic Honesty.
+
+14:31.020 --> 14:32.160
+You can do all your own work.
+
+14:34.240 --> 14:34.760
+Okay.
+
+14:34.880 --> 14:35.560
+Financial aid.
+
+14:37.560 --> 14:39.100
+Privacy sessions and tracking.
+
+14:40.080 --> 14:42.620
+Sometimes it will seem like I'm tracking you, but I'm not.
+
+14:42.720 --> 14:43.580
+I don't track anything.
+
+14:45.940 --> 14:48.240
+So we don't set session keys.
+
+14:48.240 --> 14:54.300
+So I can't do, like, sometimes I'd like to do, like, a checklist.
+
+14:54.460 --> 14:55.420
+And I don't do that.
+
+14:55.420 --> 14:56.240
+I don't do that.
+
+14:56.240 --> 14:57.680
+So my schedule's not set.
+
+14:57.680 --> 14:59.640
+So I'm kind of just like, okay, I'm going to do a checklist.
+
+14:59.640 --> 15:00.420
+It's always a checklist.
+
+15:00.420 --> 15:02.880
+And I'm just going to make sure that I'm not going to do a list of things
+
+15:02.880 --> 15:04.120
+that I'm not going to do.
+
+15:04.120 --> 15:05.880
+And I'm not going to do anything that stays there.
+
+15:05.880 --> 15:07.660
+So you come back, you can pick it back up.
+
+15:07.660 --> 15:12.060
+But then to do that, that means I'd have to use some cookies and put them in your browser
+
+15:12.060 --> 15:17.120
+or store some information about you and I'm not going to do that.
+
+15:17.120 --> 15:21.020
+So every time you would log back in, it would be empty.
+
+15:21.020 --> 15:22.700
+So it kind of defeats the purpose.
+
+15:22.700 --> 15:23.500
+All right.
+
+15:23.500 --> 15:24.000
+There should be a comprehensive summary. I haven't double checked it.
+
+15:24.000 --> 15:28.500
+double check to make sure these are the ones from last semester usually they
+
+15:28.500 --> 15:34.760
+update them here's fall 2026 so it's updated or all the different services
+
+15:34.760 --> 15:45.560
+that are available for students and you should review it and look on it and see hey is there anything here that I can use that can help me be more successful
+
+15:45.660 --> 15:52.860
+okay non-discrimination policy Title IX and sexual harassment policy student
+
+15:52.860 --> 16:12.420
+privacy your privacy rights you should know what those are mental health and wellness if you need help we have some really good support so please reach out to them tutoring and academic support for most of our stuff we would go to MESA MESA typically doesn't provide
+
+16:12.420 --> 16:21.840
+tutoring for our courses and so I would suggest you mostly use the AI tutor if
+
+16:21.840 --> 16:22.840
+you have other issues
+
+16:22.840 --> 16:29.900
+canvass email College Technology you should reach out to the helpdesk if it's
+
+16:29.900 --> 16:36.500
+specific to this course then you need to reach out to me like they're not gonna
+
+16:36.500 --> 16:45.180
+be able to help you if logic seems not working okay and then last part you know
+
+16:45.180 --> 16:50.940
+August 28th is the last day to add last day to drop without a notation last day
+
+16:50.940 --> 16:52.840
+for a refund refund of your enrollment
+
+16:52.840 --> 16:59.080
+days is August 28th and then last day to drop with a W November 6th and then
+
+16:59.080 --> 17:03.520
+December 11th is the last day of class for this semester and it's also the last
+
+17:03.520 --> 17:08.440
+day to apply for pass no pass grading
+
+17:11.340 --> 17:19.300
+all right so that's kind of the overview of course how it's laid out and then for
+
+17:19.300 --> 17:27.860
+this week I have information this is the topics up you need to cover this week
+
+17:27.860 --> 17:33.340
+yes you need to read these things and try to understand them gap between
+
+17:33.340 --> 17:40.920
+voltage in this web page meaning hey you know this web page that's your see
+
+17:40.920 --> 17:47.360
+viewing is created on a computer right it's a bunch of ones and zeros which are
+
+17:47.360 --> 17:49.120
+stored as
+
+17:49.120 --> 17:49.280
+both
+
+17:49.280 --> 17:55.220
+voltages and electricity okay yeah you view it as a web page how does that
+
+17:55.220 --> 18:01.160
+happen and that's what we need to understand
+
+18:01.160 --> 18:03.860
+some of the things that you need to get out of class once that's one of the
+
+18:03.860 --> 18:07.460
+things you need to get out of this class how does that work how does that happen
+
+18:07.460 --> 18:17.600
+okay so um anyway this what this goes on and talks about okay there is a big
+
+18:17.600 --> 18:19.100
+picture
+
+18:19.100 --> 18:28.340
+off one zero true false okay so you'll see these kind of things sometimes I've
+
+18:28.340 --> 18:34.100
+dropped in videos you see a lot of these I made last semester so I'm reusing some
+
+18:34.100 --> 18:41.960
+of them some are new some will be new some will be reused okay and there's a
+
+18:41.960 --> 18:45.320
+transcript next to it and it actually follows along so it's really good if
+
+18:45.320 --> 18:48.920
+your screens wide enough that you can do side-by-side
+
+18:48.920 --> 18:52.700
+if your screen's not wide enough and it goes over under then it's going to jump
+
+18:52.700 --> 18:58.160
+around so if that's the case you're better off than popping it out and
+
+18:58.160 --> 19:01.340
+watching it on YouTube so that then you don't have that issue
+
+19:05.300 --> 19:09.380
+okay um so there's a lot of things like this what's a CPU and you can
+
+19:10.160 --> 19:13.940
+open and close these there's just little cards that have a little bit more detail
+
+19:13.940 --> 19:15.620
+and also when are we going to hit them
+
+19:17.300 --> 19:18.740
+and then this week's learning path
+
+19:18.920 --> 19:24.200
+we're going to first off why binary what is binary how do you convert between
+
+19:24.200 --> 19:32.180
+bases and then you should do three then four find integers how do you positive
+
+19:32.180 --> 19:37.100
+and negative and we use two's complement to do that so explain what is two's
+
+19:37.100 --> 19:40.880
+complement and why we use two's complement instead of one's complement or sign
+
+19:40.880 --> 19:45.200
+magnitude and then how do you do floating point okay you can typically there's a very
+
+19:45.200 --> 19:47.300
+there's a very large number of things that you can do that you can do that you can do
+
+19:47.300 --> 19:53.000
+there's a very little overlap between these two but there's a little overlap so it's better to do
+
+19:53.000 --> 20:01.100
+the signed integers and two's complement before you do the floating point is decimals okay
+
+20:02.300 --> 20:03.500
+not whole numbers
+
+20:05.600 --> 20:09.560
+okay like some classic Mars and Sailor those are the three things we're using
+
+20:10.880 --> 20:13.880
+okay and I will show you how to do that
+
+20:15.800 --> 20:16.640
+where they are
+
+20:17.300 --> 20:23.420
+okay now we have Y binary converting between basis sign integers and these are
+
+20:24.320 --> 20:31.160
+more detailed information about these different topics okay now Mars and logic sim download
+
+20:32.840 --> 20:36.140
+you should be able to click on this link and it should take you to
+
+20:37.580 --> 20:43.040
+my OneDrive folder there are three there's logic sim for Mac so the Mac you take this one
+
+20:43.040 --> 20:46.220
+logic sim for Windows is this one
+
+20:47.300 --> 21:00.580
+okay and then Mars is for both no matter what you
+
+21:00.580 --> 21:04.620
+download it and then you extract it and basically you just run on Windows
+
+21:04.620 --> 21:08.740
+you just run them they're exes on Mac there's a few more steps to do
+
+21:08.740 --> 21:16.380
+they work on both all right so if you have problems opening this you should let me know I believe I set the usual settings to in a couple steps a year it works all right so if you have problems opening this video don't rarely do we see the results
+
+21:16.380 --> 21:17.280
+let me know I believe I set the level of 3 resolver stuff and I'll talk about the e- studio later today
+
+21:17.300 --> 21:26.120
+link up so you can open it but is Microsoft so sometimes what you think
+
+21:26.120 --> 21:32.960
+works doesn't actually work and then I also posted this you talk about it
+
+21:32.960 --> 21:37.300
+anywhere else but right now this is called Cisco's binary game Cisco has a
+
+21:37.300 --> 21:43.920
+binary game that they use and it's just how do I convert between decimal which
+
+21:43.920 --> 21:52.600
+is base 10 and binary which is base 2 it's a pretty simple game you know have
+
+21:52.600 --> 21:57.120
+eight bits here you know the rightmost bit is ones how many ones you have the
+
+21:57.120 --> 22:05.040
+next one is how many twos how many fours how many eights your observant you'll
+
+22:05.040 --> 22:10.620
+see that each of these is a multiple of two if it was decimal these would be
+
+22:10.620 --> 22:13.920
+ones tens hundreds thousands
+
+22:13.920 --> 22:19.500
+ten and so what you do is it says when it has a number here on the right I want
+
+22:19.500 --> 22:25.200
+the how do I what bit pattern gives me exactly one okay what the battery gives
+
+22:25.200 --> 22:32.020
+me exactly four and you make them like this okay 64 this one wants I know what
+
+22:32.020 --> 22:38.540
+is this number click there and you go it's 255 I know it's 255 because the
+
+22:38.540 --> 22:43.900
+next one after 128 is 256
+
+22:43.920 --> 22:50.500
+this is all one less than that so 255 okay and you play this game and you
+
+22:50.500 --> 22:58.260
+finish at multiple levels they change speed they change what you do so it's
+
+22:58.260 --> 23:03.440
+just the way kind of a fun way to work on your conversions from binary to
+
+23:03.440 --> 23:13.260
+decimal okay that's the binary game and you can play it if you want if you don't
+
+23:13.260 --> 23:13.560
+want to don't play it if you don't want to don't play it if you don't want to
+
+23:13.560 --> 23:13.900
+don't play it if you don't want to don't
+
+23:13.920 --> 23:23.580
+play it but it's there for you if you'd like to use it and try it all right so
+
+23:23.580 --> 23:30.160
+that's kind of my introduction what's going on nothing do this week per se
+
+23:30.160 --> 23:43.140
+except for get yourself set up and then also go through these modules take your
+
+23:43.140 --> 23:43.560
+time
+
+23:43.560 --> 23:50.760
+don't try to rush through take your time and go through them all right and
+
+23:50.760 --> 24:02.220
+then the last part some of them might reference sailor.org so that's the and
+
+24:02.220 --> 24:11.040
+this is the default login page so you're going to create an account still
+
+24:11.040 --> 24:13.560
+development
+
+24:13.560 --> 24:17.820
+create an account create a new account or use Google Facebook or LinkedIn if you
+
+24:17.820 --> 24:27.620
+want to use them you have an account I have an account login all right and then
+
+24:27.620 --> 24:35.320
+you're gonna go up to I usually go courses and programs computer science we
+
+24:35.320 --> 24:41.180
+are looking for 301 computer architecture and so I'm doing this here
+
+24:41.180 --> 24:43.060
+we'll do it again okay
+
+24:43.560 --> 24:50.360
+this is the course have a bunch of
+
+24:50.360 --> 24:55.640
+introduction hardware digital logic design computer arithmetic designing a
+
+24:55.640 --> 25:05.500
+processor memory storage and i-o parallel processing alright so we will
+
+25:05.500 --> 25:11.720
+use a lot of this and how I would if I were you how I would use this is I would
+
+25:11.720 --> 25:13.140
+are three three three three three
+
+25:13.560 --> 25:22.620
+the provided pages that i've provided you and then if it has a reading go to that section
+
+25:22.620 --> 25:28.200
+and especially if you're unclear at all go to that section and read it
+
+25:28.200 --> 25:35.000
+or skim it and just read in detail the parts where you go away what is that trying to tell me
+
+25:35.000 --> 25:37.420
+i don't really understand that
+
+25:37.420 --> 25:41.160
+okay so um
+
+25:41.160 --> 25:47.780
+see if i go to my home
+
+25:47.780 --> 25:58.080
+my courses i don't have any i have it already see so you basically you want to get
+
+25:58.080 --> 26:03.340
+into this course so typically when you go to the course
+
+26:07.340 --> 26:07.980
+um
+
+26:07.980 --> 26:11.140
+it will ask it will provide you with like
+
+26:11.160 --> 26:15.740
+the syllabus and you have to enroll in the course to get the detail
+
+26:15.740 --> 26:19.180
+and let's just click a link so let me use one that i have
+
+26:26.180 --> 26:30.020
+let's go back okay let's look at python for data science
+
+26:31.220 --> 26:34.380
+course introduction you have to enroll in this course
+
+26:36.620 --> 26:39.140
+okay self-enroll student no one will keep requiring
+
+26:41.160 --> 26:43.180
+you to enroll in this course
+
+26:43.180 --> 26:47.900
+and then if you go to your courses now it will be there for you
+
+26:47.900 --> 26:51.700
+okay so that's how you get in and that's how you generate it so that it's there
+
+26:51.700 --> 26:54.020
+for you and then every time you log in you just
+
+26:54.020 --> 26:56.820
+go to my courses pick the course you want
+
+26:56.820 --> 27:00.820
+you can see it keeps track of what you've completed what you haven't
+
+27:00.820 --> 27:03.340
+completed
+
+27:03.980 --> 27:08.180
+each section tends to have each unit will have
+
+27:08.180 --> 27:10.820
+a bunch of stuff and then there'll be an assessment at the end
+
+27:10.820 --> 27:16.560
+that you if you're taking it for they'll give you a grade if you want
+
+27:16.560 --> 27:20.280
+and they'll give you a little certificate if you complete the course if you want
+
+27:21.200 --> 27:23.280
+but you have to say that's what you're doing
+
+27:26.560 --> 27:29.880
+okay and so you have to do all the quizzes basically
+
+27:34.280 --> 27:40.800
+all right but some of it is really really good some of it isn't great in terms of the course
+
+27:40.820 --> 27:49.860
+on Saylor but for free it matches what we're doing so it works perfect for us
+
+27:49.860 --> 27:54.000
+all right so that's what I have for this week I know that's a little bit longer
+
+27:54.000 --> 28:05.200
+than I really wanted but I did want to share a bit so I can say welcome and I hope you're ready for a great semester
+
+28:05.200 --> 28:07.200
+thanks`;
+
+    function timeToSeconds(timeStr) {
+      if (!timeStr) return 0;
+      var parts = timeStr.trim().split(':');
+      if (parts.length === 2) {
+        return (parseInt(parts[0]) || 0) * 60 + (parseFloat(parts[1]) || 0);
+      } else if (parts.length === 3) {
+        return (parseInt(parts[0]) || 0) * 3600 + (parseInt(parts[1]) || 0) * 60 + (parseFloat(parts[2]) || 0);
+      }
+      return 0;
+    }
+
+    function parseVtt(vttText) {
+      var cues = vttText.trim().split(/\n\n+/);
+      var parsedCues = [];
+      cues.forEach(function (cueBlock) {
+        if (cueBlock.indexOf('WEBVTT') === 0 || cueBlock.trim() === '') return;
+        var lines = cueBlock.trim().split('\n');
+        var timeLine = lines.filter(function (l) { return l.indexOf('-->') !== -1; })[0];
+        if (!timeLine) return;
+        var parts = timeLine.split(' --> ');
+        var textLines = lines.slice(lines.indexOf(timeLine) + 1);
+        parsedCues.push({
+          start: timeToSeconds(parts[0]),
+          end: timeToSeconds(parts[1]),
+          text: textLines.join(' ').trim()
+        });
+      });
+      return parsedCues;
+    }
+
+    function populateTranscript() {
+      var container = document.getElementById('transcript-container');
+      container.innerHTML = '';
+      parsedTranscript.forEach(function (cue) {
+        var lineEl = document.createElement('div');
+        lineEl.className = 'transcript-line';
+        lineEl.dataset.start = cue.start;
+        lineEl.dataset.end = cue.end;
+        lineEl.textContent = cue.text;
+        lineEl.setAttribute('role', 'button');
+        lineEl.setAttribute('tabindex', '0');
+        var seekTo = function () {
+          if (player && player.seekTo) { player.seekTo(cue.start, true); player.playVideo(); }
+        };
+        lineEl.addEventListener('click', seekTo);
+        lineEl.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); seekTo(); }
+        });
+        container.appendChild(lineEl);
+      });
+    }
+
+    function highlightCurrentLine() {
+      if (!player || !player.getCurrentTime) return;
+      var currentTime = player.getCurrentTime();
+      var lines = document.querySelectorAll('#transcript-container .transcript-line');
+      lines.forEach(function (line) {
+        var start = parseFloat(line.dataset.start);
+        var end = parseFloat(line.dataset.end);
+        if (currentTime >= start && currentTime < end) {
+          if (!line.classList.contains('active-transcript-line')) {
+            var prev = document.querySelector('#transcript-container .active-transcript-line');
+            if (prev) prev.classList.remove('active-transcript-line');
+            line.classList.add('active-transcript-line');
+            line.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else {
+          line.classList.remove('active-transcript-line');
+        }
+      });
+    }
+
+    function syncTranscriptHeight() {
+      var videoContainer = document.getElementById('video-container');
+      var transcriptContainer = document.getElementById('transcript-container');
+      if (!videoContainer || !transcriptContainer) return;
+      if (window.matchMedia('(min-width: 1024px)').matches) {
+        transcriptContainer.style.maxHeight = videoContainer.offsetHeight + 'px';
+      } else {
+        transcriptContainer.style.maxHeight = '24rem';
+      }
+    }
+
+    window.onYouTubeIframeAPIReady = function () {
+      player = new YT.Player('youtube-player', {
+        videoId: VIDEO_ID,
+        events: {
+          onStateChange: function (event) {
+            clearInterval(timeUpdater);
+            if (event.data === YT.PlayerState.PLAYING) {
+              timeUpdater = setInterval(highlightCurrentLine, 300);
+            }
+          }
+        }
+      });
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      parsedTranscript = parseVtt(vttContent);
+      populateTranscript();
+      setTimeout(syncTranscriptHeight, 100);
+      if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+        var tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      } else {
+        window.onYouTubeIframeAPIReady();
+      }
+    });
+
+    var resizeTimeout;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(syncTranscriptHeight, 250);
+    });
+  })();
+  </script>
+
+</body>
 </html>
