@@ -544,15 +544,35 @@ th {
 .video-transcript-row {
   max-width: 1800px;
   padding: 0 var(--space-lg);
-  margin-left: auto;
-  margin-right: auto;
-  display: flex; flex-direction: column; gap: var(--space-md); margin: var(--space-lg) 0;
+  display: flex;
+  gap: var(--space-md);
+  /* Auto side-margins must live in the shorthand: the previous rule set
+     margin-left/right: auto and then a `margin: ... 0` shorthand reset them
+     to 0, so the row never actually centered above 1800px. */
+  margin: var(--space-lg) auto;
+
+  /* Side-by-side vs. stacked is decided by FLEX WRAP against the row's own
+     width -- deliberately NOT by a viewport media query.
+     Why: this pattern previously used `@media (min-width: 1024px)`. A media
+     query tests the VIEWPORT, and inside a Canvas iframe the viewport IS the
+     iframe, not the browser window. Canvas spends ~330px on its global and
+     course navigation before the content column starts (and the front page
+     reserves a further right-hand sidebar), so the iframe is routinely
+     narrower than 1024px on an ordinary desktop display. The result: every
+     video in this course rendered side-by-side when the raw file was opened
+     in a browser, and stacked for students in Canvas -- with nothing in the
+     repo to indicate anything was wrong.
+     With flex-wrap the columns sit side by side whenever the row is wide
+     enough to hold both flex-basis values (440 + 260 + gap + padding, i.e.
+     about 790px) and wrap to stacked when it is not. That test is against the
+     actual available width, so it is correct in Canvas, in a standalone
+     browser, and on a phone, with no width detection anywhere.
+     If a Canvas placement turns out to be narrower than the wrap point, lower
+     these two flex-basis values -- do not reintroduce a media query. */
+  flex-wrap: wrap;
 }
-@media (min-width: 1024px) {
-  .video-transcript-row { flex-direction: row; }
-  .video-col { flex: 0 0 66%; }
-  .transcript-col { flex: 0 0 33%; }
-}
+.video-col      { flex: 1 1 440px; min-width: 0; }
+.transcript-col { flex: 1 1 260px; min-width: 0; }
 .video-frame {
   width: 100%; height: 0; padding-bottom: 56.25%; position: relative;
   border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); background: var(--color-bg);
@@ -1175,11 +1195,13 @@ th {
 .circuit-canvas__img--wide { max-height: none; }
 
 /* Half-adder diagrams sit INSIDE truth-table rows (one per row), not in a
-   gallery below the table. They need to be small and to not inherit the
-   full-width image rule above. */
+   gallery below the table. Sized so the gate labels and wire states are
+   actually legible in place -- the first pass at 190px was too small to
+   read, which defeated the point of putting them in the table at all.
+   Anything still too small to read is one click from the lightbox below. */
 .tt .circuit-canvas__img {
-  max-width: 190px;
-  max-height: 120px;
+  max-width: 320px;
+  max-height: 220px;
   margin: 0;
 }
 
@@ -1312,3 +1334,131 @@ th {
   margin: var(--space-sm) 0;
 }
 .cost-readout strong { color: var(--color-text); }
+
+/* ---------- Click-to-enlarge (lightbox) ---------- */
+/* Used by: every Week 3 SPA with static diagrams, and every hardware week
+   after. Circuit screenshots carry detail -- gate labels, pin names, wire
+   routing -- that does not survive being scaled into a table cell or a
+   prose column. Rather than pick one compromise size, diagrams render at a
+   readable inline size and open full-size on click.
+
+   Deliberately no library and no dependency: a fixed overlay, one image,
+   Escape to close. It also has to work inside a Canvas iframe, which is
+   why the overlay is position:fixed against the iframe viewport rather
+   than trying to escape it -- it cannot, and should not try. */
+.zoomable { cursor: zoom-in; }
+.zoomable:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+.lightbox {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: rgba(20, 26, 33, .88);
+  padding: var(--space-lg);
+  overflow: auto;
+}
+.lightbox.open { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.lightbox__img {
+  max-width: 96%;
+  max-height: 78vh;
+  width: auto;
+  height: auto;
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+.lightbox__caption {
+  color: #fff;
+  font-size: var(--fs-sm);
+  text-align: center;
+  max-width: 720px;
+  margin-top: var(--space-md);
+  line-height: 1.5;
+}
+.lightbox__close {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  line-height: 1;
+  padding: var(--space-sm) var(--space-md);
+  border: 2px solid rgba(255,255,255,.5);
+  border-radius: var(--radius);
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+}
+.lightbox__close:hover { background: rgba(255,255,255,.15); }
+.lightbox__hint {
+  color: rgba(255,255,255,.6);
+  font-size: var(--fs-xs);
+  margin-top: var(--space-sm);
+}
+
+/* ---------- Column-addition animation ---------- */
+/* Used by: 01-adders (3.3), and again in Week 6 when the ALU does this
+   with an opcode attached. Shows a multi-bit addition resolving column by
+   column, right to left, with each carry appearing as it is produced --
+   which is the thing a static worked example cannot show and the thing
+   students most often have backwards.
+
+   Auto-plays and loops, so it carries a pause control: an indefinitely
+   looping animation with no way to stop it is a WCAG 2.2.2 failure, and
+   it is genuinely annoying while you are trying to read the paragraph
+   underneath it. */
+.col-add {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-lg);
+  margin: var(--space-lg) 0;
+}
+.col-add__grid {
+  display: grid;
+  justify-content: center;
+  gap: 2px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+}
+.col-add__cell {
+  width: 38px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background .25s, color .25s, opacity .25s;
+}
+.col-add__cell--carry { font-size: var(--fs-sm); color: var(--color-accent); font-weight: 700; }
+.col-add__cell--op    { color: var(--color-text-muted); }
+.col-add__cell--rule  { border-top: 2px solid var(--color-text); height: 6px; border-radius: 0; }
+.col-add__cell--blank { opacity: 0; }
+.col-add__cell--active {
+  background: #fdf3e6;
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+.col-add__cell--settled { color: var(--color-success); font-weight: 700; }
+.col-add__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  justify-content: center;
+  margin-top: var(--space-md);
+}
+.col-add__status {
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+  min-height: 1.4em;
+  text-align: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Show the completed sum rather than animating toward it. */
+  .col-add__cell { transition: none; }
+}
