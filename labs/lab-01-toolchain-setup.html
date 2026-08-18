@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CSC210L — Lab 1: Toolchain Setup &amp; Seeing Binary</title>
-  <link rel="stylesheet" href="../shared/style.css">
+  <link rel="stylesheet" href="shared/style.css">
   <style>
   /* ============================================================
      Lab 1 — Page-specific styles
@@ -594,25 +594,45 @@ main:
         <div class="lab-step">
           <div class="lab-step__num">9</div>
           <div class="lab-step__body">
-            <div class="lab-step__title">Rename the default circuit tab</div>
-            <p>A new Logisim file contains one circuit, named <code>main</code>. In the Explorer pane on the left, right-click <code>main</code> and choose <strong>Rename</strong> (or select it and use the Project menu's rename option). Name it:</p>
+            <div class="lab-step__title">Add a new circuit &mdash; leave <code>main</code> alone</div>
+            <p>A new Logisim file contains one circuit, named <code>main</code>. <strong>Do not rename it and do not build your graded work in it.</strong> In this course <code>main</code> stays permanently empty and serves a different purpose &mdash; see the next step.</p>
+            <p>Instead, choose <strong>Project &rarr; Add Circuit&hellip;</strong> and name the new circuit:</p>
             <pre><code>01-ByteReader</code></pre>
-            <p>Use this naming convention all semester: a two-digit number for the order you built it, then a descriptive name with no spaces. By Week 14 your Explorer pane will read like a table of contents &mdash; <code>01-ByteReader</code>, <code>04-SRLatch</code>, <code>05-Register8</code>, <code>06-ALU8</code>, and so on. Circuits sorted alphabetically also sort chronologically, which is exactly what you want when hunting for the flip-flop you built two months ago.</p>
+            <p>It appears in the Explorer pane beneath <code>main</code>. Double-click it to open it for editing. This is where you build.</p>
+            <p>Use this naming convention all semester: a two-digit number for the order you built it, then a descriptive name with no spaces. By Week 14 your Explorer pane will read like a table of contents &mdash; <code>01-ByteReader</code>, <code>04-SRLatch</code>, <code>05-Register8</code>, <code>06-ALU8</code>, and so on.</p>
+            <p>Logisim lists circuits in the order they were added, newest at the bottom, and has no alphabetical sort. The number prefix is not there to trigger a sort &mdash; it is there so the order stays <em>readable</em>, and so that a circuit's name tells you when in the course it came from. If you ever need to rearrange the list, use <strong>Project &rarr; Move Circuit Up</strong> and <strong>Move Circuit Down</strong>.</p>
           </div>
         </div>
 
         <div class="lab-step">
           <div class="lab-step__num">10</div>
           <div class="lab-step__body">
+            <div class="lab-step__title">Understand what <code>main</code> is for</div>
+            <p><code>main</code> is your <strong>scratch sheet</strong>. It is deliberately left empty and unnamed so that you always have a blank workspace available inside your one project file.</p>
+            <p>Use it whenever you want to try something without risking working circuitry: sketch an idea in <code>main</code>, poke at it, break it, throw it away. When something in <code>main</code> actually works and you want to keep it:</p>
+            <ol>
+              <li>Select everything in <code>main</code> (<strong>Edit &rarr; Select All</strong>), then <strong>Edit &rarr; Copy</strong>.</li>
+              <li><strong>Project &rarr; Add Circuit&hellip;</strong> and give it a proper numbered name.</li>
+              <li><strong>Edit &rarr; Paste</strong> into the new circuit.</li>
+              <li>Go back to <code>main</code>, select all, and delete &mdash; leaving it empty for next time.</li>
+            </ol>
+            <p>This gives you a place to experiment that costs nothing, without ever tempting you to start a second <code>.circ</code> file.</p>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">11</div>
+          <div class="lab-step__body">
             <div class="lab-step__title">Save, close, and reopen</div>
-            <p>Save the file. Then close Logisim completely and open the file again from your folder. Confirm the tab is still named <code>01-ByteReader</code>.</p>
+            <p>Save the file. Then close Logisim completely and open the file again from your folder.</p>
+            <p>It will open showing the empty <code>main</code> circuit &mdash; that is correct and expected, not a sign that your work vanished. Look at the Explorer pane on the left and confirm <code>01-ByteReader</code> is listed below it.</p>
             <p>This sounds pointlessly cautious. It is the cheapest possible test that your file is real, saved where you think it is, and not sitting unsaved in a temp directory.</p>
           </div>
         </div>
 
         <div class="lab-verify">
           <div class="lab-verify__title">Checkpoint</div>
-          <p><code>LastName_CSC210.circ</code> exists in a folder you can find, contains a circuit named <code>01-ByteReader</code>, and survives being closed and reopened.</p>
+          <p><code>LastName_CSC210.circ</code> exists in a folder you can find, contains an empty <code>main</code> plus a second circuit named <code>01-ByteReader</code>, and survives being closed and reopened.</p>
         </div>
       </section>
 
@@ -684,8 +704,13 @@ main:
 
         <p>A byte is eight bits. Those eight bits do not have a base. <code>01000010</code> is not "a binary number" that we then convert into decimal; it is a pattern of eight voltage levels, and binary, hexadecimal, and decimal are three different <em>notations we use to talk about that pattern</em>. Reading the same wire three ways at once makes that concrete in a way a conversion table cannot.</p>
 
+        <div class="lab-verify">
+          <div class="lab-verify__title">Before You Start</div>
+          <p>Double-click <code>01-ByteReader</code> in the Explorer pane so that it &mdash; not <code>main</code> &mdash; is the circuit you are editing. The name of the circuit you are currently editing appears in bold in the Explorer pane.</p>
+        </div>
+
         <div class="lab-step">
-          <div class="lab-step__num">11</div>
+          <div class="lab-step__num">12</div>
           <div class="lab-step__body">
             <div class="lab-step__title">Place an 8-bit input pin</div>
             <p>Open the <strong>Wiring</strong> library in the Explorer pane and select <strong>Pin</strong>. Before placing it, look at the attribute table in the lower-left corner and set:</p>
@@ -699,7 +724,7 @@ main:
         </div>
 
         <div class="lab-step">
-          <div class="lab-step__num">12</div>
+          <div class="lab-step__num">13</div>
           <div class="lab-step__body">
             <div class="lab-step__title">Place three probes, each with a different radix</div>
             <p>From the same Wiring library, select <strong>Probe</strong>. Place three of them to the right of your pin. Select each one in turn and set its <strong>Radix</strong> attribute:</p>
@@ -712,7 +737,7 @@ main:
         </div>
 
         <div class="lab-step">
-          <div class="lab-step__num">13</div>
+          <div class="lab-step__num">14</div>
           <div class="lab-step__body">
             <div class="lab-step__title">Wire all three probes to the same pin</div>
             <p>Using the Wire tool, drag from the output side of your <code>BYTE</code> pin to each probe. All three probes connect to the <em>same</em> wire &mdash; branch it rather than running three separate wires from the pin.</p>
@@ -721,7 +746,7 @@ main:
         </div>
 
         <div class="lab-step">
-          <div class="lab-step__num">14</div>
+          <div class="lab-step__num">15</div>
           <div class="lab-step__body">
             <div class="lab-step__title">Poke it</div>
             <p>Switch to the <strong>Poke</strong> tool (the hand) and click individual bit positions inside the <code>BYTE</code> pin to toggle them between 0 and 1. Watch all three probes update simultaneously.</p>
@@ -800,7 +825,7 @@ main:
         <p>Pair up. You are going to convert bytes between bases by hand and check your answers <em>against your circuit</em> rather than against an answer key. This is a small thing that changes the exercise: an answer key tells you that you were wrong, while a circuit shows you what is actually true and lets you find your own error.</p>
 
         <div class="lab-step">
-          <div class="lab-step__num">15</div>
+          <div class="lab-step__num">16</div>
           <div class="lab-step__body">
             <div class="lab-step__title">Take turns, six rounds each</div>
             <p>Partner A names a value in one base &mdash; say, "hex 3F." Partner B writes the other two representations on paper <em>without touching the computer</em>. Then Partner B pokes the value into their Logisim circuit and both of you read the probes.</p>
@@ -809,7 +834,7 @@ main:
         </div>
 
         <div class="lab-step">
-          <div class="lab-step__num">16</div>
+          <div class="lab-step__num">17</div>
           <div class="lab-step__body">
             <div class="lab-step__title">When you disagree with the circuit, find out why</div>
             <p>The interesting part is the errors. Two mistakes account for most of them:</p>
@@ -919,9 +944,9 @@ main:
               <td>File is named <code>LastName_CSC210.circ</code>, opens without error in isolation, and reports no missing external references.</td>
             </tr>
             <tr>
-              <td>Circuit tab named and populated</td>
+              <td>Circuit added and populated</td>
               <td>2</td>
-              <td>A circuit named <code>01-ByteReader</code> exists and contains an 8-bit input pin wired to at least three probes with different radix settings.</td>
+              <td>A circuit named <code>01-ByteReader</code> exists alongside <code>main</code>, and contains an 8-bit input pin wired to at least three probes with different radix settings. Building the byte reader inside <code>main</code> instead of a named circuit earns partial credit.</td>
             </tr>
             <tr class="rubric-total">
               <td>Total</td>
@@ -966,7 +991,7 @@ main:
             </li>
             <li>
               <input type="checkbox" id="ck-4" onchange="SubmitCheck.update()">
-              <label for="ck-4">The circuit tab is named <code>01-ByteReader</code>, not <code>main</code>.</label>
+              <label for="ck-4">My file contains a circuit named <code>01-ByteReader</code>, and <code>main</code> is still present and still empty.</label>
             </li>
             <li>
               <input type="checkbox" id="ck-5" onchange="SubmitCheck.update()">
