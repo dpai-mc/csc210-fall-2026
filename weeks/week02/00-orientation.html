@@ -197,12 +197,31 @@
 
       <p>In Week 1 you were told Logisim was coming. It is here. Install it now rather than when you reach page 4 &mdash; if something goes wrong with the download or with Java, you want to find out with days to spare, not while you are trying to finish an assignment.</p>
 
+      <div class="callout callout--note">
+        <div class="callout__title">Watch the install walkthrough first</div>
+        <p>You do not have to work this out from written steps. Open the <strong>SAYLOR.ORG &amp; SOFTWARE INSTALL</strong> section of this week's Canvas module. The recording there walks through the whole setup on screen: creating a Saylor.org account, downloading and installing <strong>Logisim Classic 2.7.1</strong>, a first tour of the Logisim interface, and installing <strong>MARS 4.5</strong>. This is a separate, longer recording &mdash; not the week overview video at the top of this page.</p>
+        <p>That video was recorded for the opening session of <strong>CSC 210L</strong>, the lab course. It applies to you whether or not you are enrolled in the lab &mdash; same software, same download links, same steps. Watch it before you start clicking; it is considerably faster than troubleshooting afterward.</p>
+      </div>
+
       <div class="tool-card">
         <div class="tool-card__icon" aria-hidden="true">&#9881;</div>
         <div>
-          <div class="tool-card__name">Logisim Classic 2.7.1</div>
-          <p class="tool-card__desc">Download from the course SharePoint link in this module. Logisim requires a Java runtime; if you do not have one, the installer walks you through it.</p>
+          <div class="tool-card__name">Logisim Classic 2.7.1 &mdash; needed this week</div>
+          <p class="tool-card__desc">Download from the course SharePoint link in this module; the walkthrough video shows you exactly where it is. Logisim requires a Java runtime; if you do not have one, the installer walks you through it. You need this before page 4 and before Assignment 2.</p>
         </div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-card__icon" aria-hidden="true">&#9679;</div>
+        <div>
+          <div class="tool-card__name">MARS 4.5 &mdash; not needed until Week 5</div>
+          <p class="tool-card__desc">The video also covers MARS, the MIPS simulator. Nothing in Week 2 uses it, so do not let that section confuse you about what you owe this week. Installing it now while you have the video open saves you a second round of setup in September; skipping that part today costs you nothing.</p>
+        </div>
+      </div>
+
+      <div class="callout">
+        <div class="callout__title">Do the Saylor.org registration this week too</div>
+        <p>The same video covers creating your Saylor.org account, and it is worth doing now rather than later. Pages 1 through 4 of this week's material point you to Saylor CS301, <strong>Unit 3: Fundamentals of Digital Logic Design</strong>, for supplementary reading. Once you have an account, log in and open Unit 3 from your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> &mdash; that content sits behind the login, so an account you already have is one less obstacle between you and a source you may want at 10pm.</p>
       </div>
 
       <div class="callout">
@@ -395,9 +414,25 @@
       var videoContainer = document.getElementById('video-container');
       var transcriptContainer = document.getElementById('transcript-container');
       if (!videoContainer || !transcriptContainer) return;
-      if (window.matchMedia('(min-width: 1024px)').matches) {
+      // Match the transcript panel's height to the video only when the two
+      // columns are ACTUALLY side by side. Detected by comparing their rendered
+      // positions rather than by a viewport-width test, so this stays in sync
+      // with the flex-wrap rule in shared/style.css regardless of how wide the
+      // Canvas iframe happens to be. (The old matchMedia('(min-width: 1024px)')
+      // test measured the iframe, not the browser window, and disagreed with
+      // the CSS whenever Canvas gave the page less than 1024px.)
+      var videoCol = videoContainer.closest('.video-col');
+      var transcriptCol = transcriptContainer.closest('.transcript-col');
+      var sideBySide = !!(videoCol && transcriptCol) && Math.abs(
+        transcriptCol.getBoundingClientRect().top - videoCol.getBoundingClientRect().top) < 2;
+      // Both height and max-height are set: .transcript-panel carries a fixed
+      // height: 24rem, so setting max-height alone could only ever shrink the
+      // panel, never grow it to match a taller video.
+      if (sideBySide) {
+        transcriptContainer.style.height = videoContainer.offsetHeight + 'px';
         transcriptContainer.style.maxHeight = videoContainer.offsetHeight + 'px';
       } else {
+        transcriptContainer.style.height = '24rem';
         transcriptContainer.style.maxHeight = '24rem';
       }
     }
