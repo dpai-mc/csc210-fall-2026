@@ -1,0 +1,2247 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w2-00a">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 2 Setup: Saylor.org, Logisim, and MARS on Windows 11</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- Setup-page specific: file-name callouts ---------- */
+    .file-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: var(--space-sm);
+      padding: var(--space-sm) var(--space-md);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      background: var(--color-surface);
+      margin-bottom: var(--space-sm);
+    }
+    .file-row__name {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--color-primary);
+    }
+    .file-row__what { font-size: var(--fs-sm); color: var(--color-text-muted); }
+    .tree {
+      font-family: var(--font-mono);
+      font-size: var(--fs-sm);
+      line-height: 1.7;
+      background: var(--color-code-bg);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: var(--space-md) var(--space-lg);
+      overflow-x: auto;
+      white-space: pre;
+      margin: var(--space-md) 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== Header ==================== -->
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 2 &rsaquo; <span>Toolchain Setup</span>
+    </nav>
+  </header>
+
+  <!-- ==================== Main Content ==================== -->
+  <main class="sp-main sp-main--full">
+
+    <h1>Setup: Saylor.org, Logisim, and MARS</h1>
+
+    <div class="lab-meta">
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Estimated time</span>
+        <span class="lab-meta__value">45&ndash;60 minutes</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Platform</span>
+        <span class="lab-meta__value">Windows 11</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Needed by</span>
+        <span class="lab-meta__value lab-meta__value--due">Week 2, page 4</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Graded</span>
+        <span class="lab-meta__value">No &mdash; but Assignment 2 depends on it</span>
+      </div>
+    </div>
+
+    <div class="callout callout--hook">
+      <div class="callout__title">Do this before you reach page 4</div>
+      <p>Week 2 is the week this course stops being reading and starts being building. Page 4 asks you to open Logisim and wire a circuit, and Assignment 2 asks you to submit five of them. Neither is possible until the software is on your machine and running.</p>
+      <p>There are three things to set up, and only the first two are needed this week:</p>
+      <ol>
+        <li><strong>A free Saylor.org account</strong>, enrolled in CS301 &mdash; the reference textbook this course points you to all semester.</li>
+        <li><strong>Logisim Classic 2.7.1</strong> &mdash; the circuit simulator. Needed this week.</li>
+        <li><strong>MARS 4.5</strong> &mdash; the MIPS assembly simulator. Not needed until Week 5, but it comes in the same download, so install it now and save yourself a second round of setup in September.</li>
+      </ol>
+      <p>Give yourself an hour, and do it early in the week. If something goes wrong &mdash; and the thing that goes wrong is almost always Java &mdash; you want to find out with days to spare, not the night Assignment 2 is due.</p>
+    </div>
+
+    <div class="callout callout--note">
+      <div class="callout__title">This page covers Windows 11</div>
+      <p>The software itself is identical on macOS, but the install has several extra steps there &mdash; Gatekeeper blocks unsigned applications, and Logisim has to be quit through <strong>File &rsaquo; Exit</strong> rather than the red close button or it leaves a Java process running. Mac students should follow the macOS instructions posted separately in this module instead of the steps below. The video applies to both platforms; only the click-by-click differs.</p>
+    </div>
+
+    <!-- ============================================================
+         Section A — The walkthrough recording
+         ============================================================ -->
+    <section id="sec-video">
+      <h2>Watch the Walkthrough</h2>
+
+      <p>This recording is the opening session of <strong>CSC 210L</strong>, the lab course, where the whole setup was done live on screen. It applies to you whether or not you are enrolled in the lab &mdash; same software, same download link, same steps.</p>
+
+      <p>It runs about 65 minutes and covers considerably more than installation: there is a tour of both programs, a first assembly program in MARS, and a first circuit in Logisim. <strong>The setup itself is the first 22 minutes.</strong> Use the chapter list to jump straight to whatever you need &mdash; clicking any line, in the chapter list or in the transcript, seeks the video to that moment.</p>
+
+      <div class="callout callout--note">
+        <div class="callout__title">A note on the chapters marked CSC 210L</div>
+        <p>A few sections describe deliverables &mdash; screenshots, a file to submit &mdash; that belong to <strong>Lab 01 in CSC 210L</strong>, the separate lab course. If you are enrolled in the lecture course only, those are not work you owe. They are marked in the list below so you can tell the difference. Your Week 2 deliverable is Assignment 2, and nothing on this page is graded.</p>
+      </div>
+
+      <h3>Jump to a Section</h3>
+
+        <div class="video-chapters" id="video-chapters">
+          <div class="video-chapters__group">
+            <div class="video-chapters__group-title">Part 1 — Saylor.org CS301</div>
+            <ul class="video-chapters__list">
+              <li><button type="button" class="chapter-btn" data-t="0"><span class="chapter-btn__time">0:00</span><span class="chapter-btn__label">What you need before Week 2, and why</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="77"><span class="chapter-btn__time">1:17</span><span class="chapter-btn__label">Go to Saylor.org and create a free account</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="176"><span class="chapter-btn__time">2:56</span><span class="chapter-btn__label">Find CS301 under Computer Science</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="205"><span class="chapter-btn__time">3:25</span><span class="chapter-btn__label">Click “Enrol me in this course”</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="216"><span class="chapter-btn__time">3:36</span><span class="chapter-btn__label">Confirm CS301 shows up under My Courses</span></button></li>
+            </ul>
+          </div>
+          <div class="video-chapters__group">
+            <div class="video-chapters__group-title">Part 2 — Downloading Logisim and MARS</div>
+            <ul class="video-chapters__list">
+              <li><button type="button" class="chapter-btn" data-t="500"><span class="chapter-btn__time">8:20</span><span class="chapter-btn__label">Where the download link lives</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="532"><span class="chapter-btn__time">8:52</span><span class="chapter-btn__label">The two files you need</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="870"><span class="chapter-btn__time">14:30</span><span class="chapter-btn__label">Walked through a second time, more slowly</span></button></li>
+            </ul>
+          </div>
+          <div class="video-chapters__group">
+            <div class="video-chapters__group-title">Part 3 — Extracting and first run</div>
+            <ul class="video-chapters__list">
+              <li><button type="button" class="chapter-btn" data-t="668"><span class="chapter-btn__time">11:08</span><span class="chapter-btn__label">Extract the download — then extract again</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="718"><span class="chapter-btn__time">11:58</span><span class="chapter-btn__label">The two folders you should end up with</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="728"><span class="chapter-btn__time">12:08</span><span class="chapter-btn__label">Double-click Mars4_5.jar</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="768"><span class="chapter-btn__time">12:48</span><span class="chapter-btn__label">Open logisim-win-2.7.1.exe</span></button></li>
+            </ul>
+          </div>
+          <div class="video-chapters__group">
+            <div class="video-chapters__group-title">Part 4 — Installing Java</div>
+            <ul class="video-chapters__list">
+              <li><button type="button" class="chapter-btn" data-t="1061"><span class="chapter-btn__time">17:41</span><span class="chapter-btn__label">“Select an app to open this file” — Java is missing</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="1149"><span class="chapter-btn__time">19:09</span><span class="chapter-btn__label">The Java 8 download page</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="1195"><span class="chapter-btn__time">19:55</span><span class="chapter-btn__label">Online vs. offline; pick Windows Offline (64-bit)</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="1266"><span class="chapter-btn__time">21:06</span><span class="chapter-btn__label">Installing both 32- and 64-bit</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="1299"><span class="chapter-btn__time">21:39</span><span class="chapter-btn__label">Close the browser, and reboot if it still fails</span></button></li>
+            </ul>
+          </div>
+          <div class="video-chapters__group">
+            <div class="video-chapters__group-title">Also in this recording — beyond setup</div>
+            <ul class="video-chapters__list">
+              <li><button type="button" class="chapter-btn" data-t="1324"><span class="chapter-btn__time">22:04</span><span class="chapter-btn__label">Tour of the MARS interface</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="1425"><span class="chapter-btn__time">23:45</span><span class="chapter-btn__label">Why Logisim Classic and not Evolution</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="1543"><span class="chapter-btn__time">25:43</span><span class="chapter-btn__label">The MARS smoke-test program</span></button></li>
+              <li><button type="button" class="chapter-btn chapter-btn--lab" data-t="1863"><span class="chapter-btn__time">31:03</span><span class="chapter-btn__label">Saving as lab01_smoketest.asm</span><span class="chapter-btn__tag">CSC 210L</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="1897"><span class="chapter-btn__time">31:37</span><span class="chapter-btn__label">Assemble and run</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="2066"><span class="chapter-btn__time">34:26</span><span class="chapter-btn__label">Hexadecimal vs. decimal in the register pane</span></button></li>
+              <li><button type="button" class="chapter-btn chapter-btn--lab" data-t="2212"><span class="chapter-btn__time">36:52</span><span class="chapter-btn__label">Taking the screenshot deliverable</span><span class="chapter-btn__tag">CSC 210L</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="2334"><span class="chapter-btn__time">38:54</span><span class="chapter-btn__label">Tour of Logisim: poke, wire, and probe</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="2606"><span class="chapter-btn__time">43:26</span><span class="chapter-btn__label">Naming your .circ file</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="2720"><span class="chapter-btn__time">45:20</span><span class="chapter-btn__label">Building an 8-bit input with probes</span></button></li>
+              <li><button type="button" class="chapter-btn chapter-btn--lab" data-t="3505"><span class="chapter-btn__time">58:25</span><span class="chapter-btn__label">What to submit, and keeping your .circ file</span><span class="chapter-btn__tag">CSC 210L</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="3703"><span class="chapter-btn__time">1:01:43</span><span class="chapter-btn__label">Where this course is going</span></button></li>
+            </ul>
+          </div>
+        </div>
+
+      <div class="video-breakout">
+        <div class="video-transcript-row">
+          <div class="video-col">
+            <div class="video-frame" id="video-container">
+              <iframe id="youtube-player"
+                      src="https://www.youtube.com/embed/zsXI5K7RW5A?enablejsapi=1&amp;cc_load_policy=1&amp;iv_load_policy=3&amp;modestbranding=1&amp;rel=0"
+                      title="CSC210 Setup Walkthrough: Saylor.org, Logisim, and MARS"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allowfullscreen
+                      loading="lazy">
+              </iframe>
+            </div>
+            <div class="video-caption">Recorded live with a class, so there is some back-and-forth. The recording opens directly on the setup, and student names have been removed from the transcript. Select any transcript line to jump the video to that point.</div>
+          </div>
+          <div class="transcript-col">
+            <div class="transcript-panel" id="transcript-container" role="region"
+                 aria-label="Video transcript. Select a line to jump to that point in the video.">
+              <p class="transcript-loading">Loading transcript&hellip;</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">If you would rather read than watch</div>
+        <p>Everything the recording covers about installation is written out below, in the same order, with the Windows 11 specifics filled in. The written steps are the authoritative version; the video is there for when a step does not look the way you expected.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Section B — Saylor.org
+         ============================================================ -->
+    <section id="sec-saylor">
+      <h2>Part 1 &mdash; Saylor.org and CS301</h2>
+
+      <p>Saylor Academy publishes <strong>CS301: Computer Architecture</strong>, a free, openly licensed course that serves as this course's reference textbook. Pages 1 through 4 of Week 2 point you at <strong>Unit 3: Fundamentals of Digital Logic Design</strong> for supplementary reading, and later weeks point at other units. That content sits behind a login, so an account you already have is one less obstacle between you and a source you may want at 10pm.</p>
+
+      <p>It costs nothing, there is no payment step, and enrolling takes about three minutes.</p>
+
+      <div class="lab-step">
+        <div class="lab-step__num">1</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Go to Saylor.org and create an account</div>
+          <p>Open <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and sign up. You can create a Saylor account with an email address and password, or sign in with an existing Google, Facebook, or LinkedIn account &mdash; any of them works.</p>
+          <p>When it asks what brings you to Saylor, <strong>Skill Development</strong> is the right answer for our purposes. You are taking one individual course, not working toward one of their degree pathways.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">2</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Enrol in CS301</div>
+          <p>Logged in, browse to <strong>Computer Science</strong> in the course catalog and open <strong>CS301: Computer Architecture</strong>. On the course page, click <strong>Enrol me in this course</strong>.</p>
+          <p>Saylor lists a large number of computer science courses. CS301 is the only one this course uses &mdash; do not enrol in the others expecting them to be relevant.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">3</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Confirm it landed</div>
+          <p>Open <strong>My Courses</strong> from the Saylor dashboard. CS301 should be listed there. Click into it and you will see the unit index &mdash; Unit 1 through Unit 9. When a page in this course says to read a specific unit, this is where you come.</p>
+        </div>
+      </div>
+
+      <div class="lab-verify">
+        <div class="lab-verify__title">Verify</div>
+        <p>You are done with Part 1 when <strong>CS301: Computer Architecture</strong> appears under My Courses and you can open <strong>Unit 3</strong> and see reading material rather than a login prompt.</p>
+      </div>
+
+      <div class="callout">
+        <div class="callout__title">About the material itself</div>
+        <p>CS301 is genuinely useful in places and thin in others, and the last substantial revision was several years ago. That is fine for what we use it for &mdash; the fundamentals of binary, logic, and machine organization have not moved. You are not expected to read the whole thing; the SPAs will tell you which units are worth your time, and where a topic is not covered well enough, the SPA itself carries the material instead.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Section C — Downloading
+         ============================================================ -->
+    <section id="sec-download">
+      <h2>Part 2 &mdash; Downloading the Software</h2>
+
+      <p>Both programs are distributed through a <strong>SharePoint link posted in this week's Canvas module</strong>, on the same page as this one. Use that link rather than searching for the software yourself: version matters here, and the copies posted for the course are the versions everything in this course was built and tested against.</p>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Classic 2.7.1, not Evolution</div>
+        <p>There is a newer program called <strong>Logisim Evolution</strong>. <strong>Do not use it for this course.</strong> In Classic, a subcircuit keeps the visual shape you gave it, so you can look at a circuit and read its structure at a glance. Evolution draws every subcircuit as a featureless labeled rectangle. That difference is a minor annoyance in Week 2 and a serious one by Week 13, when your CPU is a dozen nested subcircuits deep. Classic is also, in the instructor's experience, the more stable of the two for this kind of work.</p>
+      </div>
+
+      <p>From the SharePoint folder, you need exactly two files for Windows:</p>
+
+      <div class="file-row">
+        <span class="file-row__name">logisim-win-2.7.1.zip</span>
+        <span class="file-row__what">Logisim Classic 2.7.1, Windows build &mdash; needed this week</span>
+      </div>
+      <div class="file-row">
+        <span class="file-row__name">mars4_5.zip</span>
+        <span class="file-row__what">MARS 4.5, the MIPS simulator &mdash; not needed until Week 5</span>
+      </div>
+
+      <p>The folder also contains a macOS build of Logisim, marked with <code>macosx</code> in the name. Windows users should ignore it. Selecting both Windows files and downloading them together is fine &mdash; SharePoint will bundle them into a single zip, which is why you end up extracting twice in the next step.</p>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Put it somewhere you will find it again</div>
+        <p>Do not leave this in your Downloads folder. You will open your Logisim file every week between now and December. Make a folder you will remember &mdash; <code>Documents\CSC210</code> is a reasonable choice &mdash; and work there.</p>
+        <p>If you keep it inside OneDrive, that works and gives you a backup, but let OneDrive finish syncing before you open anything. A file still showing the blue cloud icon has not been downloaded to your machine yet.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Section D — Extracting
+         ============================================================ -->
+    <section id="sec-extract">
+      <h2>Part 3 &mdash; Extracting and First Run</h2>
+
+      <p>This is the step that trips people up, so it is worth being precise: <strong>if you downloaded both files together, you have to extract twice.</strong> SharePoint gives you one zip that contains two more zips. Extracting once gets you the inner zips, not the programs.</p>
+
+      <div class="lab-step">
+        <div class="lab-step__num">1</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Extract the outer zip</div>
+          <p>Right-click the downloaded file &mdash; it will be called something like <code>OneDrive_1_8-18-2026.zip</code> &mdash; and choose <strong>Extract All&hellip;</strong>. Windows 11 has this built in; you do not need 7-Zip or WinRAR, though either works fine if you already have one.</p>
+          <p>Point it at your <code>CSC210</code> folder and click Extract.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">2</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Extract the two inner zips</div>
+          <p>Inside, you will find <code>logisim-win-2.7.1.zip</code> and <code>mars4_5.zip</code>. Right-click each one and <strong>Extract All&hellip;</strong> again, into the same folder.</p>
+          <p>You should end up with two <em>folders</em> rather than two zip files:</p>
+          <div class="tree">Documents\CSC210\
+├── logisim-win-2.7.1\
+│   └── logisim-win-2.7.1.exe
+└── mars4_5\
+    └── Mars4_5.jar</div>
+          <p>If what you are looking at still has a zipper on the icon, it is still a zip &mdash; extract it.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">3</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Try to run Logisim</div>
+          <p>Double-click <code>logisim-win-2.7.1.exe</code>. Despite the <code>.exe</code>, this is a Java program in an executable wrapper, so it needs Java installed to start.</p>
+          <p>Windows 11 will probably show <strong>&ldquo;Windows protected your PC&rdquo;</strong> from SmartScreen, because the file is not code-signed and almost nobody downloads it. Click <strong>More info</strong>, then <strong>Run anyway</strong>. This is expected for Logisim and not a sign that anything is wrong.</p>
+          <p>If Logisim opens to a blank canvas with a toolbar down the left side, you have Java and you are finished with this step.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">4</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Try to run MARS</div>
+          <p>Double-click <code>Mars4_5.jar</code>. If Java is installed and registered, MARS opens: a large blue editing pane, a column of registers down the right side, and a message box along the bottom.</p>
+          <p>If instead Windows shows <strong>&ldquo;How do you want to open this file?&rdquo;</strong> and offers you Notepad, you do not have a working Java runtime. That is Part 4.</p>
+        </div>
+      </div>
+
+      <div class="lab-verify">
+        <div class="lab-verify__title">Verify</div>
+        <p>Part 3 is done when <strong>both</strong> programs open: Logisim to an empty circuit canvas, MARS to its editor with the register list visible. If either one does not, keep going &mdash; the cause is nearly always Java, and Part 4 fixes it.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Section E — Java
+         ============================================================ -->
+    <section id="sec-java">
+      <h2>Part 4 &mdash; Installing Java</h2>
+
+      <p>MARS 4.5 and Logisim Classic 2.7.1 are both Java programs. They need a <strong>Java Runtime Environment</strong> (JRE) &mdash; the part of Java that runs programs. You do not need the full JDK, which is the part you would need to <em>write</em> Java.</p>
+
+      <p>Windows 11 does not ship with Java. If you have never installed it, or you reset your PC at some point, you do not have it.</p>
+
+      <div class="lab-step">
+        <div class="lab-step__num">1</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Check whether you already have it</div>
+          <p>Open <strong>Windows Terminal</strong> or <strong>Command Prompt</strong> and type:</p>
+          <pre><code>java -version</code></pre>
+          <p>A version number back means Java is installed. <code>'java' is not recognized&hellip;</code> means it is not, and you should continue.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">2</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Download the Java 8 runtime</div>
+          <p>Go to <a href="https://www.java.com/en/download/manual.jsp" target="_blank" rel="noopener">java.com's manual download page</a>, which lists every installer rather than guessing what your browser needs. As of August 2026 this offers <strong>Java 8 Update 503</strong>.</p>
+          <p>Under Windows you will see three options:</p>
+          <ul>
+            <li><strong>Windows Online</strong> &mdash; a small stub that downloads the rest during installation.</li>
+            <li><strong>Windows Offline</strong> &mdash; the complete 32-bit installer.</li>
+            <li><strong>Windows Offline (64-bit)</strong> &mdash; the complete 64-bit installer. <strong>This is the one you want.</strong></li>
+          </ul>
+          <p>Any modern Windows 11 machine is 64-bit. The offline installer is larger but does not depend on your connection holding up mid-install, which makes it the safer choice.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">3</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Install it, then close your browser</div>
+          <p>Run the installer and accept the defaults. When it finishes, <strong>close your browser completely and reopen it</strong>, and close any File Explorer windows you had open. Windows does not always pick up the new file associations until then, which is why the <code>.jar</code> file sometimes still refuses to open right after a successful install.</p>
+          <p>If it still refuses after that, reboot. That is not a superstition here &mdash; the <code>.jar</code> association in particular is registered at a level that a restart reliably settles.</p>
+        </div>
+      </div>
+
+      <div class="lab-verify">
+        <div class="lab-verify__title">Verify</div>
+        <p>Run <code>java -version</code> again. You should get a version number back. Then double-click <code>Mars4_5.jar</code> and <code>logisim-win-2.7.1.exe</code> &mdash; both should now open.</p>
+      </div>
+
+      <details class="lab-troubleshoot">
+        <summary>Troubleshooting &mdash; the four things that actually go wrong</summary>
+        <dl>
+          <dt>Double-clicking Mars4_5.jar opens Notepad, or asks which app to use</dt>
+          <dd>Java is installed but Windows is not associating <code>.jar</code> files with it. Fastest workaround: open a terminal in the <code>mars4_5</code> folder and run <code>java -jar Mars4_5.jar</code>. To fix it properly, right-click the file &rsaquo; <strong>Open with</strong> &rsaquo; <strong>Choose another app</strong> &rsaquo; <strong>Look for another app on this PC</strong>, and point it at <code>javaw.exe</code> (usually under <code>C:\Program Files\Java\jre1.8.0_xxx\bin\</code>), then tick <em>Always use this app</em>.</dd>
+
+          <dt>&ldquo;Windows protected your PC&rdquo; when opening Logisim</dt>
+          <dd>SmartScreen, reacting to an unsigned executable that few people download. Click <strong>More info</strong> &rsaquo; <strong>Run anyway</strong>. If your antivirus quarantines it outright, restore it and add an exclusion for your <code>CSC210</code> folder.</dd>
+
+          <dt>Nothing happens at all when you double-click</dt>
+          <dd>Almost always means you are double-clicking something still inside a zip. Windows will happily preview a zip's contents in Explorer as though it were a folder, and programs run from there fail silently. Confirm you extracted, and that the path in the address bar does not contain <code>.zip</code>.</dd>
+
+          <dt>You had Java before and it stopped working</dt>
+          <dd>A Windows reset or a Java uninstall takes the JRE with it. Reinstall from Part 4, step 2. You can safely install the 32-bit and 64-bit runtimes side by side if you are unsure which you need.</dd>
+        </dl>
+      </details>
+    </section>
+
+    <!-- ============================================================
+         Section F — Course file + checklist
+         ============================================================ -->
+    <section id="sec-circfile">
+      <h2>Part 5 &mdash; Create Your Course Circuit File</h2>
+
+      <p>One last step, and it takes a minute. With Logisim open:</p>
+
+      <ol class="logisim-steps">
+        <li>Choose <strong>File &rsaquo; New</strong>.</li>
+        <li>Choose <strong>File &rsaquo; Save As</strong> and save it immediately as <code>CSC210_YourName.circ</code> &mdash; your own name, not the literal word &ldquo;YourName.&rdquo;</li>
+        <li>Save it into your <code>CSC210</code> folder, alongside the two program folders.</li>
+      </ol>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">One file. All semester. Read this carefully.</div>
+        <p><strong>All circuits for this course must live inside a single <code>.circ</code> file.</strong> Every checkpoint from here to December adds a new <em>circuit tab</em> to the file you just created &mdash; never a new file, and never a link to an external file.</p>
+        <p>By Week 14 this one file will contain a working CPU. Submissions that reference external Logisim files are graded as incomplete, because the grader cannot open circuits that are not there.</p>
+      </div>
+
+      <h3>Setup Checklist</h3>
+
+      <p>Tick these off as you go. Nothing here is submitted &mdash; the checklist is for you, and it resets when you reload the page.</p>
+
+      <ul class="lab-checklist" id="setup-checklist">
+        <li><input type="checkbox" id="ck1"><label for="ck1">I have a Saylor.org account and can log in.</label></li>
+        <li><input type="checkbox" id="ck2"><label for="ck2">CS301: Computer Architecture appears under My Courses, and I can open Unit 3.</label></li>
+        <li><input type="checkbox" id="ck3"><label for="ck3">I downloaded <code>logisim-win-2.7.1.zip</code> and <code>mars4_5.zip</code> from the module's SharePoint link.</label></li>
+        <li><input type="checkbox" id="ck4"><label for="ck4">I extracted both, and I have folders &mdash; not zip files &mdash; containing <code>logisim-win-2.7.1.exe</code> and <code>Mars4_5.jar</code>.</label></li>
+        <li><input type="checkbox" id="ck5"><label for="ck5"><code>java -version</code> returns a version number.</label></li>
+        <li><input type="checkbox" id="ck6"><label for="ck6">Logisim opens to an empty circuit canvas.</label></li>
+        <li><input type="checkbox" id="ck7"><label for="ck7">MARS opens to its editor with the register list visible.</label></li>
+        <li><input type="checkbox" id="ck8"><label for="ck8">I created <code>CSC210_YourName.circ</code> and saved it somewhere I will find it again.</label></li>
+      </ul>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">When you are done here</div>
+        <p>Go back to page 1 and work through Week 2 in order. You will not need Logisim until page 4 &mdash; pages 1 through 3 are gates, NAND universality, and Boolean algebra, and they are what make page 4 make sense. Having the software installed now just means page 4 is about circuits rather than about troubleshooting.</p>
+        <p>If something on this page did not work, message me before the week gets away from you. A setup problem is a ten-minute conversation and a week of lost time, in that order.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== Footer ==================== -->
+  <footer class="sp-footer">
+    CSC210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <!-- ==================== Setup checklist ==================== -->
+  <script>
+  (function () {
+    'use strict';
+    document.querySelectorAll('#setup-checklist input[type="checkbox"]').forEach(function (box) {
+      box.addEventListener('change', function () {
+        box.closest('li').classList.toggle('checked', box.checked);
+      });
+    });
+  })();
+  </script>
+
+  <!-- ==================== Video + Transcript Sync (CSC210 Video Embed Standard) ==================== -->
+  <!-- Source: CSC210L Lab 01 Zoom recording, 2026-08-18, published as
+       https://youtu.be/zsXI5K7RW5A (1:04:38).
+       Two edits separate the published video from the Zoom master, and the
+       transcript below is retimed for both:
+         1. a 2.733 s section removed at 00:13:57.633 (PII briefly visible in a
+            screenshare) — cues after that point sit 2.733 s earlier;
+         2. the opening 00:00:00.000-00:04:37.000 removed in YouTube Studio —
+            everything then shifts 277 s earlier and the first 60 cues are gone.
+       Student speaker labels and in-line names are redacted (FERPA).
+       Chapter data-t values in the markup above are on this same timeline. -->
+  <script>
+  (function () {
+    'use strict';
+
+    var VIDEO_ID = 'zsXI5K7RW5A';
+    var vttContent = `WEBVTT
+Kind: captions
+Language: en-US
+
+00:00:00.670 --> 00:00:04.310
+David Pai: Okay, so what we're gonna do, I have a lot of lab.
+
+00:00:04.730 --> 00:00:07.850
+David Pai: But what we want to do first is I want to make sure that
+
+00:00:08.290 --> 00:00:15.300
+David Pai: You guys are connected to the Saylor.org class? Oh. Okay, that's kind of the textbook?
+
+00:00:16.090 --> 00:00:23.210
+David Pai: Partial textbook that we use. And then that you have Logisim and MARS on your computer.
+
+00:00:23.950 --> 00:00:29.909
+David Pai: and working. Okay? And when I say that, do either of you have a Mac?
+
+00:00:31.200 --> 00:00:34.350
+Student: I don't, no. Okay. No.
+
+00:00:34.740 --> 00:00:42.409
+David Pai: Mac is, Logisim, they're both Java programs, MARS and Logisim are both Java programs.
+
+00:00:42.750 --> 00:00:48.030
+David Pai: And so, when you try to open them, if you don't have the JRE, you know, the runtime environment, it'll…
+
+00:00:48.360 --> 00:00:52.310
+David Pai: Ask you to download it, and then… You should be able to download it and run it.
+
+00:00:53.920 --> 00:01:00.430
+David Pai: But on a Mac, it's, you know, it's a… there's a couple little tricks you have to do on the Mac to get it to work.
+
+00:01:01.550 --> 00:01:06.439
+David Pai: Okay? So the… and then there's a lab that goes with this, and…
+
+00:01:07.630 --> 00:01:11.249
+David Pai: But the first thing we want to do is is I want you to go…
+
+00:01:11.380 --> 00:01:16.939
+David Pai: You should… [student], you don't have this, because you're not in the class, so I'll post it in the chat.
+
+00:01:17.620 --> 00:01:23.660
+David Pai: The link? Okay? First, we want to go to Saylor.org.
+
+00:01:28.690 --> 00:01:30.410
+Student: Might be a dumb question.
+
+00:01:30.410 --> 00:01:30.970
+David Pai: Yep.
+
+00:01:31.090 --> 00:01:37.489
+Student: do I have to be in CS301 in order for this portion of it, or is this.
+
+00:01:37.490 --> 00:01:41.300
+David Pai: I'm just setting it up for the… it's more for the other… for the lecture class.
+
+00:01:41.510 --> 00:01:42.220
+Student: Okay.
+
+00:01:43.440 --> 00:01:47.940
+David Pai: But you want to go in here. And if you've never been here, you need to create an account.
+
+00:01:48.780 --> 00:01:52.100
+David Pai: Okay, it doesn't cost anything. Okay.
+
+00:01:55.850 --> 00:02:02.870
+David Pai: So you're gonna log in. I always just do skill development, because I'm just taking individual courses, and I'm not trying to take a whole degree kind of thing.
+
+00:02:03.810 --> 00:02:04.560
+David Pai: Okay.
+
+00:02:06.550 --> 00:02:13.689
+David Pai: And if you don't have an account, you can create one, or you can use a Google account, Facebook or LinkedIn, pre-existing.
+
+00:02:14.210 --> 00:02:19.880
+David Pai: I have one that I created a while ago.
+
+00:02:21.910 --> 00:02:24.000
+David Pai: Okay? You create an account.
+
+00:02:26.870 --> 00:02:28.550
+David Pai: And then log in.
+
+00:02:34.310 --> 00:02:37.519
+David Pai: All right, and… let me see, let me look at my dashboard here.
+
+00:02:56.360 --> 00:03:06.649
+David Pai: Anyway, so when you go… to computer science. Okay? There's all these courses here in computer science that you could take.
+
+00:03:07.120 --> 00:03:16.949
+David Pai: Or use, and we're gonna use this one. CS301 Computer Architecture. Okay, and when you click on it, I'm already enrolled.
+
+00:03:17.490 --> 00:03:22.990
+David Pai: So it'll show up, but if you click on it. I'm clicking on this one that I'm not enrolled in.
+
+00:03:25.240 --> 00:03:28.450
+David Pai: Okay, and then you're gonna click enroll me in this course.
+
+00:03:31.720 --> 00:03:35.030
+David Pai: Okay? And then once you're enrolled in the course.
+
+00:03:36.790 --> 00:03:42.249
+David Pai: When you go to your My Courses, It should show up.
+
+00:03:52.120 --> 00:03:52.800
+David Pai: Okay?
+
+00:03:56.650 --> 00:04:01.049
+David Pai: And then once it shows up, then you can get into it, and you can…
+
+00:04:01.429 --> 00:04:07.919
+David Pai: Look at the index, and if you need to… if we're… if we said, read 3.1 or something, then you can click on 3.
+
+00:04:09.530 --> 00:04:11.079
+David Pai: And read 3.1.
+
+00:04:13.700 --> 00:04:14.500
+Student: Sweet.
+
+00:04:17.190 --> 00:04:17.929
+Student: Got it.
+
+00:04:21.270 --> 00:04:26.490
+David Pai: Okay, and so this is a textbook we use, it's supplemental to what I post in the lecture class.
+
+00:04:26.490 --> 00:04:27.409
+Student: Happy New Year.
+
+00:04:27.920 --> 00:04:30.610
+David Pai: So typically, like.
+
+00:04:30.610 --> 00:04:31.170
+Student: I don't.
+
+00:04:31.380 --> 00:04:36.599
+David Pai: Like, you'll… this stuff will all show up because it supports logic gates and building…
+
+00:04:36.750 --> 00:04:38.930
+David Pai: Circuits and stuff like that.
+
+00:04:45.490 --> 00:04:48.749
+David Pai: Okay, so that's the first thing, is to get you into Saylor.org.
+
+00:04:49.600 --> 00:04:55.800
+David Pai: And for you to… enroll on this CS301 Computer Architecture course.
+
+00:04:57.530 --> 00:05:03.089
+David Pai: Okay, and it's all self-study, it's all… You know, at your own pace kind of thing.
+
+00:05:07.510 --> 00:05:08.750
+David Pai: Oops, that's not what I want.
+
+00:05:12.550 --> 00:05:16.280
+David Pai: Okay. You guys good with Saylor?
+
+00:05:16.940 --> 00:05:19.430
+Student: Yeah, I'm all logged in on that, and I made the accountant, yeah.
+
+00:05:21.400 --> 00:05:22.760
+David Pai: You okay, [student]? You got it?
+
+00:05:23.720 --> 00:05:36.389
+Student: Oh, yeah, I found the section on Mendo. I do have an account. It's, Lab 1 Credits, COREC is CSC 210, must be taken at the same time, add course to plan.
+
+00:05:37.060 --> 00:05:45.599
+Student: Let me see, I haven't… I haven't used Mendo much… that much. My home is, like, [another college], it's where I graduated from until I transferred, so…
+
+00:05:46.000 --> 00:05:49.049
+Student: It's a little different, but y'all use basically the same system.
+
+00:05:49.840 --> 00:05:53.049
+David Pai: Yeah, I mean, it's the same, it's just branded differently, usually.
+
+00:05:54.570 --> 00:06:02.979
+Student: Has been planned on the schedule. Pretty certain, like, I'm almost done, and she's gonna get… To the reg… registration.
+
+00:06:04.400 --> 00:06:05.440
+Student: Plan and schedule.
+
+00:06:06.970 --> 00:06:11.299
+Student: And, let's see… okay, it says register, there's 33 seats available when we.
+
+00:06:11.300 --> 00:06:15.320
+David Pai: Yeah, yeah, there's a bunch of seats available. So you, you probably won't…
+
+00:06:15.500 --> 00:06:20.310
+David Pai: show up until tonight in Canvas. You probably won't get into Canvas that…
+
+00:06:20.620 --> 00:06:29.679
+David Pai: module, you know, that class in Canvas, probably for you. I don't know if Windows is gonna show up, but it probably doesn't show up right away, because usually I think they roll it…
+
+00:06:30.160 --> 00:06:33.099
+David Pai: You know, it's not real time, they roll it, like, twice a day.
+
+00:06:34.100 --> 00:06:36.230
+David Pai: Once in the morning and once in the evening.
+
+00:06:36.300 --> 00:06:39.909
+Student: Okay, I said. Says I'm in. Awesome.
+
+00:06:40.230 --> 00:06:46.999
+David Pai: You know, so your actual… I'm in this class, might not happen till 6 or 7 tonight, kind of a thing.
+
+00:06:47.560 --> 00:06:48.349
+Student: Alright, excellent.
+
+00:06:48.510 --> 00:06:49.130
+David Pai: Okay?
+
+00:06:49.530 --> 00:06:56.279
+Student: Good to know. I just want to tell you about the Saylor Academy. I already took… I'm taking one of their data science courses at Python.
+
+00:06:56.280 --> 00:06:56.819
+David Pai: Oh, okay.
+
+00:06:56.820 --> 00:07:02.790
+Student: And it just happens that… it just happens that this class has a class from that institution.
+
+00:07:03.100 --> 00:07:05.690
+Student: Which is a crazy coincidence, because I'm just like…
+
+00:07:05.690 --> 00:07:08.320
+David Pai: It's good, though, because then you already have an account, so…
+
+00:07:08.640 --> 00:07:09.050
+Student: Yeah.
+
+00:07:09.050 --> 00:07:15.079
+David Pai: Login, add that. Add that course to your list of my courses, and you know how it works, because you've used it already.
+
+00:07:15.280 --> 00:07:17.479
+Student: Mmm, yeah, I've been using it for weeks now.
+
+00:07:19.060 --> 00:07:19.650
+Student: Cool.
+
+00:07:20.270 --> 00:07:25.950
+David Pai: And like I said, some of the stuff is really good, and some of it's… Not great.
+
+00:07:26.460 --> 00:07:29.679
+Student: A lot of it's kind of outdated, you know, if you go on the Python.
+
+00:07:29.680 --> 00:07:31.840
+David Pai: It is pretty old, a lot of it is pretty old.
+
+00:07:32.090 --> 00:07:40.069
+Student: Not everything. The last update is, like, 2018, and I've seen some pages, and I'm like, oh, wow, that's…
+
+00:07:40.070 --> 00:07:48.609
+David Pai: Most of us, I'll just be honest with you, in this class, because we're… I'm trying to focus on the basics of binary computers.
+
+00:07:49.040 --> 00:07:56.110
+David Pai: We're, you know, the beginning kind of stuff. The 2018 is fine, it's not…
+
+00:07:56.260 --> 00:07:56.800
+Student: Right, yeah.
+
+00:07:56.800 --> 00:08:06.159
+David Pai: you know. We're not doing the latest, because first you need to understand how it works before we get into how to do parallel processing and…
+
+00:08:06.460 --> 00:08:08.780
+David Pai: All that kind of stuff. You know?
+
+00:08:09.350 --> 00:08:11.840
+Student: Yeah, yeah, textbooks. Sure.
+
+00:08:12.810 --> 00:08:19.730
+David Pai: Okay, so, then what we want to do… [student], you'll be able to get this, and [student], I'll put the link in.
+
+00:08:20.420 --> 00:08:27.349
+David Pai: The chat. It's also in the other class, but… You need to download the software.
+
+00:08:32.300 --> 00:08:33.350
+David Pai: Man…
+
+00:08:36.950 --> 00:08:42.790
+David Pai: There's a chat and link. Hopefully, you can click on that link in the chat, and it'll take you there.
+
+00:08:44.480 --> 00:08:51.570
+David Pai: Okay? And so what you want to do is you need to download logisim-win-2.7.1.zip.
+
+00:08:52.280 --> 00:09:03.199
+David Pai: And mars4_5.zip. Okay, so you can select them all. And download them. It'll download a zip file, and you gotta extract it twice.
+
+00:09:06.550 --> 00:09:07.270
+David Pai: Right?
+
+00:09:08.280 --> 00:09:10.260
+Student: I've been trying it.
+
+00:09:20.540 --> 00:09:24.707
+David Pai: And then you can… Open it up wherever it is. And inside it, there'll be two zip files.
+
+00:09:32.307 --> 00:09:35.637
+David Pai: Okay? Gonna move that, so…
+
+00:09:41.647 --> 00:09:43.726
+David Pai: So it's all in one place, right?
+
+00:09:47.077 --> 00:09:48.526
+Student: We don't need the…
+
+00:09:49.207 --> 00:09:51.846
+David Pai: You don't need the… you only need the,
+
+00:09:55.417 --> 00:09:59.496
+David Pai: Oops. I hate it when this happens.
+
+00:10:12.597 --> 00:10:13.237
+Student: Indeed.
+
+00:10:14.757 --> 00:10:17.676
+David Pai: So, anyway, let's see here…
+
+00:10:32.297 --> 00:10:33.687
+Student: That is absurd.
+
+00:10:33.687 --> 00:10:34.517
+David Pai: Sorry, I'm…
+
+00:10:36.047 --> 00:10:40.257
+David Pai: Searching for something else. But anyway, you want to put it somewhere where you know where it is?
+
+00:11:02.667 --> 00:11:06.477
+David Pai: So, here, I put it on. my OneDrive.
+
+00:11:08.557 --> 00:11:11.997
+David Pai: Right, and then you can do… you can use,
+
+00:11:11.997 --> 00:11:12.467
+Student: Fair enough.
+
+00:11:12.467 --> 00:11:16.436
+David Pai: Extract all… I use 7-Zip a lot.
+
+00:11:18.987 --> 00:11:23.197
+David Pai: Okay. Extract it to this folder…
+
+00:11:26.587 --> 00:11:29.576
+David Pai: And then inside, I'll have these two files, right?
+
+00:11:37.477 --> 00:11:39.886
+David Pai: And they'll extract it to these subfolders.
+
+00:11:42.167 --> 00:11:44.357
+David Pai: Okay? So I end up with these two folders.
+
+00:11:56.157 --> 00:12:04.307
+David Pai: Okay, MARS and Logisim. And if you open the MARS, it's just a Mars4_5.jar file.
+
+00:12:05.967 --> 00:12:11.757
+David Pai: Okay? So you should be able to double-click on it. And it should…
+
+00:12:11.957 --> 00:12:19.397
+David Pai: If you have the JRE installed, it should automatically run, like this. If you don't, it should say, I need JRE
+
+00:12:19.707 --> 00:12:23.246
+David Pai: And it should have a link that you can click on to…
+
+00:12:23.707 --> 00:12:25.897
+David Pai: grab the JRE and install it.
+
+00:12:28.336 --> 00:12:34.586
+David Pai: Which is the Java runtime environment. You don't need the full Java code, you just need the runtime environment.
+
+00:12:41.267 --> 00:12:52.547
+David Pai: Okay? And the same with… when you open up this file, Logisim, it's a .exe, but it's a Java… it's a Java program.
+
+00:12:52.687 --> 00:12:58.177
+David Pai: It also needs a Java runtime environment. When you open it, it'll look something like this.
+
+00:13:05.747 --> 00:13:11.417
+David Pai: Okay, so… Let me know if it works or not for you.
+
+00:13:11.697 --> 00:13:18.047
+Student: Yeah, yeah, I got them both up, sorry. Yeah, I… I was able to get them extracted, and both are running for me.
+
+00:13:18.047 --> 00:13:18.927
+Student: That's funny.
+
+00:13:18.927 --> 00:13:19.547
+David Pai: Okay.
+
+00:13:24.907 --> 00:13:26.597
+David Pai: [student], you okay, or not?
+
+00:13:27.387 --> 00:13:30.936
+Student: No, sorry, I just logged into the Saylor, I got into the, course.
+
+00:13:31.077 --> 00:13:31.877
+Student: It's a file.
+
+00:13:31.877 --> 00:13:32.537
+David Pai: Okay.
+
+00:13:33.177 --> 00:13:41.077
+Student: 40-something hours, I think it said, or… And it's about 1 to 9 units, so… It's gonna be pretty hefty.
+
+00:13:41.427 --> 00:13:42.017
+Student: Huh.
+
+00:13:42.017 --> 00:13:43.557
+David Pai: Oh, the, Saylor?
+
+00:13:44.057 --> 00:13:44.997
+Student: Yeah, I'm seeing this.
+
+00:13:44.997 --> 00:13:45.377
+David Pai: Yeah.
+
+00:13:45.377 --> 00:13:48.407
+Student: Whenever you log in, they say the units.
+
+00:13:48.407 --> 00:13:55.226
+David Pai: Yeah, but I don't… like, I'm not gonna sign… I'm not gonna tell you to read every single section of that thing.
+
+00:13:55.687 --> 00:13:59.136
+David Pai: Because everything's not exactly pertinent to what we're doing.
+
+00:13:59.327 --> 00:14:00.007
+Student: Alright.
+
+00:14:00.827 --> 00:14:01.667
+David Pai: So…
+
+00:14:03.337 --> 00:14:04.226
+Student: Something we do.
+
+00:14:05.927 --> 00:14:08.637
+David Pai: Obviously, you can read it all if you want.
+
+00:14:08.877 --> 00:14:11.957
+Student: No, no, I probably won't. Okay.
+
+00:14:11.957 --> 00:14:23.826
+David Pai: So what… I wanted you to do where we're at. is… This Logisim/MARS software download?
+
+00:14:24.587 --> 00:14:27.447
+David Pai: Which I posted the link in the chat.
+
+00:14:30.617 --> 00:14:41.006
+David Pai: to, like, it starts mendocinocollege-my.sharepoint.com. Right. Slash, slash, personal, slash DPAI underscore.
+
+00:14:41.267 --> 00:14:51.407
+David Pai: And as you know, you're… So what that will do… What that does is it takes you to… This location here.
+
+00:14:51.997 --> 00:14:53.026
+Student: Okay, I see it.
+
+00:14:53.027 --> 00:15:01.067
+David Pai: OneDrive, and you want to download MARS, and Logisim —, if you have Windows.
+
+00:15:01.537 --> 00:15:05.576
+David Pai: The dash win one, if you have Mac, the dash Mac OSX one.
+
+00:15:07.697 --> 00:15:08.477
+David Pai: Okay?
+
+00:15:11.477 --> 00:15:15.417
+Student: And I… I got it. Okay, it's taking a minute to download.
+
+00:15:15.697 --> 00:15:23.396
+David Pai: And you download them, then you have to extract them? If you download them together, it'll create one zip of the two zip files.
+
+00:15:23.627 --> 00:15:26.387
+David Pai: You have to extract it, and then extract them again.
+
+00:15:26.877 --> 00:15:29.477
+Student: Yeah. It gives me OneDrive, one on the.
+
+00:15:29.477 --> 00:15:35.106
+David Pai: Oh yeah, yeah, yeah. OneDrive something, and then you extract it, and then you'll have these two zip files in there.
+
+00:15:35.567 --> 00:15:38.057
+David Pai: And then you need to extract these two zip files.
+
+00:15:43.127 --> 00:15:55.116
+David Pai: Okay, and so you'll end up with something… These two folders. MARS 4.5, and Logisim dash wind-271.
+
+00:15:55.327 --> 00:16:01.666
+David Pai: When you extract those two files individually, you'll create these folders, And then inside them.
+
+00:16:02.587 --> 00:16:06.736
+David Pai: Inside the MARS, there'll be a Mars4_5.jar.
+
+00:16:08.847 --> 00:16:13.957
+David Pai: And inside the logisim-win-2.7.1, there'll be logisim-win-2.7.1.exe.
+
+00:16:16.117 --> 00:16:19.937
+David Pai: And then, I want you to open them, make sure, double-click on them, make sure they run.
+
+00:17:04.937 --> 00:17:07.766
+David Pai: Okay, and if they run, hopefully they run, we're gonna start on MARS.
+
+00:17:36.377 --> 00:17:40.536
+Student: I'll open, finally. So I have the jars.jar.
+
+00:17:41.067 --> 00:17:53.187
+David Pai: Yeah. Mars4_5.jar. So if you double-click on it, If you have the JRE, it'll open up and it'll look like what I have on my screen.
+
+00:17:54.717 --> 00:17:56.047
+David Pai: Or similar.
+
+00:17:59.367 --> 00:18:04.986
+David Pai: If you don't, it'll say, I need this, and it should have a link, usually, that says, click here to…
+
+00:18:05.807 --> 00:18:07.897
+David Pai: Download and install a JRE.
+
+00:18:26.677 --> 00:18:32.446
+Student: Select an app to open this jar file. I don't know what that means. I…
+
+00:18:32.717 --> 00:18:33.647
+David Pai: What did it say?
+
+00:18:34.397 --> 00:18:39.406
+Student: It says, browse an app. It'll use to open, and it'll select Notepad, or RStudio, or via.
+
+00:18:39.407 --> 00:18:45.486
+David Pai: Oh, no, it should… well, it should be… Oh, because you don't have it installed then.
+
+00:18:46.177 --> 00:18:46.807
+David Pai: Yeah.
+
+00:18:46.807 --> 00:18:47.777
+Student: Clearly.
+
+00:18:47.777 --> 00:18:55.297
+David Pai: Don't have a… So, let's see here…
+
+00:19:09.167 --> 00:19:12.327
+David Pai: Yeah, it should be 8.
+
+00:19:22.357 --> 00:19:24.447
+David Pai: Okay. Do you want to download…
+
+00:19:27.817 --> 00:19:28.527
+Student: Beautiful.
+
+00:19:37.507 --> 00:19:39.226
+David Pai: One of these.
+
+00:19:39.647 --> 00:19:46.557
+Student: Yeah, I see the exact same page that you have. It's, update 503, release 18-2026.
+
+00:19:47.607 --> 00:19:50.237
+Student: Right? Okay, I have.
+
+00:19:50.237 --> 00:19:51.857
+David Pai: Yeah, and you want the…
+
+00:19:55.417 --> 00:20:01.286
+David Pai: You want the… I don't think it matters whether you do online or offline.
+
+00:20:02.537 --> 00:20:12.826
+David Pai: The difference is online means It'll just download a part of it, and then as you do the install, it'll download what it needs, and offline, it'll download everything.
+
+00:20:13.797 --> 00:20:23.196
+David Pai: For you to install, you know what I mean? Everything. Or Windows Offline 64. You probably want 64-bit.
+
+00:20:27.677 --> 00:20:30.897
+David Pai: Right? You do know all 64, right?
+
+00:20:38.917 --> 00:20:40.877
+David Pai: So, just make sure you…
+
+00:20:41.177 --> 00:20:45.977
+Student: But I had to refactor my computer, because I had, like, an issue on it, with the kernel.
+
+00:20:46.287 --> 00:20:54.497
+Student: So I did have it at one point, I had a JRE, but I thought I had another course for Java, and I'll stay in Java.
+
+00:20:54.987 --> 00:21:00.897
+Student: And, yeah, and… And one day, I just… something went wrong, I refactored, and
+
+00:21:01.107 --> 00:21:05.947
+Student: it fixed it. But in that, it was gone, because I refactored, so, you know, it deletes all your…
+
+00:21:06.577 --> 00:21:20.407
+David Pai: Yeah, and you can actually install both the 32 and 64-bit. side-by-side, and if it's a 32-bit browser, it'll… or application, it'll run the 32-bit version. If it's 64, it'll run 64, so…
+
+00:21:20.857 --> 00:21:22.957
+David Pai: You might want to do both, just to be safe.
+
+00:21:27.157 --> 00:21:32.996
+David Pai: Okay, so, it should be straightfor- pretty straightforward if you can get that going.
+
+00:21:35.827 --> 00:21:39.497
+Student: I'm gonna have to probably, close all the browsers, of course, you know.
+
+00:21:39.497 --> 00:21:44.006
+David Pai: Yeah, you might have to… after you've reinstall it, you might have to start over, reboot, even.
+
+00:21:46.017 --> 00:21:48.277
+David Pai: Definitely need to close the browser and reopen it.
+
+00:22:04.707 --> 00:22:10.426
+David Pai: Alright, so I'm gonna… while you're doing that, I'm gonna talk about the interface, and then what we're gonna do today, okay?
+
+00:22:11.757 --> 00:22:16.797
+David Pai: So, when you look at the interface, you have this, this blue area.
+
+00:22:17.647 --> 00:22:26.427
+David Pai: And on the right, you have these registers. So these are all the registers that this, simulation covers. There should be 32 of them, I think.
+
+00:22:27.107 --> 00:22:32.976
+David Pai: And then there's a message box in the bottom. And you can grab and move these.
+
+00:22:34.037 --> 00:22:40.917
+David Pai: Things around, right? To change the size of the different parts. To make them bigger or smaller.
+
+00:22:41.787 --> 00:22:51.556
+David Pai: You're gonna program in the edit field, this blue area. When it's in blue, it just basically says you can't really do anything because you don't have a file open.
+
+00:22:52.507 --> 00:22:59.907
+David Pai: Okay, so to write an assembly program in MARS, you have to start with File New.
+
+00:23:02.217 --> 00:23:06.286
+David Pai: And then… It's a tab there with the file name on top.
+
+00:23:06.587 --> 00:23:09.396
+David Pai: And then it gives you space to write your program.
+
+00:23:11.447 --> 00:23:12.387
+David Pai: Okay?
+
+00:23:15.397 --> 00:23:22.827
+David Pai: And what we're gonna do for our program… Is…
+
+00:23:28.247 --> 00:23:30.117
+David Pai: Go to Lab 1.
+
+00:23:34.527 --> 00:23:37.966
+David Pai: Okay, this talks… and there's some more stuff, you should read this.
+
+00:23:38.377 --> 00:23:45.397
+David Pai: Or we'll go through it a little bit, but… We're gonna… Use Logisim 2.7.1.
+
+00:23:45.637 --> 00:23:53.336
+David Pai: There is a new version of Logisim called Logisim Evolution that I don't personally like, and so that's why we're not using it.
+
+00:23:53.917 --> 00:24:02.606
+David Pai: And I'll explain why I don't like it in a second. But… Logisim creates a .circ file.
+
+00:24:03.837 --> 00:24:10.816
+David Pai: CIRC file for circuit file. Okay, and that's the type of file name that it uses?
+
+00:24:12.587 --> 00:24:17.396
+David Pai: And we're gonna use… we're gonna do something in the Logisim. And then we're gonna do something…
+
+00:24:18.437 --> 00:24:22.297
+David Pai: MARS. And we're gonna do MARS first, and then do Logisim second.
+
+00:24:25.997 --> 00:24:32.247
+David Pai: Okay. Why not Logisim Evolution? And so, the real reason is that
+
+00:24:34.947 --> 00:24:38.016
+David Pai: When you create a circuit in evolution.
+
+00:24:38.017 --> 00:24:38.417
+Student: Absolutely.
+
+00:24:38.417 --> 00:24:46.037
+David Pai: Everything is a rectangle. When you create a circuit in… Classic.
+
+00:24:47.467 --> 00:24:52.877
+David Pai: You can, create it to look however you want it to look.
+
+00:24:53.897 --> 00:25:05.197
+David Pai: And so… When you put all these circuits together. In evolution, they're all rectangles, so you have to label them all, and you have to read them to know what they are.
+
+00:25:05.367 --> 00:25:12.677
+David Pai: And in Classic, they can be different shapes, and so you can just look at the different shapes and know what they are.
+
+00:25:14.047 --> 00:25:23.136
+David Pai: Okay, so it's more of a visual… Understanding of your circuits. And that's why I like Classic over Evolution.
+
+00:25:23.357 --> 00:25:24.957
+Student: Evolution.
+
+00:25:25.037 --> 00:25:32.877
+David Pai: It's a little bit more stable. Okay, there are some issues with Classic, it's not always stable, but… That's the trade-off.
+
+00:25:33.697 --> 00:25:37.556
+David Pai: And so, that's why I like Classic, and that's what I'm asking you to use.
+
+00:25:38.487 --> 00:25:39.347
+David Pai: Okay?
+
+00:25:43.197 --> 00:25:52.477
+David Pai: Alright, so you can install MARS, You can check your Java version, right? So what we're gonna do, this is a program.
+
+00:25:53.027 --> 00:25:57.277
+David Pai: Here's a program, and all this program does is prints the number 66.
+
+00:25:59.017 --> 00:26:05.177
+David Pai: Okay? And so, what I want you to do, we'll cover later what all this stuff means.
+
+00:26:05.517 --> 00:26:10.437
+David Pai: And I'll explain to you if you want. What we're gonna do is we're gonna take this and just copy it.
+
+00:26:11.767 --> 00:26:14.286
+David Pai: So, you know, copy all this stuff.
+
+00:26:16.927 --> 00:26:24.007
+David Pai: Copy… And then we're gonna go into MARS, In this ASM area…
+
+00:26:24.327 --> 00:26:25.986
+David Pai: You have to use the keyboard.
+
+00:26:27.927 --> 00:26:28.976
+David Pai: I'll use Ctrl-V.
+
+00:26:28.977 --> 00:26:29.637
+Student: a girl.
+
+00:26:30.587 --> 00:26:31.436
+David Pai: Paste it in.
+
+00:26:31.437 --> 00:26:32.127
+Student: Tom?
+
+00:26:36.647 --> 00:26:39.617
+David Pai: Let me…
+
+00:26:53.837 --> 00:26:55.616
+David Pai: Okay, maybe that's readable.
+
+00:27:02.197 --> 00:27:11.186
+David Pai: Okay. So, anything with a hashtag, anything online after a hashtag is a comment?
+
+00:27:12.207 --> 00:27:20.816
+David Pai: In assembly here? Okay, typically, we're gonna have at least two sections on every program. We'll have a .txt.
+
+00:27:21.337 --> 00:27:28.087
+David Pai: Section, which will be our program, and a .data section, which is where we can store data.
+
+00:27:30.417 --> 00:27:34.867
+David Pai: Okay, so this is… we created a variable here called MSG for message.
+
+00:27:36.837 --> 00:27:42.787
+David Pai: So type .asciiz, meaning it's characters followed by a null terminator at the end.
+
+00:27:43.977 --> 00:27:50.487
+David Pai: And this is the… string, if you will, that's being stored in this MSG variable.
+
+00:27:54.597 --> 00:27:56.027
+David Pai: This is our program.
+
+00:27:57.817 --> 00:28:00.877
+David Pai: Starts here. main — this is our program.
+
+00:28:02.907 --> 00:28:07.547
+David Pai: Okay? To do input-output, you have to do a syscall.
+
+00:28:11.207 --> 00:28:13.947
+David Pai: Alright, and there is a register V0.
+
+00:28:15.557 --> 00:28:20.976
+David Pai: If you look down the right side, I can't blow them up, but there is a bunch of different names.
+
+00:28:21.947 --> 00:28:29.267
+David Pai: Dollar sign zero, dollar sign AT, dollar sign B0, dollar sign B1, dollar sign A0, dollar sign A1.
+
+00:28:30.147 --> 00:28:43.697
+David Pai: Okay. So, V0… Controls like your input-output. So you load… Numbers. And we get into doing assembly, I have a little sheet that says.
+
+00:28:43.857 --> 00:28:50.357
+David Pai: What number 1 means, what number 2 means, what number 3, 4, 5, 6, to do different things, okay?
+
+00:28:51.837 --> 00:28:59.867
+David Pai: So, if you load 4 into A0, that says, print a string, And…
+
+00:29:00.097 --> 00:29:08.227
+David Pai: You have to put whatever sh… String you're printing into A0. That's the register it has to be in.
+
+00:29:08.857 --> 00:29:16.937
+David Pai: So we're gonna load the address of message into a 0. And then we do a syscall, it'll print the strings MARS is running, your value is.
+
+00:29:20.227 --> 00:29:27.086
+David Pai: Okay. LI means load immediate. So what that means is that whatever…
+
+00:29:27.887 --> 00:29:34.476
+David Pai: follows… so I'm gonna load into this register. Whatever follows is a value, not an address.
+
+00:29:35.647 --> 00:29:42.037
+David Pai: Okay, so I'm gonna load the… Decimal number 66. And into the $t0 register?
+
+00:29:44.247 --> 00:29:53.237
+David Pai: Okay, so 66 is hex 42. Or binary 01000010?
+
+00:29:56.446 --> 00:30:00.117
+David Pai: But when I print an integer, I need to load 1 into V0.
+
+00:30:00.696 --> 00:30:06.297
+David Pai: That's what this does. I need to put the value of T0 into A0.
+
+00:30:06.946 --> 00:30:19.466
+David Pai: Okay, otherwise I'm gonna print the… If I'm printing an integer, I'll print the address of… Whatever A0 was before.
+
+00:30:20.507 --> 00:30:27.856
+David Pai: Which was the location of the message, so I'd print the location of the message if I don't replace it with the 66.
+
+00:30:28.787 --> 00:30:33.757
+David Pai: syscall. to do this… Printing?
+
+00:30:35.757 --> 00:30:41.997
+David Pai: And then, when I load 10 and do a syscall, that's the terminate the program and exit.
+
+00:30:44.997 --> 00:30:49.576
+David Pai: Okay, so… When you have this, what we need to do is we need to save it.
+
+00:30:50.477 --> 00:30:59.707
+David Pai: In the instructions. what I have is, I said, have it… save it as lab01_smoketest.asm.
+
+00:31:03.327 --> 00:31:05.436
+David Pai: Okay, so you want to go File Save As?
+
+00:31:09.647 --> 00:31:15.797
+David Pai: and then find… The folder you want to save it into. I'm gonna save it.
+
+00:31:17.797 --> 00:31:20.187
+David Pai: In my MARS folder, that's fine.
+
+00:31:23.837 --> 00:31:35.876
+David Pai: Okay. lab01_smoke. test.asm. Always need to end with .ASM for assembly. I can save it.
+
+00:31:37.637 --> 00:31:42.776
+David Pai: So, what I need to do is I need to, essentially, I need to assemble it.
+
+00:31:44.207 --> 00:31:55.457
+David Pai: Okay? And that's essentially the same as compiling. But, because we're an assembly, We assemble it, meaning we convert it all to… Binary.
+
+00:31:55.927 --> 00:31:58.047
+David Pai: Okay? And load it into the computer.
+
+00:32:00.557 --> 00:32:09.296
+David Pai: Okay, so to assemble, there's this wrench, And screwdriver tool. And we just click on that to run the assembly process.
+
+00:32:10.907 --> 00:32:18.537
+David Pai: Notice the top change to execute from Edit. The top part here, this is our program in…
+
+00:32:19.227 --> 00:32:28.897
+David Pai: Binary, assembled in binary where it is. Our data segment here in the middle is kind of what we have stored in memory.
+
+00:32:29.567 --> 00:32:40.747
+David Pai: And then on the right, we have our registers. Okay, in the bottom, we have a message that says, assemble, operation completed successfully, meaning we didn't have any errors when we assembled it.
+
+00:32:43.347 --> 00:32:47.467
+David Pai: Okay, and then to run our program, We can click on…
+
+00:32:49.117 --> 00:32:55.997
+David Pai: the green circle with the right triangle thing in it to run. It'll run the whole program.
+
+00:32:57.117 --> 00:33:02.036
+David Pai: Or you can click on the one with the 1 next to it, which will run one line of your program at a time.
+
+00:33:02.647 --> 00:33:05.346
+David Pai: So you can step through the program one line at a time.
+
+00:33:06.567 --> 00:33:09.146
+David Pai: Which is good for debugging sometimes.
+
+00:33:11.137 --> 00:33:18.046
+David Pai: Okay, and then you have this run speed… Thing where you can slow down or speed up how fast it runs.
+
+00:33:20.357 --> 00:33:22.476
+David Pai: I'm just gonna run it, I know it works.
+
+00:33:24.427 --> 00:33:31.837
+David Pai: Okay, and I get output of MARS is… Running, your value is 66.
+
+00:33:35.057 --> 00:33:40.577
+David Pai: And if I go back to look at our program… What we did is we printed this message.
+
+00:33:40.907 --> 00:33:47.957
+David Pai: MARS is running, your value is space. And then we loaded 66 and printed the number 66.
+
+00:33:49.177 --> 00:33:50.057
+David Pai: Here.
+
+00:33:51.867 --> 00:33:55.756
+David Pai: Okay? So I attached it to the end. And then we exited the program.
+
+00:33:57.127 --> 00:33:58.217
+David Pai: That's all we did.
+
+00:34:03.827 --> 00:34:08.236
+David Pai: Alright, and so, so let's assemble, run…
+
+00:34:10.087 --> 00:34:18.676
+David Pai: The register panes, if you look in the register pane. In both, A0 and T0, you should now see 66.
+
+00:34:19.687 --> 00:34:22.116
+David Pai: Okay? If you see something that…
+
+00:34:26.437 --> 00:34:32.457
+David Pai: Doesn't look like numbers over here under value. That's because you probably have hexadecimal values.
+
+00:34:32.837 --> 00:34:40.017
+David Pai: So you might see 0x00000042. In both A0 and T0.
+
+00:34:41.897 --> 00:34:47.456
+David Pai: You can just… un-check. the hexadecimal values, and to show it in decimal.
+
+00:34:48.767 --> 00:34:51.607
+David Pai: Okay, so 66 is in both of those.
+
+00:34:52.437 --> 00:35:05.776
+Student: I don't know if it matters or not, but just as, like, an FYI, like, that hexadecimal addresses and values, it was covered by my bottom box, so I couldn't see it, and I had to, like, scroll it to move it down.
+
+00:35:06.157 --> 00:35:09.986
+David Pai: Yep. It can happen. It depends on how much screen space you have.
+
+00:35:10.677 --> 00:35:13.687
+David Pai: A lot of times. Right?
+
+00:35:16.377 --> 00:35:19.437
+David Pai: And it can get kind of crunched sometimes, like, if I do this.
+
+00:35:19.997 --> 00:35:24.617
+David Pai: Nope, my whole bottom went away, right? Yeah, so…
+
+00:35:31.397 --> 00:35:32.597
+David Pai: It can happen.
+
+00:35:35.387 --> 00:35:41.037
+David Pai: But that's why I'm doing it on full screen. Even though I almost never use it as full screen.
+
+00:35:42.407 --> 00:35:55.907
+David Pai: When I do stuff, There's also, I think in the… Settings, you can also do it in settings, let's see… Oh, yeah.
+
+00:35:56.117 --> 00:36:04.497
+David Pai: So in settings, it's also up here in Settings. Okay? So settings, and I can say values in hexadecimal.
+
+00:36:04.887 --> 00:36:10.356
+David Pai: This is exactly the same checkbox. But you can get to it through settings as well.
+
+00:36:12.757 --> 00:36:13.547
+David Pai: Okay?
+
+00:36:23.037 --> 00:36:24.836
+David Pai: Alright, so,
+
+00:36:29.167 --> 00:36:33.606
+David Pai: Let's, scroll down to the bottom so that… We know what.
+
+00:36:36.977 --> 00:36:39.687
+David Pai: Before we do the other thing, let's scroll down to the bottom.
+
+00:36:48.987 --> 00:36:50.546
+David Pai: Okay, so what to submit?
+
+00:36:52.667 --> 00:37:01.577
+David Pai: For MARS, We want a screenshot. Showing the assembled and run IO pain, showing MARS is running your value at 66.
+
+00:37:02.587 --> 00:37:05.636
+David Pai: Okay, so what we need to do is take a little screenshot.
+
+00:37:06.917 --> 00:37:09.616
+David Pai: basically of this Run I.O. area.
+
+00:37:11.167 --> 00:37:12.536
+David Pai: Down here in the bottom.
+
+00:37:15.047 --> 00:37:16.276
+David Pai: with this message.
+
+00:37:18.467 --> 00:37:23.437
+David Pai: Okay, so what I use, typically, I use Snippets… let's see, I have Snip and Sketch.
+
+00:37:26.357 --> 00:37:31.286
+David Pai: Or the snipping tool? That's what I usually use in Windows. Works pretty good.
+
+00:37:32.367 --> 00:37:38.077
+David Pai: If you don't have it on your toolbar. You know, just… just you search for snipping tool.
+
+00:37:39.877 --> 00:37:47.076
+David Pai: And open it. And then you click plus for a new one, it grades your screen out, you just click and drag.
+
+00:37:47.447 --> 00:37:48.667
+David Pai: Whatever you want.
+
+00:37:51.187 --> 00:37:53.986
+David Pai: And there's your image, and then you can save it.
+
+00:37:56.377 --> 00:38:03.507
+David Pai: to, you know, Wherever you have your program, or wherever you want to save it to.
+
+00:38:10.727 --> 00:38:12.957
+David Pai: So, I will save it to…
+
+00:38:17.417 --> 00:38:21.427
+David Pai: My MARS 4.5, this is my,
+
+00:38:28.817 --> 00:38:32.187
+David Pai: Lab01 underscore MARS. That's my MARS image.
+
+00:38:35.927 --> 00:38:38.296
+David Pai: Okay, and then we're done with MARS for now.
+
+00:38:39.847 --> 00:38:44.836
+David Pai: It's just, you got it, it's… We figured out how to load it.
+
+00:38:45.047 --> 00:38:49.187
+David Pai: And we ran a program. You know, a simple program.
+
+00:38:54.297 --> 00:39:05.817
+David Pai: Okay? So then… The other part is we want to create a… We wanna open up… Logisim, and…
+
+00:39:06.807 --> 00:39:13.727
+David Pai: Build a little… it's not really a circuit. Okay? We want to orient ourselves to how Logisim works.
+
+00:39:14.067 --> 00:39:20.867
+David Pai: how to build stuff in Logisim. And… how to run simulations in Logisim.
+
+00:39:22.037 --> 00:39:28.436
+David Pai: Okay, so we're gonna use the select wire… The Pope, which is a hand.
+
+00:39:28.607 --> 00:39:36.947
+David Pai: Which is how you run simulations, A pen and a probe. Okay? And the probe is really helpful because
+
+00:39:37.087 --> 00:39:42.357
+David Pai: You can connect it to any wire, and you can read whatever's on that wire.
+
+00:39:42.707 --> 00:39:47.917
+David Pai: Okay, so you can… oh, there's supposed to be a 1 on here, but it's not showing a 1, so you can…
+
+00:39:48.487 --> 00:39:52.206
+David Pai: You know, debug it that way. your circuit.
+
+00:39:54.977 --> 00:40:06.816
+David Pai: Okay, typically, when you have a wire, if it's green, that means the value is 0. If it's bright green, it's 1. If it's red, there's an error, meaning it's not connected properly, or maybe…
+
+00:40:07.097 --> 00:40:15.836
+David Pai: you have… An 8-bit wire, when it should only be a 1-bit wire, or something like that, or vice versa.
+
+00:40:16.607 --> 00:40:24.477
+David Pai: If it's blue. Or gray, but I usually don't get gray too often. If it's blue, it's an unknown value, it doesn't understand what's going on.
+
+00:40:25.067 --> 00:40:30.137
+David Pai: And so blue can be okay, because it's just not… Running yet?
+
+00:40:30.837 --> 00:40:40.567
+David Pai: So, a lot of times I'll have blue… in my circuit. But it's partially because I'm not running yet, so it doesn't know if it should have a value or not.
+
+00:40:45.507 --> 00:40:49.527
+David Pai: So we're gonna build a circuit. It's gonna be a really simple circuit.
+
+00:40:51.767 --> 00:40:54.106
+David Pai: Okay, so what we want to do is open up Logisim.
+
+00:41:03.187 --> 00:41:14.267
+David Pai: Okay? And in Logisim, What you have is… Up in the upper left, you have your menu. Again, I can't really expand this, there's no way for me to blow it up.
+
+00:41:15.477 --> 00:41:25.506
+David Pai: Would you have a menu? File, Edit, Project, Simulate, window, help. And then you have some tool… shortcut tools.
+
+00:41:25.717 --> 00:41:33.716
+David Pai: And then you have these… folders… And, and, and you have this… Untitled, I think it's…
+
+00:41:34.087 --> 00:41:39.646
+David Pai: Because we haven't saved this as a new file yet. And they have Maine. Maine is this…
+
+00:41:40.447 --> 00:41:47.967
+David Pai: Area with all the dots on it. Okay, this is where you draw your circuits. This is where you make your circuits.
+
+00:41:48.697 --> 00:41:58.597
+David Pai: And then you have… In wiring, you have some tools. A splitter, a pin, a probe, a tunnel… In gates.
+
+00:41:59.997 --> 00:42:09.166
+David Pai: And we have NOT gates, we have a buffer, AND gate, OR gate, NAND gate, and OR gate. And so, next week, we're gonna use these gates to build some things.
+
+00:42:10.987 --> 00:42:19.267
+David Pai: And that we're gonna use. And then there's more stuff, like there's plexors, Arithmetic, memory.
+
+00:42:19.837 --> 00:42:25.096
+David Pai: And these… we're not gonna use these. Okay? For the most part, we're not gonna use these.
+
+00:42:25.627 --> 00:42:29.137
+David Pai: We're gonna build our own. Okay?
+
+00:42:30.927 --> 00:42:35.376
+David Pai: So we're gonna build our own decoder. We're gonna use a couple decoders in our…
+
+00:42:35.857 --> 00:42:41.636
+David Pai: CPU simulation, we're gonna build our own decoder, we're not gonna use the built… the pre-built one, because…
+
+00:42:41.837 --> 00:42:47.436
+David Pai: I want you to understand how that pre-built one actually got made, and how you can make stuff from
+
+00:42:47.767 --> 00:42:49.736
+David Pai: Just these gates up here.
+
+00:42:51.547 --> 00:42:58.527
+David Pai: Okay? Same with arithmetic. Okay, there's, like, an adder, and there's, you know…
+
+00:42:58.797 --> 00:43:00.417
+David Pai: We're gonna build our own adder.
+
+00:43:02.017 --> 00:43:04.926
+David Pai: We're not gonna use the pre-built one, we're gonna build our own.
+
+00:43:07.297 --> 00:43:10.686
+David Pai: Alright? So we're mostly just gonna use this stuff here.
+
+00:43:12.297 --> 00:43:14.276
+David Pai: To build everything.
+
+00:43:17.117 --> 00:43:24.487
+David Pai: Right? So, so what we want to do… Let's see here…
+
+00:43:26.357 --> 00:43:35.917
+David Pai: We want to create a name for our file, and we're going to call it our last name underscore CSC210.circ.
+
+00:43:36.607 --> 00:43:37.787
+David Pai: C-I-R-C.
+
+00:43:40.037 --> 00:43:42.617
+David Pai: So the first thing we want to do is go up here and go File.
+
+00:43:45.497 --> 00:43:50.626
+David Pai: Save as… And… we're gonna find where we're gonna save it.
+
+00:43:56.897 --> 00:44:03.046
+David Pai: I'm gonna save it in my Logisim directory that I just… Right, downloaded that information.
+
+00:44:16.007 --> 00:44:26.147
+David Pai: So mine will be Pai underscore CSC… T10.circ… I can leave the .CIRC off if I want.
+
+00:44:27.067 --> 00:44:30.347
+David Pai: Because that's the default name anyway. Save it.
+
+00:44:32.127 --> 00:44:36.727
+David Pai: Okay, and so now it's… The name of the file is up here, it's no longer entitled.
+
+00:44:38.117 --> 00:44:45.677
+David Pai: Okay, Maine is our, kind of our working place. We want to create a new circuit called 01-byte Reader.
+
+00:44:48.157 --> 00:45:00.147
+David Pai: So, I'm gonna go up to Project, And go Add Circuit. And give it a name, 01 dash… My reader.
+
+00:45:01.887 --> 00:45:07.927
+David Pai: And say, okay. Alright, so now I have two circuits, main and 01 byte reader.
+
+00:45:08.317 --> 00:45:11.397
+David Pai: The one with the magnifying glass with the one I'm working in.
+
+00:45:12.557 --> 00:45:13.337
+David Pai: Okay?
+
+00:45:15.257 --> 00:45:19.736
+David Pai: Since the circuit is gonna be simple, we're gonna have an input.
+
+00:45:20.487 --> 00:45:28.487
+David Pai: We're gonna take an 8-bit input, and then we're gonna put, some probes on it to see what is stored in that 8-bit input.
+
+00:45:29.517 --> 00:45:34.216
+David Pai: And we're going to display that as binary and decimal and hexadecimal.
+
+00:45:34.807 --> 00:45:39.377
+David Pai: Like, the value that's stored there, and so when we change what that input is, we'll see the…
+
+00:45:39.617 --> 00:45:42.426
+David Pai: Resulting outputs change, if you will.
+
+00:45:45.117 --> 00:45:50.997
+David Pai: So, what we want to do is… We're gonna open up wiring, and we wanna add a pin.
+
+00:45:54.387 --> 00:45:57.187
+David Pai: To add it, you just grab it, and drag it.
+
+00:45:59.837 --> 00:46:01.717
+David Pai: You don't even have to drag it, I don't think.
+
+00:46:08.197 --> 00:46:17.146
+David Pai: Let's see… Click on it. And then click anywhere in your space, and it'll be there.
+
+00:46:18.067 --> 00:46:25.056
+David Pai: Okay, and then anytime you have something that you put on there highlighted, you'll have some properties.
+
+00:46:26.517 --> 00:46:33.437
+David Pai: Okay? So basically, what this is. Is all these things in wiring, these are, like, classes.
+
+00:46:34.617 --> 00:46:42.766
+David Pai: And these are all the attributes, and so every time I put it on there, I create a new instance of that class, and I can change its attributes to be whatever I want it to be.
+
+00:46:44.047 --> 00:46:48.996
+David Pai: Okay, all the way down here at the bottom, you'll see this 100%.
+
+00:46:49.637 --> 00:46:59.337
+David Pai: And then you have these two little up and down arrows. And so what I can do with these, I can click up arrows to expand that, to make it bigger, to blow it up.
+
+00:47:00.277 --> 00:47:05.106
+David Pai: I can blow up this right side. I can drag and move this.
+
+00:47:07.037 --> 00:47:11.057
+David Pai: So what I want is output node, because this is my 8-bit input.
+
+00:47:11.457 --> 00:47:18.517
+David Pai: Number of bits… I'm gonna make it 8 bits. Oops. Now it's off the screen.
+
+00:47:19.367 --> 00:47:20.577
+David Pai: 8-bit…
+
+00:47:24.207 --> 00:47:33.546
+David Pai: Three state? No, it's only going to be zeros or ones. I'm not… I don't want a third state.
+
+00:47:34.177 --> 00:47:38.746
+David Pai: Pull behavior we'll leave unchanged. We'll talk about that some other day.
+
+00:47:39.147 --> 00:47:44.956
+David Pai: Label. You can give it a label. Take any instructions, it says, call it Byte.
+
+00:47:46.647 --> 00:47:49.157
+David Pai: Okay? That's the bite.
+
+00:47:51.027 --> 00:47:58.427
+David Pai: Right? If I want to wire, If you look at his… input There's one little dot.
+
+00:47:58.737 --> 00:48:04.586
+David Pai: And when I'm over it, I'll get a green circle. If I click and drag, it'll create a wire.
+
+00:48:06.737 --> 00:48:10.177
+David Pai: Okay? And that's how I connect things to it.
+
+00:48:12.707 --> 00:48:18.397
+David Pai: Alright? And so, what I want to know is, if this is a wire and it's connected to something else.
+
+00:48:19.227 --> 00:48:25.256
+David Pai: Let's just go out here. It goes to something else, doesn't matter what it goes to. How do I know what's on this wire?
+
+00:48:25.767 --> 00:48:29.266
+David Pai: Okay? And to do that, what I do is I put in a probe.
+
+00:48:32.567 --> 00:48:46.327
+David Pai: The probe also has An input-output. Okay. East… in location west. I'm gonna change its facing from east to west.
+
+00:48:46.547 --> 00:48:53.057
+David Pai: Meaning, that means this dot will be on the left. And I'm gonna make a little L.
+
+00:48:53.897 --> 00:49:02.506
+David Pai: And you notice it shows binary, kind of thing. So the… what I want it to output is in binary.
+
+00:49:07.617 --> 00:49:12.516
+David Pai: And so, this is binary, so I'll just call this BIN for binary.
+
+00:49:13.157 --> 00:49:17.766
+David Pai: I left it as left, I mean, west also, so it's right above it.
+
+00:49:19.027 --> 00:49:23.057
+David Pai: I'm gonna take another probe. And put it in.
+
+00:49:26.127 --> 00:49:34.887
+David Pai: And change that one to west, also. And for this one, I'm going to show hexadecimal.
+
+00:49:36.447 --> 00:49:38.367
+David Pai: Okay, so I'll call this one HEX.
+
+00:49:40.357 --> 00:49:44.177
+David Pai: And then I will attach it to the exact same wire.
+
+00:49:46.167 --> 00:49:54.257
+David Pai: Okay, and so 0 binary is also 0 hex. I'm gonna have a third probe, all measuring the same thing.
+
+00:49:58.187 --> 00:49:59.187
+David Pai: West.
+
+00:50:00.717 --> 00:50:08.787
+David Pai: Unsigned decimal, meaning no negatives. Okay. We'll call this DEC for decimal.
+
+00:50:10.217 --> 00:50:20.426
+David Pai: And I'll connect that as well. Okay? And so then… If I want to play with this simulation, change the byte value.
+
+00:50:20.747 --> 00:50:25.117
+David Pai: What I have to do is I have to change it from… the arrow is edit mode.
+
+00:50:25.827 --> 00:50:34.786
+David Pai: The hand or poke tool is simulation mode. So I click on the hand, and now what I do is I can change bytes.
+
+00:50:35.037 --> 00:50:38.976
+David Pai: like, the values, I click on the value, and it changes between 0 and 1.
+
+00:50:40.387 --> 00:50:50.046
+David Pai: Okay. So, 01000, is… Decimal 64, which is hex 4.0.
+
+00:50:52.637 --> 00:51:05.887
+David Pai: Alright? If I want 66, like our other program. It would be, I need to add 2, so I need to make it… 0100010.
+
+00:51:06.327 --> 00:51:09.536
+David Pai: Or hex 42 for decimal 66.
+
+00:51:11.907 --> 00:51:15.166
+David Pai: Does that make sense, you guys? I mean, that's how it works, okay?
+
+00:51:19.637 --> 00:51:25.607
+David Pai: I have this, I have this byte reader, okay? If I have a new circuit.
+
+00:51:27.167 --> 00:51:32.237
+David Pai: If I want to go to a new circuit. and I want to use a byte reader in that new circuit.
+
+00:51:32.617 --> 00:51:42.986
+David Pai: I can click and add this byte reader to that circuit. Okay? It doesn't look like anything, because it only has an input. It doesn't have any outputs.
+
+00:51:43.147 --> 00:51:52.666
+David Pai: It doesn't really do anything. But in essence, I created a copy of that byte reader circuit, and I put it in a different circuit to use it.
+
+00:51:54.017 --> 00:51:56.956
+David Pai: Okay, and that's what we're gonna do. We're gonna create, like, a…
+
+00:51:57.327 --> 00:52:04.087
+David Pai: When we do memory, we're gonna create a 1-bit memory circuit Okay, then we're gonna…
+
+00:52:05.557 --> 00:52:15.476
+David Pai: Gang 8 of them together to make a one-byte circuit. Okay? And then we're gonna add some things to make a register, because it's just memory. Registers are just memory.
+
+00:52:16.407 --> 00:52:19.756
+David Pai: Okay, we're gonna add a bunch of bytes together to make our RAM.
+
+00:52:20.627 --> 00:52:21.637
+David Pai: That kind of thing.
+
+00:52:26.577 --> 00:52:31.836
+David Pai: Alright? So… We're back to visit our byte reader.
+
+00:52:33.967 --> 00:52:42.697
+David Pai: That's what… So we used it. select for arrow, just click and drag to make a long… I mean… Select.
+
+00:52:43.547 --> 00:52:50.747
+David Pai: Click on an item, But remember, the big thing to remember, because some people always get this
+
+00:52:51.077 --> 00:52:56.806
+David Pai: Messed up, you can't… to simulate Like, I can't change the number…
+
+00:52:57.167 --> 00:53:03.266
+David Pai: When I'm in the arrow mode. I can only change the numbers and simulate when I'm in the finger mode.
+
+00:53:04.347 --> 00:53:13.646
+David Pai: If I want to reset everything back to original. Under Simulate, I go Reset Simulation, everything goes back to zeros.
+
+00:53:14.927 --> 00:53:19.287
+David Pai: Okay, so I can start over. If I want to edit it.
+
+00:53:19.717 --> 00:53:21.217
+David Pai: I need to click on the…
+
+00:53:23.517 --> 00:53:27.067
+David Pai: arrow, so then I can edit, move stuff around. Oh, I need to move this.
+
+00:53:28.847 --> 00:53:29.657
+David Pai: Okay?
+
+00:53:33.877 --> 00:53:35.726
+David Pai: Whatever you kind of want to do.
+
+00:53:48.317 --> 00:53:51.676
+David Pai: Okay, so these probes are nice, because you can stick them anywhere.
+
+00:53:51.947 --> 00:53:55.277
+David Pai: Attach them to anything, and read what's there.
+
+00:53:57.317 --> 00:54:05.567
+David Pai: Okay? If you know what's supposed to be there. And you put this probe on there, and you don't get what's supposed to be there, then obviously you know that's an issue.
+
+00:54:06.067 --> 00:54:13.027
+David Pai: And you can start… Debugging. Your circuit to figure out where you went wrong.
+
+00:54:16.757 --> 00:54:20.996
+David Pai: Okay, so we did pin, poke, the hand tool, wire, and a probe.
+
+00:54:28.887 --> 00:54:35.337
+David Pai: Alright. And that's all the stuff that we did. There's a little simulation here, also, so…
+
+00:54:35.947 --> 00:54:43.706
+David Pai: We want to set to 66. 66 is 64 plus 2, so that's 66.
+
+00:54:44.867 --> 00:54:49.487
+David Pai: So this is binary, what it should look like, this is what our hex should be.
+
+00:54:49.647 --> 00:54:55.536
+David Pai: This is what decimal should be. We're reading ASCII characters, it would be a B.
+
+00:54:57.857 --> 00:55:06.907
+David Pai: The only way we know… we don't really know, just by looking at a string of bits, of whether it's a number or a character.
+
+00:55:07.417 --> 00:55:12.167
+David Pai: Okay? The computer knows, based on the context, That you give it.
+
+00:55:12.587 --> 00:55:19.437
+David Pai: Whether it's a number or a character. Okay, but just a num… just a bunch of bets, we have no idea.
+
+00:55:19.967 --> 00:55:23.997
+David Pai: what it is. Until we understand the context that it's in.
+
+00:55:29.297 --> 00:55:30.997
+David Pai: Okay, so,
+
+00:55:34.757 --> 00:55:38.877
+David Pai: So for the assignment, then, what you need to do is you need to take
+
+00:55:39.227 --> 00:55:49.487
+David Pai: You need to save that file. That we just created. With your byte reader in it, circuit in it, you need to save that.
+
+00:55:49.847 --> 00:55:55.786
+David Pai: You need a screenshot of Logisim's help, showing that you're using version 2.71.
+
+00:55:57.107 --> 00:56:04.317
+David Pai: Right, so you go… Help about. And then you want to take a screenshot of that.
+
+00:56:08.127 --> 00:56:11.176
+David Pai: Right, here, I'm using Logisim 2.7.1.
+
+00:56:28.207 --> 00:56:34.586
+David Pai: And then… You'll need to turn in this file into the…
+
+00:56:38.587 --> 00:56:42.117
+David Pai: This .circ file, so you want to save this.
+
+00:56:43.677 --> 00:56:46.136
+David Pai: To make sure you have it, because you need this fight reader in there.
+
+00:56:50.397 --> 00:57:00.027
+David Pai: Okay? The other way, so we created, sometimes. A lot of times, I don't create the circuit. What I do is… I have Maine.
+
+00:57:00.527 --> 00:57:05.037
+David Pai: and I build my circuit, so, like, if I was doing the same kind of thing, right?
+
+00:57:09.287 --> 00:57:16.417
+David Pai: 8… I have the sink amount. I'm not gonna do everything, but if I put a probe on it.
+
+00:57:22.087 --> 00:57:32.737
+David Pai: Right? This is my circuit. what I would do is I'd build it here, and then I go… Project… Add circuit…
+
+00:57:37.977 --> 00:57:40.137
+David Pai: Hemp. Bite Reader.
+
+00:57:44.927 --> 00:57:50.366
+David Pai: And it's empty, and I'll go back to Maine. Right? And I can do edit.
+
+00:57:51.027 --> 00:58:00.656
+David Pai: Select all, or CTRL-A. Ctrl-X to cut it. Go to… double-click on Temp to be in there, and go Ctrl-V.
+
+00:58:00.997 --> 00:58:03.947
+David Pai: Paste it in, and I can move the whole circuit that way.
+
+00:58:05.247 --> 00:58:07.657
+David Pai: To a different circuit name.
+
+00:58:09.557 --> 00:58:13.147
+David Pai: Okay, so lots of times I'll build it this way. In Maine.
+
+00:58:20.827 --> 00:58:21.527
+David Pai: Right?
+
+00:58:25.637 --> 00:58:32.746
+David Pai: Okay, so you say that, and so you just submit… Those three things, the two screenshots, and the CERC file.
+
+00:58:34.237 --> 00:58:38.477
+David Pai: You always want to keep this CERC file, because you'll use it through the whole semester.
+
+00:58:39.887 --> 00:58:48.787
+David Pai: Okay, we'll add to it, we'll add to it, we'll add to it, and eventually… Let's see…
+
+00:59:03.187 --> 00:59:04.747
+David Pai: Eventually…
+
+00:59:22.327 --> 00:59:25.047
+David Pai: It's something like… I think this is it.
+
+00:59:34.197 --> 00:59:35.377
+David Pai: Shake this down.
+
+00:59:37.277 --> 00:59:42.697
+David Pai: We're gonna create something eventually that'll look like this. Where…
+
+00:59:46.147 --> 00:59:47.856
+David Pai: This is our CPU.
+
+00:59:51.097 --> 00:59:51.877
+David Pai: Oops.
+
+00:59:54.927 --> 01:00:05.197
+David Pai: And so our CPU will have… Control section, ALU, RAM… registers…
+
+01:00:05.917 --> 01:00:11.216
+David Pai: A program counter, an instruction register, a way to load our program.
+
+01:00:11.967 --> 01:00:21.056
+David Pai: Okay, a clock to run it, right here. You know, to cycle through, Okay, our ALU, whoa.
+
+01:00:21.947 --> 01:00:25.776
+David Pai: Have 7 different operations that it does.
+
+01:00:31.087 --> 01:00:40.376
+David Pai: Our control section, it will be ugly. But it has a stepper that steps through, and then we have to figure out what things we're doing.
+
+01:00:40.737 --> 01:00:48.227
+David Pai: Based on the… Instruction register coming in, which is your op code. What operation are we doing?
+
+01:00:48.427 --> 01:00:54.557
+David Pai: Are we adding? Are we shifting? You know, are we ANDing? What are we doing?
+
+01:01:02.607 --> 01:01:12.867
+David Pai: Oops. And then we'll have our RAM. module… Okay, that will be… A bunch of bites.
+
+01:01:17.167 --> 01:01:21.277
+David Pai: And each bite will look like this, with some selectors on it.
+
+01:01:21.387 --> 01:01:33.906
+David Pai: Inputs, outputs… Okay, and a byte is considered consensus of memory, and a… Enable circuit.
+
+01:01:35.057 --> 01:01:42.747
+David Pai: And our memory circuit will be a bunch of… 8 one… 8 one-bit memory circuits.
+
+01:01:43.757 --> 01:01:49.476
+David Pai: Okay, and so we're gonna keep building all these things. We build them, and then we build up. Here's a one-bit memory circuit.
+
+01:01:49.937 --> 01:01:51.537
+David Pai: from NAND gates.
+
+01:01:59.457 --> 01:02:02.506
+David Pai: Okay, so we're gonna build this over the course of the semester.
+
+01:02:02.767 --> 01:02:14.407
+David Pai: So there's a lot of stuff in it. It's difficult to… it's not difficult to do if you continually are working on it across a semester. It's difficult to do if you…
+
+01:02:14.757 --> 01:02:18.696
+David Pai: wait till the last 2 weeks and say, I'm gonna build everything in the last 2 weeks.
+
+01:02:19.807 --> 01:02:26.337
+David Pai: Okay? Because… As you can see, there's a fair number of things to build.
+
+01:02:29.347 --> 01:02:31.627
+David Pai: Okay, but we're gonna build them all in one place.
+
+01:02:33.217 --> 01:02:37.057
+David Pai: So that they're all in this same one… one file.
+
+01:02:42.997 --> 01:02:43.747
+David Pai: Alright?
+
+01:02:50.117 --> 01:02:54.167
+David Pai: And then, obviously, we'll run it. There's a little program, I have a little program that I'll send you.
+
+01:02:54.657 --> 01:02:56.727
+David Pai: That you can load and run.
+
+01:02:59.007 --> 01:02:59.807
+David Pai: Okay?
+
+01:03:06.307 --> 01:03:07.767
+David Pai: Alright, you guys have any questions?
+
+01:03:10.597 --> 01:03:14.877
+Student: No, I'm… I'm good. Seems pretty… straightforward. Thank you.
+
+01:03:14.877 --> 01:03:18.646
+David Pai: Yeah, and so… and every week, what I want to do is we'll do something…
+
+01:03:19.367 --> 01:03:31.186
+David Pai: That pertains to the lecture for that week? Okay? And some of the stuff we'll build towards our final project, and some won't, just because we're gonna focus on
+
+01:03:31.487 --> 01:03:40.867
+David Pai: you know, Well, they all will focus on, or at some point, Elle will help you towards the final project, but…
+
+01:03:41.327 --> 01:03:46.686
+David Pai: Some will actually… you'll actually put in your final project, and some others
+
+01:03:46.827 --> 01:03:51.707
+David Pai: You'll have to adapt to have them in your final project. Hopefully that makes sense.
+
+01:03:54.166 --> 01:03:55.117
+David Pai: Alright?
+
+01:03:57.977 --> 01:04:02.477
+David Pai: Well, thanks, guys. I don't really have anything else. Do you guys have a question?
+
+01:04:02.477 --> 01:04:02.907
+Student: Thank you.
+
+01:04:06.077 --> 01:04:10.207
+David Pai: And like I said, not every week we won't be able to do everything in here, because…
+
+01:04:10.836 --> 01:04:15.796
+David Pai: In theory, it's a 3-hour lab. We're only meeting for an hour and a half.
+
+01:04:15.916 --> 01:04:23.656
+David Pai: But… We'll be able to get along, you know, a fair amount into something, so that then you should be able to finish it on your own.
+
+01:04:26.307 --> 01:04:28.396
+Student: I'll take a push to start, that's fine by me.
+
+01:04:29.626 --> 01:04:30.727
+David Pai: Sounds good.
+
+01:04:32.067 --> 01:04:33.046
+Student: Thank you so much.
+
+01:04:33.487 --> 01:04:34.227
+David Pai: Thank you, guys.
+
+01:04:36.197 --> 01:04:37.147
+Student: Thank you.
+
+01:04:37.147 --> 01:04:38.706
+David Pai: See you next week, yeah?
+`;
+
+    var player, timeUpdater, parsedTranscript = [];
+
+    function timeToSeconds(timeStr) {
+      if (!timeStr) return 0;
+      var parts = timeStr.trim().split(':');
+      if (parts.length === 2) {
+        return (parseInt(parts[0]) || 0) * 60 + (parseFloat(parts[1]) || 0);
+      } else if (parts.length === 3) {
+        return (parseInt(parts[0]) || 0) * 3600 + (parseInt(parts[1]) || 0) * 60 + (parseFloat(parts[2]) || 0);
+      }
+      return 0;
+    }
+
+    function parseVtt(vttText) {
+      var cues = vttText.trim().split(/\n\n+/);
+      var parsedCues = [];
+      cues.forEach(function (cueBlock) {
+        if (cueBlock.indexOf('WEBVTT') === 0 || cueBlock.trim() === '') return;
+        var lines = cueBlock.trim().split('\n');
+        var timeLine = lines.filter(function (l) { return l.indexOf('-->') !== -1; })[0];
+        if (!timeLine) return;
+        var parts = timeLine.split(' --> ');
+        var textLines = lines.slice(lines.indexOf(timeLine) + 1);
+        parsedCues.push({
+          start: timeToSeconds(parts[0]),
+          end: timeToSeconds(parts[1]),
+          text: textLines.join(' ').trim()
+        });
+      });
+      return parsedCues;
+    }
+
+    function seek(seconds) {
+      if (player && player.seekTo) { player.seekTo(seconds, true); player.playVideo(); }
+    }
+
+    function populateTranscript() {
+      var container = document.getElementById('transcript-container');
+      if (!container) return;
+      container.innerHTML = '';
+      parsedTranscript.forEach(function (cue) {
+        var lineEl = document.createElement('div');
+        lineEl.className = 'transcript-line';
+        lineEl.dataset.start = cue.start;
+        lineEl.dataset.end = cue.end;
+        lineEl.textContent = cue.text;
+        lineEl.setAttribute('role', 'button');
+        lineEl.setAttribute('tabindex', '0');
+        lineEl.addEventListener('click', function () { seek(cue.start); });
+        lineEl.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); seek(cue.start); }
+        });
+        container.appendChild(lineEl);
+      });
+    }
+
+    // Chapter buttons seek the video and scroll the transcript panel to match,
+    // so the panel is already in the right place even before playback starts.
+    function wireChapters() {
+      document.querySelectorAll('#video-chapters .chapter-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var t = parseFloat(btn.dataset.t);
+          seek(t);
+          scrollTranscriptTo(t);
+        });
+      });
+    }
+
+    function scrollTranscriptTo(t) {
+      var lines = document.querySelectorAll('#transcript-container .transcript-line');
+      for (var i = 0; i < lines.length; i++) {
+        if (parseFloat(lines[i].dataset.end) >= t) {
+          lines[i].scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
+      }
+    }
+
+    function highlightCurrentLine() {
+      if (!player || !player.getCurrentTime) return;
+      var currentTime = player.getCurrentTime();
+      var lines = document.querySelectorAll('#transcript-container .transcript-line');
+      lines.forEach(function (line) {
+        var start = parseFloat(line.dataset.start);
+        var end = parseFloat(line.dataset.end);
+        if (currentTime >= start && currentTime < end) {
+          if (!line.classList.contains('active-transcript-line')) {
+            var prev = document.querySelector('#transcript-container .active-transcript-line');
+            if (prev) prev.classList.remove('active-transcript-line');
+            line.classList.add('active-transcript-line');
+            line.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else {
+          line.classList.remove('active-transcript-line');
+        }
+      });
+    }
+
+    function syncTranscriptHeight() {
+      var videoContainer = document.getElementById('video-container');
+      var transcriptContainer = document.getElementById('transcript-container');
+      if (!videoContainer || !transcriptContainer) return;
+      // Match the transcript panel's height to the video only when the two
+      // columns are ACTUALLY side by side, detected by comparing their rendered
+      // positions rather than by a viewport-width test — 100vw inside Canvas
+      // measures the iframe, not the browser window.
+      var videoCol = videoContainer.closest('.video-col');
+      var transcriptCol = transcriptContainer.closest('.transcript-col');
+      var sideBySide = !!(videoCol && transcriptCol) && Math.abs(
+        transcriptCol.getBoundingClientRect().top - videoCol.getBoundingClientRect().top) < 2;
+      if (sideBySide) {
+        transcriptContainer.style.height = videoContainer.offsetHeight + 'px';
+        transcriptContainer.style.maxHeight = videoContainer.offsetHeight + 'px';
+      } else {
+        transcriptContainer.style.height = '24rem';
+        transcriptContainer.style.maxHeight = '24rem';
+      }
+    }
+
+    window.onYouTubeIframeAPIReady = function () {
+      if (!VIDEO_ID || !document.getElementById('youtube-player')) return;
+      player = new YT.Player('youtube-player', {
+        videoId: VIDEO_ID,
+        events: {
+          onStateChange: function (event) {
+            clearInterval(timeUpdater);
+            if (event.data === YT.PlayerState.PLAYING) {
+              timeUpdater = setInterval(highlightCurrentLine, 300);
+            }
+          }
+        }
+      });
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      if (!VIDEO_ID || !vttContent.trim()) { syncTranscriptHeight(); return; }
+
+      parsedTranscript = parseVtt(vttContent);
+      populateTranscript();
+      wireChapters();
+      setTimeout(syncTranscriptHeight, 100);
+      if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+        var tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      } else {
+        window.onYouTubeIframeAPIReady();
+      }
+    });
+
+    var resizeTimeout;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(syncTranscriptHeight, 250);
+    });
+  })();
+  </script>
+
+</body>
+</html>
