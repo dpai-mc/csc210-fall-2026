@@ -46,18 +46,6 @@
     }
     .path-step__desc { font-size: var(--fs-sm); margin: 0; }
 
-    /* Placeholder styling for the not-yet-recorded overview video */
-    .video-pending {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      height: 100%;
-      padding: var(--space-xl);
-      background: var(--color-code-bg);
-      color: var(--color-text-muted);
-      font-size: var(--fs-sm);
-    }
   </style>
 </head>
 <body>
@@ -101,24 +89,27 @@
          ============================================================ -->
     <section id="sec-video">
       <h2>Week 2 Overview</h2>
-      <p>Watch this before you start the material below. It walks through the whole week in about ten minutes: what a logic gate is, why the NAND gate matters more than any other, and what you will build in Logisim.</p>
+      <p>Watch this before you start the material below. It walks through the whole week: what a logic gate is, all seven gates and their truth tables, why NAND and NOR are universal, the Boolean algebra laws including De Morgan's, and a screen-share walkthrough of building your first circuit in Logisim. It runs about 28 minutes &mdash; the Logisim demonstration starts around the 14-minute mark, so it is worth having Logisim open when you get there.</p>
 
       <div class="video-breakout">
         <div class="video-transcript-row">
           <div class="video-col">
             <div class="video-frame" id="video-container">
-              <!-- PLACEHOLDER: replace src and VIDEO_ID below once the Fall 2026
-                   recording exists. See docs/CSC210-Week2-VideoBrief.md. -->
-              <div class="video-pending">
-                <p><strong>Video coming soon.</strong><br>
-                The Week 2 overview video is being recorded and will appear here before the module opens.</p>
-              </div>
+              <iframe id="youtube-player"
+                      src="https://www.youtube.com/embed/EfyKllHWdyE?enablejsapi=1&amp;cc_load_policy=1&amp;iv_load_policy=3&amp;modestbranding=1&amp;rel=0"
+                      title="CSC210 Week 2 Overview: Making Decisions from Voltage"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allowfullscreen
+                      loading="lazy">
+              </iframe>
             </div>
             <div class="video-caption">Closed captions available. Use the transcript panel to jump to any point in the video.</div>
           </div>
           <div class="transcript-col">
-            <div class="transcript-panel" id="transcript-container">
-              <p class="transcript-loading">Transcript will appear here once the video is posted.</p>
+            <div class="transcript-panel" id="transcript-container" role="region"
+                 aria-label="Video transcript. Select a line to jump to that point in the video.">
+              <p class="transcript-loading">Loading transcript&hellip;</p>
             </div>
           </div>
         </div>
@@ -317,23 +308,586 @@
   </footer>
 
   <!-- ==================== Video + Transcript Sync (CSC210 Video Embed Standard) ==================== -->
-  <!-- PLACEHOLDER STATE.  To activate once the Fall 2026 recording exists:
-       1. Set VIDEO_ID below to the new YouTube id.
-       2. Paste the cleaned VTT into vttContent.
-       3. Replace the .video-pending div in Section F with the standard iframe:
-          <iframe id="youtube-player"
-                  src="https://www.youtube.com/embed/VIDEO_ID?enablejsapi=1&cc_load_policy=1&iv_load_policy=3&modestbranding=1&rel=0"
-                  title="CSC210 Week 2 Overview"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  referrerpolicy="strict-origin-when-cross-origin"
-                  allowfullscreen loading="lazy"></iframe>
-       The script below already handles all three and no-ops until then. -->
+  <!-- ACTIVE.  Fall 2026 recording: https://youtu.be/EfyKllHWdyE (28:23).
+       Transcript below is the corrected caption track for that recording:
+       auto-transcript with tool names, gate vocabulary and two misspeaks fixed,
+       re-segmented on sentence boundaries. Cue timings match the source. -->
   <script>
   (function () {
     'use strict';
 
-    var VIDEO_ID = '';          // <-- set once recorded
-    var vttContent = ``;        // <-- paste cleaned VTT once available
+    var VIDEO_ID = 'EfyKllHWdyE';
+    var vttContent = `WEBVTT
+Kind: captions
+Language: en-US
+
+00:00:00.000 --> 00:00:11.026
+Aloha and welcome. So this is week two. So in week one, we mostly went over how to convert bases, what is binary, you
+
+00:00:11.026 --> 00:00:21.020
+know, how do we do numbers and that kind of thing. What we're going to do this week is we're moving on to how
+
+00:00:21.020 --> 00:00:29.006
+do I make decisions from voltage. We use voltage to be our ones and zeros.
+
+00:00:29.006 --> 00:00:41.578
+Okay, so we use a five-volt system typically and anything like three volts and up is a one and anything under three volts
+
+00:00:41.578 --> 00:00:52.325
+is a zero. Something basically like that. So this orientation video is going to be posted right here on this page.
+
+00:00:52.325 --> 00:01:06.093
+But a couple of things through this week is how transistors work and different gates, logic gates, AND gates, OR gates, NOT gates,
+
+00:01:06.093 --> 00:01:15.932
+NAND gates, NOR gates, XOR gates — exclusive-OR gates, I call them — and the negations of those.
+
+00:01:15.932 --> 00:01:28.513
+Okay, and so I'll go over the truth tables for them, circuit symbols, what they look like, and we'll look at how to build
+
+00:01:28.513 --> 00:01:34.860
+them, or how do they act and we can use Logisim to show how they act.
+
+00:01:35.820 --> 00:01:43.400
+Okay, we have NAND and NOR. We'll cover that. They're universal gates, meaning every other gate can be built from them.
+
+00:01:43.400 --> 00:01:50.515
+Okay, that's not always true. You can't build a NAND gate from an AND gate with all AND gates kind of a thing, but
+
+00:01:50.515 --> 00:01:55.820
+you can build an AND gate with all NAND gates. All right, then a little bit about Boolean algebra.
+
+00:01:55.900 --> 00:02:08.089
+This is really important because it allows us to take our circuits that we come up with and potentially using algebra rules.
+
+00:02:08.089 --> 00:02:14.865
+Okay, we call it Boolean because it's ones and zeros instead of, you know, tens and hundreds.
+
+00:02:14.865 --> 00:02:24.924
+Okay, but what we can do is we can use the essentially algebra rules and simplify our circuits and the simpler we can make
+
+00:02:24.924 --> 00:02:28.300
+them, so the fewer gates you have, the faster they're going to perform.
+
+00:02:30.380 --> 00:02:34.780
+All right, and then the last is building circuits in Logisim. We'll have an assignment on that.
+
+00:02:35.740 --> 00:02:42.631
+Building circuits. Okay, so first, you're going to have to install Logisim.
+
+00:02:42.631 --> 00:02:52.036
+I'm posting a video from the lab last week where we installed Logisim and MARS, and we tested them to make sure they work
+
+00:02:52.036 --> 00:02:58.047
+so you can see those, and there's some other stuff in there, but you'll be able to see those and understand how they
+
+00:02:58.047 --> 00:03:02.280
+work. And we need Logisim and MARS.
+
+00:03:06.980 --> 00:03:11.580
+So that's kind of what we're going to go over this week.
+
+00:03:16.680 --> 00:03:26.840
+In broad strokes. So the first part is voltage to decisions. And that's transistors to switches.
+
+00:03:27.720 --> 00:03:32.800
+So there is a video here that I want you to watch that I created last semester.
+
+00:03:32.880 --> 00:03:38.020
+I redid it last semester or a year ago. That's what I taught this class about transistors.
+
+00:03:38.280 --> 00:03:43.240
+And I walked through how they're kind of built and, you know, how they work.
+
+00:03:43.540 --> 00:03:48.360
+So you can see what they are. And all it is is a switch.
+
+00:03:51.320 --> 00:03:57.560
+And then here's a simplified version. And once you watch the video, that hopefully these simplified versions will make sense to you.
+
+00:04:00.540 --> 00:04:06.700
+You can see kind of how it really looks, but anyway.
+
+00:04:09.720 --> 00:04:13.740
+So that'll talk about gates and we'll talk about basic gates. So like an AND gate.
+
+00:04:14.580 --> 00:04:17.520
+And what an AND gate does, we have a two-input AND gate.
+
+00:04:17.860 --> 00:04:26.471
+So two inputs and an output. So we have two inputs. And they both could be — A could be zero or one, B could
+
+00:04:26.471 --> 00:04:30.080
+be zero or one. We have four possible combinations of zeros and ones.
+
+00:04:31.720 --> 00:04:36.000
+And the output of an AND gate will be one when they're both one.
+
+00:04:36.240 --> 00:04:43.080
+When all the inputs are one, the output will be one. When any of the inputs are zero, the output is zero.
+
+00:04:43.780 --> 00:04:49.160
+This is why we write it A times B or AB or A and B.
+
+00:04:50.200 --> 00:04:53.720
+Essentially we're multiplying. So if we multiply zero times zero, we get zero.
+
+00:04:53.720 --> 00:04:56.640
+Zero times one, we get zero. One times zero, we get zero.
+
+00:04:56.640 --> 00:04:59.200
+One times one, we get one. So we get our output.
+
+00:05:01.960 --> 00:05:12.438
+OR gate is like addition, sort of. But we write it as addition or OR or A plus B because if it's zero plus
+
+00:05:12.438 --> 00:05:16.760
+zero, it's zero. If it's zero plus one, it's one. If it's one plus zero, it's one.
+
+00:05:16.760 --> 00:05:20.400
+If it's one plus one, anything that's not zero is one.
+
+00:05:23.720 --> 00:05:29.080
+NOT gate switches them. The inverted gates NAND is a NOT AND.
+
+00:05:29.880 --> 00:05:38.200
+NOR is a NOT OR. And XNOR is a NOT XOR. We didn't talk about XORs, but we will in a second.
+
+00:05:40.180 --> 00:05:46.460
+The small circle on the output means it's NOTed or inverted. So this is an AND with a NOT.
+
+00:05:47.680 --> 00:05:51.360
+So A and B, zero times zero is zero. NOTed is one.
+
+00:05:52.480 --> 00:05:55.920
+Zero times one is zero. NOTed. It's one. One times zero is zero.
+
+00:05:55.920 --> 00:06:02.060
+NOTed. It's one. One times one is one. NOTed. It's zero. Same with NOR.
+
+00:06:03.200 --> 00:06:09.100
+You know, it's the OR, but you make them opposite. And then exclusive OR.
+
+00:06:09.500 --> 00:06:19.160
+So an OR typically we write, we show as a curved back, straight sides, and then usually it's a little bit more pointed than
+
+00:06:19.160 --> 00:06:27.029
+this, but it's — I call it an ogive shape, but it comes down as a curved-like triangle and a curved triangle kind of
+
+00:06:27.029 --> 00:06:33.600
+a thing. An exclusive OR, we add a second line behind the OR.
+
+00:06:35.600 --> 00:06:46.600
+An exclusive OR is different in that for two inputs, basically if they're the same, then it's a zero.
+
+00:06:46.600 --> 00:06:52.600
+So one and one is zero, zero and zero is zero. And if they're different, the output is one.
+
+00:06:53.600 --> 00:06:59.600
+And we show it as a plus inside a circle. That's how you do an XOR.
+
+00:06:59.600 --> 00:07:08.600
+Plus inside a circle. And then XNOR is an XOR with the bubble on the output.
+
+00:07:08.600 --> 00:07:15.600
+Meaning if I did A XNOR B, if XOR is zero, XNOR is one.
+
+00:07:17.600 --> 00:07:22.600
+So it'd be one. If XOR is one, XNOR is zero. So one, zero, zero, one.
+
+00:07:24.600 --> 00:07:36.600
+Because it's just an XOR inverted in terms of the output. So we have these seven AND, OR, NOT, NAND, NOR, XOR, and XNOR.
+
+00:07:37.600 --> 00:07:48.600
+Now we can have more than two inputs. And we have some rules here that say what the results are.
+
+00:07:48.600 --> 00:08:02.247
+And they're pretty straightforward, except for the XOR and XNOR. So how you do an XOR is you just add
+
+00:08:02.247 --> 00:08:16.071
+up all the values for the inputs. If they're one plus one plus one, if they're all ones for a three input, that's
+
+00:08:16.071 --> 00:08:21.600
+three. So if it's odd, then the output is one. If it's even, the output is zero.
+
+00:08:21.600 --> 00:08:26.600
+That's what an XOR gives you when you have more than two inputs.
+
+00:08:26.600 --> 00:08:33.600
+It even works for two inputs. You just add them up. If it adds up to an odd number, the output is one.
+
+00:08:33.600 --> 00:08:36.600
+If it adds up to an even number, the output is zero.
+
+00:08:36.600 --> 00:08:44.600
+And we treat zero as even. So it doesn't matter if I have a five input XOR gate.
+
+00:08:44.600 --> 00:08:49.600
+I just add up all the numbers, all the inputs. And if it's an odd number, then the output is one.
+
+00:08:49.600 --> 00:08:53.600
+If it's an even number, the output is zero. And the XNOR is the opposite.
+
+00:08:54.600 --> 00:09:02.600
+So there's a little gate simulator that you can play with to do stuff and some questions and check yourself.
+
+00:09:03.600 --> 00:09:12.659
+So universal gates, this just kind of goes through how to build what they are and how you can build other gates, like a
+
+00:09:12.659 --> 00:09:17.600
+NOT from a NAND and an AND from a NAND. So that's the universal gates.
+
+00:09:18.600 --> 00:09:24.545
+So this is how you can build a NOT from a NAND and an OR from a NAND with
+
+00:09:24.545 --> 00:09:32.840
+only NAND gates. So you can look at these and see how they work.
+
+00:09:32.840 --> 00:09:42.155
+One of the big rules that you need to really kind of know is called De Morgan's Law in Boolean algebra because that's
+
+00:09:42.155 --> 00:09:50.600
+an easy way to do a lot of the simplification, and it's also what proves why the NAND rule works
+
+00:09:50.600 --> 00:10:04.543
+in terms of being a universal gate. Okay, so Boolean algebra there are
+
+00:10:04.543 --> 00:10:17.904
+some basic rules. Okay, this talks about how to read that but here's the identity law: A or 1, A or 0 right A
+
+00:10:17.904 --> 00:10:28.440
+plus 0 equals A, where A is any input — or even any circuit — A times 1 so ANDing A with 1 equals
+
+00:10:28.440 --> 00:10:34.242
+A. Right, if I AND something with all ones it has to be whatever A is.
+
+00:10:34.242 --> 00:10:47.231
+Okay, complement rules distributive rules the null rule, meaning A plus 1 equals 1 because A or 1 — well, as long as one
+
+00:10:47.231 --> 00:10:56.033
+is one it's always one so A or 1 is equal to 1, and A times 0 equals 0 commutative rule double negation rule
+
+00:10:56.033 --> 00:11:08.826
+NOT A, you know, is A. Right, if I invert it twice it's back to what it originally was.
+
+00:11:08.826 --> 00:11:18.050
+Okay, idempotent law A plus A equals A, A times A equals A associative just like algebra.
+
+00:11:18.050 --> 00:11:27.617
+Okay, and the last one is De Morgan's. Okay, and so De Morgan says that the NOT of an AND so A times B
+
+00:11:27.617 --> 00:11:40.235
+— after I AND it — is the same as NOT A or NOT B okay and then A or B, NOT it, is
+
+00:11:40.235 --> 00:11:50.160
+the same as NOT A and NOT B okay so I have them in parentheses and it's an AND and I NOT it and
+
+00:11:50.160 --> 00:11:56.536
+I can NOT each individual one and make it an OR, or vice versa you know if I have this situation I can rewrite
+
+00:11:56.536 --> 00:12:04.377
+it as this and if I have this situation I can rewrite it as this same on the other side.
+
+00:12:04.377 --> 00:12:12.270
+All right, so that's what these says the NOT of an AND is the OR of the NOTs and the NOT of an OR
+
+00:12:12.270 --> 00:12:14.000
+is the AND of the NOTs.
+
+00:12:16.940 --> 00:12:26.480
+Okay so you can use De Morgan's law and you can apply it and so any simplification you can do means your hardware is
+
+00:12:26.480 --> 00:12:35.169
+faster so if I have a function of a circuit if I have a circuit it's A times B or A times NOT B
+
+00:12:35.169 --> 00:12:48.771
+I can distribute that as A times B plus NOT B but we know that by complement A plus NOT A
+
+00:12:48.771 --> 00:13:01.473
+or B plus NOT B that's equal to one so we can say this — distributive makes this — the complement rule says B plus NOT
+
+00:13:01.473 --> 00:13:10.692
+B is equal to 1 so A times 1 equals A by the identity rule or law.
+
+00:13:10.692 --> 00:13:20.900
+Okay, so I simplified it — it's really just A, because I have B or NOT B, which is just one because it's always one
+
+00:13:20.900 --> 00:13:27.689
+right — if B is zero, NOT B is one and if B is one, NOT B is zero — but we're ORing them
+
+00:13:27.689 --> 00:13:33.210
+so one of them is always at least one of them is always one.
+
+00:13:33.210 --> 00:13:43.195
+Okay, so you can do that and there are other examples to try here and you can work on them
+
+00:13:43.195 --> 00:13:56.847
+and if this page isn't enough there's some other like I put up the Boolean GeeksforGeeks as a supplement there's
+
+00:13:56.847 --> 00:14:10.253
+also coverage in our CS301 course on Saylor.org the next is building circuits so part of
+
+00:14:10.253 --> 00:14:22.731
+building circuits you need to watch the first video and then also this video which talks about how to use Logisim to create circuits.
+
+00:14:22.731 --> 00:14:32.540
+Okay, so you've got to watch these videos or if you're in the lab.
+
+00:14:37.620 --> 00:14:50.770
+Okay so it talks about how to open up Logisim, how you create a file, how do you add a circuit — Project, Add
+
+00:14:50.770 --> 00:15:04.596
+Circuit. You can't reorganize your circuits so make sure you name them well, so that you know what they are — order them, get a
+
+00:15:04.596 --> 00:15:12.883
+new circuit copy it to there and then delete the old circuit which means it'll be in a different place because every new circuit
+
+00:15:12.883 --> 00:15:19.658
+goes at the bottom of your list. Okay, so it's chronological not alphabetical.
+
+00:15:19.658 --> 00:15:31.798
+Okay, so like your first circuit build a NOT from a NAND it tells you what to do obviously kind of watch these videos
+
+00:15:31.798 --> 00:15:35.460
+you know where those all are.
+
+00:16:35.320 --> 00:16:41.380
+Okay it's kind of magnifying glass on it that means this area here is test and I need an input pin, okay.
+
+00:16:42.420 --> 00:16:53.243
+I need a NAND gate. Here's my NAND gate. So what I need to do for this NAND gate, I need to make it
+
+00:16:53.243 --> 00:16:59.760
+two-input. So when I click on the circuit, there's all these things, attributes.
+
+00:16:59.760 --> 00:17:06.100
+So essentially when you look at these, these are just classes. If you think of a program, these are classes.
+
+00:17:06.100 --> 00:17:10.420
+Even my circuits I create are a class. I can drag and drop them.
+
+00:17:10.420 --> 00:17:17.340
+And when I do, I have these attributes that I can change for each specific one.
+
+00:17:17.340 --> 00:17:23.960
+So this NAND gate, I want it to be two input. So I'm gonna change it to two, okay.
+
+00:17:26.980 --> 00:17:38.840
+Size, there's three sizes. Wide, medium is the default, and narrow. So later you're gonna use narrow.
+
+00:17:41.280 --> 00:17:45.660
+All right, and so then you can add a label if you want.
+
+00:17:51.400 --> 00:17:58.640
+And added the label. Same thing, your input, you click on input.
+
+00:17:58.640 --> 00:18:05.660
+Is it an output? No. So anything with sharp corners is an input, and rounded corners are gonna be output.
+
+00:18:06.100 --> 00:18:14.120
+Each of these has these little blue dots. These are connections. These are the input one, input two.
+
+00:18:14.120 --> 00:18:19.220
+This is an input. So this is where it goes to.
+
+00:18:23.060 --> 00:18:29.380
+Make sure you look at this thing that says three state when you have an input, and we never want three state.
+
+00:18:29.380 --> 00:18:32.360
+Okay, we always want two state. It's a one or a zero.
+
+00:18:35.420 --> 00:18:45.080
+This is: when I reset, what's the value? Unchanged means it keeps whatever's stored in there.
+
+00:18:45.080 --> 00:18:49.080
+Pull up means it's a one, and pull down means it's a zero.
+
+00:18:51.140 --> 00:18:56.060
+So lots of times, there's a few places where you have to pick what it is.
+
+00:18:56.060 --> 00:19:01.960
+Lots of times, the easiest is select default to pull down, and then change it to pull up if you need it.
+
+00:19:01.960 --> 00:19:04.740
+And then this is your input in this case. We're gonna call it input A.
+
+00:19:05.160 --> 00:19:12.980
+All right, and so then we have outputs. So we're doing a NOT gate.
+
+00:19:16.980 --> 00:19:22.100
+Have our two inputs, our one output. Okay, and then we can do a pin.
+
+00:19:22.100 --> 00:19:29.140
+There's some default. Up here, there's default gates that show up all the time.
+
+00:19:29.140 --> 00:19:34.000
+So there's a pin for input. And there's a pin — the round one — for output.
+
+00:19:34.000 --> 00:19:39.000
+So I can click on it and drag it and attach it.
+
+00:19:40.000 --> 00:19:47.000
+Now, let me attach it over here, and there's a little dot, so I can connect it.
+
+00:19:47.000 --> 00:19:55.000
+All right, so it doesn't really like this input, but we want to simulate.
+
+00:19:55.000 --> 00:20:02.000
+What we can do is we can click on the poke tool, and then we can reset our simulation.
+
+00:20:03.340 --> 00:20:09.340
+So we reset our simulation. And so now we're in a mode where we want to play with it.
+
+00:20:09.340 --> 00:20:14.340
+So I can change my input to one. When it's a one, the output's a zero.
+
+00:20:14.340 --> 00:20:19.340
+When it's a zero, the output's a one, which means it's a NOT gate, right?
+
+00:20:19.340 --> 00:20:24.340
+It's just inverting whatever the input is. The output is the opposite of where the input is.
+
+00:20:24.340 --> 00:20:29.340
+This is an example of creating a NOT gate from a NAND gate.
+
+00:20:30.340 --> 00:20:38.965
+Now, we have NOT gates. And so if I wanted to verify it, what I could do, I could put a NOT gate in
+
+00:20:38.965 --> 00:20:49.340
+here. I could tie it to the same input. So click and drag makes a wire, and then I can have its own output.
+
+00:20:50.340 --> 00:21:00.340
+And then I'll have its own output here. And so this one — we'll label this, this is a NOT gate.
+
+00:21:04.340 --> 00:21:13.007
+And so to verify, if you want to verify that there's a NAND, it's the same as a NOT, I have it such that
+
+00:21:13.007 --> 00:21:18.340
+whenever I hit A, I get output from the NAND and I get output from the NOT.
+
+00:21:18.340 --> 00:21:24.340
+And all I have to do to verify it is I run through all the possible combinations of A.
+
+00:21:24.340 --> 00:21:29.340
+When A's a one, they're both zero. When A's a zero, they're both one.
+
+00:21:29.340 --> 00:21:43.140
+They're identical. So that's how I can compare and validate that my NAND gate, my NAND circuit is the same as a
+
+00:21:43.140 --> 00:21:53.340
+NOT gate. So anyway, that's how you use this. When you save it, you know, or save as, you name your file.
+
+00:21:53.340 --> 00:21:58.340
+I'm not going to save this one, but you name your file, put it somewhere where you can save it until you get it.
+
+00:21:58.340 --> 00:22:09.340
+And then if you need another, a different circuit — Project, Add Circuit, you know, test two.
+
+00:22:10.340 --> 00:22:18.340
+Now test one is empty. Now I have a circuit here and I want to reuse it in some other circuit.
+
+00:22:18.340 --> 00:22:26.340
+I can just like go. One thing I got to make sure I'm on the arrow, not the poke, but the arrow tool.
+
+00:22:26.340 --> 00:22:34.340
+So I'm in the edit mode. I can click and drag. Edit copy.
+
+00:22:34.340 --> 00:22:44.340
+Go to test two, which is empty and go edit paste. And I just copied everything over.
+
+00:22:44.340 --> 00:22:50.340
+Test one still has it. Test two has everything. That was in test one.
+
+00:22:50.340 --> 00:22:55.340
+And then I can add stuff to it or modify it. I don't have to always start over from scratch.
+
+00:22:57.340 --> 00:23:06.340
+That's just some basic stuff. There are some peculiarities on a Mac.
+
+00:23:06.340 --> 00:23:14.340
+I got a Mac. You never want to click the X, if you click the X, then it leaves a Java process
+
+00:23:14.340 --> 00:23:24.840
+running and it gums up everything. And there's information on the website of what you have to do, you know, special things
+
+00:23:24.840 --> 00:23:34.340
+you have to do if you're running on a Mac. If you're on a Mac, you always want to go file, file, exit.
+
+00:23:35.340 --> 00:23:37.340
+To get out.
+
+00:23:45.340 --> 00:23:51.340
+CS301 has some documentation. So you can read about all the circuits and about gates.
+
+00:23:51.340 --> 00:23:57.340
+You should look at those. If you have any questions at all.
+
+00:23:58.340 --> 00:24:03.340
+And then there's a circuit design. It asks you to do these circuits.
+
+00:24:04.340 --> 00:24:14.340
+And build them. So there's Assignment 2: logic gates, and then universality.
+
+00:24:14.340 --> 00:24:27.840
+And that's in this Assignment 2, even though there's no assignment one, there's an Assignment 2, because it's
+
+00:24:27.840 --> 00:24:31.340
+week two. And so you want to use Logisim. And there's some reminders of what they are.
+
+00:24:31.340 --> 00:24:34.340
+And so you want to complete these by hand, these truth tables and stuff, some Boolean algebra stuff.
+
+00:25:24.340 --> 00:25:35.245
+And get your output out of the tool right everything you save we do everything in one file for the whole semester so every
+
+00:25:35.245 --> 00:25:45.361
+time you submit the file you have a homework, you just submit the same file CSC210_YourName.circ and if assignment three has more stuff
+
+00:25:45.361 --> 00:25:58.454
+it's going to say create new circuits in your same file so every time we add to it right so
+
+00:25:58.454 --> 00:26:12.297
+hopefully that makes sense that covers Week 2 the assignment there will be some installation instructions here there'll be a video
+
+00:26:12.297 --> 00:26:24.240
+from the lab class this is where you download the software from you go there and you can download if you have a Mac
+
+00:26:24.240 --> 00:26:35.994
+you download this one MARS 4.5 is for both if you've got Windows, you just do the bottom two.
+
+00:26:35.994 --> 00:26:44.629
+Okay, and in the video it walks through how to actually download them and stuff like that and then the last thing extra steps
+
+00:26:44.629 --> 00:26:56.925
+for Logisim on a Mac there are some weird things about Logisim on a Mac it doesn't like certain things and whatever
+
+00:26:56.925 --> 00:27:06.291
+but anyway there's instructions are here what you have to do in order to get it to work.
+
+00:27:06.291 --> 00:27:14.446
+Okay. Things you got to get around because it's not from the Mac store.
+
+00:27:14.446 --> 00:27:25.029
+Okay. But it all works if you inadvertently close Logisim on a Mac without using file exit you just hit the big X
+
+00:27:25.029 --> 00:27:34.682
+in the corner you'll see this little icon in your toolbar as Java is still running and so what I do is I open
+
+00:27:34.682 --> 00:27:47.820
+a terminal console and run this command to identify the PID for this Java application for Logisim which in this case is 1155 and
+
+00:27:47.820 --> 00:27:49.800
+then I use this command kill -9.
+
+00:27:55.120 --> 00:28:03.330
+This process delete the process from running it'll stop it and wipe it out.
+
+00:28:03.330 --> 00:28:08.960
+Okay, and so then you can open Logisim again.
+
+00:28:14.880 --> 00:28:23.220
+If you have any questions make sure you reach out hope you have a good week thanks.
+`;
 
     var player, timeUpdater, parsedTranscript = [];
 
