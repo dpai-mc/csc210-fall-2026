@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="lab02-video">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210L — Lab 2 Video Tutorial: Gates from NAND</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- Tutorial-page specific ---------- */
+    .circ-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); margin: var(--space-md) 0; }
+    .circ-table th, .circ-table td {
+      text-align: left;
+      padding: var(--space-sm) var(--space-md);
+      border-bottom: 1px solid var(--color-border);
+      vertical-align: top;
+    }
+    .circ-table th {
+      font-size: var(--fs-xs);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--color-text-muted);
+      border-bottom: 2px solid var(--color-border);
+    }
+    .circ-table code { font-weight: 700; white-space: nowrap; }
+    .circ-table tr:last-child td { border-bottom: none; }
+    .tag-guided, .tag-own {
+      display: inline-block;
+      font-size: var(--fs-xs);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      padding: 2px 8px;
+      border-radius: var(--radius);
+      white-space: nowrap;
+    }
+    .tag-guided { background: #eef6fc; color: var(--color-primary); }
+    .tag-own    { background: #fef9f3; color: var(--color-accent-hov); }
+    .table-scroll { overflow-x: auto; }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== Header ==================== -->
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210L — Computer Organization &amp; Architecture Lab</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Lab 2 &rsaquo; <span>Video Tutorial</span>
+    </nav>
+  </header>
+
+  <!-- ==================== Main Content ==================== -->
+  <main class="sp-main sp-main--full">
+
+    <h1>Lab 2 Video Tutorial — Gates from NAND</h1>
+
+    <div class="lab-meta">
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Lab session</span>
+        <span class="lab-meta__value lab-meta__value--due">No meeting Tue, Aug 25</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Video</span>
+        <span class="lab-meta__value">42 minutes</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Your working time</span>
+        <span class="lab-meta__value">~90 minutes</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Completion Check 2</span>
+        <span class="lab-meta__value lab-meta__value--due">Mon, Aug 31 &middot; 11:59 PM</span>
+      </div>
+    </div>
+
+    <div class="callout callout--warn">
+      <div class="callout__title">No lab meeting this week</div>
+      <p>I have been seated on a jury for a trial that runs during our Tuesday lab hour, so there is <strong>no live session on August 25</strong>. The trial is expected to end Wednesday, so this affects this week only &mdash; Lab 3 on September 1 meets normally.</p>
+      <p>This page replaces the session. The video below is the same walkthrough I would have run at the front of the room, recorded start to finish, and the notes underneath cover the things I would normally have said while circulating. <strong>Nothing about the deadline changes:</strong> Completion Check 2 is still due Monday, August 31 at 11:59 PM.</p>
+      <p>Email me if you get stuck. I will be slower than usual to reply while court is in session, but I will get to everything, and a question that arrives Tuesday still leaves you six days.</p>
+    </div>
+
+    <!-- ============================================================
+         Section A — Summary of the video
+         ============================================================ -->
+    <section id="sec-summary">
+      <h2>What the Video Covers</h2>
+
+      <p>The whole lab in one sentence: <strong>you have been told the NAND gate is universal, and this week you make that concrete by building the other gates out of nothing but NAND gates, then prove one of De Morgan's laws with a circuit you can poke.</strong></p>
+
+      <p>In order, the recording walks through:</p>
+
+      <ol>
+        <li><strong>Renaming your semester file</strong> to <code>CSC210_YourName.circ</code>, and a reminder of what is already in it from Lab 1.</li>
+        <li><strong>NOT from NAND</strong> &mdash; built with you, step by step. One NAND gate, with the single input wired to <em>both</em> of its inputs. Verified against the two-row NOT truth table with the poke tool.</li>
+        <li><strong>AND from NAND</strong> &mdash; built with you. Two stages: a NAND to compute <code>(A&middot;B)&prime;</code>, then a second NAND wired as an inverter to undo the bubble. Verified across all four input rows.</li>
+        <li><strong>Subcircuits</strong> &mdash; the technique the rest of the course depends on. Your finished <code>NAND_NOT</code> is dropped into <code>NAND_AND</code> as a component, and you see that the box on screen is a live instance of the circuit, not a copy of it.</li>
+        <li><strong>Edit Circuit Appearance</strong> &mdash; how to redraw a subcircuit so it looks like the gate it implements instead of a plain rectangle. <em>This section is optional polish and is not graded.</em> See the note below before you spend time on it.</li>
+        <li><strong>OR and XOR from NAND</strong> &mdash; deliberately <em>not</em> demonstrated. These are yours to derive.</li>
+        <li><strong>Splitters and tunnels</strong> &mdash; two wire-management tools. A splitter fans one 8-bit wire out into eight 1-bit wires (or gathers eight into one); a tunnel is a named connection with no line drawn, so two tunnels sharing a name behave as though a wire ran between them.</li>
+        <li><strong>De Morgan's second law as a circuit</strong> &mdash; build <code>(A + B)&prime;</code> and <code>A&prime; &middot; B&prime;</code> from the same two inputs, feed both into an XOR, and watch the XOR sit at 0 for every input combination. Then the honest part: a NOT gate gets pulled out on purpose so you can see the detector actually fire.</li>
+      </ol>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Why the XOR trick is worth understanding, not just copying</div>
+        <p>An XOR outputs 0 when its two inputs agree and 1 when they disagree. Point it at the outputs of two circuits that are supposed to be equivalent and it becomes a <strong>disagreement detector</strong>: if it ever reads 1, the two circuits are not the same. Because both sides are driven by the same A and B, you only have to step through four input combinations to check the entire law.</p>
+        <p>This pattern &mdash; build both sides, compare with XOR, poke every row &mdash; is how you will verify your own work for the rest of the semester. It is worth more than the circuit it is checking.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Section B — The video
+         ============================================================ -->
+    <section id="sec-video">
+      <h2>The Walkthrough</h2>
+
+      <p>Work along with it rather than watching it through. Open Logisim beside the video, pause after each step, and build as you go &mdash; that is what the 90 minutes of lab time would have been for. Clicking any line in the chapter list or the transcript jumps the video to that moment.</p>
+
+      <h3>Jump to a Section</h3>
+
+        <div class="video-chapters" id="video-chapters">
+          <div class="video-chapters__group">
+            <div class="video-chapters__group-title">Before you start</div>
+            <ul class="video-chapters__list">
+              <li><button type="button" class="chapter-btn" data-t="0"><span class="chapter-btn__time">0:00</span><span class="chapter-btn__label">Why there is no lab meeting this week</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="13"><span class="chapter-btn__time">0:13</span><span class="chapter-btn__label">What Lab 2 covers</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="56"><span class="chapter-btn__time">0:56</span><span class="chapter-btn__label">What is guided and what you derive yourself</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="86"><span class="chapter-btn__time">1:26</span><span class="chapter-btn__label">How Lab 2 and Assignment 2 overlap</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="129"><span class="chapter-btn__time">2:09</span><span class="chapter-btn__label">What your file must contain when you submit</span></button></li>
+            </ul>
+          </div>
+          <div class="video-chapters__group">
+            <div class="video-chapters__group-title">Part 1 — Your semester file</div>
+            <ul class="video-chapters__list">
+              <li><button type="button" class="chapter-btn" data-t="144"><span class="chapter-btn__time">2:24</span><span class="chapter-btn__label">Rename the file to CSC210_YourName.circ</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="177"><span class="chapter-btn__time">2:57</span><span class="chapter-btn__label">Opening it: main and 01-ByteReader</span></button></li>
+            </ul>
+          </div>
+          <div class="video-chapters__group">
+            <div class="video-chapters__group-title">Part 2 — NOT from NAND (built with you)</div>
+            <ul class="video-chapters__list">
+              <li><button type="button" class="chapter-btn" data-t="269"><span class="chapter-btn__time">4:29</span><span class="chapter-btn__label">Project ▸ Add Circuit → NAND_NOT</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="302"><span class="chapter-btn__time">5:02</span><span class="chapter-btn__label">Place the NAND gate and set it to 2 inputs</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="322"><span class="chapter-btn__time">5:22</span><span class="chapter-btn__label">Pins, labels, and three-state = No</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="395"><span class="chapter-btn__time">6:35</span><span class="chapter-btn__label">Does it actually behave like a NOT gate?</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="475"><span class="chapter-btn__time">7:55</span><span class="chapter-btn__label">The written steps, restated</span></button></li>
+            </ul>
+          </div>
+          <div class="video-chapters__group">
+            <div class="video-chapters__group-title">Part 3 — AND from NAND (built with you)</div>
+            <ul class="video-chapters__list">
+              <li><button type="button" class="chapter-btn" data-t="521"><span class="chapter-btn__time">8:41</span><span class="chapter-btn__label">Create NAND_AND with pins A, B, Y</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="625"><span class="chapter-btn__time">10:25</span><span class="chapter-btn__label">Stage 1 — wire the NAND</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="669"><span class="chapter-btn__time">11:09</span><span class="chapter-btn__label">Stage 2 — invert the result</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="780"><span class="chapter-btn__time">13:00</span><span class="chapter-btn__label">Reuse NAND_NOT as a subcircuit</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="805"><span class="chapter-btn__time">13:25</span><span class="chapter-btn__label">Looking inside the subcircuit box</span></button></li>
+            </ul>
+          </div>
+          <div class="video-chapters__group">
+            <div class="video-chapters__group-title">Optional — Edit Circuit Appearance</div>
+            <ul class="video-chapters__list">
+              <li><button type="button" class="chapter-btn chapter-btn--lab" data-t="924"><span class="chapter-btn__time">15:24</span><span class="chapter-btn__label">Right-click ▸ Edit Circuit Appearance</span><span class="chapter-btn__tag">optional</span></button></li>
+              <li><button type="button" class="chapter-btn chapter-btn--lab" data-t="954"><span class="chapter-btn__time">15:54</span><span class="chapter-btn__label">Redrawing NAND_NOT as a triangle</span><span class="chapter-btn__tag">optional</span></button></li>
+              <li><button type="button" class="chapter-btn chapter-btn--lab" data-t="1082"><span class="chapter-btn__time">18:02</span><span class="chapter-btn__label">The rotation point and pin placement</span><span class="chapter-btn__tag">optional</span></button></li>
+              <li><button type="button" class="chapter-btn chapter-btn--lab" data-t="1170"><span class="chapter-btn__time">19:30</span><span class="chapter-btn__label">Confirming it is still the same circuit</span><span class="chapter-btn__tag">optional</span></button></li>
+              <li><button type="button" class="chapter-btn chapter-btn--lab" data-t="1300"><span class="chapter-btn__time">21:40</span><span class="chapter-btn__label">Redrawing NAND_AND</span><span class="chapter-btn__tag">optional</span></button></li>
+              <li><button type="button" class="chapter-btn chapter-btn--lab" data-t="1571"><span class="chapter-btn__time">26:11</span><span class="chapter-btn__label">Arcs, and drawing by hand with lines</span><span class="chapter-btn__tag">optional</span></button></li>
+              <li><button type="button" class="chapter-btn chapter-btn--lab" data-t="1708"><span class="chapter-btn__time">28:28</span><span class="chapter-btn__label">An appearance change updates every use</span><span class="chapter-btn__tag">optional</span></button></li>
+            </ul>
+          </div>
+          <div class="video-chapters__group">
+            <div class="video-chapters__group-title">Part 4 — OR and XOR from NAND</div>
+            <ul class="video-chapters__list">
+              <li><button type="button" class="chapter-btn" data-t="1728"><span class="chapter-btn__time">28:48</span><span class="chapter-btn__label">Your turn: NAND_OR and 02-XOR-from-NAND</span></button></li>
+            </ul>
+          </div>
+          <div class="video-chapters__group">
+            <div class="video-chapters__group-title">Part 5 — Splitters and tunnels</div>
+            <ul class="video-chapters__list">
+              <li><button type="button" class="chapter-btn" data-t="1753"><span class="chapter-btn__time">29:13</span><span class="chapter-btn__label">Splitters: one 8-bit wire into eight</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="1871"><span class="chapter-btn__time">31:11</span><span class="chapter-btn__label">Tunnels: a named wire with no line drawn</span></button></li>
+            </ul>
+          </div>
+          <div class="video-chapters__group">
+            <div class="video-chapters__group-title">Part 6 — De Morgan's second law</div>
+            <ul class="video-chapters__list">
+              <li><button type="button" class="chapter-btn" data-t="2031"><span class="chapter-btn__time">33:51</span><span class="chapter-btn__label">What the check circuit proves</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="2055"><span class="chapter-btn__time">34:15</span><span class="chapter-btn__label">Build the left side: (A + B)′</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="2216"><span class="chapter-btn__time">36:56</span><span class="chapter-btn__label">Build the right side: A′ · B′</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="2299"><span class="chapter-btn__time">38:19</span><span class="chapter-btn__label">The XOR disagreement detector</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="2354"><span class="chapter-btn__time">39:14</span><span class="chapter-btn__label">Poking all four input rows</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="2400"><span class="chapter-btn__time">40:00</span><span class="chapter-btn__label">Proving it works by deliberately breaking it</span></button></li>
+              <li><button type="button" class="chapter-btn" data-t="2451"><span class="chapter-btn__time">40:51</span><span class="chapter-btn__label">Why one XOR checks the whole law</span></button></li>
+            </ul>
+          </div>
+          <div class="video-chapters__group">
+            <div class="video-chapters__group-title">Finishing up</div>
+            <ul class="video-chapters__list">
+              <li><button type="button" class="chapter-btn" data-t="2481"><span class="chapter-btn__time">41:21</span><span class="chapter-btn__label">What to finish on your own, and what to submit</span></button></li>
+            </ul>
+          </div>
+        </div>
+
+      <div class="video-breakout">
+        <div class="video-transcript-row">
+          <div class="video-col">
+            <div class="video-frame" id="video-container">
+              <iframe id="youtube-player"
+                      src="https://www.youtube.com/embed/5u4rXzEnLpg?enablejsapi=1&amp;cc_load_policy=1&amp;iv_load_policy=3&amp;modestbranding=1&amp;rel=0"
+                      title="CSC210L Lab 2 Tutorial: Gates from NAND"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allowfullscreen
+                      loading="lazy">
+              </iframe>
+            </div>
+            <div class="video-caption">Recorded in one take, so there is some drawing and redrawing on screen. Select any transcript line to jump the video to that point.</div>
+          </div>
+          <div class="transcript-col">
+            <div class="transcript-panel" id="transcript-container" role="region"
+                 aria-label="Video transcript. Select a line to jump to that point in the video.">
+              <p class="transcript-loading">Loading transcript&hellip;</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Section C — What must be in your file
+         ============================================================ -->
+    <section id="sec-deliverables">
+      <h2>What Has to Be in Your File</h2>
+
+      <p>The video names circuits a little loosely as it goes. <strong>These are the names that get graded</strong>, so use them exactly &mdash; the rubric checks tab names, and a tab called <code>DeMorgan2</code> or <code>nand_not</code> costs points for no good reason.</p>
+
+      <div class="table-scroll">
+        <table class="circ-table">
+          <thead>
+            <tr><th>Circuit tab</th><th>What it is</th><th>How you get it</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>NAND_NOT</code></td>
+              <td>NOT built from 1 NAND gate. Input <code>A</code>, output <code>Y</code>.</td>
+              <td><span class="tag-guided">Built in the video</span></td>
+            </tr>
+            <tr>
+              <td><code>NAND_AND</code></td>
+              <td>AND built from 2 NAND gates. Inputs <code>A</code>, <code>B</code>; output <code>Y</code>.</td>
+              <td><span class="tag-guided">Built in the video</span></td>
+            </tr>
+            <tr>
+              <td><code>NAND_OR</code></td>
+              <td>OR built from 3 NAND gates.</td>
+              <td><span class="tag-own">You derive it</span></td>
+            </tr>
+            <tr>
+              <td><code>02-XOR-from-NAND</code></td>
+              <td>XOR built from 4 NAND gates.</td>
+              <td><span class="tag-own">You derive it</span></td>
+            </tr>
+            <tr>
+              <td><code>03-DeMorgan2-Check</code></td>
+              <td>Both sides of <code>(A + B)&prime; = A&prime; &middot; B&prime;</code> driven by shared inputs, compared by an XOR.</td>
+              <td><span class="tag-guided">Built in the video</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>These sit alongside <code>main</code> and <code>01-ByteReader</code> from Lab 1, in the same file. Nothing from Lab 1 gets deleted.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">One file. All semester. This is the rule that costs people points.</div>
+        <p><strong>Every circuit in this course lives in one <code>.circ</code> file.</strong> New work is a new circuit <em>tab</em> in <code>CSC210_YourName.circ</code> &mdash; never a new file, never a link to an external file.</p>
+        <p>Your file gets opened on my machine with none of your other files present. A circuit that references something stored elsewhere arrives broken, and it is graded as incomplete. Check this before you upload, every single time.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Section D — Things the video assumes
+         ============================================================ -->
+    <section id="sec-notes">
+      <h2>Things I Would Have Said While Circulating</h2>
+
+      <p>These are the corrections I normally give one desk at a time. Read them before you start; most of them are the difference between twenty minutes and two.</p>
+
+      <div class="lab-step">
+        <div class="lab-step__num">1</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Set three-state to <em>No</em> on every pin</div>
+          <p>Click a pin, find <strong>Three-state</strong> in the attribute table at the lower left, and set it to <strong>No</strong>. A three-state pin can sit in a floating "neither" state, which shows up as a blue wire and a circuit that refuses to behave. Everything in this course is a clean 1 or 0. The video does this in passing at the 5:22 mark; do it for <em>every</em> pin you place, in every circuit, all semester.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">2</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Label every pin</div>
+          <p>Input pins get <code>A</code> and <code>B</code>; the output pin gets <code>Y</code>. Set the <strong>Label</strong> attribute on the pin itself &mdash; not a floating text box near it. Labels are what make a subcircuit readable when you instance it later, and the rubric asks for them explicitly.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">3</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Two keystrokes worth knowing</div>
+          <p><strong>Ctrl+D</strong> duplicates whatever is selected, which is the fast way to place a second identical pin or gate. The <strong>text tool</strong> (the letter <em>A</em> in the toolbar) edits a label in place. The video uses both without stopping to name them.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">4</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Verify by poking <em>every</em> row, not the one you expect to work</div>
+          <p><code>NAND_NOT</code> has two input combinations. Everything else has four. Step through all of them with the poke tool (the hand) and check each against the truth table before you move on. A circuit that is wrong in one row and right in three looks fine until it is buried three levels deep in your CPU in November.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">5</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Only NAND gates in the four derived circuits</div>
+          <p><code>NAND_NOT</code>, <code>NAND_AND</code>, <code>NAND_OR</code>, and <code>02-XOR-from-NAND</code> must contain <strong>no AND, OR, or NOT gates</strong> &mdash; that is the entire point of the exercise. Instancing your own <code>NAND_NOT</code> subcircuit is fine and encouraged; reaching for Logisim's built-in NOT gate is not.</p>
+          <p>The XOR check circuit is the exception: the comparison XOR in <code>03-DeMorgan2-Check</code> is a measuring instrument, not part of what you are proving, so a built-in XOR is fine there.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">6</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Save often, and keep a spare copy this week</div>
+          <p>Logisim Classic is stable enough but not bulletproof, and there is no autosave. Ctrl+S after each working circuit. Because I am not available to rescue a corrupted file at short notice this week, copy <code>CSC210_YourName.circ</code> somewhere safe once you have <code>NAND_NOT</code> and <code>NAND_AND</code> working.</p>
+        </div>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Circuit Appearance is optional &mdash; do not let it eat your evening</div>
+        <p>Roughly thirteen minutes of the video (15:24 to 28:40) is spent redrawing subcircuit shapes so they look like real gate symbols. It is a genuinely useful technique and it is why this course uses Logisim Classic rather than Evolution &mdash; but <strong>none of it is graded, and none of it is required for Lab 2 or Assignment 2.</strong></p>
+        <p>Watch it if you are curious, or skip from 15:24 to 28:43 and come back to it in a quieter week. The drawing on screen is deliberately rough; the point is the mechanism, not the artwork.</p>
+      </div>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Splitters and tunnels: understand them now, use them later</div>
+        <p>Nothing in Lab 2 or Assignment 2 requires a splitter or a tunnel. They are demonstrated here because Week 3's adders and Week 8's RAM get wide enough that hand-routing every wire becomes unmanageable, and it is easier to meet these tools on a circuit you already understand than on one you are still figuring out.</p>
+        <p>Build the two small demos along with the video anyway. Ten minutes now saves an hour in Week 8.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Section E — Lab / assignment overlap
+         ============================================================ -->
+    <section id="sec-overlap">
+      <h2>Lab 2 and Assignment 2 Overlap &mdash; Do the Work Once</h2>
+
+      <p>The video mentions this and it is worth being precise about, because students routinely build the same circuit twice.</p>
+
+      <p>Four of the five circuits above are <strong>also</strong> deliverables in Assignment 2 for the lecture course. They are the same circuits, in the same file, with the same names. Build each one once, verify it once, and it counts for both.</p>
+
+      <p>What Assignment 2 asks for that this lab does <em>not</em> cover:</p>
+
+      <ul>
+        <li>The written truth tables and Boolean-algebra problems, done by hand.</li>
+        <li>The <strong>De Morgan's <em>first</em> law</strong> check &mdash; <code>(A &middot; B)&prime; = A&prime; + B&prime;</code>. Note the difference: this lab builds the <em>second</em> law, <code>(A + B)&prime; = A&prime; &middot; B&prime;</code>. Same idea, opposite operators. Once you have built one, the other takes about five minutes, which is exactly why the assignment asks for the one the lab does not do.</li>
+        <li>The Boolean-expression circuit from the assignment's own problem set.</li>
+      </ul>
+
+      <div class="callout callout--note">
+        <div class="callout__title">If you are not enrolled in CSC 210L</div>
+        <p>You are welcome to work through this page anyway &mdash; the lab is a recommended companion, not a requirement, and nothing in CSC 210 depends on lab attendance. The circuits here are Assignment 2 deliverables regardless of whether you are in the lab section. The only thing that does not apply to you is Completion Check 2, which is a CSC 210L grade.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Section F — Submitting
+         ============================================================ -->
+    <section id="sec-submit">
+      <h2>Finishing and Submitting</h2>
+
+      <p>Work through the video, then finish <code>NAND_OR</code> and <code>02-XOR-from-NAND</code> on your own. When all five circuits are in the file and verified, upload it.</p>
+
+      <ul class="lab-checklist" id="lab-checklist">
+        <li><input type="checkbox" id="lk1"><label for="lk1">My file is named <code>CSC210_YourName.circ</code>, with my actual name.</label></li>
+        <li><input type="checkbox" id="lk2"><label for="lk2"><code>NAND_NOT</code> works &mdash; both input rows checked with the poke tool.</label></li>
+        <li><input type="checkbox" id="lk3"><label for="lk3"><code>NAND_AND</code> works &mdash; all four rows checked.</label></li>
+        <li><input type="checkbox" id="lk4"><label for="lk4"><code>NAND_OR</code> works &mdash; all four rows checked.</label></li>
+        <li><input type="checkbox" id="lk5"><label for="lk5"><code>02-XOR-from-NAND</code> works &mdash; all four rows checked.</label></li>
+        <li><input type="checkbox" id="lk6"><label for="lk6"><code>03-DeMorgan2-Check</code> reads 0 on the XOR for all four rows.</label></li>
+        <li><input type="checkbox" id="lk7"><label for="lk7">The four derived circuits use NAND gates only &mdash; no AND, OR, or NOT gates snuck in.</label></li>
+        <li><input type="checkbox" id="lk8"><label for="lk8">Every pin in every circuit has a label.</label></li>
+        <li><input type="checkbox" id="lk9"><label for="lk9">Everything is in the one file &mdash; <code>main</code> and <code>01-ByteReader</code> are still there, and there are no external file references.</label></li>
+      </ul>
+
+      <p>Upload <code>CSC210_YourName.circ</code> to the <strong>Lab 2 Completion Check</strong> assignment in Canvas by <strong>Monday, August 31 at 11:59 PM</strong>. It is worth 10 points and assesses CSLO 1. The full rubric is on the Lab 2 instructions page in this module.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Where this goes</div>
+        <p>Next week you chain gates into arithmetic: half adder, full adder, a 4-bit ripple-carry adder, and your first decoder. The subcircuit habit you picked up today is what makes that possible &mdash; a full adder is two half adders and an OR gate, and you will build it by instancing the half adder rather than redrawing it.</p>
+        <p>Lab 3 meets normally on Tuesday, September 1.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== Footer ==================== -->
+  <footer class="sp-footer">
+    CSC210L — Computer Organization &amp; Architecture Lab &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <!-- ==================== Checklist ==================== -->
+  <script>
+  (function () {
+    'use strict';
+    document.querySelectorAll('#lab-checklist input[type="checkbox"]').forEach(function (box) {
+      box.addEventListener('change', function () {
+        box.closest('li').classList.toggle('checked', box.checked);
+      });
+    });
+  })();
+  </script>
+
+  <!-- ==================== Video + Transcript Sync (CSC210 Video Embed Standard) ==================== -->
+  <!-- Source: CSC210L Lab 02 tutorial, published as
+       https://youtu.be/5u4rXzEnLpg (42:00). Transcript below is the Whisper
+       auto-transcript with Logisim/gate vocabulary corrected, hallucinated
+       runs removed, and lines re-segmented on sentence boundaries. Cue timings
+       match the source; chapter data-t values are on the same timeline. -->
+  <script>
+  (function () {
+    'use strict';
+
+    var VIDEO_ID = '5u4rXzEnLpg';
+    var vttContent = `WEBVTT
+Kind: captions
+Language: en-US
+
+00:00:00.000 --> 00:00:06.200
+Aloha, sorry that I can't be there with you guys today, but I got called into jury duty.
+
+00:00:13.760 --> 00:00:19.936
+Anyway, what I want to do is get you started on Lab 2 in this video. Let's get started on
+
+00:00:19.936 --> 00:00:32.950
+Lab 2. Yeah, what we're going to do is build some gates using NAND gates. Okay, just to show that NAND is
+
+00:00:32.950 --> 00:00:43.653
+universal. And then we'll also turn a finished circuit into a subcircuit and put it inside another circuit. We'll look quickly at splitters and
+
+00:00:43.653 --> 00:00:56.760
+tunnels and then lay out De Morgan's second law which would light an LED if it ever failed. I'm not going to do that one
+
+00:00:56.760 --> 00:01:05.970
+For you because you're going to do a bunch of them yourself. Okay, so basically I'm going to do NAND_NOT guided in the lab —
+
+00:01:05.970 --> 00:01:13.753
+we'll go through it step by step and build it and then we'll do NAND_AND. You're going to have to derive the NAND_OR.
+
+00:01:13.753 --> 00:01:26.340
+Notice. These are all part of Assignment 2 so you're actually working on Assignment 2 and Lab 2 overlap a little bit. Okay, so
+
+00:01:26.340 --> 00:01:33.536
+You're gonna have to derive the NAND_OR. Notice XOR from NAND Not in the assignment — practice.
+
+00:01:33.536 --> 00:01:35.000
+That's for you to do.
+
+00:01:37.520 --> 00:01:44.451
+The DeMorgan2 check. These say "not in the assignment," but they should still be in your lab.
+
+00:01:49.060 --> 00:01:59.212
+These two the Boolean expression and the DeMorgan2 check those are part of your Assignment 2 so we're not gonna touch them here.
+
+00:01:59.212 --> 00:02:09.980
+Okay, so this one proves De Morgan's first law this one over here for the lab proves De Morgan's second law so you
+
+00:02:09.980 --> 00:02:18.180
+need your lab should include NAND_NOT, NAND_AND, NAND_OR and XOR from NAND.
+
+00:02:24.580 --> 00:02:36.540
+Okay semester file rename it you can rename it outside Logisim, or open it and rename it, which is what I did I opened it in here and
+
+00:02:36.540 --> 00:02:43.460
+then I renamed it now I'm going to be playing with this one.
+
+00:02:43.460 --> 00:02:57.059
+Okay, so this is you know here's our information you know here's our information you know here's our information up
+
+00:02:57.059 --> 00:03:10.943
+in the corner it's not open yet so let me open the file File, Open Recent you can see I renamed it —
+
+00:03:10.943 --> 00:03:20.221
+there are two of them I think this is the one we did last week.
+
+00:03:20.221 --> 00:03:29.518
+Okay, and you can see inside here I have main and ByteReader and you can open ByteReader and you can see what ByteReader looks
+
+00:03:29.518 --> 00:03:38.840
+like. All right, so now we'll get into the lab so let me blow this up to take the whole screen.
+
+00:03:41.560 --> 00:03:54.139
+And go into the lab. Okay, so I renamed it so we're going to add a circuit. Okay, it's an empty circuit and we're
+
+00:03:54.139 --> 00:04:05.248
+going to name that NAND_NOT okay so it's a NOT gate from a nand gate.
+
+00:04:05.248 --> 00:04:13.560
+All right, that's what we're going to do so let's go in here and.
+
+00:04:16.600 --> 00:04:25.960
+Let's uh wow that's off the screen let's shrink that down I'm sorry it needs to be so that we can see it.
+
+00:04:29.400 --> 00:04:42.931
+Okay so in here we're gonna go Project, Add Circuit my circuit name it's going
+
+00:04:42.931 --> 00:04:54.410
+to be NAND_NOT say. Okay, and then over here we look and you see it's here it has the magnifying glass over it that
+
+00:04:54.410 --> 00:04:58.760
+means that's the one we've selected. All right, so let me get rid of that.
+
+00:05:02.360 --> 00:05:13.662
+Okay so from our gates we'll open up our gates and we're going to grab a nand gate and we're going to put it
+
+00:05:13.662 --> 00:05:27.205
+in and we're going to make it two inputs. All right, so from the input side we'll have
+
+00:05:27.205 --> 00:05:35.602
+two inputs we're making a NOT gate so I'll make this two inputs this.
+
+00:05:35.602 --> 00:05:42.792
+Okay, we're making a NOT gate so it has one input and what we're going to do is we're going to take that input
+
+00:05:42.792 --> 00:05:51.812
+and we're going to split it and put it into both inputs of the NAND all right so here's our input we'll grab one
+
+00:05:51.812 --> 00:06:00.840
+of those and we'll just butt it up against this one you see it's connected they're all dark green let's label this one A.
+
+00:06:03.000 --> 00:06:14.623
+Okay and we have one output make a little wire we'll grab the round one we'll put it on the end it's connected and
+
+00:06:14.623 --> 00:06:25.640
+we'll call it Y and it's going we're going to change three-state from Yes to No.
+
+00:06:25.640 --> 00:06:29.160
+Okay, so here's our nand gate.
+
+00:06:35.480 --> 00:06:41.080
+Okay that operates like a NOT gate and so how do we know that.
+
+00:06:41.080 --> 00:06:54.507
+Okay, so we know we have A and Y and y right so for a NOT
+
+00:06:54.507 --> 00:07:02.440
+gate, when A is zero y is one.
+
+00:07:07.240 --> 00:07:14.440
+I don't know if I did very good there that's not bad.
+
+00:07:18.440 --> 00:07:31.400
+You use Ctrl+D to duplicate. Okay, text tool to edit it and when A is one.
+
+00:07:37.480 --> 00:07:45.705
+Y of zero so that's our kind of our truth table right NOT gate. Okay, so with the poke tool: A is zero, Y
+
+00:07:45.705 --> 00:07:51.860
+is one — that's the first row when A is 1, Y is 0 — that's the second row.
+
+00:07:51.860 --> 00:07:55.280
+So this is our NAND gate, our NOT gate, from a NAND.
+
+00:07:55.280 --> 00:08:09.034
+Okay, that's it right there, that's NOT from NAND. So that's the first one, when you put one output, place the pins
+
+00:08:09.034 --> 00:08:13.340
+— an input pin on the left and output pin on the right.
+
+00:08:13.340 --> 00:08:23.720
+Okay, label A, Y. Okay, all right, place a NAND gate from the gates.
+
+00:08:23.720 --> 00:08:30.920
+Okay, see its number of inputs at 2, wire it A to both NAND inputs.
+
+00:08:30.920 --> 00:08:38.973
+Okay, so check when A is 0, it should be 1. Okay, so that's everything.
+
+00:08:38.973 --> 00:08:43.253
+Now, now we want an AND from NAND. Okay, so that's everything.
+
+00:08:43.253 --> 00:08:43.320
+Now, now we want an AND from NAND. Okay, so now we want an AND from NAND.
+
+00:08:43.940 --> 00:08:57.040
+Not a NOT, we want AND from NAND. All right. So we have 2 inputs, A and B and output Y.
+
+00:08:57.040 --> 00:09:08.120
+Let's create that circuit first. So we're gonna go up here. Project.
+
+00:09:08.120 --> 00:09:21.318
+Add circuit. NAND. And there's our blank one, we have
+
+00:09:21.318 --> 00:09:35.098
+two inputs, A, A, and I can use Ctrl+D to duplicate it,
+
+00:09:35.098 --> 00:09:48.514
+Z this way, and this one is B, and we have one
+
+00:09:48.514 --> 00:10:02.076
+output, output, call it Y, and set three-state to No, and then we have some NAND gates, and we have to put
+
+00:10:02.076 --> 00:10:15.824
+in NAND gates. Okay, so now what we've got to do is figure out how to make
+
+00:10:15.824 --> 00:10:25.700
+this work, so that it works. So let's look at the instructions, okay.
+
+00:10:25.700 --> 00:10:32.600
+Place a NAND gate, wire A to the upper input and B to the lower input.
+
+00:10:32.600 --> 00:10:37.220
+Now it's in. A times B, not, right?
+
+00:10:43.220 --> 00:10:53.370
+Okay, so what I want to do here, and this one down here, we're going to move this one there, this one there, we
+
+00:10:53.370 --> 00:11:04.980
+have A goes in, B goes in, and we have an output, and we have a NAND gate.
+
+00:11:05.980 --> 00:11:09.980
+So this is our Y. So this is a NAND gate. The output is now (A AND B)', right, because that's what NAND is.
+
+00:11:09.980 --> 00:11:23.393
+Invert, we should already know, which means we want to NAND it
+
+00:11:23.393 --> 00:11:33.220
+again, and not it, so that we get A times B — because A times B, NOTed twice.
+
+00:11:33.320 --> 00:11:41.792
+So we have A, NAND gate. Is the same as a times B okay so we know what we have a NOT gate created
+
+00:11:41.792 --> 00:11:51.095
+it from NAND gates already so let's go in here and let me show you we could.
+
+00:11:51.095 --> 00:12:05.054
+Okay, we could put an and gate in here. Okay, make it a two input two input and then connect
+
+00:12:05.054 --> 00:12:18.429
+these two right and then connect this to the output. Okay, so when either is zero or one output
+
+00:12:18.429 --> 00:12:25.694
+is zero for an AND gate and when they're both 1, the output is 1.
+
+00:12:25.694 --> 00:12:34.960
+Okay, so they're both 0, it's 0, when A is 1, it's still 0, when A is 0, 1, it's still 0, when it's
+
+00:12:34.960 --> 00:12:45.120
+1, 1, it's 1. So we have an AND gate. All right, that's how you build an AND gate from NAND gates.
+
+00:12:45.120 --> 00:12:55.020
+Now, what we could have done, and this is elsewhere in the thing,.
+
+00:13:00.540 --> 00:13:05.642
+Is kind of taken the NOT gate from the NANDs and dropped it in.
+
+00:13:05.642 --> 00:13:11.900
+We have an input, there's a NOT gate, we have an output.
+
+00:13:11.900 --> 00:13:17.154
+Okay, and notice when we do this, I'm going to either use my input or I'm going to use my input, and then I'm
+
+00:13:17.154 --> 00:13:17.528
+going to OK, either input, or I'm going to OK, either input, or I'm going to OK, either input, or I'm going to OK,
+
+00:13:17.528 --> 00:13:22.636
+or I'm going to OK, and notice when we do this, is zero the output is still zero when they're both one the output
+
+00:13:22.636 --> 00:13:28.933
+is one. Okay, you want to see what this inside here you can double click on the middle and we can see it's an
+
+00:13:28.933 --> 00:13:42.620
+and gate because that's what we had from before. Okay, so we're reusing this in our hand right so since the NAND_NOT it's just
+
+00:13:42.620 --> 00:13:55.940
+a NAND gate with one input pipe to both of it and one output. Okay, when we put that in this NAND_AND
+
+00:13:55.940 --> 00:14:00.740
+gate this is the same.
+
+00:14:11.300 --> 00:14:24.923
+Okay so this box is this shape with one input split to a NAND gate and
+
+00:14:24.923 --> 00:14:34.760
+one output out to Y right because when I double click when I go to this middle of this.
+
+00:14:41.300 --> 00:14:54.847
+I can't if I can't get the double click again right click and go view right that's all it is that's what that box
+
+00:14:54.847 --> 00:15:03.980
+is has one input and one output, with the input feeding both sides of a NAND gate and the output is the output from NAND right
+
+00:15:03.980 --> 00:15:13.066
+that's how you can drag and drop and use things you've already created in other things.
+
+00:15:13.066 --> 00:15:24.328
+Okay, and then typically what I would have done instead is I would have and this isn't anywhere in this assignment but I would
+
+00:15:24.328 --> 00:15:32.416
+have to see this NAND_NOT I would go open that and I would right click and go Edit Circuit Appearance.
+
+00:15:32.416 --> 00:15:36.960
+Okay, here's my circuit.
+
+00:15:41.300 --> 00:15:54.654
+Okay I have an input and an output on a NOT gate you see a NOT gate use what
+
+00:15:54.654 --> 00:16:04.264
+are not gay looks like I could draw a triangle with a circle on it, with an input and an output. Okay, so so
+
+00:16:04.264 --> 00:16:12.510
+if I go to NAND_NOT and if I want to Edit Circuit Appearance and yep to Edit Circuit Appearance here's what it looks like
+
+00:16:12.510 --> 00:16:18.860
+well what I could do is I could redraw this.
+
+00:16:38.460 --> 00:16:43.460
+Change that.
+
+00:17:29.460 --> 00:17:31.460
+I'm going to draw it like this.
+
+00:17:50.460 --> 00:18:02.793
+So I have a triangle I can make the input I can take this input move it there the output this dot is the
+
+00:18:02.793 --> 00:18:11.460
+rotation point let me put it up on top so it rotates around that point and get rid of all those don't need it
+
+00:18:13.460 --> 00:18:22.460
+I have input output oh wait let me move this output over one move it over here and then let me draw a circle.
+
+00:18:34.460 --> 00:18:40.460
+Right there so now I have a circle with the output and an input.
+
+00:18:44.460 --> 00:18:57.127
+Now what's going to happen is when I look at NAND_AND see this it changes the shape of it let me move it over
+
+00:18:57.127 --> 00:19:00.460
+here let me delete all that.
+
+00:19:16.940 --> 00:19:30.473
+Input, output, Y, reset
+
+00:19:30.473 --> 00:19:43.850
+my simulation. Poke tool, okay, now this one, I redrew it
+
+00:19:43.850 --> 00:19:57.480
+to look like this one, but it's actually this one here. And you know it because, right here, over
+
+00:19:57.480 --> 00:20:06.600
+here, you know it because if I click on this and I go.
+
+00:20:06.600 --> 00:20:14.800
+So it's not. It's the NAND_NOT circuit, and I can view it, and that's what you get.
+
+00:20:14.800 --> 00:20:24.160
+Okay so I like to redraw my circuits when I create them so that when I look at them and I use them in
+
+00:20:24.160 --> 00:20:37.880
+other circuits they look proper. Okay anyway, that's a lot of stuff to just do this simple, create this, okay, and then here's a
+
+00:20:37.880 --> 00:20:51.880
+little thing. You can check all these things here, all right,
+
+00:20:51.880 --> 00:21:05.687
+so, so Logisim Classic, I just did all this, but
+
+00:21:05.687 --> 00:21:16.780
+not in this exact example. And you can do this example, but it's exactly the same if you wanted to look at this one
+
+00:21:16.780 --> 00:21:24.713
+and you wanted to use it, so if I'm in main, let's get rid of this one, and I wanted to use this one
+
+00:21:24.713 --> 00:21:29.380
+in a circuit, I could drop it in, now it automatically looks like a box.
+
+00:21:30.380 --> 00:21:35.380
+I have A and B, you can see when I roll over them they say A and B.
+
+00:21:36.380 --> 00:21:39.380
+You know that one doesn't say Y. So, A, B, and Y.
+
+00:21:39.380 --> 00:21:41.380
+Well, I don't like this shape. I don't like it at all.
+
+00:21:41.380 --> 00:21:42.380
+So I can go into NAND and, and I can edit the Circuit Appearance.
+
+00:21:43.380 --> 00:21:54.713
+So here I got, this is the rotation point, here's my output, okay, now when I click on these, the little circuit appears in
+
+00:21:54.713 --> 00:22:00.380
+the middle, okay, and I can see that I'm in the middle of the circuit.
+
+00:22:05.380 --> 00:22:07.780
+Yeah. So, as you can see, the little circuit appears in the lower right hand corner.
+
+00:22:07.780 --> 00:22:20.698
+Let me see if I can, so it's up, so, when I click on one of these, down in the right hand corner, you
+
+00:22:20.698 --> 00:22:26.100
+can see it's blown up and that shows it's B. The bottom one, okay.
+
+00:22:26.100 --> 00:22:31.380
+That's how you'd know which of these which are A, which are B, okay.
+
+00:22:34.380 --> 00:22:43.140
+We draw that, so I don't like this drawing, I want it to look like an actual NAND gate.
+
+00:22:43.140 --> 00:22:56.712
+Okay, so a NAND gate, let's see, look
+
+00:22:56.712 --> 00:23:10.284
+like this one, not really, that doesn't look
+
+00:23:10.284 --> 00:23:22.460
+like. Let's see, what we
+
+00:23:22.460 --> 00:23:36.440
+want is, we want something stylized.
+
+00:23:43.140 --> 00:23:56.032
+This, okay, and then this one we want, uh, to do,
+
+00:23:56.032 --> 00:24:09.140
+to do, to do, no, we want more than fill.
+
+00:24:13.140 --> 00:24:22.020
+That's what it works. Right, this is my NAND gate with a circle on the end.
+
+00:24:31.480 --> 00:24:37.920
+And then I have an output pin, and I have my two input pins.
+
+00:24:43.140 --> 00:24:53.240
+I don't want to get rid of that green one, dot, green one is my rotation, I'm going to put it right there, I
+
+00:24:53.240 --> 00:25:03.148
+don't need this, and then if I want text, I can go, I need one for A, for my A input, I need one
+
+00:25:03.148 --> 00:25:11.860
+for B, for my B input, I need one for Y, for my Y output, okay, and then I can say.
+
+00:25:13.140 --> 00:25:27.074
+So I wrote those, you can only write single line, but let's put A right here, and B, you can put them on the
+
+00:25:27.074 --> 00:25:31.480
+inside, you don't have to, but I like putting them on the inside.
+
+00:25:31.480 --> 00:25:40.000
+This is a NAND gate, and this is Y. Okay, so that's just how it looks.
+
+00:25:40.000 --> 00:25:41.080
+Now if I go back to main, where I had input, I'm going to go back to main.
+
+00:25:43.080 --> 00:25:50.460
+Now I have inputted one, right, it changed what it looked like to what I just did.
+
+00:25:50.460 --> 00:26:04.120
+Not a great diagram, it doesn't really look like this. Okay, but I'm just building it.
+
+00:26:04.120 --> 00:26:11.080
+There's the Circuit Appearance, right, you have these shapes. So I could have done.
+
+00:26:11.080 --> 00:26:24.323
+Oh, I could have done that. Have built an arc. What I normally do
+
+00:26:24.323 --> 00:26:34.160
+is with a built an arc, like.
+
+00:26:43.080 --> 00:26:56.507
+This, put that on a rectangle, so maybe that's a little bit
+
+00:26:56.507 --> 00:27:08.620
+better. Or what you could do is once you do this, the other way you can do it is you get rid of the
+
+00:27:08.620 --> 00:27:17.620
+arc and you can do it by hand with straight lines. There's a line.
+
+00:27:17.620 --> 00:27:31.300
+There's a line. There's a line. Right? Do something
+
+00:27:31.300 --> 00:27:43.040
+like that to get that shape. It looks closer. It's not good, but it's closer.
+
+00:27:43.040 --> 00:27:55.663
+All right, and then you can put your
+
+00:27:55.663 --> 00:28:08.286
+A, your B, rotation, my circle, my output,
+
+00:28:08.286 --> 00:28:19.674
+my Y, and my NAND. My A input and my B input.
+
+00:28:19.674 --> 00:28:33.350
+And delete that stuff. So now when I go here, so anywhere I've used that circuit, it redrew it.
+
+00:28:33.350 --> 00:28:42.940
+Okay? To be just like whatever I drew it. All right, so that's how you use Circuit Appearance.
+
+00:28:43.040 --> 00:28:51.019
+Now you build circuits, and then how you reuse them in other places.
+
+00:28:51.019 --> 00:28:56.259
+Okay, OR from NAND, that's up to you to figure out how to do.
+
+00:28:56.259 --> 00:29:02.306
+XOR from NAND, that's up to you to figure out how to do.
+
+00:29:02.306 --> 00:29:13.715
+Splitters and tunnels. Okay, so a splitter, let's go back to our thing here.
+
+00:29:13.715 --> 00:29:27.480
+So let's go to our reader. Okay? So a splitter, what a splitter does, and it's in wiring, you can take a
+
+00:29:27.480 --> 00:29:33.400
+splitter and it can work either way. Okay? So here's a splitter.
+
+00:29:33.400 --> 00:29:39.982
+It's an 8-bit splitter. You can see it's a left-handed. The Fan Out is 8.
+
+00:29:39.982 --> 00:29:46.012
+Input width. So here's the output fan. So this wire here is an 8-bit wire.
+
+00:29:46.012 --> 00:29:55.508
+Okay? So I can make it, tie it to this. Now every bit here is now one of these bits.
+
+00:29:55.508 --> 00:30:06.791
+Okay? So bit zero is the rightmost. Let me enable my simulation.
+
+00:30:06.791 --> 00:30:19.560
+Let's reset it. Okay? So 0 is the rightmost. So when I tie it, you can see the green color changed up here.
+
+00:30:19.560 --> 00:30:27.633
+It's now 1. Okay? 0, 1, 0, 1. Same with bit 7 is the leftmost.
+
+00:30:27.633 --> 00:30:36.051
+See on here, 7 is now light green, dark green, light green when it's 1, dark green when it's 0.
+
+00:30:36.051 --> 00:30:38.680
+Okay? So I can take 8-bit and split it into 8 bits.
+
+00:30:40.680 --> 00:30:41.480
+Okay, Okay.
+
+00:30:41.480 --> 00:30:44.618
+Okay, When I enable the simulation here, I can split this into 8 1-bits, so this is 1 8-bit, I can split
+
+00:30:44.618 --> 00:30:54.291
+it into 8 1-bit elements. Or I can have it work the other direction and taking eight individual bits and put them in and
+
+00:30:54.291 --> 00:31:01.619
+send them to an 8-bit something. So wires can be however many bits they need to be.
+
+00:31:01.619 --> 00:31:10.120
+It doesn't matter 1-bit, 8-bit, 4-bit, 3-bit, whatever. And you can use the splitter, okay?
+
+00:31:11.680 --> 00:31:25.592
+To split them apart or put them together now there is something called a tunnel. Okay, so we're gonna create
+
+00:31:25.592 --> 00:31:38.230
+a tunnel. Okay, label it DC okay another tunnel
+
+00:31:38.230 --> 00:31:51.940
+set the other direction we're gonna also label it the
+
+00:31:51.940 --> 00:31:55.720
+same label DC okay.
+
+00:32:28.300 --> 00:32:35.200
+Sorry — it says one bit; give it 8 bits.
+
+00:32:40.580 --> 00:32:50.965
+Hook the other one to this and you notice it works. Okay, so what the tunnel is doing as long as in the same
+
+00:32:50.965 --> 00:32:56.567
+name it's like there's a wire between them. Okay, so I can use a tunnel anywhere. Okay, so I can use a tunnel anywhere
+
+00:32:56.567 --> 00:33:05.160
+I can use a我也 Anywhere I need to. Okay, so as long as the names are the same it works the names are different.
+
+00:33:11.120 --> 00:33:21.586
+It doesn't work, because it doesn't know what to tie together okay, so it's just like I just it is a wireless connection instead
+
+00:33:21.586 --> 00:33:24.660
+of a wired connection between the two tunnels.
+
+00:33:27.680 --> 00:33:37.050
+All right, so you can use this to simplify some things I Use them in a couple places just to make it easier to
+
+00:33:37.050 --> 00:33:40.960
+visualize your circuits. I Don't use it everywhere because.
+
+00:33:46.920 --> 00:33:56.740
+Those are tunnels and splitters which are also in the lab for you to look at the last one is De Morgan's law.
+
+00:34:00.880 --> 00:34:11.880
+So De Morgan's law says (A OR B)' equals NOT A AND NOT B So what we want to do is.
+
+00:34:15.300 --> 00:34:25.220
+See if this works, okay, so How we do that is we build the left side, A OR B, and NOT it. We build
+
+00:34:25.220 --> 00:34:36.040
+the right side NOT A AND NOT B And compare the two to each other. So if I'm in here, I'm going to build
+
+00:34:36.040 --> 00:34:44.515
+I'm going to add a new circuit to my project. I don't know what it asks you to call it, but I'm
+
+00:34:44.515 --> 00:34:51.360
+gonna call it DeMorgan2. Okay, so I have two inputs A and B.
+
+00:34:59.240 --> 00:35:06.410
+And I have two inputs B and B so it's going to be. This is going to be. Okay, so let me give you
+
+00:35:06.410 --> 00:35:09.660
+an example it's a.
+
+00:35:12.560 --> 00:35:19.030
+Now I'm going to enter it here. And I'm going to have a common A and B So I'm going to put this down
+
+00:35:19.030 --> 00:35:24.992
+here. So I have two inputs. And this is going to be finally What I want to be I'm not going to get to
+
+00:35:24.992 --> 00:35:36.743
+the rest of this. Okay, so I have a, A or B or gate okay I get output.
+
+00:35:36.743 --> 00:35:50.338
+Okay, this is one side of the equation oh
+
+00:35:50.338 --> 00:36:03.886
+and I got A, NOT it sorry not it after I poured it
+
+00:36:03.886 --> 00:36:16.200
+I need to not it but it NOT gate in this is (A OR B)'.
+
+00:36:26.380 --> 00:36:40.299
+A OR B okay that's what that output represents the other output is
+
+00:36:40.299 --> 00:36:53.583
+what I want the other one I want is the output I need is
+
+00:36:53.583 --> 00:37:06.696
+NOT A and right so what I need to do for this
+
+00:37:06.696 --> 00:37:18.840
+one I need an AND gate and two things AND gate.
+
+00:37:23.880 --> 00:37:36.118
+I need NOT A AND NOT B what is
+
+00:37:36.118 --> 00:37:49.752
+here A, NOT it there's a not
+
+00:37:49.752 --> 00:37:58.260
+be the same thing for B NOT B.
+
+00:38:07.940 --> 00:38:19.110
+This output is NOT A AND NOT B all right and so now what I want to do is compare them. All right, so
+
+00:38:19.110 --> 00:38:32.889
+what I can do is I can use an two-input XOR gate because when XOR gate when they're the same
+
+00:38:32.889 --> 00:38:46.758
+zero when they're different it's one. Okay, so I can wire these into it and I get
+
+00:38:46.758 --> 00:38:48.400
+an output.
+
+00:38:51.260 --> 00:39:04.009
+Here. Okay, so when they're the same zero when they're different when these two results are different it's one so if this ever turns
+
+00:39:04.009 --> 00:39:16.872
+one then these two circuits are not identical. Okay, so now, the poke tool I run through zero zero
+
+00:39:16.872 --> 00:39:30.732
+one zero notice the output is always zero, which means this input which is
+
+00:39:30.732 --> 00:39:43.151
+(A + B)' and this input a not NOT B are always the same — so you get zero, and you would get one if they differed.
+
+00:39:43.151 --> 00:39:53.660
+Okay, and you can turn that into an LED light so that it lights up when they're different but since they're not different it
+
+00:39:53.660 --> 00:40:06.872
+never lights up now if we wanted to make them different let me edit these, just to show.
+
+00:40:12.220 --> 00:40:25.860
+Let's take that NOT gate out now let's run it — notice at 0, 0 they now differ, because the output is one zero one they're different it's one
+
+00:40:25.860 --> 00:40:38.425
+one zero they're the same so it's zero. Okay, so that shows you how using an XOR to compare two single bits you can
+
+00:40:38.425 --> 00:40:46.620
+do that to compare them if you want them to be the same it should always be zero under all conditions.
+
+00:40:51.260 --> 00:41:04.439
+Okay so this is actually the Morgan second law check. Okay, so I have
+
+00:41:04.439 --> 00:41:13.172
+two circuits driven by the exactly the same two inputs so I only have to cycle these into inputs and I get and I
+
+00:41:13.172 --> 00:41:18.539
+checked both circuits against each other. All right, so that's De Morgan's second law and you have to do De Morgan's first law so
+
+00:41:18.539 --> 00:41:22.470
+you have to do De Morgan's second law and you have to do De Morgan's first law all right.
+
+00:41:22.470 --> 00:41:35.190
+All right, that sets you up. That actually does most of Lab 2 for you need to work through the rest of them
+
+00:41:35.190 --> 00:41:40.223
+and make sure those circuits get in your file and submit the file for grading.
+
+00:41:40.223 --> 00:41:49.369
+Okay, so make sure you reach out if you have questions and I should be back next week the jury trial is expected to
+
+00:41:49.369 --> 00:41:54.180
+end on Wednesday and. And today's Monday, so it's only supposed to be two days.
+
+00:41:54.700 --> 00:42:00.400
+So hopefully I'll be there. All right, have a great week.
+`;
+
+    var player, timeUpdater, parsedTranscript = [];
+
+    function timeToSeconds(timeStr) {
+      if (!timeStr) return 0;
+      var parts = timeStr.trim().split(':');
+      if (parts.length === 2) {
+        return (parseInt(parts[0]) || 0) * 60 + (parseFloat(parts[1]) || 0);
+      } else if (parts.length === 3) {
+        return (parseInt(parts[0]) || 0) * 3600 + (parseInt(parts[1]) || 0) * 60 + (parseFloat(parts[2]) || 0);
+      }
+      return 0;
+    }
+
+    function parseVtt(vttText) {
+      var cues = vttText.trim().split(/\n\n+/);
+      var parsedCues = [];
+      cues.forEach(function (cueBlock) {
+        if (cueBlock.indexOf('WEBVTT') === 0 || cueBlock.trim() === '') return;
+        var lines = cueBlock.trim().split('\n');
+        var timeLine = lines.filter(function (l) { return l.indexOf('-->') !== -1; })[0];
+        if (!timeLine) return;
+        var parts = timeLine.split(' --> ');
+        var textLines = lines.slice(lines.indexOf(timeLine) + 1);
+        parsedCues.push({
+          start: timeToSeconds(parts[0]),
+          end: timeToSeconds(parts[1]),
+          text: textLines.join(' ').trim()
+        });
+      });
+      return parsedCues;
+    }
+
+    function seek(seconds) {
+      if (player && player.seekTo) { player.seekTo(seconds, true); player.playVideo(); }
+    }
+
+    function populateTranscript() {
+      var container = document.getElementById('transcript-container');
+      if (!container) return;
+      container.innerHTML = '';
+      parsedTranscript.forEach(function (cue) {
+        var lineEl = document.createElement('div');
+        lineEl.className = 'transcript-line';
+        lineEl.dataset.start = cue.start;
+        lineEl.dataset.end = cue.end;
+        lineEl.textContent = cue.text;
+        lineEl.setAttribute('role', 'button');
+        lineEl.setAttribute('tabindex', '0');
+        lineEl.addEventListener('click', function () { seek(cue.start); });
+        lineEl.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); seek(cue.start); }
+        });
+        container.appendChild(lineEl);
+      });
+    }
+
+    function wireChapters() {
+      document.querySelectorAll('#video-chapters .chapter-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var t = parseFloat(btn.dataset.t);
+          seek(t);
+          scrollTranscriptTo(t);
+        });
+      });
+    }
+
+    function scrollTranscriptTo(t) {
+      var lines = document.querySelectorAll('#transcript-container .transcript-line');
+      for (var i = 0; i < lines.length; i++) {
+        if (parseFloat(lines[i].dataset.end) >= t) {
+          lines[i].scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
+      }
+    }
+
+    function highlightCurrentLine() {
+      if (!player || !player.getCurrentTime) return;
+      var currentTime = player.getCurrentTime();
+      var lines = document.querySelectorAll('#transcript-container .transcript-line');
+      lines.forEach(function (line) {
+        var start = parseFloat(line.dataset.start);
+        var end = parseFloat(line.dataset.end);
+        if (currentTime >= start && currentTime < end) {
+          if (!line.classList.contains('active-transcript-line')) {
+            var prev = document.querySelector('#transcript-container .active-transcript-line');
+            if (prev) prev.classList.remove('active-transcript-line');
+            line.classList.add('active-transcript-line');
+            line.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else {
+          line.classList.remove('active-transcript-line');
+        }
+      });
+    }
+
+    function syncTranscriptHeight() {
+      var videoContainer = document.getElementById('video-container');
+      var transcriptContainer = document.getElementById('transcript-container');
+      if (!videoContainer || !transcriptContainer) return;
+      // Side-by-side is detected from rendered positions rather than a viewport
+      // width test: inside Canvas, 100vw measures the iframe, not the window.
+      var videoCol = videoContainer.closest('.video-col');
+      var transcriptCol = transcriptContainer.closest('.transcript-col');
+      var sideBySide = !!(videoCol && transcriptCol) && Math.abs(
+        transcriptCol.getBoundingClientRect().top - videoCol.getBoundingClientRect().top) < 2;
+      if (sideBySide) {
+        transcriptContainer.style.height = videoContainer.offsetHeight + 'px';
+        transcriptContainer.style.maxHeight = videoContainer.offsetHeight + 'px';
+      } else {
+        transcriptContainer.style.height = '24rem';
+        transcriptContainer.style.maxHeight = '24rem';
+      }
+    }
+
+    window.onYouTubeIframeAPIReady = function () {
+      if (!VIDEO_ID || !document.getElementById('youtube-player')) return;
+      player = new YT.Player('youtube-player', {
+        videoId: VIDEO_ID,
+        events: {
+          onStateChange: function (event) {
+            clearInterval(timeUpdater);
+            if (event.data === YT.PlayerState.PLAYING) {
+              timeUpdater = setInterval(highlightCurrentLine, 300);
+            }
+          }
+        }
+      });
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      if (!VIDEO_ID || !vttContent.trim()) { syncTranscriptHeight(); return; }
+
+      parsedTranscript = parseVtt(vttContent);
+      populateTranscript();
+      wireChapters();
+      setTimeout(syncTranscriptHeight, 100);
+      if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+        var tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      } else {
+        window.onYouTubeIframeAPIReady();
+      }
+    });
+
+    var resizeTimeout;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(syncTranscriptHeight, 250);
+    });
+  })();
+  </script>
+
+</body>
+</html>
