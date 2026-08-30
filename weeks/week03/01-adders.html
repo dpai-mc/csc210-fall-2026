@@ -6,13 +6,10 @@
   <title>CSC210 — Week 3: From Gates to Adders</title>
   <link rel="stylesheet" href="../../shared/style.css">
   <style>
-    /* ---------- File-specific: adder simulator layout ----------
-       Two-column on wide viewports (explanation beside diagram), stacked
-       on narrow. The truth table carries an image per row, which is why
-       it needs its own column sizing rather than the shared .tt defaults. */
+    /* ---------- File-specific: adder simulator layout ---------- */
     .sim-layout {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1.15fr 1fr;
       gap: var(--space-lg);
       align-items: start;
     }
@@ -20,16 +17,16 @@
       .sim-layout { grid-template-columns: 1fr; }
     }
 
-    /* Truth table with a diagram in each row (half adder, §3.2). */
-    .tt--illustrated td:last-child { padding: var(--space-xs); width: 200px; }
-    @media (max-width: 560px) {
+    /* Truth table carrying a diagram per row (half adder, §3.2). */
+    .tt--illustrated td:last-child { padding: var(--space-xs); width: 340px; }
+    .tt--illustrated th, .tt--illustrated td { vertical-align: middle; }
+    @media (max-width: 620px) {
       .tt--illustrated td:last-child,
       .tt--illustrated th:last-child { display: none; }
     }
 
-    /* SVG-local styling for the ported simulators. The wire and lamp
-       classes come from shared/style.css; these are the pieces that are
-       genuinely specific to these two diagrams. */
+    /* SVG-local styling. Wire and lamp colours come from shared/style.css;
+       these are the pieces specific to these two diagrams. */
     .sim-svg { width: 100%; height: auto; overflow: visible; }
     .sim-svg .gate {
       fill: var(--color-surface);
@@ -37,10 +34,19 @@
       stroke-width: 3;
       stroke-linejoin: round;
     }
+    /* The XOR's second back-arc is a stroke only -- filling it would close
+       the crescent and turn the gate into a blob. */
+    .sim-svg .gate-arc {
+      fill: none;
+      stroke: var(--color-text);
+      stroke-width: 3;
+      stroke-linecap: round;
+    }
     .sim-svg .gate-label {
       font-family: var(--font-mono);
-      font-size: 13px;
-      fill: var(--color-text);
+      font-size: 12px;
+      fill: var(--color-text-muted);
+      text-anchor: middle;
     }
     .sim-svg .label {
       font-family: var(--font-sans);
@@ -61,13 +67,14 @@
     }
     .sim-svg .input-switch { cursor: pointer; }
     .sim-svg .input-switch:hover .sw-box { stroke: var(--color-primary-lt); }
-    .sim-svg .input-switch:focus-visible {
-      outline: 3px solid var(--color-accent);
-      outline-offset: 2px;
-    }
-    /* Stage highlighting for the full adder's two half-adder halves. */
+    .sim-svg .input-switch:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
+    /* Junction dot: marks a real electrical connection where a signal
+       branches. Wires that merely cross carry no dot -- standard schematic
+       convention, and the reason the crossings below are unambiguous. */
+    .sim-svg .junction { fill: var(--color-text); transition: fill .18s ease; }
+    .sim-svg .junction--hi { fill: var(--color-success); }
     .sim-svg .stage-group { transition: opacity .2s; }
-    .sim-svg .stage-group--dim { opacity: .22; }
+    .sim-svg .stage-group--dim { opacity: .18; }
 
     .sim-readout {
       font-family: var(--font-mono);
@@ -77,11 +84,19 @@
       padding: var(--space-sm) var(--space-md);
       margin-top: var(--space-sm);
     }
+    .pin-key {
+      display: flex;
+      gap: var(--space-lg);
+      flex-wrap: wrap;
+      font-size: var(--fs-sm);
+      margin-top: var(--space-sm);
+    }
+    .pin-key__item { display: flex; align-items: center; gap: var(--space-xs); }
+    .pin-key__dot { width: 13px; height: 13px; border-radius: 50%; display: inline-block; }
   </style>
 </head>
 <body>
 
-  <!-- ==================== Header ==================== -->
   <header class="sp-header">
     <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
     <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
@@ -95,7 +110,7 @@
     <p><strong>Sections 3.1&ndash;3.3</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1.75 hours</p>
 
     <!-- ============================================================
-         3.1 — From Gates to Circuits: What "Useful" Means
+         3.1
          ============================================================ -->
     <section id="sec-3-1">
       <h2>3.1 &nbsp; From Gates to Circuits: What "Useful" Means</h2>
@@ -143,7 +158,7 @@
     </section>
 
     <!-- ============================================================
-         3.2 — The Half Adder
+         3.2
          ============================================================ -->
     <section id="sec-3-2">
       <h2>3.2 &nbsp; The Half Adder: Adding Two Bits</h2>
@@ -176,6 +191,8 @@
 
       <p>The half adder is those two gates, side by side, reading the same two inputs. That is worth noticing explicitly: <strong>the half-adder truth table is just the XOR and AND truth tables printed next to each other.</strong> Nothing was invented. Two gates you already know were pointed at the same pair of inputs.</p>
 
+      <p style="font-size:var(--fs-sm);color:var(--color-text-muted);">Click any circuit below to open it full size.</p>
+
       <table class="tt tt--illustrated">
         <caption class="sr-only">Half adder truth table with a circuit diagram for each input combination</caption>
         <thead>
@@ -184,28 +201,34 @@
         <tbody>
           <tr>
             <td>0</td><td>0</td><td>0</td><td>0</td>
-            <td><img class="circuit-canvas__img" src="images/HalfAdd_00.jpg" loading="lazy"
+            <td><img class="circuit-canvas__img zoomable" src="images/HalfAdd_00.jpg" loading="lazy" tabindex="0"
+                     data-caption="Half adder with both inputs at 0. The XOR and AND gates both output 0: sum 0, carry 0."
                      alt="Half adder with both inputs at 0. The XOR and AND gates both output 0, so sum is 0 and carry is 0."></td>
           </tr>
           <tr>
             <td>0</td><td>1</td><td>1</td><td>0</td>
-            <td><img class="circuit-canvas__img" src="images/HalfAdd_01.jpg" loading="lazy"
+            <td><img class="circuit-canvas__img zoomable" src="images/HalfAdd_01.jpg" loading="lazy" tabindex="0"
+                     data-caption="Half adder with A at 0 and B at 1. The XOR outputs 1, the AND outputs 0: sum 1, carry 0."
                      alt="Half adder with A at 0 and B at 1. The XOR gate outputs 1 and the AND gate outputs 0, so sum is 1 and carry is 0."></td>
           </tr>
           <tr>
             <td>1</td><td>0</td><td>1</td><td>0</td>
-            <td><img class="circuit-canvas__img" src="images/HalfAdd_10.jpg" loading="lazy"
+            <td><img class="circuit-canvas__img zoomable" src="images/HalfAdd_10.jpg" loading="lazy" tabindex="0"
+                     data-caption="Half adder with A at 1 and B at 0. The XOR outputs 1, the AND outputs 0: sum 1, carry 0."
                      alt="Half adder with A at 1 and B at 0. The XOR gate outputs 1 and the AND gate outputs 0, so sum is 1 and carry is 0."></td>
           </tr>
           <tr class="tt__row--true">
             <td>1</td><td>1</td><td>0</td><td>1</td>
-            <td><img class="circuit-canvas__img" src="images/HalfAdd_11.jpg" loading="lazy"
+            <td><img class="circuit-canvas__img zoomable" src="images/HalfAdd_11.jpg" loading="lazy" tabindex="0"
+                     data-caption="Half adder with both inputs at 1. The XOR outputs 0 and the AND outputs 1: sum 0, carry 1 — because 1 + 1 is binary 10."
                      alt="Half adder with both inputs at 1. The XOR gate outputs 0 and the AND gate outputs 1, so sum is 0 and carry is 1 — binary 1 plus 1 is 10."></td>
           </tr>
         </tbody>
       </table>
 
-      <p>The highlighted last row is the interesting one, and it is also the limitation. A half adder produces a carry, but it has nowhere to <em>accept</em> one. That is fine for the rightmost column of an addition, where nothing has been carried in yet. It is useless for every other column &mdash; which is the next section.</p>
+      <p><strong>The green-tinted bottom row is the interesting one</strong> &mdash; the only case that produces a carry, and the reason a half adder is not enough on its own. It produces a carry, but it has nowhere to <em>accept</em> one. That is fine for the rightmost column of an addition, where nothing has been carried in yet. It is useless for every other column, which is the next section.</p>
+
+      <p style="font-size:var(--fs-sm);color:var(--color-text-muted);">(The orange outline is separate: it tracks whichever row matches the simulator below as you toggle its inputs.)</p>
 
       <!-- ==================== WIDGET 1 ==================== -->
       <div class="widget-card">
@@ -214,38 +237,61 @@
 
         <div class="sim-layout">
           <div class="circuit-canvas">
-            <svg id="ha-svg" class="sim-svg" viewBox="0 0 350 250" role="img" aria-labelledby="ha-title">
+            <svg id="ha-svg" class="sim-svg" viewBox="0 0 380 220" role="img" aria-labelledby="ha-title">
               <title id="ha-title">Half adder circuit diagram, interactive</title>
 
-              <path id="ha-wire-a1" class="wire" d="M 50 50 H 125" />
-              <path id="ha-wire-b1" class="wire" d="M 50 125 H 125" />
-              <path id="ha-wire-a2" class="wire" d="M 70 50 v 110 H 125" />
-              <path id="ha-wire-b2" class="wire" d="M 70 125 v 60 H 125" />
-              <path id="ha-wire-s"  class="wire" d="M 215 88 H 300" />
-              <path id="ha-wire-c"  class="wire" d="M 185 185 H 300" />
+              <defs>
+                <!-- XOR: ogive body (point at the right) plus a separate
+                     back-arc. 50 wide, 44 tall; signal edge at x+6. -->
+                <g id="ha-sym-xor">
+                  <path class="gate" d="M6,0 C12,14 12,30 6,44 C28,44 44,35 50,22 C44,9 28,0 6,0 Z"/>
+                  <path class="gate-arc" d="M0,0 C6,14 6,30 0,44"/>
+                </g>
+                <!-- AND: flat back, semicircular front. 46 wide, 44 tall. -->
+                <path id="ha-sym-and" class="gate" d="M0,0 H24 A22,22 0 0 1 24,44 H0 Z"/>
+              </defs>
 
-              <path class="gate" d="M140,63 v50 q20,0 20,-25 q0,-25 -20,-25 m-15,55 c10,-5 15,-22.5 15,-27.5 s-5,-22.5 -15,-27.5" />
-              <path class="gate" d="M125,160 h30 a30,30 0 0 1 0,50 h-30 z" />
-              <text class="gate-label" x="139" y="46">XOR</text>
-              <text class="gate-label" x="133" y="152">AND</text>
+              <!-- A: trunk, then two branches from the junction at x=80 -->
+              <path id="ha-w-a"     class="wire" d="M50,52 H80"/>
+              <path id="ha-w-a-xor" class="wire" d="M80,52 V41 H156"/>
+              <path id="ha-w-a-and" class="wire" d="M80,52 V141 H150"/>
+
+              <!-- B: trunk, then two branches from the junction at x=104.
+                   Branch x differs from A's so the vertical runs never
+                   overlap -- in the first draft both sat at x=70 and the
+                   two inputs appeared to be the same wire. -->
+              <path id="ha-w-b"     class="wire" d="M50,152 H104"/>
+              <path id="ha-w-b-xor" class="wire" d="M104,152 V63 H156"/>
+              <path id="ha-w-b-and" class="wire" d="M104,152 V163 H150"/>
+
+              <use href="#ha-sym-xor" x="150" y="30"/>
+              <use href="#ha-sym-and" x="150" y="130"/>
+              <text class="gate-label" x="182" y="26">XOR</text>
+              <text class="gate-label" x="178" y="126">AND</text>
+
+              <path id="ha-w-s" class="wire" d="M200,52 H322"/>
+              <path id="ha-w-c" class="wire" d="M196,152 H322"/>
+
+              <circle id="ha-j-a" class="junction" cx="80"  cy="52"  r="4.5"/>
+              <circle id="ha-j-b" class="junction" cx="104" cy="152" r="4.5"/>
 
               <g id="ha-input-a" class="input-switch" tabindex="0" role="button" aria-pressed="false" aria-label="Input A, currently 0">
-                <rect class="sw-box" x="20" y="38" width="30" height="25" rx="5"/>
-                <text class="label" x="6" y="55">A</text>
-                <text id="ha-val-a" class="value" x="30" y="56">0</text>
+                <rect class="sw-box" x="16" y="39" width="34" height="26" rx="5"/>
+                <text class="label" x="0" y="57">A</text>
+                <text id="ha-val-a" class="value" x="33" y="57" text-anchor="middle">0</text>
               </g>
               <g id="ha-input-b" class="input-switch" tabindex="0" role="button" aria-pressed="false" aria-label="Input B, currently 0">
-                <rect class="sw-box" x="20" y="113" width="30" height="25" rx="5"/>
-                <text class="label" x="6" y="130">B</text>
-                <text id="ha-val-b" class="value" x="30" y="131">0</text>
+                <rect class="sw-box" x="16" y="139" width="34" height="26" rx="5"/>
+                <text class="label" x="0" y="157">B</text>
+                <text id="ha-val-b" class="value" x="33" y="157" text-anchor="middle">0</text>
               </g>
 
-              <circle id="ha-light-s" class="node node--lo" cx="315" cy="88"  r="11"/>
-              <text class="label" x="332" y="93">Sum</text>
-              <text id="ha-val-s" class="value" x="310" y="93" text-anchor="middle">0</text>
-              <circle id="ha-light-c" class="node node--lo" cx="315" cy="185" r="11"/>
-              <text class="label" x="332" y="190">Carry</text>
-              <text id="ha-val-c" class="value" x="310" y="190" text-anchor="middle">0</text>
+              <circle id="ha-light-s" class="node node--lo" cx="334" cy="52" r="11"/>
+              <text id="ha-val-s" class="value" x="334" y="57" text-anchor="middle">0</text>
+              <text class="label" x="352" y="57">Sum</text>
+              <circle id="ha-light-c" class="node node--lo" cx="334" cy="152" r="11"/>
+              <text id="ha-val-c" class="value" x="334" y="157" text-anchor="middle">0</text>
+              <text class="label" x="352" y="157">Carry</text>
             </svg>
           </div>
 
@@ -253,7 +299,7 @@
             <p><strong>What to try.</strong> Set both inputs to 1. Watch the sum lamp go <em>dark</em> while the carry lamp lights. That is the case that makes a half adder insufficient on its own &mdash; the answer is correct, but half of it has left the column.</p>
             <div class="sim-readout" id="ha-readout" role="status" aria-live="polite">A = 0, B = 0 &rarr; sum 0, carry 0</div>
             <p style="margin-top:var(--space-md);font-size:var(--fs-sm);color:var(--color-text-muted);">
-              The table above highlights the row matching the current inputs.
+              A filled dot marks a real connection where one signal branches to two gates. Wires that simply cross are not connected.
             </p>
           </div>
         </div>
@@ -261,45 +307,63 @@
     </section>
 
     <!-- ============================================================
-         3.3 — The Full Adder
+         3.3
          ============================================================ -->
     <section id="sec-3-3">
       <h2>3.3 &nbsp; The Full Adder: Accounting for Carry-In</h2>
 
       <p>Add two multi-bit numbers by hand and you work column by column, right to left. The rightmost column takes two digits. <strong>Every other column takes three</strong> &mdash; its own two digits, plus whatever was carried out of the column to its right.</p>
 
-      <pre><code>    1 1        &larr; carries
-    0 1 1 1
-  + 0 0 1 1
-  ---------
-    1 0 1 0</code></pre>
+      <p>Watch it happen. This is <code>0111 + 0011</code>, one column at a time:</p>
+
+      <div class="col-add" id="col-add">
+        <div class="col-add__grid" id="col-add-grid" role="img" aria-labelledby="col-add-desc"></div>
+        <p class="col-add__status" id="col-add-status" role="status" aria-live="polite"></p>
+        <p id="col-add-desc" class="sr-only">
+          Animated column addition of binary 0111 plus 0011. Working right to left:
+          column 0 adds 1 and 1 giving sum 0 and carrying 1. Column 1 adds 1, 1 and the
+          carry giving sum 1 and carrying 1. Column 2 adds 1, 0 and the carry giving sum 0
+          and carrying 1. Column 3 adds 0, 0 and the carry giving sum 1 with no carry out.
+          The result is 1010, which is decimal 10.
+        </p>
+        <div class="col-add__controls">
+          <button type="button" class="widget-btn widget-btn--small widget-btn--outline" id="col-add-toggle">Pause</button>
+          <button type="button" class="widget-btn widget-btn--small widget-btn--outline" id="col-add-step">Step</button>
+        </div>
+      </div>
+
+      <p><strong>Three carries, not two.</strong> Every column except the rightmost receives one here. That is the pattern in general: the rightmost column is the only one guaranteed to have nothing coming in.</p>
 
       <p>A half adder cannot do those inner columns. It has two inputs and there are three things to add. What is needed is a circuit that accepts a <strong>carry-in</strong> as a first-class input alongside A and B &mdash; a <em>full</em> adder.</p>
 
       <h3>Built from two half adders and an OR</h3>
 
-      <p>Here is the useful part: you do not need new ideas to build one. A full adder is <strong>two half adders and a single OR gate</strong>, and it is best understood one gate at a time.</p>
+      <p>Here is the useful part: you do not need new ideas to build one. A full adder is <strong>two half adders and a single OR gate</strong>, and it is best understood one gate at a time. Click any step to see it full size.</p>
 
       <div class="circuit-canvas">
-        <img class="circuit-canvas__img" src="images/FullAdder_S1.jpg" loading="lazy"
+        <img class="circuit-canvas__img zoomable" src="images/FullAdder_S1.jpg" loading="lazy" tabindex="0"
+             data-caption="Step 1 — a half adder: one XOR and one AND fed by A and B, drawn with space to the right for the gates still to come."
              alt="Step 1 of the full adder construction: a half adder — one XOR gate and one AND gate fed by inputs A and B — drawn with space to the right for the gates still to come.">
         <div class="circuit-canvas__caption"><strong>Step 1.</strong> Start with a half adder, drawn with room to its right. It adds A and B and gives a partial sum and a first carry.</div>
       </div>
 
       <div class="circuit-canvas">
-        <img class="circuit-canvas__img" src="images/FullAdder_S2.jpg" loading="lazy"
+        <img class="circuit-canvas__img zoomable" src="images/FullAdder_S2.jpg" loading="lazy" tabindex="0"
+             data-caption="Step 2 — a second XOR takes the first XOR's output and the carry-in. Its output is the full adder's sum."
              alt="Step 2: a second XOR gate is added, taking the first XOR's output and the carry-in. Its output is the full adder's sum.">
         <div class="circuit-canvas__caption"><strong>Step 2.</strong> A second XOR takes that partial sum and the carry-in. Its output is the final <code>sum</code>. Adding three bits is adding two, then adding the third to the result.</div>
       </div>
 
       <div class="circuit-canvas">
-        <img class="circuit-canvas__img" src="images/FullAdder_S3.jpg" loading="lazy"
+        <img class="circuit-canvas__img zoomable" src="images/FullAdder_S3.jpg" loading="lazy" tabindex="0"
+             data-caption="Step 3 — a second AND, on the partial sum and the carry-in, produces the second of the two possible carries."
              alt="Step 3: a second AND gate is added, taking the first XOR's output and the carry-in. This produces the second of the two possible carries.">
         <div class="circuit-canvas__caption"><strong>Step 3.</strong> A second AND, on the same two signals, produces a second possible carry &mdash; the case where the partial sum and the carry-in were both 1.</div>
       </div>
 
       <div class="circuit-canvas">
-        <img class="circuit-canvas__img" src="images/FullAdder_S4.jpg" loading="lazy"
+        <img class="circuit-canvas__img zoomable" src="images/FullAdder_S4.jpg" loading="lazy" tabindex="0"
+             data-caption="Step 4 — an OR combines the two carries into carry-out. The full adder is complete: two XOR, two AND, one OR."
              alt="Step 4: an OR gate combines the two AND gate outputs to produce carry-out. The full adder is complete: two XOR gates, two AND gates, and one OR gate.">
         <div class="circuit-canvas__caption"><strong>Step 4.</strong> An OR combines the two carries into <code>cout</code>. Five gates total: two XOR, two AND, one OR.</div>
       </div>
@@ -331,9 +395,16 @@
       <p>Read the last row as a sanity check: 1 + 1 + 1 = 3, which in binary is <code>11</code> &mdash; sum 1, carry 1. The circuit agrees.</p>
 
       <div class="circuit-canvas">
-        <img class="circuit-canvas__img" src="images/1bitAdder_redrawn.jpg" loading="lazy"
-             alt="The full adder redrawn as a labelled block: a sideways trapezoid with five pin locations — A, B, and carry-in on the left, sum and carry-out on the right.">
-        <div class="circuit-canvas__caption">The same circuit drawn as a <strong>block</strong>: three inputs left, two outputs right. This is how you will think about it from the next page onward &mdash; and how Logisim will draw it once you make it a subcircuit.</div>
+        <img class="circuit-canvas__img zoomable" src="images/1bitAdder_redrawn.jpg" loading="lazy" tabindex="0"
+             data-caption="The full adder as a labelled block. Blue dots are the three 1-bit inputs (a, b, carry-in); red dots are the two 1-bit outputs (sum, carry-out)."
+             alt="The full adder redrawn as a labelled block: a sideways trapezoid with five pins. Three blue dots on the left are the 1-bit inputs a, b and carry-in; two red dots on the right are the 1-bit outputs sum and carry-out.">
+        <div class="circuit-canvas__caption">
+          <strong>The same circuit drawn as a block:</strong> three inputs in, two outputs out.
+          <span class="pin-key" style="justify-content:center;">
+            <span class="pin-key__item"><span class="pin-key__dot" style="background:#2980b9;"></span> blue = 1-bit <strong>inputs</strong> (<code>a</code>, <code>b</code>, <code>cin</code>)</span>
+            <span class="pin-key__item"><span class="pin-key__dot" style="background:#c0392b;"></span> red = 1-bit <strong>outputs</strong> (<code>sum</code>, <code>cout</code>)</span>
+          </span>
+        </div>
       </div>
 
       <p>That redrawing is not cosmetic. Once the full adder is a named subcircuit with five pins, its internals stop mattering. You place it, wire its pins, and move on &mdash; which is exactly what makes the next page possible.</p>
@@ -351,60 +422,95 @@
 
         <div class="sim-layout">
           <div class="circuit-canvas">
-            <svg id="fa-svg" class="sim-svg" viewBox="0 0 460 300" role="img" aria-labelledby="fa-title">
+            <svg id="fa-svg" class="sim-svg" viewBox="0 0 540 300" role="img" aria-labelledby="fa-title">
               <title id="fa-title">Full adder circuit diagram, interactive</title>
 
-              <!-- Stage 1: first half adder -->
+              <defs>
+                <g id="fa-sym-xor">
+                  <path class="gate" d="M6,0 C12,14 12,30 6,44 C28,44 44,35 50,22 C44,9 28,0 6,0 Z"/>
+                  <path class="gate-arc" d="M0,0 C6,14 6,30 0,44"/>
+                </g>
+                <path id="fa-sym-and" class="gate" d="M0,0 H24 A22,22 0 0 1 24,44 H0 Z"/>
+                <!-- OR: same ogive as XOR's body, without the back-arc. -->
+                <path id="fa-sym-or" class="gate" d="M0,0 C6,14 6,30 0,44 C22,44 38,35 44,22 C38,9 22,0 0,0 Z"/>
+              </defs>
+
+              <!-- ---------- Stage 1: first half adder ---------- -->
               <g id="fa-stage-group-1" class="stage-group">
-                <path id="fa-wire-a1" class="wire" d="M50 70 h 70" />
-                <path id="fa-wire-b1" class="wire" d="M50 110 h 70" />
-                <path class="gate" d="M120,50 v56 q22,0 22,-28 q0,-28 -22,-28 m-16,56 c11,-6 16,-25 16,-28 s-5,-22 -16,-28" />
-                <path class="gate" d="M120,140 h26 a26,26 0 0 1 0,44 h-26 z" />
-                <text class="gate-label" x="119" y="44">XOR</text>
-                <text class="gate-label" x="116" y="134">AND</text>
+                <use href="#fa-sym-xor" x="140" y="40"/>
+                <use href="#fa-sym-and" x="140" y="110"/>
+                <text class="gate-label" x="172" y="36">XOR</text>
+                <text class="gate-label" x="168" y="106">AND</text>
               </g>
 
-              <!-- Stage 2: second half adder + the OR -->
+              <!-- ---------- Stage 2: second half adder + the OR ---------- -->
               <g id="fa-stage-group-2" class="stage-group">
-                <path class="gate" d="M250,50 v56 q22,0 22,-28 q0,-28 -22,-28 m-16,56 c11,-6 16,-25 16,-28 s-5,-22 -16,-28" />
-                <path class="gate" d="M250,140 h26 a26,26 0 0 1 0,44 h-26 z" />
-                <path class="gate" d="M330,215 c14,-8 30,-8 44,0 c-14,8 -14,32 0,40 c-14,8 -30,8 -44,0 c8,-14 8,-26 0,-40 z" />
-                <text class="gate-label" x="249" y="44">XOR</text>
-                <text class="gate-label" x="246" y="134">AND</text>
-                <text class="gate-label" x="336" y="209">OR</text>
+                <use href="#fa-sym-xor" x="300" y="40"/>
+                <use href="#fa-sym-and" x="300" y="150"/>
+                <use href="#fa-sym-or"  x="400" y="210"/>
+                <text class="gate-label" x="332" y="36">XOR</text>
+                <text class="gate-label" x="328" y="146">AND</text>
+                <text class="gate-label" x="424" y="206">OR</text>
               </g>
 
-              <path id="fa-wire-s1"   class="wire" d="M172 78 h 78" />
-              <path id="fa-wire-s1b"  class="wire" d="M200 78 v 84 h 50" />
-              <path id="fa-wire-c1"   class="wire" d="M172 162 h 18 v 68 h 140" />
-              <path id="fa-wire-cin1" class="wire" d="M50 250 h 60 v -140 h 0" />
-              <path id="fa-wire-cin2" class="wire" d="M110 250 h 88 v -66 h 52" />
-              <path id="fa-wire-s2"   class="wire" d="M302 78 h 98" />
-              <path id="fa-wire-c2"   class="wire" d="M302 162 h 14 v 92 h 14" />
-              <path id="fa-wire-cout" class="wire" d="M374 235 h 26" />
+              <!-- A: trunk + two branches (junction x=80) -->
+              <path id="fa-w-a"     class="wire" d="M50,62 H80"/>
+              <path id="fa-w-a-xor" class="wire" d="M80,62 V51 H146"/>
+              <path id="fa-w-a-and" class="wire" d="M80,62 V121 H140"/>
+
+              <!-- B: trunk + two branches (junction x=104) -->
+              <path id="fa-w-b"     class="wire" d="M50,122 H104"/>
+              <path id="fa-w-b-xor" class="wire" d="M104,122 V73 H146"/>
+              <path id="fa-w-b-and" class="wire" d="M104,122 V143 H140"/>
+
+              <!-- Cin: trunk runs under the whole circuit, then branches up
+                   to XOR2's SECOND input and AND2's second input. In the
+                   first draft this wire terminated on B's line, which made
+                   the carry-in look like part of stage 1. -->
+              <path id="fa-w-cin"     class="wire" d="M50,252 H250"/>
+              <path id="fa-w-cin-xor" class="wire" d="M250,252 V73 H306"/>
+              <path id="fa-w-cin-and" class="wire" d="M250,252 V183 H300"/>
+
+              <!-- s1: XOR1 output, branching to XOR2 and AND2 (junction x=220) -->
+              <path id="fa-w-s1"     class="wire" d="M190,62 H220"/>
+              <path id="fa-w-s1-xor" class="wire" d="M220,62 V51 H306"/>
+              <path id="fa-w-s1-and" class="wire" d="M220,62 V161 H300"/>
+
+              <!-- c1: AND1 output down to the OR's first input -->
+              <path id="fa-w-c1" class="wire" d="M186,132 H236 V221 H400"/>
+              <!-- c2: AND2 output down to the OR's second input -->
+              <path id="fa-w-c2" class="wire" d="M346,172 H370 V243 H400"/>
+
+              <path id="fa-w-s"    class="wire" d="M350,62 H478"/>
+              <path id="fa-w-cout" class="wire" d="M444,232 H478"/>
+
+              <circle id="fa-j-a"   class="junction" cx="80"  cy="62"  r="4.5"/>
+              <circle id="fa-j-b"   class="junction" cx="104" cy="122" r="4.5"/>
+              <circle id="fa-j-cin" class="junction" cx="250" cy="252" r="4.5"/>
+              <circle id="fa-j-s1"  class="junction" cx="220" cy="62"  r="4.5"/>
 
               <g id="fa-input-a" class="input-switch" tabindex="0" role="button" aria-pressed="false" aria-label="Input A, currently 0">
-                <rect class="sw-box" x="20" y="58" width="30" height="25" rx="5"/>
-                <text class="label" x="6" y="75">A</text>
-                <text id="fa-val-a" class="value" x="30" y="76">0</text>
+                <rect class="sw-box" x="16" y="49" width="34" height="26" rx="5"/>
+                <text class="label" x="0" y="67">A</text>
+                <text id="fa-val-a" class="value" x="33" y="67" text-anchor="middle">0</text>
               </g>
               <g id="fa-input-b" class="input-switch" tabindex="0" role="button" aria-pressed="false" aria-label="Input B, currently 0">
-                <rect class="sw-box" x="20" y="98" width="30" height="25" rx="5"/>
-                <text class="label" x="6" y="115">B</text>
-                <text id="fa-val-b" class="value" x="30" y="116">0</text>
+                <rect class="sw-box" x="16" y="109" width="34" height="26" rx="5"/>
+                <text class="label" x="0" y="127">B</text>
+                <text id="fa-val-b" class="value" x="33" y="127" text-anchor="middle">0</text>
               </g>
               <g id="fa-input-cin" class="input-switch" tabindex="0" role="button" aria-pressed="false" aria-label="Carry in, currently 0">
-                <rect class="sw-box" x="20" y="238" width="30" height="25" rx="5"/>
-                <text class="label" x="-6" y="255">Cin</text>
-                <text id="fa-val-cin" class="value" x="30" y="256">0</text>
+                <rect class="sw-box" x="16" y="239" width="34" height="26" rx="5"/>
+                <text class="label" x="-16" y="257">Cin</text>
+                <text id="fa-val-cin" class="value" x="33" y="257" text-anchor="middle">0</text>
               </g>
 
-              <circle id="fa-light-s" class="node node--lo" cx="412" cy="78" r="11"/>
-              <text class="label" x="428" y="83">Sum</text>
-              <text id="fa-val-s" class="value" x="407" y="83" text-anchor="middle">0</text>
-              <circle id="fa-light-cout" class="node node--lo" cx="412" cy="235" r="11"/>
-              <text class="label" x="428" y="240">Cout</text>
-              <text id="fa-val-cout" class="value" x="407" y="240" text-anchor="middle">0</text>
+              <circle id="fa-light-s" class="node node--lo" cx="490" cy="62" r="11"/>
+              <text id="fa-val-s" class="value" x="490" y="67" text-anchor="middle">0</text>
+              <text class="label" x="508" y="67">Sum</text>
+              <circle id="fa-light-cout" class="node node--lo" cx="490" cy="232" r="11"/>
+              <text id="fa-val-cout" class="value" x="490" y="237" text-anchor="middle">0</text>
+              <text class="label" x="508" y="237">Cout</text>
             </svg>
           </div>
 
@@ -413,7 +519,7 @@
             <p>Then set A = 1, B = 0, Cin = 1. Only the <em>second</em> AND fires this time. Different route, same carry-out. That is what the OR gate is for.</p>
             <div class="sim-readout" id="fa-readout" role="status" aria-live="polite">A = 0, B = 0, Cin = 0 &rarr; sum 0, cout 0</div>
             <p style="margin-top:var(--space-md);font-size:var(--fs-sm);color:var(--color-text-muted);">
-              The eight-row table above highlights the row matching the current inputs.
+              Follow <code>Cin</code> along the bottom: it branches upward into the <em>second</em> XOR and the <em>second</em> AND. It never touches stage 1 &mdash; that is what "carry-in arrives late" means physically.
             </p>
           </div>
         </div>
@@ -421,7 +527,7 @@
     </section>
 
     <!-- ============================================================
-         Self-check A
+         Self-check
          ============================================================ -->
     <section id="sec-selfcheck">
       <h2>Check Yourself</h2>
@@ -436,7 +542,9 @@
 
         <div class="tab-panel active" id="tab-ha" role="tabpanel" aria-labelledby="tab-btn-ha" tabindex="0">
           <div class="quiz-question">Which gate produces the <strong>carry</strong> output of a half adder?</div>
-          <div class="quiz-options" data-answer="1">
+          <div class="quiz-options" data-answer="1"
+               data-ok="Correct. The carry is 1 only when both inputs are 1, which is exactly AND — and the sum is 1 only when they differ, which is exactly XOR."
+               data-no="Not quite — the correct answer is highlighted. Re-read the table in §3.2 and compare its two output columns against the gates you already know.">
             <button type="button" class="quiz-option">XOR &mdash; it is 1 when the inputs differ</button>
             <button type="button" class="quiz-option">AND &mdash; it is 1 only when both inputs are 1</button>
             <button type="button" class="quiz-option">OR &mdash; it is 1 when at least one input is 1</button>
@@ -447,7 +555,9 @@
 
         <div class="tab-panel" id="tab-fa" role="tabpanel" aria-labelledby="tab-btn-fa" tabindex="0">
           <div class="quiz-question">Why can a half adder not be used for the middle columns of a multi-bit addition?</div>
-          <div class="quiz-options" data-answer="2">
+          <div class="quiz-options" data-answer="2"
+               data-ok="Correct. A half adder has exactly two inputs, and an inner column has three things to add. The missing input is the carry coming in from the right."
+               data-no="Not quite — the correct answer is highlighted. A half adder computes correctly; the problem is what it has no input for.">
             <button type="button" class="quiz-option">It produces the wrong sum when both inputs are 1</button>
             <button type="button" class="quiz-option">It is too slow &mdash; the carry takes too long to settle</button>
             <button type="button" class="quiz-option">It has no way to accept a carry coming in from the column to its right</button>
@@ -459,7 +569,7 @@
     </section>
 
     <!-- ============================================================
-         Closing forward reference
+         Closing
          ============================================================ -->
     <section id="sec-forward">
       <div class="callout callout--forward">
@@ -482,6 +592,14 @@
     <span style="opacity:.7;">Instructor: David Pai</span>
   </footer>
 
+  <!-- Click-to-enlarge overlay -->
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-labelledby="lightbox-caption">
+    <button type="button" class="lightbox__close" id="lightbox-close" aria-label="Close enlarged view">&times;</button>
+    <img class="lightbox__img" id="lightbox-img" src="" alt="">
+    <p class="lightbox__caption" id="lightbox-caption"></p>
+    <p class="lightbox__hint">Click anywhere or press Escape to close</p>
+  </div>
+
   <script src="../../shared/logic.js"></script>
   <script>
   (function () {
@@ -492,9 +610,6 @@
     function el(id) { return document.getElementById(id); }
     function setText(id, v) { var e = el(id); if (e) e.textContent = v; }
 
-    /* Wire and lamp state is a class swap, never an inline style -- the
-       colours live in shared/style.css so every circuit widget in the
-       course speaks the same visual language (Standards Section 8). */
     function setWire(id, on) {
       var e = el(id);
       if (!e) return;
@@ -507,10 +622,11 @@
       e.classList.toggle('node--hi', !!on);
       e.classList.toggle('node--lo', !on);
     }
+    function setJunction(id, on) {
+      var e = el(id);
+      if (e) e.classList.toggle('junction--hi', !!on);
+    }
 
-    /* Keyboard parity with the mouse: Enter and Space activate, matching
-       the role="button" we have declared. Ported from the Fall 2025
-       module, which had this right. */
     function onActivate(node, fn) {
       if (!node) return;
       node.addEventListener('click', function (e) { e.preventDefault(); fn(); });
@@ -534,10 +650,7 @@
       }
     }
 
-    /* ---------------- Widget 1: half adder ----------------
-       Logic comes from CSCLogic.halfAdder rather than being recomputed
-       here, so the widget and the assignment's printed tables cannot
-       drift apart -- shared/logic.test.js asserts both. */
+    /* ---------------- Widget 1: half adder ---------------- */
     var ha = { a: 0, b: 0 };
 
     function haUpdate() {
@@ -548,12 +661,13 @@
       setText('ha-val-s', r.sum);
       setText('ha-val-c', r.carry);
 
-      setWire('ha-wire-a1', ha.a);
-      setWire('ha-wire-a2', ha.a);
-      setWire('ha-wire-b1', ha.b);
-      setWire('ha-wire-b2', ha.b);
-      setWire('ha-wire-s', r.sum);
-      setWire('ha-wire-c', r.carry);
+      setWire('ha-w-a', ha.a); setWire('ha-w-a-xor', ha.a); setWire('ha-w-a-and', ha.a);
+      setWire('ha-w-b', ha.b); setWire('ha-w-b-xor', ha.b); setWire('ha-w-b-and', ha.b);
+      setWire('ha-w-s', r.sum);
+      setWire('ha-w-c', r.carry);
+
+      setJunction('ha-j-a', ha.a);
+      setJunction('ha-j-b', ha.b);
 
       setLamp('ha-light-s', r.sum);
       setLamp('ha-light-c', r.carry);
@@ -561,17 +675,13 @@
       markSwitch('ha-input-a', 'Input A', ha.a);
       markSwitch('ha-input-b', 'Input B', ha.b);
 
-      // Text is the primary channel; colour is a redundant cue.
       var out = el('ha-readout');
       if (out) {
         out.textContent = 'A = ' + ha.a + ', B = ' + ha.b +
                           ' → sum ' + r.sum + ', carry ' + r.carry +
                           (r.carry ? '  (1 + 1 = binary 10)' : '');
       }
-
-      // Truth-table row order is A,B ascending: 00, 01, 10, 11.
-      var table = document.querySelector('.tt--illustrated tbody');
-      highlightRow(table, (ha.a << 1) | ha.b);
+      highlightRow(document.querySelector('.tt--illustrated tbody'), (ha.a << 1) | ha.b);
     }
 
     onActivate(el('ha-input-a'), function () { ha.a ^= 1; haUpdate(); });
@@ -590,16 +700,19 @@
       setText('fa-val-s', r.sum);
       setText('fa-val-cout', r.cout);
 
-      setWire('fa-wire-a1', fa.a);
-      setWire('fa-wire-b1', fa.b);
-      setWire('fa-wire-cin1', fa.cin);
-      setWire('fa-wire-cin2', fa.cin);
-      setWire('fa-wire-s1', s1);
-      setWire('fa-wire-s1b', s1);
-      setWire('fa-wire-c1', c1);
-      setWire('fa-wire-s2', r.sum);
-      setWire('fa-wire-c2', c2);
-      setWire('fa-wire-cout', r.cout);
+      setWire('fa-w-a', fa.a); setWire('fa-w-a-xor', fa.a); setWire('fa-w-a-and', fa.a);
+      setWire('fa-w-b', fa.b); setWire('fa-w-b-xor', fa.b); setWire('fa-w-b-and', fa.b);
+      setWire('fa-w-cin', fa.cin); setWire('fa-w-cin-xor', fa.cin); setWire('fa-w-cin-and', fa.cin);
+      setWire('fa-w-s1', s1); setWire('fa-w-s1-xor', s1); setWire('fa-w-s1-and', s1);
+      setWire('fa-w-c1', c1);
+      setWire('fa-w-c2', c2);
+      setWire('fa-w-s', r.sum);
+      setWire('fa-w-cout', r.cout);
+
+      setJunction('fa-j-a', fa.a);
+      setJunction('fa-j-b', fa.b);
+      setJunction('fa-j-cin', fa.cin);
+      setJunction('fa-j-s1', s1);
 
       setLamp('fa-light-s', r.sum);
       setLamp('fa-light-cout', r.cout);
@@ -615,8 +728,6 @@
                           ' → sum ' + r.sum + ', cout ' + r.cout +
                           '   (' + total + ' in binary is ' + r.cout + '' + r.sum + ')';
       }
-
-      // Table row order is Cin,A,B ascending.
       highlightRow(el('fa-tt-body'), (fa.cin << 2) | (fa.a << 1) | fa.b);
     }
 
@@ -624,9 +735,6 @@
     onActivate(el('fa-input-b'), function () { fa.b ^= 1; faUpdate(); });
     onActivate(el('fa-input-cin'), function () { fa.cin ^= 1; faUpdate(); });
 
-    /* Stage isolation: dims one half of the circuit so the two-half-adder
-       construction is visible in the live diagram, not only in the four
-       static steps above. */
     function setStage(which) {
       var g1 = el('fa-stage-group-1'), g2 = el('fa-stage-group-2');
       if (g1) g1.classList.toggle('stage-group--dim', which === 2);
@@ -636,11 +744,151 @@
         if (b) b.setAttribute('aria-pressed', p[1] === which ? 'true' : 'false');
       });
     }
-    var stageBtns = [['fa-stage-all', 0], ['fa-stage-1', 1], ['fa-stage-2', 2]];
-    stageBtns.forEach(function (p) {
+    [['fa-stage-all', 0], ['fa-stage-1', 1], ['fa-stage-2', 2]].forEach(function (p) {
       var b = el(p[0]);
       if (b) b.addEventListener('click', function () { setStage(p[1]); });
     });
+
+    /* ---------------- Column-addition animation ----------------
+       Values come from CSCLogic.ripple, so the carries shown are the
+       carries the circuit actually produces -- the hand-written version
+       of this example was missing one. */
+    (function columnAddition() {
+      var grid = el('col-add-grid');
+      if (!grid || !L) return;
+
+      var WIDTH = 4;
+      var A = 0x7, B = 0x3;                       // 0111 + 0011
+      var res = L.ripple(L.intToBits(A, WIDTH), L.intToBits(B, WIDTH), 0);
+      var aBits = L.intToBits(A, WIDTH), bBits = L.intToBits(B, WIDTH);
+
+      // Grid is 5 columns wide: a sign/operator column plus WIDTH digits.
+      grid.style.gridTemplateColumns = 'repeat(' + (WIDTH + 1) + ', 38px)';
+
+      var cells = { carry: [], a: [], b: [], rule: [], sum: [] };
+
+      function addCell(rowKey, text, cls) {
+        var d = document.createElement('div');
+        d.className = 'col-add__cell' + (cls ? ' ' + cls : '');
+        d.textContent = text;
+        grid.appendChild(d);
+        cells[rowKey].push(d);
+        return d;
+      }
+
+      // Row 1 — carries (blank operator cell, then one slot per column)
+      addCell('carry', '', 'col-add__cell--carry');
+      for (var i = WIDTH - 1; i >= 0; i--) addCell('carry', '', 'col-add__cell--carry');
+      // Row 2 — operand A
+      addCell('a', '');
+      for (i = WIDTH - 1; i >= 0; i--) addCell('a', aBits[i]);
+      // Row 3 — operand B, with the plus sign
+      addCell('b', '+', 'col-add__cell--op');
+      for (i = WIDTH - 1; i >= 0; i--) addCell('b', bBits[i]);
+      // Row 4 — the rule
+      for (i = 0; i <= WIDTH; i++) addCell('rule', '', 'col-add__cell--rule');
+      // Row 5 — the sum
+      addCell('sum', '');
+      for (i = WIDTH - 1; i >= 0; i--) addCell('sum', '');
+
+      // cells.carry[0] and cells.a[0] etc are the operator column; digit
+      // cells run left-to-right, i.e. MSB first. Column index c (LSB = 0)
+      // maps to display slot (WIDTH - c).
+      function slot(row, c) { return cells[row][WIDTH - c]; }
+
+      var status = el('col-add-status');
+      var toggleBtn = el('col-add-toggle');
+      var stepBtn = el('col-add-step');
+      var timer = null, step = 0, playing = true;
+      var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      function clearAll() {
+        for (var c = 0; c < WIDTH; c++) {
+          slot('carry', c).textContent = '';
+          slot('sum', c).textContent = '';
+          slot('sum', c).classList.remove('col-add__cell--settled');
+          slot('a', c).classList.remove('col-add__cell--active');
+          slot('b', c).classList.remove('col-add__cell--active');
+          slot('sum', c).classList.remove('col-add__cell--active');
+        }
+        if (status) status.textContent = '';
+      }
+
+      function renderStep(n) {
+        // n in 0..WIDTH-1 resolves column n; n === WIDTH is the finished state.
+        for (var c = 0; c < WIDTH; c++) {
+          var on = (c === n);
+          slot('a', c).classList.toggle('col-add__cell--active', on);
+          slot('b', c).classList.toggle('col-add__cell--active', on);
+          slot('sum', c).classList.toggle('col-add__cell--active', on);
+        }
+        if (n >= WIDTH) return;
+
+        var st = res.stages[n];
+        slot('sum', n).textContent = st.sum;
+        slot('sum', n).classList.add('col-add__cell--settled');
+
+        // A carry OUT of column n is a carry INTO column n+1, so it is drawn
+        // above column n+1 -- which is where a hand-written addition puts it.
+        if (st.cout === 1 && n + 1 < WIDTH) slot('carry', n + 1).textContent = '1';
+
+        if (status) {
+          status.textContent = 'Column ' + n + ':  ' + st.a + ' + ' + st.b +
+            (st.cin ? ' + carry ' + st.cin : '') +
+            '  =  sum ' + st.sum + (st.cout ? ', carry the 1' : ', no carry');
+        }
+      }
+
+      function showFinal() {
+        clearAll();
+        for (var c = 0; c < WIDTH; c++) {
+          var st = res.stages[c];
+          slot('sum', c).textContent = st.sum;
+          slot('sum', c).classList.add('col-add__cell--settled');
+          if (st.cout === 1 && c + 1 < WIDTH) slot('carry', c + 1).textContent = '1';
+        }
+        if (status) status.textContent = '0111 + 0011 = 1010   (7 + 3 = 10), with three carries';
+      }
+
+      function tick() {
+        if (step === 0) clearAll();
+        if (step < WIDTH) {
+          renderStep(step);
+          step++;
+          timer = setTimeout(tick, 1100);
+        } else {
+          renderStep(WIDTH);
+          if (status) status.textContent = 'Result: 1010  —  7 + 3 = 10';
+          step = 0;
+          timer = setTimeout(tick, 2200);   // hold, then start over
+        }
+      }
+
+      function play() {
+        playing = true;
+        if (toggleBtn) { toggleBtn.textContent = 'Pause'; toggleBtn.setAttribute('aria-pressed', 'false'); }
+        clearTimeout(timer);
+        tick();
+      }
+      function pause() {
+        playing = false;
+        if (toggleBtn) { toggleBtn.textContent = 'Play'; toggleBtn.setAttribute('aria-pressed', 'true'); }
+        clearTimeout(timer);
+      }
+
+      if (toggleBtn) toggleBtn.addEventListener('click', function () { playing ? pause() : play(); });
+      if (stepBtn) stepBtn.addEventListener('click', function () {
+        pause();
+        if (step === 0) clearAll();
+        if (step < WIDTH) { renderStep(step); step++; }
+        else { renderStep(WIDTH); step = 0; }
+      });
+
+      // Respect the user's motion preference: show the finished sum instead
+      // of looping an animation they have asked not to see.
+      if (reduced) { showFinal(); pause(); }
+      else { play(); }
+    })();
 
     /* ---------------- Self-check ---------------- */
     var tabs = [['tab-btn-ha', 'tab-ha'], ['tab-btn-fa', 'tab-fa']];
@@ -657,36 +905,67 @@
       });
     });
 
-    /* Unscored and non-persistent by design: formative only, and artifacts
-       must not use localStorage. */
     Array.prototype.forEach.call(document.querySelectorAll('.quiz-options'), function (group) {
       var answer = parseInt(group.getAttribute('data-answer'), 10);
+      var okMsg = group.getAttribute('data-ok');
+      var noMsg = group.getAttribute('data-no');
       var feedback = group.parentNode.querySelector('.quiz-feedback');
       var opts = group.querySelectorAll('.quiz-option');
 
       Array.prototype.forEach.call(opts, function (opt, i) {
         opt.addEventListener('click', function () {
-          Array.prototype.forEach.call(opts, function (o) {
-            o.classList.remove('correct', 'incorrect');
-          });
+          Array.prototype.forEach.call(opts, function (o) { o.classList.remove('correct', 'incorrect'); });
           var right = (i === answer);
           opt.classList.add(right ? 'correct' : 'incorrect');
           if (!right) opts[answer].classList.add('correct');
           if (feedback) {
             feedback.className = 'quiz-feedback visible ' +
               (right ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
-            feedback.textContent = right
-              ? 'Correct. The carry is 1 only when both inputs are 1, which is exactly AND — and the sum is 1 only when they differ, which is exactly XOR.'
-              : 'Not quite — the correct answer is highlighted. Re-read the table in §3.2 and compare its two output columns against the gates you already know.';
-            if (group.getAttribute('data-answer') === '2') {
-              feedback.textContent = right
-                ? 'Correct. A half adder has exactly two inputs, and an inner column has three things to add. The missing input is the carry coming in from the right.'
-                : 'Not quite — the correct answer is highlighted. A half adder computes correctly; the problem is what it has no input for.';
-            }
+            feedback.textContent = right ? okMsg : noMsg;
           }
         });
       });
     });
+
+    /* ---------------- Lightbox ---------------- */
+    (function lightbox() {
+      var box = el('lightbox'), img = el('lightbox-img'),
+          cap = el('lightbox-caption'), closeBtn = el('lightbox-close');
+      if (!box) return;
+      var lastFocus = null;
+
+      function open(src, caption, alt) {
+        lastFocus = document.activeElement;
+        img.src = src;
+        img.alt = alt || '';
+        cap.textContent = caption || '';
+        box.classList.add('open');
+        closeBtn.focus();
+      }
+      function close() {
+        box.classList.remove('open');
+        img.src = '';
+        if (lastFocus && lastFocus.focus) lastFocus.focus();
+      }
+
+      Array.prototype.forEach.call(document.querySelectorAll('.zoomable'), function (node) {
+        var fire = function () {
+          open(node.getAttribute('src'),
+               node.getAttribute('data-caption') || node.getAttribute('alt'),
+               node.getAttribute('alt'));
+        };
+        node.addEventListener('click', fire);
+        node.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fire(); }
+        });
+      });
+
+      box.addEventListener('click', close);
+      closeBtn.addEventListener('click', function (e) { e.stopPropagation(); close(); });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && box.classList.contains('open')) close();
+      });
+    })();
 
     /* Initial render */
     haUpdate();

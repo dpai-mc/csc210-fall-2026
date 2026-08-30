@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w3-a3">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Assignment 3: Combinational Circuits</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- Assignment-specific ----------
+       Matches assignment2.html deliberately: same badge, question,
+       checklist and rubric treatment, so the two assignments read as one
+       series. .pin-table and .logisim-steps are shared. */
+    .points-badge {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: var(--fs-xs);
+      font-weight: 700;
+      padding: 2px var(--space-sm);
+      border-radius: 999px;
+      background: var(--color-accent);
+      color: #fff;
+      vertical-align: middle;
+      margin-left: var(--space-sm);
+    }
+    .q { margin-bottom: var(--space-lg); }
+    .q__num {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--color-primary);
+    }
+    .q__pts {
+      font-family: var(--font-mono);
+      font-size: var(--fs-xs);
+      color: var(--color-text-muted);
+    }
+    .q ol { margin-top: var(--space-sm); }
+
+    /* Blank truth tables students fill in */
+    .tt-blank td.fill {
+      background: var(--color-code-bg);
+      min-width: 46px;
+      height: 30px;
+    }
+
+    /* Checklist glyphs — not live inputs. Submission is through Canvas,
+       so a real checkbox would imply state we do not persist. */
+    .checklist { list-style: none; padding-left: 0; }
+    .checklist li {
+      position: relative;
+      padding-left: var(--space-xl);
+      margin-bottom: var(--space-sm);
+    }
+    .checklist li::before {
+      content: "";
+      position: absolute;
+      left: 0; top: 3px;
+      width: 16px; height: 16px;
+      border: 2px solid var(--color-text-muted);
+      border-radius: 3px;
+    }
+
+    .rubric-table { font-size: var(--fs-sm); }
+    .rubric-table th:first-child { width: 22%; }
+
+    /* Part C point table */
+    .pts-table { font-size: var(--fs-sm); }
+    .pts-table td:nth-child(2) { text-align: center; width: 1%; white-space: nowrap; font-family: var(--font-mono); font-weight: 700; }
+    .pts-table td:first-child { font-family: var(--font-mono); white-space: nowrap; }
+    .pts-table tfoot td { font-weight: 700; background: var(--color-code-bg); }
+
+    /* Print: students often work from paper for the written parts */
+    @media print {
+      .sp-header, .sp-footer, .no-print { display: none; }
+      .q { break-inside: avoid; }
+      .pin-table { break-inside: avoid; }
+      a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 3 &rsaquo; <span>Assignment 3: Combinational Circuits</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Assignment 3: Combinational Circuits</h1>
+    <p>
+      <strong>100 points</strong> &nbsp;|&nbsp;
+      <strong>Assesses:</strong> SLO1 &mdash; describe basic computer architecture, organization and design &nbsp;|&nbsp;
+      <strong>Due:</strong> see the due date on this assignment in the course menu
+    </p>
+
+    <div class="callout callout--hook">
+      <div class="callout__title">Every circuit here is a component of your final project</div>
+      <p>This is not practice. The 8-bit adder you build becomes the arithmetic core of the ALU in Week 6. The decoders become the selection logic in the ALU, in RAM, and in the register file. <strong>You build them once, correctly, and then instantiate them for the rest of the semester.</strong></p>
+      <p>That is why the pin names and widths below are exact, and why three of the 100 points are for matching them.</p>
+    </div>
+
+    <!-- ============================================================
+         Setup
+         ============================================================ -->
+    <section id="setup">
+      <h2>Before You Start</h2>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">One file, all semester &mdash; no exceptions</div>
+        <p>Open the same <code>CSC210_YourName.circ</code> file you created in Week 2. The six circuits below are <strong>new tabs in that same file.</strong></p>
+        <p>Do not create a new file. Do not create separate files and link them together &mdash; a "master" file that links to external circuits opens as a broken circuit on the grader's machine, and it is the single most common way students lose points in this course. Your Week 2 circuits stay exactly where they are; nothing gets deleted or replaced.</p>
+      </div>
+
+      <ul>
+        <li><strong>Logisim Classic 2.7.1</strong> only &mdash; not Logisim Evolution.</li>
+        <li><strong>Primitive gates only.</strong> NAND, AND, OR, NOT, NOR, XOR, XNOR, plus input and output pins. Logisim's built-in Adder, Decoder, Multiplexer, Register, RAM and ROM components are <strong>not permitted</strong> &mdash; building them from gates is the point of the exercise.</li>
+        <li><strong>Verify each circuit against its truth table with the poke tool</strong> before moving on to the next one. A bug in <code>FULL_ADDER</code> becomes eight bugs in <code>ADDER_8BIT</code>.</li>
+      </ul>
+    </section>
+
+    <!-- ============================================================
+         Component interfaces
+         ============================================================ -->
+    <section id="interfaces">
+      <h2>Component Interfaces</h2>
+
+      <div class="callout">
+        <div class="callout__title">These tables are the specification, not reference material</div>
+        <p>Tab names, pin names, pin widths and pin ordering are all part of each component's interface. Later weeks instantiate these circuits and look for exactly these names. A circuit that works perfectly but calls its output <code>result</code> instead of <code>sum</code> is not the component Week 6 is expecting.</p>
+      </div>
+
+      <div class="pin-table__name">HALF_ADDER</div>
+      <table class="pin-table">
+        <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>a</td><td>1</td><td>in</td><td></td></tr>
+          <tr><td>b</td><td>1</td><td>in</td><td></td></tr>
+          <tr><td>sum</td><td>1</td><td>out</td><td>XOR of <code>a</code> and <code>b</code></td></tr>
+          <tr><td>carry</td><td>1</td><td>out</td><td>AND of <code>a</code> and <code>b</code></td></tr>
+        </tbody>
+      </table>
+
+      <div class="pin-table__name">FULL_ADDER</div>
+      <table class="pin-table">
+        <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>a</td><td>1</td><td>in</td><td></td></tr>
+          <tr><td>b</td><td>1</td><td>in</td><td></td></tr>
+          <tr><td>cin</td><td>1</td><td>in</td><td>carry in from the column to the right</td></tr>
+          <tr><td>sum</td><td>1</td><td>out</td><td></td></tr>
+          <tr><td>cout</td><td>1</td><td>out</td><td>carry out to the column to the left</td></tr>
+        </tbody>
+      </table>
+
+      <div class="pin-table__name">ADDER_8BIT</div>
+      <table class="pin-table">
+        <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>a</td><td>8</td><td>in</td><td></td></tr>
+          <tr><td>b</td><td>8</td><td>in</td><td></td></tr>
+          <tr><td>cin</td><td>1</td><td>in</td><td>set pull behaviour to <strong>pull-down</strong></td></tr>
+          <tr><td>sum</td><td>8</td><td>out</td><td></td></tr>
+          <tr><td>cout</td><td>1</td><td>out</td><td>bit 7's carry-out</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <div class="callout__title">This interface is fixed</div>
+        <p>The Week 6 ALU instantiates <code>ADDER_8BIT</code> and expects exactly these five pins at exactly these widths. Of all the interfaces on this page, this is the one that will cost you the most rework if you get it wrong.</p>
+      </div>
+
+      <div class="pin-table__name">DECODER_2TO4</div>
+      <table class="pin-table">
+        <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>sel</td><td>2</td><td>in</td><td>one 2-bit pin, not two 1-bit pins</td></tr>
+          <tr><td>out0</td><td>1</td><td>out</td><td>high when <code>sel</code> = <code>00</code></td></tr>
+          <tr><td>out1</td><td>1</td><td>out</td><td>high when <code>sel</code> = <code>01</code></td></tr>
+          <tr><td>out2</td><td>1</td><td>out</td><td>high when <code>sel</code> = <code>10</code></td></tr>
+          <tr><td>out3</td><td>1</td><td>out</td><td>high when <code>sel</code> = <code>11</code></td></tr>
+        </tbody>
+      </table>
+
+      <div class="pin-table__name">DECODER_3TO8</div>
+      <table class="pin-table">
+        <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>sel</td><td>3</td><td>in</td><td></td></tr>
+          <tr><td>out0 … out7</td><td>1 each</td><td>out</td><td><code>sel</code> = <code>000</code> raises <code>out0</code>; <code>111</code> raises <code>out7</code></td></tr>
+        </tbody>
+      </table>
+
+      <div class="pin-table__name">DECODER_4TO16</div>
+      <table class="pin-table">
+        <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>sel</td><td>4</td><td>in</td><td></td></tr>
+          <tr><td>out0 … out15</td><td>1 each</td><td>out</td><td><code>sel</code> = <code>0000</code> raises <code>out0</code>; <code>1111</code> raises <code>out15</code></td></tr>
+        </tbody>
+      </table>
+
+      <p><strong>Pin ordering is part of every decoder's interface:</strong> the all-zeros input raises the first output. Getting this backwards produces a circuit that works and is still wrong.</p>
+    </section>
+
+    <!-- ============================================================
+         PART A
+         ============================================================ -->
+    <section id="part-a">
+      <h2>Part A &mdash; Written: Adder Analysis <span class="points-badge">25 points</span></h2>
+
+      <div class="q">
+        <p><span class="q__num">1.</span> <span class="q__pts">(5 pts)</span> Complete the half-adder truth table, and state which single gate produces each of the two outputs.</p>
+        <table class="tt-blank" style="max-width:380px;">
+          <thead><tr><th>a</th><th>b</th><th>sum</th><th>carry</th></tr></thead>
+          <tbody>
+            <tr><td>0</td><td>0</td><td class="fill"></td><td class="fill"></td></tr>
+            <tr><td>0</td><td>1</td><td class="fill"></td><td class="fill"></td></tr>
+            <tr><td>1</td><td>0</td><td class="fill"></td><td class="fill"></td></tr>
+            <tr><td>1</td><td>1</td><td class="fill"></td><td class="fill"></td></tr>
+          </tbody>
+        </table>
+        <p><code>sum</code> is produced by: ________________ &nbsp;&nbsp;&nbsp; <code>carry</code> is produced by: ________________</p>
+      </div>
+
+      <div class="q">
+        <p><span class="q__num">2.</span> <span class="q__pts">(5 pts)</span> Explain why a half adder cannot be used for any column of a multi-bit addition <em>except</em> the rightmost.</p>
+      </div>
+
+      <div class="q">
+        <p><span class="q__num">3.</span> <span class="q__pts">(5 pts)</span> A full adder is built from two half adders and an OR gate. Explain what the OR gate is for &mdash; specifically, why the two carry sources cannot simply be wired together.</p>
+      </div>
+
+      <div class="q">
+        <p><span class="q__num">4.</span> <span class="q__pts">(5 pts)</span> For an 8-bit ripple-carry adder, give an input pair (both operands, in binary) that forces a carry to propagate through all eight positions. Explain why this is the slowest case for the circuit.</p>
+      </div>
+
+      <div class="q">
+        <p><span class="q__num">5.</span> <span class="q__pts">(5 pts)</span> <strong>Reading these eight bits as unsigned values (0&ndash;255):</strong> the addition <code>10000001 + 10000001</code> in an 8-bit adder produces a sum of <code>00000010</code> and a carry-out of 1. Explain what the carry-out means, and why the 8-bit sum on its own is misleading.</p>
+
+        <div class="callout">
+          <div class="callout__title">Unsigned overflow &mdash; and what this question is <em>not</em> asking</div>
+          <p>This question is entirely about <strong>unsigned overflow</strong>. The true sum, 258, is larger than 255, and the carry-out is how the circuit tells you so.</p>
+          <p>Week 1's <strong>signed overflow</strong> is a different condition, detected by a different rule, and it is not what is being asked here.</p>
+          <p>If you noticed that these same bit patterns are &minus;127 each in two's complement, you are reading ahead correctly &mdash; the same hardware supports both readings, and which one applies is a decision <em>you</em> make, not something the adder knows. Week 6 puts that decision inside the ALU. For this question, read them as unsigned.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART B
+         ============================================================ -->
+    <section id="part-b">
+      <h2>Part B &mdash; Written: Selection Circuits <span class="points-badge">20 points</span></h2>
+
+      <div class="q">
+        <p><span class="q__num">6.</span> <span class="q__pts">(5 pts)</span> How many AND gates does a 4&times;16 decoder need, and how many inputs does each one have? State the general rule for an <em>n</em>-input decoder.</p>
+      </div>
+
+      <div class="q">
+        <p><span class="q__num">7.</span> <span class="q__pts">(5 pts)</span> Explain in your own words the difference between a decoder and a multiplexer. <strong>Your answer must address what happens to the data.</strong></p>
+      </div>
+
+      <div class="q">
+        <p><span class="q__num">8.</span> <span class="q__pts">(5 pts)</span> A decoder's outputs are described as "one-hot." Explain what that means, and why it is useful for selecting one thing out of many.</p>
+      </div>
+
+      <div class="q">
+        <p><span class="q__num">9.</span> <span class="q__pts">(5 pts)</span> An encoder is sometimes described as a decoder in reverse. Explain the sense in which that is true, and describe what an encoder should do if two of its inputs are high at once.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART C
+         ============================================================ -->
+    <section id="part-c">
+      <h2>Part C &mdash; Logisim Build <span class="points-badge">55 points</span></h2>
+
+      <p><span class="q__num">10.</span> <span class="q__pts">(55 pts)</span> Build all six circuits as separate tabs in your single <code>CSC210_YourName.circ</code> file, matching the interfaces specified above.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Composition is the requirement, not just correct answers</div>
+        <p><code>ADDER_8BIT</code> must be built from <strong>eight instances of your <code>FULL_ADDER</code> subcircuit</strong>. An 8-bit adder hand-wired from forty individual gates produces correct sums and <strong>has not met the requirement</strong> &mdash; it will be graded as such.</p>
+        <p>This is not pedantry. The point of the exercise is building a component once and reusing it, and a hand-wired version cannot be dropped into the ALU in Week 6 the way a composed one can.</p>
+      </div>
+
+      <h3>Circuit 1 &mdash; <code>HALF_ADDER</code></h3>
+      <ol class="logisim-steps">
+        <li>New circuit tab named <code>HALF_ADDER</code>.</li>
+        <li>Two 1-bit input pins, <code>a</code> and <code>b</code>.</li>
+        <li>One XOR gate fed by both inputs &rarr; output pin <code>sum</code>.</li>
+        <li>One AND gate fed by both inputs &rarr; output pin <code>carry</code>.</li>
+        <li><strong>Verify all four rows</strong> with the poke tool. Note the last row: 1 + 1 gives <code>sum</code> 0 and <code>carry</code> 1, which is binary <code>10</code> &mdash; and is exactly why a half adder is not enough on its own.</li>
+      </ol>
+
+      <h3>Circuit 2 &mdash; <code>FULL_ADDER</code></h3>
+      <ol class="logisim-steps">
+        <li>New circuit tab named <code>FULL_ADDER</code>. Three 1-bit inputs: <code>a</code>, <code>b</code>, <code>cin</code>.</li>
+        <li><strong>First stage:</strong> XOR of <code>a</code> and <code>b</code> gives the partial sum. AND of <code>a</code> and <code>b</code> gives the first carry.</li>
+        <li><strong>Second stage:</strong> XOR the partial sum with <code>cin</code> &rarr; output pin <code>sum</code>.</li>
+        <li>AND the partial sum with <code>cin</code> to produce the second carry.</li>
+        <li>OR the two carries &rarr; output pin <code>cout</code>. If <em>either</em> stage carried, the full adder carries.</li>
+        <li>Five gates total: 2 XOR, 2 AND, 1 OR. <strong>Verify all eight input combinations.</strong></li>
+      </ol>
+
+      <table class="tt-blank" style="max-width:520px;">
+        <thead><tr><th>cin</th><th>a</th><th>b</th><th>sum</th><th>cout</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>0</td><td>0</td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>0</td><td>0</td><td>1</td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>0</td><td>1</td><td>0</td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>0</td><td>1</td><td>1</td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>1</td><td>0</td><td>0</td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>1</td><td>0</td><td>1</td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>1</td><td>1</td><td>0</td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>1</td><td>1</td><td>1</td><td class="fill"></td><td class="fill"></td></tr>
+        </tbody>
+      </table>
+
+      <h3>Circuit 3 &mdash; <code>ADDER_8BIT</code></h3>
+      <ol class="logisim-steps">
+        <li>New circuit tab named <code>ADDER_8BIT</code>. Inputs <code>a</code> and <code>b</code> at <strong>8 bits wide</strong>; <code>cin</code> at 1 bit.</li>
+        <li>Use splitters to break <code>a</code> and <code>b</code> into their individual bits.</li>
+        <li>Place <strong>eight instances of your <code>FULL_ADDER</code></strong> subcircuit. Do not hand-wire forty gates.</li>
+        <li>Bit 0 (least significant) takes the circuit's <code>cin</code>.</li>
+        <li>Each stage's <code>cout</code> becomes the next stage's <code>cin</code>, running LSB &rarr; MSB.</li>
+        <li>Bit 7's <code>cout</code> becomes the circuit's <code>cout</code>.</li>
+        <li>Recombine the eight sum bits with a splitter into the 8-bit <code>sum</code> output.</li>
+        <li><strong>Set <code>cin</code>'s pull behaviour to pull-down</strong> so it resets to 0. Left floating, the adder can come up holding a stale carry and give a wrong answer on your first test while every gate is wired correctly.</li>
+        <li><strong>Verify at minimum:</strong> <code>10000001 + 10000001</code> (which overflows into <code>cout</code>), one addition producing no carry at all, and one with <code>cin</code> = 1.</li>
+      </ol>
+
+      <h3>Circuit 4 &mdash; <code>DECODER_2TO4</code></h3>
+      <ol class="logisim-steps">
+        <li>New circuit tab named <code>DECODER_2TO4</code>. One 2-bit input pin named <code>sel</code>.</li>
+        <li>Split <code>sel</code> into its two bits. Run each through a NOT gate so both polarities are available.</li>
+        <li>Four 2-input AND gates, one per output, each wired to the combination that selects it: <code>out0</code> = both inverted, <code>out3</code> = both true.</li>
+        <li><strong>Verify:</strong> each of the four input values raises exactly one output and leaves the other three at 0.</li>
+      </ol>
+
+      <h3>Circuit 5 &mdash; <code>DECODER_3TO8</code></h3>
+      <ol class="logisim-steps">
+        <li>Same method, one input wider: three input bits, six polarities, <strong>eight 3-input AND gates</strong>.</li>
+        <li><code>sel</code> = <code>000</code> raises <code>out0</code>, through <code>sel</code> = <code>111</code> raising <code>out7</code>.</li>
+        <li><strong>Verify all eight</strong> input values.</li>
+      </ol>
+
+      <h3>Circuit 6 &mdash; <code>DECODER_4TO16</code></h3>
+      <ol class="logisim-steps">
+        <li>Same method again: four input bits, eight polarities, <strong>sixteen 4-input AND gates</strong>.</li>
+        <li><code>sel</code> = <code>0000</code> raises <code>out0</code>, through <code>1111</code> raising <code>out15</code>.</li>
+        <li><strong>Verify a representative sample</strong> across the range, including <code>0000</code> and <code>1111</code>.</li>
+      </ol>
+
+      <div class="callout">
+        <div class="callout__title">Build this one directly &mdash; do not cascade two 3&times;8 decoders</div>
+        <p>Wider decoders are built by <strong>extending the pattern</strong>, not by combining narrower ones. Cascading is a workaround from an era when decoders came as fixed-size chips and engineers combined what they could buy. It also requires an enable input, which your <code>DECODER_3TO8</code> does not have.</p>
+      </div>
+
+      <h3>Part C point breakdown</h3>
+      <table class="pts-table">
+        <thead><tr><th>Circuit</th><th>Points</th><th>What earns them</th></tr></thead>
+        <tbody>
+          <tr><td>HALF_ADDER</td><td>5</td><td>Correct for all 4 input combinations</td></tr>
+          <tr><td>FULL_ADDER</td><td>10</td><td>Correct for all 8; built as two half adders + OR</td></tr>
+          <tr><td>ADDER_8BIT</td><td>15</td><td><strong>Built from eight <code>FULL_ADDER</code> instances</strong>, not hand-wired gates</td></tr>
+          <tr><td>DECODER_2TO4</td><td>5</td><td>One-hot output, correct ordering</td></tr>
+          <tr><td>DECODER_3TO8</td><td>7</td><td>One-hot output, correct ordering</td></tr>
+          <tr><td>DECODER_4TO16</td><td>8</td><td>Extended pattern, <strong>not</strong> cascaded 3&times;8s</td></tr>
+          <tr><td>Interface conformance</td><td>3</td><td>Pin names and widths match the spec exactly &mdash; later weeks depend on it</td></tr>
+          <tr><td>Submission rules</td><td>2</td><td>Single <code>.circ</code> file, primitive gates only</td></tr>
+        </tbody>
+        <tfoot>
+          <tr><td>Total</td><td>55</td><td></td></tr>
+        </tfoot>
+      </table>
+
+      <p style="font-size:var(--fs-sm);color:var(--color-text-muted);">Points are weighted by build effort and by how much later work depends on the circuit. <code>ADDER_8BIT</code> carries the most because it is both the largest build and the component the ALU consumes directly.</p>
+    </section>
+
+    <!-- ============================================================
+         Submission
+         ============================================================ -->
+    <section id="submit">
+      <h2>What to Submit</h2>
+
+      <p>Two items, both through Canvas:</p>
+      <ol>
+        <li>Your written answers to Parts A and B (questions 1&ndash;9).</li>
+        <li>Your <code>CSC210_YourName.circ</code> file &mdash; the same one, containing every circuit from Week 2 <em>and</em> the six new tabs.</li>
+      </ol>
+
+      <h3>Checklist</h3>
+      <ul class="checklist">
+        <li>All six circuits (<code>HALF_ADDER</code>, <code>FULL_ADDER</code>, <code>ADDER_8BIT</code>, <code>DECODER_2TO4</code>, <code>DECODER_3TO8</code>, <code>DECODER_4TO16</code>) are present as separate tabs</li>
+        <li><code>ADDER_8BIT</code> is built from eight <code>FULL_ADDER</code> instances, not hand-wired gates</li>
+        <li>Pin names and widths match the specification exactly</li>
+        <li>Decoder outputs are ordered so the all-zeros input raises the first output</li>
+        <li>Each circuit is verified against its truth table using the poke tool</li>
+        <li><strong>All circuits are contained within this single .circ file — no external file links</strong></li>
+        <li>Only primitive gates and I/O pins are used (no built-in library components)</li>
+      </ul>
+    </section>
+
+    <!-- ============================================================
+         Rubric
+         ============================================================ -->
+    <section id="rubric">
+      <h2>Grading Rubric</h2>
+
+      <p>Every criterion below assesses <strong>SLO1</strong> &mdash; describe basic computer architecture, organization and design.</p>
+
+      <table class="rubric-table">
+        <thead>
+          <tr>
+            <th>Criterion</th>
+            <th>Excellent (90&ndash;100%)</th>
+            <th>Proficient (75&ndash;89%)</th>
+            <th>Developing (60&ndash;74%)</th>
+            <th>Inadequate (&lt;60%)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Adder understanding</strong><br>Part A, 25 pts<br><span style="font-size:var(--fs-xs);color:var(--color-text-muted);">SLO1</span></td>
+            <td>All truth tables correct. Explains carry propagation and the role of the OR gate precisely. Identifies the worst-case carry input and why.</td>
+            <td>Mostly correct. Minor gaps in explaining propagation or overflow.</td>
+            <td>Several errors. Struggles to explain why a half adder is insufficient.</td>
+            <td>Cannot complete adder truth tables or explain carry.</td>
+          </tr>
+          <tr>
+            <td><strong>Selection circuits</strong><br>Part B, 20 pts<br><span style="font-size:var(--fs-xs);color:var(--color-text-muted);">SLO1</span></td>
+            <td>Decoder scaling stated correctly as a general rule. Decoder/multiplexer distinction addresses data flow accurately.</td>
+            <td>Mostly correct; the mux/decoder distinction may be imprecise about data.</td>
+            <td>Confuses decoders and multiplexers, or cannot state the scaling rule.</td>
+            <td>Fundamental misunderstanding of selection logic.</td>
+          </tr>
+          <tr>
+            <td><strong>Circuit construction</strong><br>Part C, 55 pts<br><span style="font-size:var(--fs-xs);color:var(--color-text-muted);">SLO1</span></td>
+            <td>All six circuits correct and correctly named. <strong><code>ADDER_8BIT</code> built from <code>FULL_ADDER</code> instances.</strong> <code>DECODER_4TO16</code> extends the pattern. Pins match spec.</td>
+            <td>Circuits functional; minor naming or organization issues.</td>
+            <td>One or more circuits missing or incorrect, <strong>or the adder hand-wired rather than composed.</strong></td>
+            <td>Submission incomplete or uses prohibited components.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============================================================
+         Help
+         ============================================================ -->
+    <section id="help">
+      <h2>Getting Help</h2>
+
+      <ul>
+        <li><strong>Stuck on the concepts?</strong> Pages 1 and 2 of this week cover the adders; page 3 covers the decoders. The simulators on those pages let you set any inputs and watch the outputs, which is a fast way to check your own reasoning against a working model.</li>
+        <li><strong>Stuck on the tool?</strong> Week 2 page 4 has the nine-minute Logisim walkthrough, and the official <a href="https://cburch.com/logisim/docs.html" target="_blank" rel="noopener">Logisim documentation</a> is thorough.</li>
+        <li><strong>Circuit gives wrong answers?</strong> Verify the smallest piece first. A broken <code>FULL_ADDER</code> becomes eight broken stages, and it is far easier to find at one gate than at forty.</li>
+        <li><strong>Reference reading:</strong> combinational circuits are covered in <strong>Unit 3: Fundamentals of Digital Logic Design</strong> in Saylor CS301. Log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> and navigate to Unit 3.</li>
+      </ul>
+
+      <div class="callout">
+        <div class="callout__title">A scheduling note</div>
+        <p>Finish this inside Week 3 if you can. Week 4 is short &mdash; Labor Day falls on its Monday &mdash; and <strong>Quiz 1 lands the same week</strong>, covering Weeks 1 through 4. Parts A and B here are written in the style of the questions you will see on it.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+</body>
+</html>

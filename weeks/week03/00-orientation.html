@@ -208,24 +208,34 @@
       <h2>Week 3 Overview</h2>
       <p>Watch this before you start the material below. It walks through the whole week in about ten minutes: why gates alone are not enough, how a half adder becomes a full adder becomes an 8-bit adder, what a decoder does, and how all of it ends up inside the processor you build later.</p>
 
-      <div class="video-breakout">
+      <div class="video-breakout" role="region" aria-label="Week 3 overview video and transcript">
         <div class="video-transcript-row">
           <div class="video-col">
             <div class="video-frame" id="video-container">
               <!-- PLACEHOLDER: replace with the standard iframe and set VIDEO_ID
                    below once the Fall 2026 recording exists.
                    See docs/CSC210-Week3-VideoBrief.md. -->
+              <!-- COPY RULE (Standards, and it has bitten twice now): a
+                   placeholder must never promise a date that the act of
+                   shipping will falsify. Week 2's placeholder said "before
+                   the module opens" and the module opened without it; that
+                   wording was then copied forward into Week 3. Say "later
+                   this week" or give no date at all. Do not reintroduce a
+                   deadline here when copying this block to Week 4. -->
               <div class="video-pending">
                 <p><strong>Video coming soon.</strong><br>
-                The Week 3 overview video is being recorded and will appear here before the module opens.</p>
+                The Week 3 overview video will be posted later this week. Nothing on this page depends on it &mdash; start with page 1 whenever you are ready.</p>
               </div>
             </div>
             <div class="video-caption">Closed captions available. Use the transcript panel to jump to any point in the video.</div>
           </div>
           <div class="transcript-col">
-            <div class="transcript-panel" id="transcript-container">
-              <p class="transcript-loading">Transcript will appear here once the video is posted.</p>
+            <h3 class="sr-only" id="transcript-heading">Video transcript</h3>
+            <div class="transcript-panel" id="transcript-container"
+                 role="group" aria-labelledby="transcript-heading">
+              <p class="transcript-loading">The searchable, click-to-seek transcript will appear here once the video is posted.</p>
             </div>
+            <p class="sr-only" role="status" aria-live="polite" id="transcript-status"></p>
           </div>
         </div>
       </div>
@@ -384,7 +394,7 @@
       <p>You have gates that decide. You are about to build circuits that count.</p>
 
       <div style="text-align:center;margin:var(--space-xl) 0;">
-        <div class="spa-card__btn" style="font-size:var(--fs-md);padding:var(--space-md) var(--space-xl);">
+        <div class="spa-card__btn" aria-hidden="true" style="font-size:var(--fs-md);padding:var(--space-md) var(--space-xl);">
           Continue to the next item in this module to begin Page 1: From Gates to Adders
         </div>
       </div>
@@ -472,6 +482,18 @@
       });
     }
 
+    /* Announce the active line for screen-reader users. The visual
+       highlight is a class change, which is silent to assistive tech; this
+       mirrors it into a polite live region. Guarded so it only speaks when
+       the line actually changes, not on every timer tick. */
+    var lastAnnounced = null;
+    function announceLine(text) {
+      if (text === lastAnnounced) return;
+      lastAnnounced = text;
+      var s = document.getElementById('transcript-status');
+      if (s) s.textContent = text || '';
+    }
+
     function highlightCurrentLine() {
       if (!player || !player.getCurrentTime) return;
       var currentTime = player.getCurrentTime();
@@ -484,6 +506,7 @@
             var prev = document.querySelector('#transcript-container .active-transcript-line');
             if (prev) prev.classList.remove('active-transcript-line');
             line.classList.add('active-transcript-line');
+            announceLine(line.textContent);
             line.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
         } else {
@@ -496,9 +519,25 @@
       var videoContainer = document.getElementById('video-container');
       var transcriptContainer = document.getElementById('transcript-container');
       if (!videoContainer || !transcriptContainer) return;
-      if (window.matchMedia('(min-width: 1024px)').matches) {
+      // Match the transcript panel's height to the video only when the two
+      // columns are ACTUALLY side by side. Detected by comparing their rendered
+      // positions rather than by a viewport-width test, so this stays in sync
+      // with the flex-wrap rule in shared/style.css regardless of how wide the
+      // Canvas iframe happens to be. (The old matchMedia('(min-width: 1024px)')
+      // test measured the iframe, not the browser window, and disagreed with
+      // the CSS whenever Canvas gave the page less than 1024px.)
+      var videoCol = videoContainer.closest('.video-col');
+      var transcriptCol = transcriptContainer.closest('.transcript-col');
+      var sideBySide = !!(videoCol && transcriptCol) && Math.abs(
+        transcriptCol.getBoundingClientRect().top - videoCol.getBoundingClientRect().top) < 2;
+      // Both height and max-height are set: .transcript-panel carries a fixed
+      // height: 24rem, so setting max-height alone could only ever shrink the
+      // panel, never grow it to match a taller video.
+      if (sideBySide) {
+        transcriptContainer.style.height = videoContainer.offsetHeight + 'px';
         transcriptContainer.style.maxHeight = videoContainer.offsetHeight + 'px';
       } else {
+        transcriptContainer.style.height = '24rem';
         transcriptContainer.style.maxHeight = '24rem';
       }
     }

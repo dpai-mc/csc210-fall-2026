@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w3-04">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 3: Encoders, Comparators, and What You Now Own</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ----------
+       This page has no widget. The only local styling is the components
+       inventory, which is a summary layout rather than a reusable
+       component -- if a second week needs it, move it to shared then. */
+
+    .inventory {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: var(--space-md);
+      margin: var(--space-md) 0;
+    }
+    .inventory__item {
+      border: 1px solid var(--color-border);
+      border-left: 4px solid var(--color-primary);
+      border-radius: var(--radius);
+      background: var(--color-surface);
+      padding: var(--space-md);
+    }
+    .inventory__name {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: var(--fs-md);
+      color: var(--color-text);
+      margin-bottom: var(--space-xs);
+    }
+    .inventory__role {
+      font-size: var(--fs-sm);
+      color: var(--color-text-muted);
+      line-height: 1.5;
+    }
+    .inventory__dest {
+      display: inline-block;
+      margin-top: var(--space-sm);
+      font-size: var(--fs-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: var(--color-primary);
+    }
+
+    /* The comparator chain runs MSB to LSB, the opposite direction to the
+       adder. .stage-chain is shared; the direction marker is local because
+       only this page has a chain that runs the other way. */
+    .chain-direction {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      font-family: var(--font-mono);
+      font-size: var(--fs-xs);
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-xs);
+    }
+    .chain-direction__arrow {
+      flex: 1;
+      height: 2px;
+      background: linear-gradient(to right, var(--color-primary), var(--color-border));
+      border-radius: 1px;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 3 &rsaquo; <span>Page 4: Encoders, Comparators, and What You Now Own</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Encoders, Comparators, and What You Now Own</h1>
+    <p><strong>Sections 3.7&ndash;3.9</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1.5 hours</p>
+
+    <!-- ============================================================
+         3.7
+         ============================================================ -->
+    <section id="sec-3-7">
+      <h2>3.7 &nbsp; Encoders and Comparators</h2>
+
+      <p>Two more circuits round out the picture. Neither is on your assignment &mdash; both are here because you will meet them inside the ALU and the control unit, and because the second one demonstrates a technique you have already used without naming it.</p>
+
+      <h3>The encoder</h3>
+
+      <p>An <strong>encoder</strong> is the decoder run backwards.</p>
+
+      <p>A decoder takes a code and raises one of many lines. An encoder takes many lines, exactly one of which is high, and produces the <em>n</em>-bit code that names it. Sixteen input lines in, a 4-bit code out.</p>
+
+      <p>Where is that useful? Any time something out in the machine raises a line and the processor needs to know <em>which</em> line it was, as a number it can work with. A keyboard raising one line per key, and the encoder turning that into a key code, is the classic example.</p>
+
+      <div class="callout">
+        <div class="callout__title">What if two inputs are high at once?</div>
+        <p>A plain encoder has no answer &mdash; its output is meaningless, because it was built on the assumption that exactly one input is active.</p>
+        <p>The fix is a <strong>priority encoder</strong>, which is given a rule: when several inputs are high, report the highest-numbered one and ignore the rest. Real interrupt controllers work exactly this way &mdash; several devices can ask for attention simultaneously, and something has to decide who gets served first.</p>
+        <p>We are not building one. It is worth knowing the name and the reason it exists.</p>
+      </div>
+
+      <h3>The comparator</h3>
+
+      <p>A <strong>comparator</strong> takes two values and reports how they relate: whether they are equal, and which is larger.</p>
+
+      <p>Start at one bit, and it is small enough to reason through completely. Given inputs <code>A</code> and <code>B</code>, three questions:</p>
+
+      <table>
+        <thead>
+          <tr><th>Question</th><th>When is it true?</th><th>The gate</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>A</code> equals <code>B</code></td>
+            <td>Both 0, or both 1 &mdash; the bits are the same</td>
+            <td><strong>XNOR</strong>, which is exactly "these agree"</td>
+          </tr>
+          <tr>
+            <td><code>A</code> is greater than <code>B</code></td>
+            <td><code>A</code> is 1 and <code>B</code> is 0</td>
+            <td><strong>AND</strong> of <code>A</code> with <code>B'</code></td>
+          </tr>
+          <tr>
+            <td><code>A</code> is less than <code>B</code></td>
+            <td><code>A</code> is 0 and <code>B</code> is 1</td>
+            <td><strong>AND</strong> of <code>A'</code> with <code>B</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>Three gates and two inverters, and the one-bit comparison is complete. Notice that XNOR &mdash; a gate you might have filed away as an oddity in Week 2 &mdash; turns out to be the natural expression of "equal." That is a recurring experience in this material: the gate you could not find a use for is the obvious answer to a question you had not asked yet.</p>
+
+      <div class="callout">
+        <div class="callout__title">This one is a worked example, not a deliverable</div>
+        <p>The 1-bit comparator is here to be understood, not submitted. It is not one of the six circuits in Assignment 3, and there are no points attached to it. Build it in Logisim if you want to see it work &mdash; it is five minutes &mdash; but nothing asks you to.</p>
+      </div>
+
+      <h3>Making it wider &mdash; and a technique you have already used</h3>
+
+      <p>Wider comparators are <strong>built the same way the adder is</strong>: identical stages chained together, each one passing status along to the next. One stage per bit, each handing the next stage what it has concluded so far.</p>
+
+      <p>You built a chain like this two pages ago. In the ripple-carry adder, what travelled along the chain was a <em>carry</em>. In a comparator, what travels is a verdict &mdash; <em>equal so far</em>, or <em>already decided</em>.</p>
+
+      <div class="chain-direction" aria-hidden="true">
+        <span>bit 7 (MSB)</span>
+        <span class="chain-direction__arrow"></span>
+        <span>bit 0 (LSB)</span>
+      </div>
+      <p style="font-size:var(--fs-sm);color:var(--color-text-muted);margin-top:0;">
+        The comparator's chain runs in the direction shown. <strong>The direction differs from the adder's, for a reason you will see when you build the ALU.</strong>
+      </p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Chaining identical stages is the technique, not the circuit</div>
+        <p>This is the second time this week you have seen the same move: <strong>build one small stage, verify it completely, then chain copies of it and let information flow along the chain.</strong></p>
+        <p>Seeing it twice, in two circuits that do entirely different jobs, is what makes it a <em>technique</em> rather than a quirk of adders. It appears again inside the ALU, and again in the datapath. When you meet a circuit that has to work on a whole word, this is almost always how it is built.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         3.8
+         ============================================================ -->
+    <section id="sec-3-8">
+      <h2>3.8 &nbsp; Synthesis: These Are Your Components</h2>
+
+      <p>Step back and look at what is in your <code>.circ</code> file.</p>
+
+      <p>Two weeks ago it held gates built from NAND &mdash; a demonstration that universality is real. This week it holds an 8-bit adder and three decoders, built to specification, with the pin names the rest of the course expects.</p>
+
+      <p><strong>Those are not exercises. They are parts of the machine you are going to finish in December.</strong></p>
+
+      <div class="inventory">
+        <div class="inventory__item">
+          <div class="inventory__name">ADDER_8BIT</div>
+          <div class="inventory__role">Becomes the arithmetic core of the ALU &mdash; instantiated unchanged, not rebuilt.</div>
+          <span class="inventory__dest">Week 6</span>
+        </div>
+        <div class="inventory__item">
+          <div class="inventory__name">DECODER_3TO8</div>
+          <div class="inventory__role">Selects which ALU operation reaches the output.</div>
+          <span class="inventory__dest">Week 6</span>
+        </div>
+        <div class="inventory__item">
+          <div class="inventory__name">DECODER_4TO16</div>
+          <div class="inventory__role">Two of them address the rows and columns of the RAM matrix.</div>
+          <span class="inventory__dest">Week 8</span>
+        </div>
+        <div class="inventory__item">
+          <div class="inventory__name">DECODER_2TO4</div>
+          <div class="inventory__role">Selects which register the processor is reading from or writing to.</div>
+          <span class="inventory__dest">Weeks 10&ndash;13</span>
+        </div>
+      </div>
+
+      <p>You will see exactly how each of those connects when you build the circuit that uses it. Registers arrive in Week 5, the ALU in Week 6, RAM in Week 8, the control unit in Week 11. There is no need to understand any of that yet &mdash; only to know that the parts have somewhere to go, and that the specification you are being held to now is the reason they will fit when they get there.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Nothing new went into the toolbox this week</div>
+        <p>Look back at what any of these circuits is actually made of. The adder is XOR, AND, and OR. The decoder is NOT and AND. <strong>Not one new primitive was introduced.</strong></p>
+        <p>Everything you gained this week came from <em>arrangement</em> &mdash; from putting known parts together in a particular shape. That is the central fact of hardware design, and it does not stop being true at any level above this one. The CPU is gates. The computer is gates. It is arrangement all the way up.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         3.9
+         ============================================================ -->
+    <section id="sec-3-9">
+      <h2>3.9 &nbsp; Looking Ahead: Circuits That Forget</h2>
+
+      <p>There is something every circuit you have built so far cannot do, and it is easy to miss because nothing has asked for it yet.</p>
+
+      <div class="callout callout--hook">
+        <div class="callout__title">What we have</div>
+        <p>Circuits that perform arithmetic and selection on multi-bit values. Real components, built to spec.</p>
+      </div>
+
+      <div class="callout callout--hook">
+        <div class="callout__title">What we can't do yet</div>
+        <p><strong>Remember anything.</strong></p>
+        <p>Every circuit built this week is <em>combinational</em> &mdash; its output depends only on what its inputs are <em>right now</em>. Change the inputs and the old answer is simply gone. There is nowhere for it to have been kept.</p>
+        <p>Think about what that rules out. You cannot add three numbers, because there is nowhere to put the first sum while you fetch the third. You cannot count. You cannot do one thing and then another thing, because "and then" requires remembering that the first thing happened. <strong>Without memory there are no programs</strong> &mdash; only a fixed shape that transforms whatever is presented to it.</p>
+      </div>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">What you will be able to do next week</div>
+        <p>Store a single bit that persists until you deliberately change it.</p>
+        <p>Built &mdash; and this is the part worth being surprised by &mdash; from <strong>two NAND gates wired back into each other</strong>. No new component, no special memory ingredient. Two of the gates you already have, with each one's output feeding the other's input.</p>
+        <p>That circuit is where logic becomes memory, and it is the most important single idea in this course. Everything after it &mdash; registers, RAM, the program counter, the whole notion of a machine that executes one instruction and then the next &mdash; rests on it.</p>
+      </div>
+
+      <p>Week 2 proved NAND could build any logic function. Next week collects on that investment a second time, in a way the universality proof did not predict: two NAND gates can build something that is not a logic function at all.</p>
+    </section>
+
+    <!-- ============================================================
+         Closing — Assignment 3 callout
+         Standards §7: Assignment 3 is confirmed to ship (SPA Plan rev. 2,
+         Open Decision #3, ruled by Dave 2026-08-08), so naming it here is
+         permitted. Described as actually implemented; not linked (§5).
+         ============================================================ -->
+    <section id="sec-assignment">
+      <h2>Before you move on</h2>
+
+      <div class="callout">
+        <div class="callout__title">Assignment 3: Combinational Circuits &mdash; 100 points</div>
+        <p>Three parts: written questions on the adders (25 points), written questions on the selection circuits (20 points), and the Logisim build of all six circuits (55 points).</p>
+        <p>The assignment page is the next item in this module in Canvas. Everything it asks about is on the four pages you have just read.</p>
+        <p><strong>Finish it inside this week if you can.</strong> Week 4 is short &mdash; Labor Day falls on its Monday &mdash; and Quiz 1 lands the same week. Quiz 1 covers Weeks 1 through 4, and Parts A and B of this assignment are deliberately written in the style of the questions you will see on it.</p>
+      </div>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Reference textbook</div>
+        <p>Encoders and comparators are covered alongside the other combinational circuits in <strong>Unit 3: Fundamentals of Digital Logic Design</strong> in Saylor CS301. Log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> and navigate to Unit 3. The components framing &mdash; that these circuits are parts of your final project rather than exercises &mdash; is specific to this course and is covered here.</p>
+        <p>Plantz remains a useful companion for the circuit-building material generally; no specific chapter is assigned this week.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+</body>
+</html>

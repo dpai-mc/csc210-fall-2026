@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w3-02">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 3: The Ripple-Carry Adder</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific: the eight-stage carry chain ----------
+       Everything visual that recurs elsewhere (.bus-bit, .stage-chain,
+       .circuit-canvas__img, .preset-row) lives in shared/style.css. What
+       is here is the grid that lines the two operand rows up with the sum
+       row, which is specific to this page. */
+
+    /* Operands and sum share one column grid so bit 7 sits above bit 7.
+       MSB is on the LEFT, matching how the number is written -- the bit
+       ARRAYS are LSB-first per CSCLogic's convention, so the render loop
+       reverses. Getting these two conventions crossed is the classic bug
+       in this widget; it is called out again at the render site. */
+    .operand-grid {
+      display: grid;
+      grid-template-columns: 92px repeat(8, 1fr) 64px;
+      gap: var(--space-xs);
+      align-items: center;
+      margin: var(--space-sm) 0;
+      min-width: 0;
+    }
+    .operand-grid__label {
+      font-family: var(--font-mono);
+      font-size: var(--fs-sm);
+      font-weight: 700;
+      color: var(--color-text-muted);
+      text-align: right;
+      padding-right: var(--space-xs);
+    }
+    .operand-grid__value {
+      font-family: var(--font-mono);
+      font-size: var(--fs-sm);
+      color: var(--color-text-muted);
+      text-align: left;
+      padding-left: var(--space-xs);
+    }
+    .operand-grid__bitindex {
+      font-family: var(--font-mono);
+      font-size: var(--fs-xs);
+      color: var(--color-text-muted);
+      text-align: center;
+    }
+    .operand-grid--rule {
+      border-top: 2px solid var(--color-text);
+      padding-top: var(--space-sm);
+      margin-top: 0;
+    }
+
+    /* The carry row sits between operand B and the sum, offset half a cell
+       to the left, because a carry belongs BETWEEN two columns rather than
+       inside one -- it leaves bit i and arrives at bit i+1. */
+    .carry-row {
+      display: grid;
+      grid-template-columns: 92px repeat(8, 1fr) 64px;
+      gap: var(--space-xs);
+      align-items: center;
+      margin: var(--space-xs) 0;
+    }
+    .carry-cell {
+      font-family: var(--font-mono);
+      font-size: var(--fs-sm);
+      font-weight: 700;
+      text-align: center;
+      color: var(--color-border);
+      transform: translateX(-50%);
+      transition: color .18s;
+    }
+    .carry-cell--hi { color: var(--color-success); }
+    .carry-cell--pending { opacity: .25; }
+
+    @media (max-width: 720px) {
+      .operand-grid, .carry-row { grid-template-columns: 62px repeat(8, 1fr) 52px; }
+      .operand-grid__label { font-size: var(--fs-xs); }
+    }
+
+    /* Mode toggle. Two buttons, not a checkbox: the states are peers
+       rather than on/off, and .widget-btn already styles them. */
+    .mode-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-xs);
+      align-items: center;
+      margin: var(--space-md) 0 var(--space-sm);
+    }
+    .mode-row__label {
+      font-size: var(--fs-xs);
+      color: var(--color-text-muted);
+      margin-right: var(--space-xs);
+    }
+
+    .readout {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-md);
+      margin-top: var(--space-md);
+      padding-top: var(--space-md);
+      border-top: 1px solid var(--color-border);
+    }
+    .readout__item {
+      font-family: var(--font-mono);
+      font-size: var(--fs-sm);
+    }
+    .readout__item strong { color: var(--color-text); }
+    .readout__flag {
+      font-family: var(--font-mono);
+      font-size: var(--fs-sm);
+      font-weight: 700;
+      padding: 2px var(--space-sm);
+      border-radius: var(--radius);
+      border: 2px solid var(--color-border);
+      color: var(--color-text-muted);
+    }
+    .readout__flag--hi {
+      border-color: var(--color-danger, #b3261e);
+      color: var(--color-danger, #b3261e);
+      background: #fdf0ef;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 3 &rsaquo; <span>Page 2: The Ripple-Carry Adder</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>The Ripple-Carry Adder</h1>
+    <p><strong>Section 3.4</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~0.7 hours</p>
+
+    <!-- ============================================================
+         3.4
+         ============================================================ -->
+    <section id="sec-3-4">
+      <h2>3.4 &nbsp; The Ripple-Carry Adder: Chaining to 8 Bits</h2>
+
+      <p>You have a full adder. It adds one column: two bits and a carry coming in, producing a sum bit and a carry going out.</p>
+
+      <p>One column is not a number. To add two bytes you need eight columns, and the thing that connects them is already sitting on your full adder as an unused pin.</p>
+
+      <h3>The construction</h3>
+
+      <p>Place eight full adders side by side. Then wire them the way you were taught to add on paper, in first grade:</p>
+
+      <ul>
+        <li>The rightmost column &mdash; <strong>bit 0</strong>, the least significant &mdash; takes the circuit's own <code>cin</code>. For plain addition that is 0.</li>
+        <li>Every stage's <code>cout</code> becomes the <strong>next stage's <code>cin</code></strong>, running right to left, least significant to most significant.</li>
+        <li>The last stage's <code>cout</code> &mdash; bit 7's &mdash; becomes the circuit's <code>cout</code>.</li>
+      </ul>
+
+      <p>That is the whole design. Eight identical parts and a wire between each pair.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Build the small thing once</div>
+        <p>You do not wire forty gates. You build <code>FULL_ADDER</code> once, verify it against all eight rows of its truth table, and then place <strong>eight instances of it</strong>.</p>
+        <p>This is the habit the rest of the course is built on. In Week 6 you will place this entire 8-bit adder inside the ALU as a single component, the same way you are placing full adders inside it now. Each level hides the one below it &mdash; but the gates are all still there, doing exactly what you designed them to do.</p>
+      </div>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/1bitAdder_redrawn.jpg" loading="lazy" tabindex="0"
+             data-caption="One full adder, drawn as a reusable block. Five pins: a and b on the left, carry-in below, sum and carry-out on the right."
+             alt="The full adder redrawn as a labelled block: a small five-sided shape with input a at the top left, input b at the bottom left, carry-in entering from below, and carry-out and sum leaving on the right. The pin names c out, sum and c in are printed inside the block.">
+        <figcaption class="circuit-canvas__caption">One full adder as a block. Once it is verified, you stop thinking about the five gates inside it and think about the five pins instead.</figcaption>
+      </figure>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img circuit-canvas__img--wide zoomable" src="images/8bitAdder.png" loading="lazy" tabindex="0"
+             data-caption="Eight full adders in Logisim, bit 0 at the bottom and bit 7 at the top. The green wire up the middle is the carry chain."
+             alt="Eight one-bit full adders stacked vertically in Logisim, bit 7 at the top and bit 0 at the bottom. A single green wire runs up the middle of the column: each stage's carry-out feeds the carry-in of the stage above it. The 8-bit inputs A and B enter on the left through splitters that fan out to the individual bits, and the sum bits recombine through a splitter on the right. The circuit is shown adding 10000001 to 10000001, giving a sum of 00000010 and a carry-out of 1.">
+        <figcaption class="circuit-canvas__caption">Eight of them chained, with <strong>bit 0 at the bottom and bit 7 at the top</strong>. The single wire running up the middle of the column is the carry chain &mdash; the only thing connecting one stage to the next. It is shown carrying a 1, because this is the <code>10000001 + 10000001</code> case. Click to enlarge.</figcaption>
+      </figure>
+
+      <div class="callout">
+        <div class="callout__title">One detail that will save you a debugging session</div>
+        <p>Set <code>cin</code>'s pull behaviour to <strong>pull-down</strong> so it resets to 0.</p>
+        <p>Left floating, the adder can come up holding a stale carry and give you a wrong answer by exactly one on your very first test &mdash; while every gate in the circuit is wired correctly. That is a genuinely miserable thing to hunt for.</p>
+      </div>
+
+      <h3 id="aha">What you have actually built</h3>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">The adder circuit <em>is</em> addition</div>
+        <p>There is no software in this circuit. No instructions, no algorithm, no program, no loop counting through the bit positions.</p>
+        <p><strong>You set the input bits and the answer appears</strong> &mdash; as fast as electricity can cross the gates. When your laptop adds two numbers, this is what happens: not a calculation performed, but a value that <em>settles</em>.</p>
+      </div>
+
+      <p>It is worth sitting with that for a moment, because it is the single idea this week exists to deliver. Addition is not something a computer <em>does</em>. It is something a computer <em>is shaped like</em>. The shape was decided when the circuit was wired, and after that the arithmetic is a consequence of physics rather than of instruction.</p>
+
+      <h3>And the honest complication</h3>
+
+      <p>The carry has to travel.</p>
+
+      <p>Bit 7 cannot decide its sum until it knows its carry-in. That carry-in is bit 6's carry-out, which bit 6 cannot produce until it knows <em>its</em> carry-in from bit 5, which waits on bit 4, and so on all the way down to bit 0.</p>
+
+      <p>So the answer does not appear everywhere at once. It resolves from right to left, and the circuit is not finished until the last stage has settled. It is fast &mdash; billionths of a second &mdash; but it is not instantaneous, and the delay grows with every bit you add to the width.</p>
+
+      <p><strong>That is why it is called a <em>ripple</em>-carry adder.</strong> The carry ripples.</p>
+
+      <p>The worst case is an addition where a carry is created at bit 0 and survives all the way to bit 7. <code>11111111 + 00000001</code> does exactly that: every single column produces a carry, and the final answer depends on a signal that has crossed all eight stages. There is a preset for it in the simulator below, and it is also the input pair Assignment 3 asks you to produce.</p>
+
+      <h3>When the answer does not fit</h3>
+
+      <p>Eight bits hold eight bits. Nothing else. So what happens when the true sum is bigger than that?</p>
+
+      <p><strong>For this section we are reading these eight bits as an unsigned value, 0 through 255.</strong> Under that reading, a carry-out of 1 means the true sum was larger than 255, and the eight bits you can see are what is left over after the part that did not fit was pushed out the top.</p>
+
+      <p>The circuit does not fail, and it does not warn you. It raises <code>cout</code>, which is the hardware telling you plainly: <em>there was more answer than there was room</em>. Whether anyone pays attention to that line is a decision made elsewhere.</p>
+
+      <div class="callout">
+        <div class="callout__title">Unsigned overflow &mdash; and how it differs from the overflow you met in Week 1</div>
+        <p><strong>Unsigned overflow</strong> is what you are seeing here: the true answer exceeded 255, and the carry-out is the evidence.</p>
+        <p><strong>Signed overflow</strong> is a separate condition with a separate detection rule. It happens when a two's-complement result has a sign that the operands' signs say it should not have &mdash; two negatives producing a positive, for instance. Carry-out is <em>not</em> how you detect it.</p>
+        <p>The same adder hardware produces both. What differs is how <em>you</em> are choosing to read the bits. The circuit has no idea which one you meant &mdash; it just adds. <strong>This week is unsigned throughout;</strong> Week 6 is where that choice gets made deliberately, inside the ALU.</p>
+      </div>
+
+      <p>The simulator below defaults to a plain addition with no carry-out at all, because that is the normal case. The dramatic ones are presets.</p>
+    </section>
+
+    <!-- ============================================================
+         WIDGET 3 — anchored after Section 3.4, per spec
+         ============================================================ -->
+    <section id="widget-3">
+      <div class="widget-card">
+        <div class="widget-card__title">8-Bit Ripple-Carry Adder</div>
+        <div class="widget-card__subtitle">Click or press Enter on any bit of A or B to toggle it. Watch the carry row between them.</div>
+
+        <div class="mode-row">
+          <span class="mode-row__label">Mode:</span>
+          <button type="button" class="widget-btn active" id="mode-instant" aria-pressed="true">Instant</button>
+          <button type="button" class="widget-btn" id="mode-stepped" aria-pressed="false">Stepped</button>
+          <button type="button" class="widget-btn" id="btn-replay" hidden>Replay &#8635;</button>
+          <button type="button" class="widget-btn" id="btn-step" hidden>Step &rsaquo;</button>
+        </div>
+
+        <p class="mode-note" id="mode-note" style="font-size:var(--fs-xs);color:var(--color-text-muted);margin:0 0 var(--space-md);">
+          <strong>Instant</strong> shows the finished answer, the way the circuit behaves at human timescales. Switch to <strong>Stepped</strong> to watch the carry cross the eight stages one at a time.
+        </p>
+
+        <!-- Bit index guide. MSB left, matching how the number is written. -->
+        <div class="operand-grid" aria-hidden="true">
+          <span class="operand-grid__label"></span>
+          <span class="operand-grid__bitindex">7</span>
+          <span class="operand-grid__bitindex">6</span>
+          <span class="operand-grid__bitindex">5</span>
+          <span class="operand-grid__bitindex">4</span>
+          <span class="operand-grid__bitindex">3</span>
+          <span class="operand-grid__bitindex">2</span>
+          <span class="operand-grid__bitindex">1</span>
+          <span class="operand-grid__bitindex">0</span>
+          <span class="operand-grid__value"></span>
+        </div>
+
+        <div class="operand-grid" id="row-a">
+          <span class="operand-grid__label" id="lbl-a">A</span>
+          <!-- eight .bus-bit buttons injected here, MSB first -->
+          <span class="operand-grid__value" id="val-a">0</span>
+        </div>
+
+        <div class="operand-grid" id="row-b">
+          <span class="operand-grid__label" id="lbl-b">+ &nbsp;B</span>
+          <span class="operand-grid__value" id="val-b">0</span>
+        </div>
+
+        <!-- Carries out of each stage, sitting between the operands and the
+             sum because that is where they act. -->
+        <div class="carry-row" id="row-carry">
+          <span class="operand-grid__label" style="font-size:var(--fs-xs);">carry</span>
+          <span class="operand-grid__value"></span>
+        </div>
+
+        <div class="operand-grid operand-grid--rule" id="row-sum">
+          <span class="operand-grid__label">= &nbsp;Sum</span>
+          <span class="operand-grid__value" id="val-sum">0</span>
+        </div>
+
+        <!-- The eight stages as discrete blocks. In stepped mode they light
+             LSB to MSB; in instant mode they are all settled at once. -->
+        <div class="stage-chain" id="stage-chain" aria-hidden="true"></div>
+
+        <div class="readout">
+          <span class="readout__item">A = <strong id="dec-a">0</strong></span>
+          <span class="readout__item">B = <strong id="dec-b">0</strong></span>
+          <span class="readout__item">true sum = <strong id="dec-true">0</strong></span>
+          <span class="readout__item">stored in 8 bits = <strong id="dec-stored">0</strong></span>
+          <span class="readout__flag" id="flag-cout">cout = 0</span>
+        </div>
+
+        <!-- The live region is what a screen-reader user gets instead of the
+             animation. It states the arithmetic and the overflow reading in
+             words rather than describing the visual. -->
+        <p class="sr-only" role="status" aria-live="polite" id="sr-status"></p>
+
+        <div class="preset-row">
+          <span class="mode-row__label">Try:</span>
+          <button type="button" class="preset-btn" data-a="77" data-b="38"
+                  data-note="77 + 38 = 115. Carries arise at bits 2 and 3, ripple two stages, and die out. No carry-out — this is the everyday case.">
+            77 + 38 &mdash; ordinary
+          </button>
+          <button type="button" class="preset-btn" data-a="255" data-b="1"
+                  data-note="255 + 1. A carry is created at bit 0 and survives all eight stages — the worst case for propagation delay, and the input pair Assignment 3 Part A Q4 asks you to find. Unsigned overflow: the true sum, 256, does not fit in eight bits.">
+            255 + 1 &mdash; worst-case carry
+          </button>
+          <button type="button" class="preset-btn" data-a="129" data-b="129"
+                  data-note="129 + 129 read as UNSIGNED. The true sum is 258, which is larger than 255, so the eight bits hold 2 and cout goes high. That carry-out is the circuit telling you the answer did not fit. (Read as signed two's complement these same bits mean −127 each, which is a different condition with a different rule — see the callout above.)">
+            129 + 129 &mdash; unsigned overflow
+          </button>
+          <button type="button" class="preset-btn" data-a="0" data-b="0" data-note="Cleared.">Clear</button>
+        </div>
+
+        <p class="widget-note" id="preset-note" style="font-size:var(--fs-sm);color:var(--color-text-muted);margin-top:var(--space-sm);min-height:2.6em;"></p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Closing
+         ============================================================ -->
+    <section id="sec-closing">
+      <h2>Where this circuit is going</h2>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/8bitAdder_redrawn.jpg" loading="lazy" tabindex="0"
+             data-caption="The completed 8-bit adder as a single reusable block: 8-bit a and b in, 8-bit sum out, 1-bit carry-in and carry-out."
+             alt="The completed 8-bit adder drawn as a single block for reuse, labelled adder in the middle. Input a enters at the top left and input b at the bottom left, carry-in enters from below, and carry-out leaves at the top with the 8-bit sum leaving on the right.">
+        <figcaption class="circuit-canvas__caption">The finished component. Five pins, exactly as specified &mdash; this is what Week 6 will look for.</figcaption>
+      </figure>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Week 6 — the ALU</div>
+        <p>The adder you build this week becomes the <strong>arithmetic core of the ALU</strong>, instantiated unchanged. Not rebuilt, not redesigned, not improved. The same circuit, placed inside a larger one.</p>
+        <p>That is why the pin names and widths in the assignment are not a formatting preference. <code>ADDER_8BIT</code> with pins <code>a</code>, <code>b</code>, <code>cin</code>, <code>sum</code>, <code>cout</code> is an interface, and Week 6 is written against it.</p>
+      </div>
+
+      <h3>A note on speed, for the curious</h3>
+
+      <p>Real processors do not use ripple-carry adders for wide arithmetic, and now you know why: the delay grows with every bit, and a 64-bit ripple-carry adder would have to wait for a carry to cross sixty-four stages.</p>
+
+      <p>The fix is a family of designs &mdash; carry-lookahead being the best known &mdash; that compute in advance whether each column <em>will</em> generate a carry, rather than waiting to be told. They are faster and substantially more complex, and they compute the same answers.</p>
+
+      <p><strong>We are not building one.</strong> The ripple-carry adder is the design that makes the mechanism visible, which is what it is for here. But you should know that it is the simple design rather than the only one, and you should know what the simplicity costs.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Next</div>
+        <p>Adders are one of the week's two families &mdash; the circuits that <em>compute</em>. The next page is the other family: circuits that <em>select</em>.</p>
+        <p>Those two pages are independent of each other. If the carry chain has not settled in your head yet, you can move on to decoders and come back &mdash; nothing on the next page depends on this one.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <!-- Click-to-enlarge overlay -->
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-labelledby="lightbox-caption">
+    <button type="button" class="lightbox__close" id="lightbox-close" aria-label="Close enlarged view">&times;</button>
+    <img class="lightbox__img" id="lightbox-img" src="" alt="">
+    <p class="lightbox__caption" id="lightbox-caption"></p>
+    <p class="lightbox__hint">Click anywhere or press Escape to close</p>
+  </div>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    var L = window.CSCLogic;
+    var WIDTH = 8;
+
+    function el(id) { return document.getElementById(id); }
+    function setText(id, v) { var e = el(id); if (e) e.textContent = v; }
+
+    /* ---------- State ----------
+       aBits/bBits are LSB-first, matching CSCLogic.ripple() and
+       intToBits(). Everything that RENDERS reverses, because the display
+       puts the most significant bit on the left the way a written number
+       does. Every place that reversal happens is marked. */
+    var aBits = L.intToBits(0, WIDTH);
+    var bBits = L.intToBits(0, WIDTH);
+
+    var stepped = false;   // false = instant, true = stepped
+    var revealed = WIDTH;  // how many stages are currently shown (stepped)
+    var timer = null;
+
+    var reduced = window.matchMedia &&
+                  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* ---------- Build the two operand rows ---------- */
+    /* Buttons are created MSB-first for the display, but each carries a
+       data-index that is the LSB-first array index. The DOM order and the
+       array order are deliberately different, and this is the only place
+       that translation happens. */
+    function buildRow(rowId, bits, name) {
+      var row = el(rowId);
+      if (!row) return;
+      var valueSpan = row.lastElementChild;
+      var i, btn, idx;
+
+      for (i = 0; i < WIDTH; i++) {
+        idx = WIDTH - 1 - i;               // display i -> array index
+        btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'bus-bit';
+        btn.setAttribute('data-index', String(idx));
+        btn.setAttribute('data-operand', name);
+        btn.textContent = '0';
+        btn.setAttribute('aria-label', name + ' bit ' + idx + ', currently 0. Activate to toggle.');
+        btn.addEventListener('click', function () { toggle(this); });
+        btn.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(this); }
+        });
+        row.insertBefore(btn, valueSpan);
+      }
+    }
+
+    function toggle(btn) {
+      var idx = parseInt(btn.getAttribute('data-index'), 10);
+      var which = btn.getAttribute('data-operand');
+      var bits = (which === 'A') ? aBits : bBits;
+      bits[idx] = bits[idx] ? 0 : 1;
+      setNote('');
+      update(true);
+    }
+
+    /* ---------- Build the carry row and the stage chain ---------- */
+    function buildCarryRow() {
+      var row = el('row-carry');
+      if (!row) return;
+      var valueSpan = row.lastElementChild;
+      var i, span, idx;
+      for (i = 0; i < WIDTH; i++) {
+        idx = WIDTH - 1 - i;
+        span = document.createElement('span');
+        span.className = 'carry-cell';
+        span.id = 'carry-' + idx;
+        span.textContent = '0';
+        row.insertBefore(span, valueSpan);
+      }
+    }
+
+    function buildStageChain() {
+      var chain = el('stage-chain');
+      if (!chain) return;
+      var i, stage;
+      // Stages render LSB-first (left to right) because that is the
+      // direction the carry travels, and the point of this row is the
+      // travel. It deliberately reads in the opposite direction to the
+      // operand rows above it, which is why it carries its own labels.
+      for (i = 0; i < WIDTH; i++) {
+        stage = document.createElement('div');
+        stage.className = 'stage-chain__stage';
+        stage.id = 'stage-' + i;
+        stage.innerHTML =
+          '<span class="stage-chain__label">bit ' + i + '</span>' +
+          '<span id="stage-sum-' + i + '">&mdash;</span>' +
+          '<span class="stage-chain__carry" id="stage-carry-' + i + '">cout &mdash;</span>';
+        chain.appendChild(stage);
+      }
+    }
+
+    /* ---------- Render ---------- */
+    function renderOperand(rowId, bits, name, decId) {
+      var row = el(rowId);
+      if (!row) return;
+      var btns = row.querySelectorAll('.bus-bit');
+      Array.prototype.forEach.call(btns, function (btn) {
+        var idx = parseInt(btn.getAttribute('data-index'), 10);
+        var on = !!bits[idx];
+        btn.textContent = on ? '1' : '0';
+        btn.classList.toggle('bus-bit--hi', on);
+        btn.setAttribute('aria-label',
+          name + ' bit ' + idx + ', currently ' + (on ? '1' : '0') + '. Activate to toggle.');
+      });
+      var v = L.bitsToInt(bits);
+      setText(decId, String(v));
+      return v;
+    }
+
+    function update(userAction) {
+      var aVal = renderOperand('row-a', aBits, 'A', 'dec-a');
+      var bVal = renderOperand('row-b', bBits, 'B', 'dec-b');
+
+      // Single source of truth for the arithmetic. The widget never
+      // computes a sum itself -- ripple() is exhaustively tested in
+      // shared/logic.test.js against JavaScript integer addition.
+      var res = L.ripple(aBits, bBits, 0);
+
+      setText('val-a', String(aVal));
+      setText('val-b', String(bVal));
+      setText('val-sum', String(L.bitsToInt(res.sum)));
+
+      var trueSum = aVal + bVal;
+      var stored = L.bitsToInt(res.sum);
+      setText('dec-true', String(trueSum));
+      setText('dec-stored', String(stored));
+
+      var flag = el('flag-cout');
+      if (flag) {
+        flag.textContent = 'cout = ' + res.cout;
+        flag.classList.toggle('readout__flag--hi', !!res.cout);
+      }
+
+      // Screen-reader summary. States the unsigned reading explicitly,
+      // per the Standards requirement that carries the same labelling
+      // everywhere this appears.
+      var sr = aVal + ' plus ' + bVal + ' equals ' + trueSum + '. ' +
+               'Stored in eight bits as ' + stored + '. Carry-out ' + res.cout + '.';
+      if (res.cout) {
+        sr += ' Unsigned overflow: the true sum is larger than 255, so the eight visible bits are what is left over.';
+      }
+      setText('sr-status', sr);
+
+      if (stepped) {
+        if (userAction) startStepping(res);
+        else paintStages(res, revealed);
+      } else {
+        paintStages(res, WIDTH);
+      }
+    }
+
+    /* Paint the carry row and the stage blocks up to `count` stages.
+       count === WIDTH means fully settled. */
+    function paintStages(res, count) {
+      var i, st, cell, stage, sumSpan, carrySpan, shown;
+
+      for (i = 0; i < WIDTH; i++) {
+        st = res.stages[i];
+        shown = (i < count);
+
+        // Carry cell: this stage's carry-OUT, which is the carry-in of
+        // the stage to its left.
+        cell = el('carry-' + i);
+        if (cell) {
+          cell.textContent = shown ? String(st.cout) : '0';
+          cell.classList.toggle('carry-cell--hi', shown && !!st.cout);
+          cell.classList.toggle('carry-cell--pending', !shown);
+        }
+
+        stage = el('stage-' + i);
+        sumSpan = el('stage-sum-' + i);
+        carrySpan = el('stage-carry-' + i);
+        if (stage) {
+          stage.classList.toggle('stage-chain__stage--settled', shown);
+          // The frontier stage -- the one currently resolving -- is the
+          // last revealed one, and only while stepping.
+          stage.classList.toggle('stage-chain__stage--active',
+                                 stepped && shown && i === count - 1 && count < WIDTH + 1);
+        }
+        if (sumSpan) sumSpan.textContent = shown ? String(st.sum) : '—';
+        if (carrySpan) {
+          carrySpan.textContent = shown ? ('cout ' + st.cout) : 'cout —';
+          carrySpan.classList.toggle('stage-chain__carry--hi', shown && !!st.cout);
+        }
+      }
+
+      // The sum row only shows digits for stages that have settled.
+      var row = el('row-sum');
+      if (row) {
+        var btns = row.querySelectorAll('.bus-bit');
+        Array.prototype.forEach.call(btns, function (btn) {
+          var idx = parseInt(btn.getAttribute('data-index'), 10);
+          var settled = idx < count;
+          var bit = res.sum[idx];
+          btn.textContent = settled ? String(bit) : '·';
+          btn.classList.toggle('bus-bit--hi', settled && !!bit);
+          btn.setAttribute('aria-label',
+            'Sum bit ' + idx + (settled ? (', ' + bit) : ', not yet settled'));
+        });
+      }
+    }
+
+    /* ---------- Stepped mode ----------
+       Values are computed synchronously up front by ripple(); stepping
+       only controls what is REVEALED. There is no timing race here and
+       nothing is recomputed per frame -- the animation is presentation
+       over an already-correct result. */
+    function startStepping(res) {
+      stop();
+      revealed = 0;
+      paintStages(res, 0);
+      if (reduced) { revealed = WIDTH; paintStages(res, WIDTH); return; }
+      timer = setInterval(function () {
+        revealed++;
+        paintStages(res, revealed);
+        if (revealed >= WIDTH) stop();
+      }, 420);
+    }
+
+    function stop() {
+      if (timer) { clearInterval(timer); timer = null; }
+    }
+
+    function currentResult() { return L.ripple(aBits, bBits, 0); }
+
+    /* ---------- Sum row is read-only ---------- */
+    function buildSumRow() {
+      var row = el('row-sum');
+      if (!row) return;
+      var valueSpan = row.lastElementChild;
+      var i, span, idx;
+      for (i = 0; i < WIDTH; i++) {
+        idx = WIDTH - 1 - i;
+        span = document.createElement('span');
+        span.className = 'bus-bit bus-bit--readonly';
+        span.setAttribute('data-index', String(idx));
+        span.setAttribute('role', 'img');
+        span.textContent = '0';
+        row.insertBefore(span, valueSpan);
+      }
+    }
+
+    /* ---------- Mode buttons ---------- */
+    function setMode(toStepped) {
+      stepped = toStepped;
+      var inst = el('mode-instant'), step = el('mode-stepped');
+      if (inst) { inst.classList.toggle('active', !stepped); inst.setAttribute('aria-pressed', String(!stepped)); }
+      if (step) { step.classList.toggle('active', stepped); step.setAttribute('aria-pressed', String(stepped)); }
+
+      var replay = el('btn-replay'), stepBtn = el('btn-step');
+      if (replay) replay.hidden = !stepped;
+      if (stepBtn) stepBtn.hidden = !stepped;
+
+      setText('mode-note', stepped
+        ? 'Stepped mode reveals one stage at a time, least significant first — the order the carry actually travels. Use Step to advance manually.'
+        : 'Instant shows the finished answer, the way the circuit behaves at human timescales. Switch to Stepped to watch the carry cross the eight stages one at a time.');
+
+      stop();
+      if (stepped) startStepping(currentResult());
+      else { revealed = WIDTH; update(false); }
+    }
+
+    function setNote(msg) { setText('preset-note', msg || ''); }
+
+    /* ---------- Wire up ---------- */
+    buildRow('row-a', aBits, 'A');
+    buildRow('row-b', bBits, 'B');
+    buildCarryRow();
+    buildSumRow();
+    buildStageChain();
+
+    if (el('mode-instant')) el('mode-instant').addEventListener('click', function () { setMode(false); });
+    if (el('mode-stepped')) el('mode-stepped').addEventListener('click', function () { setMode(true); });
+
+    if (el('btn-replay')) el('btn-replay').addEventListener('click', function () {
+      startStepping(currentResult());
+    });
+
+    if (el('btn-step')) el('btn-step').addEventListener('click', function () {
+      stop();
+      if (revealed >= WIDTH) revealed = 0;
+      else revealed++;
+      paintStages(currentResult(), revealed);
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('.preset-btn'), function (btn) {
+      btn.addEventListener('click', function () {
+        aBits = L.intToBits(parseInt(btn.getAttribute('data-a'), 10), WIDTH);
+        bBits = L.intToBits(parseInt(btn.getAttribute('data-b'), 10), WIDTH);
+        setNote(btn.getAttribute('data-note'));
+        update(true);
+      });
+    });
+
+    /* ---------------- Lightbox ---------------- */
+    (function lightbox() {
+      var box = el('lightbox'), img = el('lightbox-img'),
+          cap = el('lightbox-caption'), closeBtn = el('lightbox-close');
+      if (!box) return;
+      var lastFocus = null;
+
+      function open(src, caption, alt) {
+        lastFocus = document.activeElement;
+        img.src = src;
+        img.alt = alt || '';
+        cap.textContent = caption || '';
+        box.classList.add('open');
+        closeBtn.focus();
+      }
+      function close() {
+        box.classList.remove('open');
+        img.src = '';
+        if (lastFocus && lastFocus.focus) lastFocus.focus();
+      }
+
+      Array.prototype.forEach.call(document.querySelectorAll('.zoomable'), function (node) {
+        var fire = function () {
+          open(node.getAttribute('src'),
+               node.getAttribute('data-caption') || node.getAttribute('alt'),
+               node.getAttribute('alt'));
+        };
+        node.addEventListener('click', fire);
+        node.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fire(); }
+        });
+      });
+
+      box.addEventListener('click', close);
+      closeBtn.addEventListener('click', function (e) { e.stopPropagation(); close(); });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && box.classList.contains('open')) close();
+      });
+    })();
+
+    /* Initial render: the default is 77 + 38, the ordinary case. Starting
+       at 0 + 0 shows a circuit doing nothing, which teaches nothing. */
+    aBits = L.intToBits(77, WIDTH);
+    bBits = L.intToBits(38, WIDTH);
+    update(false);
+  })();
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w3-03">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 3: Circuits That Select</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific: decoder width selector ----------
+       The lamp grid, compact output lights, cost readout and diagram
+       styles all live in shared/style.css. What is here is the selector
+       layout and the RAM matrix figure, both specific to this page. */
+
+    .width-selector {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-xs);
+      align-items: center;
+      margin-bottom: var(--space-md);
+    }
+    .width-selector__label {
+      font-size: var(--fs-xs);
+      color: var(--color-text-muted);
+      margin-right: var(--space-xs);
+    }
+
+    .sel-input-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-xs);
+      align-items: center;
+      margin: var(--space-md) 0;
+    }
+    .sel-input-row__label {
+      font-family: var(--font-mono);
+      font-size: var(--fs-sm);
+      font-weight: 700;
+      color: var(--color-text-muted);
+      margin-right: var(--space-xs);
+    }
+    .sel-input-row__code {
+      font-family: var(--font-mono);
+      font-size: var(--fs-md);
+      font-weight: 700;
+      color: var(--color-text);
+      margin-left: var(--space-sm);
+    }
+
+    /* The contrast table is the section's payload, so it gets a little
+       more presence than a default table. Both columns equal width --
+       neither concept is the "main" one. */
+    .contrast-table th:nth-child(2),
+    .contrast-table th:nth-child(3),
+    .contrast-table td:nth-child(2),
+    .contrast-table td:nth-child(3) { width: 38%; }
+    .contrast-table td:first-child {
+      font-weight: 600;
+      color: var(--color-text-muted);
+      background: var(--color-code-bg);
+    }
+
+    /* ---------- RAM matrix figure (static, per Open Decision #5) ----------
+       Deliberately CSS rather than an image: it needs to scale to the
+       Canvas iframe width and stay legible, and it is simple enough that
+       an inline diagram beats a screenshot. */
+    .ram-figure {
+      overflow-x: auto;
+      margin: var(--space-md) 0;
+    }
+    .ram-grid {
+      display: grid;
+      grid-template-columns: auto repeat(16, 1fr);
+      gap: 2px;
+      min-width: 480px;
+    }
+    .ram-grid__cell {
+      aspect-ratio: 1;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 2px;
+      min-height: 16px;
+    }
+    .ram-grid__cell--populated { background: #eef4fb; border-color: var(--color-primary-lt); }
+    .ram-grid__cell--target { background: var(--color-success); border-color: var(--color-success); }
+    .ram-grid__cell--rowsel { background: #fdf3e6; border-color: var(--color-accent); }
+    .ram-grid__cell--colsel { background: #fdf3e6; border-color: var(--color-accent); }
+    .ram-grid__rowlabel {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--color-text-muted);
+      display: flex;
+      align-items: center;
+      padding-right: var(--space-xs);
+      white-space: nowrap;
+    }
+    .ram-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-md);
+      font-size: var(--fs-xs);
+      color: var(--color-text-muted);
+      margin-top: var(--space-sm);
+    }
+    .ram-legend__swatch {
+      display: inline-block;
+      width: 12px; height: 12px;
+      border-radius: 2px;
+      border: 1px solid var(--color-border);
+      vertical-align: -1px;
+      margin-right: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 3 &rsaquo; <span>Page 3: Circuits That Select</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Circuits That Select</h1>
+    <p><strong>Sections 3.5&ndash;3.6</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1.45 hours</p>
+
+    <div class="callout">
+      <div class="callout__title">This page does not depend on the adder</div>
+      <p>Decoders branch off §3.1 rather than off the adder chain. If carry propagation has not clicked yet, you can work through this page first and come back &mdash; nothing here needs the adder.</p>
+    </div>
+
+    <!-- ============================================================
+         3.5
+         ============================================================ -->
+    <section id="sec-3-5">
+      <h2>3.5 &nbsp; Decoders: Turning a Code into a Selection</h2>
+
+      <p>The adder is one of the week's two families &mdash; circuits that <strong>compute</strong>. This is the other family: circuits that <strong>select</strong>.</p>
+
+      <p>Here is the problem they solve. A processor has registers, and an instruction needs to say which one to write to. Memory has locations, and a load needs to say which one to read. In both cases you have a small binary code and you need to activate exactly one thing out of many.</p>
+
+      <p>A <strong>decoder</strong> does that. It takes an <em>n</em>-bit code and raises exactly <strong>one</strong> of its 2<sup>n</sup> output lines &mdash; the one the code names. Every other output stays at 0.</p>
+
+      <p>It answers the question <em>"which one?"</em></p>
+
+      <h3>How it is built</h3>
+
+      <p>The construction is the same idea at every width, and it comes straight out of Boolean algebra:</p>
+
+      <ol>
+        <li><strong>Split each input into both polarities.</strong> Run each input bit through a NOT gate so you have both the bit and its inverse available &mdash; both <code>A</code> and <code>A'</code>.</li>
+        <li><strong>One AND gate per output.</strong> Each output gets an AND gate wired to the exact combination of true and inverted inputs that identifies it.</li>
+      </ol>
+
+      <p>Output 0 is the one that fires when every input is 0, so its AND gate takes all the <em>inverted</em> inputs: <code>A'B'</code>. Output 3 fires when both inputs are 1, so it takes both true inputs: <code>AB</code>. Output 1 takes <code>A'B</code>, output 2 takes <code>AB'</code>.</p>
+
+      <p>Each AND gate is a <strong>minterm</strong> &mdash; one specific combination, and no other. That is exactly the Boolean vocabulary from Week 2, doing real work.</p>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/2x4Decoder.jpg" loading="lazy" tabindex="0"
+             data-caption="A 2-to-4 decoder from discrete gates. Each input splits through a NOT so both polarities are available, feeding four 2-input AND gates."
+             alt="A 2-to-4 decoder built from discrete gates. Inputs A and B each split through a NOT gate so both true and inverted forms are available, feeding four 2-input AND gates — one for each of the four input combinations.">
+        <figcaption class="circuit-canvas__caption">The 2&times;4 decoder, wired from primitives. Four AND gates, one per output, each fed by the combination that selects it.</figcaption>
+      </figure>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/2x4Decoder_2bit_Input.jpg" loading="lazy" tabindex="0"
+             data-caption="The same 2-to-4 decoder with the two separate input pins replaced by a single 2-bit input bus that splits into its bits."
+             alt="The same 2-to-4 decoder tidied up, with the two separate input pins replaced by a single 2-bit input bus that splits into its individual bits.">
+        <figcaption class="circuit-canvas__caption">The same circuit with a 2-bit input bus and a splitter instead of two separate pins. This is the form your <code>DECODER_2TO4</code> should take &mdash; <code>sel</code> is one 2-bit pin.</figcaption>
+      </figure>
+
+      <h3>Wider decoders extend the pattern</h3>
+
+      <p>Nothing about the method changes as the decoder gets wider. Only the counts do.</p>
+
+      <table>
+        <thead>
+          <tr><th>Decoder</th><th>Inputs</th><th>Outputs</th><th>AND gates</th><th>Inputs per AND gate</th><th>NOT gates</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>DECODER_2TO4</code></td><td>2</td><td>4</td><td>4</td><td>2</td><td>2</td></tr>
+          <tr><td><code>DECODER_3TO8</code></td><td>3</td><td>8</td><td>8</td><td>3</td><td>3</td></tr>
+          <tr><td><code>DECODER_4TO16</code></td><td>4</td><td>16</td><td>16</td><td>4</td><td>4</td></tr>
+        </tbody>
+      </table>
+
+      <p>The rule for an <em>n</em>-input decoder: <strong>2<sup>n</sup> AND gates of <em>n</em> inputs each, plus <em>n</em> inverters.</strong> Add one input line and the number of outputs doubles.</p>
+
+      <div class="callout">
+        <div class="callout__title">Build wider decoders directly &mdash; do not cascade narrower ones</div>
+        <p>You may find sources that show a 4&times;16 decoder built from two 3&times;8 decoders wired together. <strong>Do not build yours that way.</strong></p>
+        <p>Cascading is a workaround from an era when decoders came as fixed-size physical chips and engineers combined whatever they could buy. In Logisim you simply build the decoder you need. It is also a technique that requires an <em>enable</em> input, which the decoder you are building does not have.</p>
+        <p>Extend the pattern: four inputs, eight polarities, sixteen 4-input AND gates.</p>
+      </div>
+
+      <h3>What doubling costs</h3>
+
+      <p>Look at that table one more time, and then extrapolate past it.</p>
+
+      <p>A real memory address is not 4 bits. Suppose it were 16. A 16-input decoder would need <strong>65,536 AND gates, each with 16 inputs</strong>, to select one of 65,536 locations. That is an absurd circuit &mdash; and 16 bits is a small address by modern standards.</p>
+
+      <p>So real memory does not decode in one dimension. It decodes in two, which is a trick you will use yourself in Week 8 and which is the reason you are building the 4&times;16 decoder now. More on that below the simulator.</p>
+    </section>
+
+    <!-- ============================================================
+         WIDGET 4 — anchored after Section 3.5, per spec
+         ============================================================ -->
+    <section id="widget-4">
+      <div class="widget-card">
+        <div class="widget-card__title">Decoder Simulator</div>
+        <div class="widget-card__subtitle">Change the width, then toggle the input bits. Exactly one output is high, always.</div>
+
+        <div class="width-selector" role="group" aria-label="Decoder width">
+          <span class="width-selector__label" id="width-label">Width:</span>
+          <button type="button" class="widget-btn active" data-n="2" aria-pressed="true">2 &times; 4</button>
+          <button type="button" class="widget-btn" data-n="3" aria-pressed="false">3 &times; 8</button>
+          <button type="button" class="widget-btn" data-n="4" aria-pressed="false">4 &times; 16</button>
+        </div>
+
+        <div class="sel-input-row" id="sel-row">
+          <span class="sel-input-row__label">sel</span>
+          <!-- input bit buttons injected here, MSB first -->
+        </div>
+
+        <div class="cost-readout" id="cost-readout"></div>
+
+        <p style="font-size:var(--fs-sm);color:var(--color-text-muted);margin-bottom:var(--space-sm);">
+          Outputs &mdash; exactly one is high:
+        </p>
+
+        <div class="lamp-column" id="lamp-column"></div>
+
+        <!-- Live region carries the state change in words. The lamp grid is
+             visual; this is what a screen-reader user actually receives. -->
+        <p class="sr-only" role="status" aria-live="polite" id="sr-decoder"></p>
+
+        <div class="callout" style="margin-top:var(--space-md);">
+          <div class="callout__title">The invariant worth noticing</div>
+          <p>However wide you make it, and whatever code you set, <strong>exactly one lamp is ever lit</strong>. That property has a name &mdash; the output is <em>one-hot</em> &mdash; and it is the entire reason decoders are used for selection. One line active means one thing selected, with no ambiguity to resolve downstream.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         RAM addressing figure — static, per Open Decision #5
+         ============================================================ -->
+    <section id="ram-addressing">
+      <h3>Why you build the 4&times;16 decoder twice</h3>
+
+      <p>Here is the two-dimensional arrangement that avoids the 65,536-gate problem, and the reason <code>DECODER_4TO16</code> is on your assignment.</p>
+
+      <p>In Week 8 you build RAM as a <strong>16 &times; 16 matrix</strong>. An 8-bit address arrives, and instead of feeding one enormous decoder it is <strong>split in half</strong>:</p>
+
+      <ul>
+        <li>The high 4 bits go to one 4&times;16 decoder &mdash; it selects the <strong>row</strong>.</li>
+        <li>The low 4 bits go to a second 4&times;16 decoder &mdash; it selects the <strong>column</strong>.</li>
+        <li>The byte that is actually addressed is the one whose row line <em>and</em> column line are both high.</li>
+      </ul>
+
+      <p>Two decoders of 16 AND gates each &mdash; <strong>32 gates of 4 inputs</strong> &mdash; select one of 256 locations. A single decoder for the same 8-bit address would need <strong>256 AND gates of 8 inputs</strong>. That is the saving, and it is why memory has been organised in a grid since the beginning.</p>
+
+      <figure class="ram-figure">
+        <div class="ram-grid" id="ram-grid" role="img"
+             aria-label="A 16 by 16 grid of memory cells. The address 0x1A selects row 1 and column 10; the highlighted cell sits where that row and column cross. The first two rows are shaded to show the only rows populated in this course's build.">
+          <!-- generated -->
+        </div>
+        <div class="ram-legend">
+          <span><span class="ram-legend__swatch" style="background:var(--color-success);border-color:var(--color-success);"></span>the addressed byte</span>
+          <span><span class="ram-legend__swatch" style="background:#fdf3e6;border-color:var(--color-accent);"></span>row and column selected by the two decoders</span>
+          <span><span class="ram-legend__swatch" style="background:#eef4fb;border-color:var(--color-primary-lt);"></span>populated in our build (first 2 rows)</span>
+        </div>
+        <figcaption class="circuit-canvas__caption">Address <code>0001&nbsp;1010</code>: the high nibble <code>0001</code> selects row 1, the low nibble <code>1010</code> selects column 10. One byte sits where they cross.</figcaption>
+      </figure>
+
+      <div class="callout">
+        <div class="callout__title">256 addressable, 32 populated &mdash; and that gap is deliberate</div>
+        <p>The matrix is designed for <strong>256 bytes</strong>, but in your Week 8 build only the <strong>first 2 rows are actually populated</strong>: 2 rows &times; 16 columns &times; 8 bits = 256 bits = <strong>32 bytes</strong> of real storage. Logisim Classic becomes unusably slow with the full matrix wired, and 32 bytes is enough to run real programs.</p>
+        <p>This is worth stating rather than hiding, because it is an honest engineering constraint and it previews something real: <strong>address space and physical memory are different things.</strong> Every machine you have ever used can address more memory than it has installed.</p>
+      </div>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/decoder4x16.png" loading="lazy" tabindex="0"
+             data-caption="A completed 4-to-16 decoder. A 4-bit input on the left, sixteen single-bit outputs on the right, ordered 0000 at the top to 1111 at the bottom."
+             alt="A completed 4-to-16 decoder. A 4-bit input enters on the left; sixteen single-bit outputs leave on the right, ordered from 0000 at the top to 1111 at the bottom.">
+        <figcaption class="circuit-canvas__caption">The component itself. Build it once; Week 8 instantiates it twice.</figcaption>
+      </figure>
+    </section>
+
+    <!-- ============================================================
+         3.6
+         ============================================================ -->
+    <section id="sec-3-6">
+      <h2>3.6 &nbsp; Multiplexers, and How They Differ from Decoders</h2>
+
+      <p>There is a second selection circuit, and the difference between it and the decoder is the most-confused distinction in this material. It is worth getting exactly right the first time, because both circuits appear inside the CPU you build later, doing different jobs.</p>
+
+      <p>A <strong>multiplexer</strong> &mdash; a mux &mdash; takes several <strong>data</strong> inputs plus a select code, and passes <strong>one of those inputs through</strong> to a single output.</p>
+
+      <p>It answers <em>"which value?"</em></p>
+
+      <p>Compare that to the decoder, which answers <em>"which one?"</em> The difference sounds small in English. It is not small in hardware.</p>
+
+      <h3>The contrast</h3>
+
+      <table class="contrast-table">
+        <thead>
+          <tr><th></th><th>Decoder</th><th>Multiplexer</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Inputs</td>
+            <td><em>n</em> select lines (a code)</td>
+            <td>2<sup>n</sup> data inputs <strong>+</strong> <em>n</em> select lines</td>
+          </tr>
+          <tr>
+            <td>Outputs</td>
+            <td>2<sup>n</sup> lines, exactly one high</td>
+            <td>1 output</td>
+          </tr>
+          <tr>
+            <td>Does data pass through?</td>
+            <td><strong>No</strong> &mdash; outputs are selection signals</td>
+            <td><strong>Yes</strong> &mdash; one input reaches the output</td>
+          </tr>
+          <tr>
+            <td>Answers</td>
+            <td><em>"Which one?"</em></td>
+            <td><em>"Which value?"</em></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">The sentence to hold onto</div>
+        <p><strong>A decoder's output is a signal that says <em>which</em>, never the data itself.</strong></p>
+        <p>Nothing flows through a decoder. Its output lines are enables &mdash; they go and switch something else on. A multiplexer is the opposite: data goes in one side and comes out the other, and the select code decides whose data it was.</p>
+      </div>
+
+      <h3>They are duals, which is where the confusion comes from</h3>
+
+      <p>The two circuits are closely related, and the relationship is worth understanding rather than avoiding:</p>
+
+      <ul>
+        <li>A decoder <strong>fans one code out to many lines</strong>. A multiplexer <strong>funnels many lines down to one</strong>. They point in opposite directions.</li>
+        <li>A decoder with an <em>enable</em> input behaves as a <strong>demultiplexer</strong> &mdash; it routes the enable signal to one of many destinations.</li>
+        <li>A multiplexer can be <strong>built from</strong> a decoder plus some gating: use the decoder to raise one line, AND each data input with its line, then OR the results together.</li>
+      </ul>
+
+      <p>That last point is the one that matters, and it is where sloppy sources go wrong. <strong>A decoder is a <em>component of</em> a multiplexer. It is never a <em>kind of</em> multiplexer.</strong> The relationship runs one way, and reversing it is not a simplification &mdash; it is an error that will cost you later, when you need to reason about what is actually travelling on a wire.</p>
+
+      <h3>The convention in this course</h3>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Decoders select. Multiplexers route.</div>
+        <p><strong>Decoders</strong> handle control and addressing: which register, which memory location, which ALU operation. A decoder output is always an enable line reaching some other circuit.</p>
+        <p><strong>Multiplexers</strong> handle data-path routing, where several sources feed one destination &mdash; choosing between an ALU result and a value from memory to write back into a register, for instance.</p>
+        <p>You will meet both again doing exactly these jobs. Every decoder in this machine is doing selection; nothing is ever routed <em>through</em> one.</p>
+      </div>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Reference textbook</div>
+        <p>Decoders, multiplexers and encoders are all covered in <strong>Unit 3: Fundamentals of Digital Logic Design</strong> in Saylor CS301. Log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> and navigate to Unit 3 for the definitions. The extend-the-pattern construction, the two-dimensional RAM addressing, and the decoder-versus-multiplexer distinction as this course applies it are covered here and not there.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Self-check B — anchored after Section 3.6, per spec
+         ============================================================ -->
+    <section id="self-check">
+      <h2>Check Yourself</h2>
+
+      <p>Not graded, not recorded. This is the distinction most likely to cost you points on the assignment and on Quiz 1, so it is worth two minutes now.</p>
+
+      <div class="widget-card">
+        <div class="tab-navigation" role="tablist" aria-label="Self-check topics">
+          <button type="button" class="tab-button active" role="tab" id="tab-btn-dec" aria-controls="tab-dec" aria-selected="true">Decoders</button>
+          <button type="button" class="tab-button" role="tab" id="tab-btn-mux" aria-controls="tab-mux" aria-selected="false">Decoder vs. mux</button>
+          <button type="button" class="tab-button" role="tab" id="tab-btn-scale" aria-controls="tab-scale" aria-selected="false">Scaling</button>
+        </div>
+
+        <div class="tab-panel active" id="tab-dec" role="tabpanel" aria-labelledby="tab-btn-dec" tabindex="0">
+          <div class="quiz-question">A 3&times;8 decoder receives the input code <code>101</code>. What is on its eight outputs?</div>
+          <div class="quiz-options" data-answer="2"
+               data-ok="Correct. Exactly one output is high — out5, because 101 is 5 — and the other seven are low. That is what one-hot means."
+               data-no="Not quite — the correct answer is highlighted. A decoder raises exactly one output line, the one the code names, and leaves every other output at 0.">
+            <button type="button" class="quiz-option">The value 5 appears on the output bus</button>
+            <button type="button" class="quiz-option">Outputs 1, 0 and 1 are high, matching the input bits</button>
+            <button type="button" class="quiz-option"><code>out5</code> is high; the other seven outputs are low</button>
+            <button type="button" class="quiz-option">Five of the eight outputs are high</button>
+          </div>
+          <div class="quiz-feedback" role="status" aria-live="polite"></div>
+        </div>
+
+        <div class="tab-panel" id="tab-mux" role="tabpanel" aria-labelledby="tab-btn-mux" tabindex="0">
+          <div class="quiz-question">What is the difference between a decoder and a multiplexer? Pick the answer that addresses <strong>what happens to the data</strong>.</div>
+          <div class="quiz-options" data-answer="1"
+               data-ok="Correct, and the data-flow half is the part that matters. A decoder's outputs are enable signals — nothing passes through it. A multiplexer's output is one of its data inputs, passed through."
+               data-no="Not quite — the correct answer is highlighted. Size and direction are real differences, but the distinction that decides which circuit you reach for is whether data passes through it.">
+            <button type="button" class="quiz-option">A decoder is bigger; a multiplexer is a simplified decoder</button>
+            <button type="button" class="quiz-option">No data passes through a decoder &mdash; its outputs are selection signals. A multiplexer passes one of its data inputs through to its output</button>
+            <button type="button" class="quiz-option">A decoder works on addresses; a multiplexer works on numbers</button>
+            <button type="button" class="quiz-option">They are the same circuit; a decoder is a form of multiplexer</button>
+          </div>
+          <div class="quiz-feedback" role="status" aria-live="polite"></div>
+        </div>
+
+        <div class="tab-panel" id="tab-scale" role="tabpanel" aria-labelledby="tab-btn-scale" tabindex="0">
+          <div class="quiz-question">How many AND gates does a 4&times;16 decoder need, and how many inputs does each one have?</div>
+          <div class="quiz-options" data-answer="0"
+               data-ok="Correct. 16 AND gates of 4 inputs each, plus 4 inverters. The general rule: an n-input decoder needs 2ⁿ AND gates of n inputs."
+               data-no="Not quite — the correct answer is highlighted. One AND gate per output, and each one must test every input bit, so it needs as many inputs as the decoder has.">
+            <button type="button" class="quiz-option">16 AND gates, 4 inputs each</button>
+            <button type="button" class="quiz-option">4 AND gates, 16 inputs each</button>
+            <button type="button" class="quiz-option">16 AND gates, 2 inputs each</button>
+            <button type="button" class="quiz-option">8 AND gates, 4 inputs each</button>
+          </div>
+          <div class="quiz-feedback" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Closing
+         ============================================================ -->
+    <section id="sec-forward">
+      <div class="callout callout--forward">
+        <div class="callout__title">Where these go</div>
+        <p><strong>Week 6 &mdash; the ALU.</strong> The 3&times;8 decoder selects which ALU operation reaches the output.</p>
+        <p><strong>Week 8 &mdash; RAM.</strong> Two 4&times;16 decoders address the rows and columns of the memory matrix, exactly as sketched above.</p>
+        <p><strong>Weeks 10&ndash;13 &mdash; the datapath.</strong> The 2&times;4 decoders select which register the processor is reading from or writing to.</p>
+        <p>You will see how each of those works when you build it. For now it is enough to know the parts have somewhere to go.</p>
+      </div>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Next</div>
+        <p>One short page left this week: encoders, comparators, and what you now own.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <!-- Click-to-enlarge overlay -->
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-labelledby="lightbox-caption">
+    <button type="button" class="lightbox__close" id="lightbox-close" aria-label="Close enlarged view">&times;</button>
+    <img class="lightbox__img" id="lightbox-img" src="" alt="">
+    <p class="lightbox__caption" id="lightbox-caption"></p>
+    <p class="lightbox__hint">Click anywhere or press Escape to close</p>
+  </div>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    var L = window.CSCLogic;
+
+    function el(id) { return document.getElementById(id); }
+    function setText(id, v) { var e = el(id); if (e) e.textContent = v; }
+
+    /* ---------- Decoder simulator ----------
+       selBits is LSB-first, matching CSCLogic.decode(). The input row
+       renders MSB-first, so building and rendering both reverse. This is
+       the same convention as the ripple-carry widget on the previous page. */
+    var n = 2;
+    var selBits = [0, 0];
+
+    function buildInputs() {
+      var row = el('sel-row');
+      if (!row) return;
+
+      // Clear everything except the leading label.
+      while (row.children.length > 1) row.removeChild(row.lastChild);
+
+      var i, btn, idx;
+      for (i = 0; i < n; i++) {
+        idx = n - 1 - i;                    // display position -> array index
+        btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'bus-bit';
+        btn.setAttribute('data-index', String(idx));
+        btn.textContent = '0';
+        btn.addEventListener('click', function () { toggleBit(this); });
+        btn.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleBit(this); }
+        });
+        row.appendChild(btn);
+      }
+
+      var code = document.createElement('span');
+      code.className = 'sel-input-row__code';
+      code.id = 'sel-code';
+      row.appendChild(code);
+    }
+
+    function toggleBit(btn) {
+      var idx = parseInt(btn.getAttribute('data-index'), 10);
+      selBits[idx] = selBits[idx] ? 0 : 1;
+      render();
+    }
+
+    function buildLamps() {
+      var col = el('lamp-column');
+      if (!col) return;
+      col.innerHTML = '';
+      var count = 1 << n;
+      var i, item, lamp, label;
+
+      for (i = 0; i < count; i++) {
+        item = document.createElement('div');
+        item.className = 'lamp-column__item';
+
+        lamp = document.createElement('span');
+        lamp.className = 'output-light output-light--compact';
+        lamp.id = 'lamp-' + i;
+        lamp.textContent = '0';
+        // Each lamp is its own labelled status, so a screen reader can
+        // inspect any individual output rather than only hearing the
+        // summary. conversion-module.html had none of this.
+        lamp.setAttribute('role', 'img');
+        lamp.setAttribute('aria-label', 'out' + i + ' is low');
+
+        label = document.createElement('span');
+        label.textContent = 'out' + i;
+
+        item.appendChild(lamp);
+        item.appendChild(label);
+        col.appendChild(item);
+      }
+    }
+
+    function render() {
+      var outs = L.decode(selBits);
+      var value = L.bitsToInt(selBits);
+      var cost = L.decoderCost(n);
+      var i, btn, lamp, on;
+
+      // Input buttons
+      var row = el('sel-row');
+      if (row) {
+        var btns = row.querySelectorAll('.bus-bit');
+        Array.prototype.forEach.call(btns, function (b) {
+          var idx = parseInt(b.getAttribute('data-index'), 10);
+          on = !!selBits[idx];
+          b.textContent = on ? '1' : '0';
+          b.classList.toggle('bus-bit--hi', on);
+          b.setAttribute('aria-label',
+            'Select bit ' + idx + ', currently ' + (on ? '1' : '0') + '. Activate to toggle.');
+        });
+      }
+
+      // Binary code readout, MSB first
+      var codeStr = '';
+      for (i = n - 1; i >= 0; i--) codeStr += selBits[i];
+      setText('sel-code', '= ' + codeStr + ' (' + value + ')');
+
+      // Lamps
+      for (i = 0; i < outs.length; i++) {
+        lamp = el('lamp-' + i);
+        if (!lamp) continue;
+        on = !!outs[i];
+        lamp.textContent = on ? '1' : '0';
+        lamp.classList.toggle('on', on);
+        lamp.setAttribute('aria-label', 'out' + i + ' is ' + (on ? 'HIGH' : 'low'));
+      }
+
+      // Live gate count -- this is the widget's pedagogical point, not
+      // decoration. It makes the doubling visible as the width changes.
+      setText('cost-readout', '');
+      var readout = el('cost-readout');
+      if (readout) {
+        readout.innerHTML =
+          '<strong>' + n + ' &times; ' + cost.outputs + ' decoder</strong> &mdash; ' +
+          cost.andGates + ' AND gates of ' + cost.andInputs + ' inputs each, ' +
+          'plus ' + cost.notGates + ' inverters.';
+      }
+
+      setText('sr-decoder',
+        'Select code ' + codeStr + ', decimal ' + value + '. Output ' + value +
+        ' is high; the other ' + (outs.length - 1) + ' outputs are low.');
+    }
+
+    function setWidth(newN) {
+      n = newN;
+      selBits = [];
+      for (var i = 0; i < n; i++) selBits.push(0);
+      buildInputs();
+      buildLamps();
+      render();
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll('.width-selector .widget-btn'), function (btn) {
+      btn.addEventListener('click', function () {
+        Array.prototype.forEach.call(document.querySelectorAll('.width-selector .widget-btn'), function (b) {
+          var active = (b === btn);
+          b.classList.toggle('active', active);
+          b.setAttribute('aria-pressed', String(active));
+        });
+        setWidth(parseInt(btn.getAttribute('data-n'), 10));
+      });
+    });
+
+    /* ---------- RAM matrix figure ----------
+       Static illustration of address 0x1A: row 1, column 10. Generated
+       rather than hand-written because 16x16 is 256 cells plus labels. */
+    (function buildRamGrid() {
+      var grid = el('ram-grid');
+      if (!grid) return;
+      var TARGET_ROW = 1, TARGET_COL = 10, POPULATED_ROWS = 2;
+      var r, c, cell, label;
+
+      for (r = 0; r < 16; r++) {
+        label = document.createElement('span');
+        label.className = 'ram-grid__rowlabel';
+        label.setAttribute('aria-hidden', 'true');
+        label.textContent = 'row ' + r;
+        grid.appendChild(label);
+
+        for (c = 0; c < 16; c++) {
+          cell = document.createElement('span');
+          cell.className = 'ram-grid__cell';
+          if (r < POPULATED_ROWS) cell.className += ' ram-grid__cell--populated';
+          if (r === TARGET_ROW && c === TARGET_COL) {
+            cell.className += ' ram-grid__cell--target';
+          } else if (r === TARGET_ROW || c === TARGET_COL) {
+            cell.className += ' ram-grid__cell--rowsel';
+          }
+          grid.appendChild(cell);
+        }
+      }
+    })();
+
+    /* ---------------- Self-check ---------------- */
+    var tabs = [['tab-btn-dec', 'tab-dec'], ['tab-btn-mux', 'tab-mux'], ['tab-btn-scale', 'tab-scale']];
+    tabs.forEach(function (pair) {
+      var btn = el(pair[0]);
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        tabs.forEach(function (p) {
+          var b = el(p[0]), panel = el(p[1]);
+          var on = (p[0] === pair[0]);
+          if (b) { b.classList.toggle('active', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); }
+          if (panel) panel.classList.toggle('active', on);
+        });
+      });
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('.quiz-options'), function (group) {
+      var answer = parseInt(group.getAttribute('data-answer'), 10);
+      var okMsg = group.getAttribute('data-ok');
+      var noMsg = group.getAttribute('data-no');
+      var feedback = group.parentNode.querySelector('.quiz-feedback');
+      var opts = group.querySelectorAll('.quiz-option');
+
+      Array.prototype.forEach.call(opts, function (opt, i) {
+        opt.addEventListener('click', function () {
+          Array.prototype.forEach.call(opts, function (o) { o.classList.remove('correct', 'incorrect'); });
+          var right = (i === answer);
+          opt.classList.add(right ? 'correct' : 'incorrect');
+          if (!right) opts[answer].classList.add('correct');
+          if (feedback) {
+            feedback.className = 'quiz-feedback visible ' +
+              (right ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+            feedback.textContent = right ? okMsg : noMsg;
+          }
+        });
+      });
+    });
+
+    /* ---------------- Lightbox ---------------- */
+    (function lightbox() {
+      var box = el('lightbox'), img = el('lightbox-img'),
+          cap = el('lightbox-caption'), closeBtn = el('lightbox-close');
+      if (!box) return;
+      var lastFocus = null;
+
+      function open(src, caption, alt) {
+        lastFocus = document.activeElement;
+        img.src = src;
+        img.alt = alt || '';
+        cap.textContent = caption || '';
+        box.classList.add('open');
+        closeBtn.focus();
+      }
+      function close() {
+        box.classList.remove('open');
+        img.src = '';
+        if (lastFocus && lastFocus.focus) lastFocus.focus();
+      }
+
+      Array.prototype.forEach.call(document.querySelectorAll('.zoomable'), function (node) {
+        var fire = function () {
+          open(node.getAttribute('src'),
+               node.getAttribute('data-caption') || node.getAttribute('alt'),
+               node.getAttribute('alt'));
+        };
+        node.addEventListener('click', fire);
+        node.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fire(); }
+        });
+      });
+
+      box.addEventListener('click', close);
+      closeBtn.addEventListener('click', function (e) { e.stopPropagation(); close(); });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && box.classList.contains('open')) close();
+      });
+    })();
+
+    /* Initial render */
+    setWidth(2);
+  })();
+  </script>
+
+</body>
+</html>
