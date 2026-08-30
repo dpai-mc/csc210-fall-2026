@@ -223,6 +223,8 @@
         <p><strong>Remember anything.</strong></p>
         <p>Every circuit built this week is <em>combinational</em> &mdash; its output depends only on what its inputs are <em>right now</em>. Change the inputs and the old answer is simply gone. There is nowhere for it to have been kept.</p>
         <p>Think about what that rules out. You cannot add three numbers, because there is nowhere to put the first sum while you fetch the third. You cannot count. You cannot do one thing and then another thing, because "and then" requires remembering that the first thing happened. <strong>Without memory there are no programs</strong> &mdash; only a fixed shape that transforms whatever is presented to it.</p>
+
+        <p>It is the same fact from page 2 seen from the other side. A circuit does everything, all the time. That is enormously powerful and it is also the problem: <strong>a machine that is always doing everything cannot do one thing and then another.</strong> Sequence has to be built, and it has to be built out of something that can hold still.</p>
       </div>
 
       <div class="callout callout--forward">
@@ -230,6 +232,7 @@
         <p>Store a single bit that persists until you deliberately change it.</p>
         <p>Built &mdash; and this is the part worth being surprised by &mdash; from <strong>two NAND gates wired back into each other</strong>. No new component, no special memory ingredient. Two of the gates you already have, with each one's output feeding the other's input.</p>
         <p>That circuit is where logic becomes memory, and it is the most important single idea in this course. Everything after it &mdash; registers, RAM, the program counter, the whole notion of a machine that executes one instruction and then the next &mdash; rests on it.</p>
+        <p>And once something can hold a value, a second question follows immediately: <em>when</em> should it change? That is what the <strong>clock</strong> is for, and it arrives next week alongside the flip-flop. The clock is how a machine that does everything all the time is persuaded to take turns.</p>
       </div>
 
       <p>Week 2 proved NAND could build any logic function. Next week collects on that investment a second time, in a way the universality proof did not predict: two NAND gates can build something that is not a logic function at all.</p>

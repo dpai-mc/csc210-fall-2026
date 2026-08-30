@@ -165,6 +165,51 @@
         <p>This is the habit the rest of the course is built on. In Week 6 you will place this entire 8-bit adder inside the ALU as a single component, the same way you are placing full adders inside it now. Each level hides the one below it &mdash; but the gates are all still there, doing exactly what you designed them to do.</p>
       </div>
 
+      <!-- Standards §0.2: optional, marked, bounded by its breakages, and
+           nothing assessed depends on it. Collapsed by default. -->
+      <details class="aside-optional">
+        <summary>If you have written object-oriented code before</summary>
+
+        <p class="aside-optional__skip">Optional. If object-oriented programming is not something you remember clearly &mdash; or never quite clicked &mdash; skip this. Nothing later in the course depends on it, and the explanation above is complete on its own.</p>
+
+        <p>For those who do remember it, there is a close correspondence worth naming:</p>
+
+        <table>
+          <thead><tr><th>In Logisim</th><th>In an OO program</th></tr></thead>
+          <tbody>
+            <tr><td>A circuit tab, e.g. <code>FULL_ADDER</code></td><td>A class definition</td></tr>
+            <tr><td>Dragging that circuit onto another circuit's canvas</td><td>Creating an object of that type</td></tr>
+            <tr><td>The eight full adders inside <code>ADDER_8BIT</code></td><td>Eight separate objects of the same class</td></tr>
+            <tr><td>Input and output pins</td><td>The public interface</td></tr>
+            <tr><td>The gates inside the circuit</td><td>The implementation you stop looking at</td></tr>
+          </tbody>
+        </table>
+
+        <p>It explains why the tab name and pin names matter so much: they are the interface, and the same reasoning applies for the same reason.</p>
+
+        <div class="aside-optional__breaks">
+          <div class="aside-optional__breaks-title">Four places the comparison breaks &mdash; and these are the interesting part</div>
+
+          <dl>
+            <dt>No state</dt>
+            <dd>An object has fields. A circuit instance this week has <strong>nothing</strong> &mdash; no memory, nothing carried between one moment and the next. That is not a limitation of Logisim; it is what <em>combinational</em> means, and it is exactly the wall you will hit at the end of this week.</dd>
+
+            <dt>No constructor arguments</dt>
+            <dd>Every instance of <code>FULL_ADDER</code> is identical to every other. You cannot pass one a parameter, and there is no way to make a wider or configured version. If you want something different, you build a different circuit.</dd>
+
+            <dt>Wired, not called</dt>
+            <dd>This is the deep one. There is no call, no return, no order of execution. <strong>All eight full adders are computing at once, continuously, whether or not anyone is looking at them.</strong> A method runs when invoked and then stops; a circuit is never not running.</dd>
+
+            <dt>Editing the definition changes every live instance, immediately</dt>
+            <dd>Change one gate in <code>FULL_ADDER</code> and all eight instances inside <code>ADDER_8BIT</code> change behaviour on the spot. Most OO runtimes will not do that without restarting the program. It is also the single most useful property of subcircuits: fix a bug once, and it is fixed everywhere.</dd>
+          </dl>
+
+          <p style="margin-top:var(--space-md);font-size:var(--fs-sm);">
+            <strong>One thing not to take away from this.</strong> None of it says anything about how object-oriented languages are actually implemented on hardware. A Logisim subcircuit is an organising convenience at design time &mdash; the finished circuit is flat, and nothing about &ldquo;objects&rdquo; survives into the gates. How high-level constructs really become machine operations is a genuine topic in this course, and it starts in Week 8 with how arrays and records are laid out in memory.
+          </p>
+        </div>
+      </details>
+
       <figure class="circuit-canvas">
         <img class="circuit-canvas__img zoomable" src="images/1bitAdder_redrawn.jpg" loading="lazy" tabindex="0"
              data-caption="One full adder, drawn as a reusable block. Five pins: a and b on the left, carry-in below, sum and carry-out on the right."
@@ -204,6 +249,14 @@
       <p>So the answer does not appear everywhere at once. It resolves from right to left, and the circuit is not finished until the last stage has settled. It is fast &mdash; billionths of a second &mdash; but it is not instantaneous, and the delay grows with every bit you add to the width.</p>
 
       <p><strong>That is why it is called a <em>ripple</em>-carry adder.</strong> The carry ripples.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Be careful what "the carry travels" makes you picture</div>
+        <p>It is easy to read that as the circuit working through the columns one at a time, the way you would in code &mdash; do bit 0, then bit 1, then bit 2. <strong>That is not what happens, and the difference matters more than almost anything else this week.</strong></p>
+        <p>All eight full adders are computing <em>simultaneously and continuously</em>. Every one of them is always producing an output from whatever is on its inputs right now. Nothing takes turns, nothing waits its turn, and nothing is ever switched off.</p>
+        <p>What ripples is not the work &mdash; it is the <em>correctness</em>. Bit 7 has been producing an output the whole time; it just was not producing the <em>right</em> one until its carry-in arrived and settled. The stepped mode in the simulator below shows the answer becoming true from right to left, which is exactly what happens, as long as you read it as stages becoming <strong>correct</strong> in sequence rather than stages <strong>running</strong> in sequence.</p>
+        <p>This is the fundamental difference between hardware and a program, and it will come back all semester: <strong>a program does one thing at a time; a circuit does everything, all the time.</strong> Making a circuit wait for anything is a problem you have to solve deliberately, and that is what the clock is for &mdash; starting next week.</p>
+      </div>
 
       <p>The worst case is an addition where a carry is created at bit 0 and survives all the way to bit 7. <code>11111111 + 00000001</code> does exactly that: every single column produces a carry, and the final answer depends on a signal that has crossed all eight stages. There is a preset for it in the simulator below, and it is also the input pair Assignment 3 asks you to produce.</p>
 
