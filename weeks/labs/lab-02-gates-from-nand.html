@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="lab-02">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210L — Lab 2: Gates from NAND</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+  /* ============================================================
+     Lab 2 — Page-specific styles
+     ============================================================
+     Structural lab components (.lab-meta, .lab-step, .lab-verify,
+     .lab-troubleshoot, .lab-checklist, .checklist-status,
+     .rubric-total, .widget-btn:disabled) live in shared/style.css
+     as of 2026-08-23 (Course Standards §8). Only Lab 2's own
+     widget styling is inline here.
+     ============================================================ */
+
+  /* ---------- Gate recipe card (Parts 2, 3, 5, 6) ---------- */
+  .recipe {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-xs) var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    background: var(--color-code-bg);
+    border-left: 4px solid var(--color-primary);
+    border-radius: var(--radius);
+    margin: var(--space-md) 0;
+    font-size: var(--fs-sm);
+  }
+  .recipe__k {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    font-size: var(--fs-xs);
+    color: var(--color-text-muted);
+    white-space: nowrap;
+  }
+  .recipe__v { min-width: 0; }
+  .recipe__v code { word-break: break-word; }
+
+  /* Scaffold-boundary table styles moved to shared/style.css 2026-08-30,
+     when Lab 3 became the second user (Standards Section 8). */
+
+  /* ---------- Widget 1: NAND Derivation Bench ---------- */
+  .nd-targets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-md);
+  }
+  .nd-recipe {
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-code-bg);
+    border-radius: var(--radius);
+    font-size: var(--fs-sm);
+    margin-bottom: var(--space-md);
+  }
+  .nd-table { width: 100%; max-width: 460px; margin: 0 auto var(--space-md); }
+  .nd-table th, .nd-table td { text-align: center; padding: var(--space-xs); }
+  .nd-out-btn {
+    width: 46px;
+    height: 34px;
+    font-family: var(--font-mono, monospace);
+    font-weight: 700;
+    font-size: var(--fs-base);
+    cursor: pointer;
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius);
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+  .nd-out-btn:hover { border-color: var(--color-primary-lt); }
+  .nd-out-btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  .nd-out-btn.on { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+  .nd-row--bad td { background: #fdf0ef; }
+  .nd-feedback {
+    margin-top: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius);
+    font-size: var(--fs-sm);
+    display: none;
+  }
+  .nd-feedback.visible { display: block; }
+  .nd-feedback--success { background: #f0faf4; color: var(--color-success); }
+  .nd-feedback--error   { background: #fdf0ef; color: var(--color-danger); }
+
+  /* ---------- Widget 2: De Morgan Poke Proof ---------- */
+  .dm-inputs {
+    display: flex;
+    gap: var(--space-md);
+    justify-content: center;
+    margin-bottom: var(--space-lg);
+  }
+  .dm-toggle {
+    width: 68px;
+    height: 52px;
+    font-family: var(--font-mono, monospace);
+    font-weight: 700;
+    font-size: var(--fs-lg);
+    cursor: pointer;
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius);
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+  .dm-toggle:hover { border-color: var(--color-primary-lt); }
+  .dm-toggle:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  .dm-toggle.on { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+  .dm-sides {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+  }
+  .dm-side {
+    padding: var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    text-align: center;
+  }
+  .dm-side__label { font-size: var(--fs-sm); color: var(--color-text-muted); margin-bottom: var(--space-xs); }
+  .dm-side__expr { font-family: var(--font-mono, monospace); font-weight: 700; margin-bottom: var(--space-sm); }
+  .dm-side__val {
+    font-family: var(--font-mono, monospace);
+    font-size: var(--fs-xl);
+    font-weight: 700;
+    color: var(--color-primary);
+  }
+  .dm-led {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    border-radius: var(--radius);
+    background: var(--color-code-bg);
+  }
+  .dm-led__lamp {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: #3a4a3f; border: 2px solid var(--color-border);
+  }
+  .dm-led__lamp.lit { background: var(--color-danger); box-shadow: 0 0 12px var(--color-danger); }
+  .dm-led__text { font-size: var(--fs-sm); }
+  .dm-log {
+    margin-top: var(--space-md);
+    font-size: var(--fs-sm);
+    color: var(--color-text-muted);
+    text-align: center;
+  }
+
+  @media (max-width: 560px) {
+    .dm-sides { grid-template-columns: 1fr; }
+    .recipe { grid-template-columns: 1fr; gap: 2px var(--space-md); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dm-led__lamp.lit { box-shadow: none; }
+  }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== Header ==================== -->
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210L — Computer Organization &amp; Architecture Lab</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Lab 2 &rsaquo; <span>Gates from NAND</span>
+    </nav>
+  </header>
+
+  <!-- ==================== Main Content (Single Column) ==================== -->
+  <main class="sp-main sp-main--full">
+
+      <h1>Lab 2 — Gates from NAND</h1>
+
+      <div class="lab-meta">
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Lab Session</span>
+          <span class="lab-meta__value">Tuesday, Aug 25, 2026</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">In-Class Time</span>
+          <span class="lab-meta__value">90 minutes</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Format</span>
+          <span class="lab-meta__value">Completes in class</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Assignment</span>
+          <span class="lab-meta__value">Completion Check 2 &mdash; 10 pts</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Due</span>
+          <span class="lab-meta__value lab-meta__value--due">Mon, Aug 31 &middot; 11:59 PM</span>
+        </div>
+      </div>
+
+      <div class="callout callout--hook">
+        <div class="callout__title">Why This Lab Exists</div>
+        <p><strong>What we have:</strong> Last week you made a byte visible. This week's lecture told you that NAND is universal &mdash; that every logic function, and therefore every circuit in this course, can be built from that one gate.</p>
+        <p><strong>What we can't do yet:</strong> Believe it. Universality is the kind of claim that sounds like a party trick until you have built the gates yourself and watched them behave exactly like the real ones.</p>
+        <p><strong>What we can do after today:</strong> Own a working library of NOT, AND, OR, and XOR &mdash; every one of them made of nothing but NAND &mdash; stored as reusable subcircuits in your semester file, plus a De Morgan proof you can poke with your own hands.</p>
+      </div>
+
+      <!-- ============================================================
+           Outcomes
+           ============================================================ -->
+      <section id="sec-outcomes">
+        <h2>What You Will Be Able to Do</h2>
+        <ul>
+          <li>Build NOT, AND, and OR from NAND gates alone, and verify each against its truth table by exhaustive poking.</li>
+          <li>Derive XOR from NAND without being handed the wiring &mdash; the first circuit in this course you have to think your way through.</li>
+          <li>Turn a finished circuit into a <strong>subcircuit</strong> and instance it inside another circuit. This is the technique the rest of the semester is built on.</li>
+          <li>Use <strong>splitters</strong> and <strong>tunnels</strong> to keep a circuit readable before it gets wide.</li>
+          <li>Build a self-checking circuit that proves De Morgan's second law and would light an LED if the law ever failed.</li>
+        </ul>
+      </section>
+
+      <!-- ============================================================
+           Before you arrive
+           ============================================================ -->
+      <section id="sec-before">
+        <h2>Before You Arrive</h2>
+        <ul>
+          <li>Logisim Classic 2.7.1 installed and opening (Lab 1, Part 1). If it isn't, come 10 minutes early &mdash; do not spend this session installing software.</li>
+          <li>Your semester <code>.circ</code> file from Lab 1, with its <code>01-ByteReader</code> circuit still in it.</li>
+          <li>Read this week's lecture pages on gates and NAND universality. This lab assumes you have seen a truth table for NAND and know what the bubble on a gate symbol means. It does not re-teach that.</li>
+        </ul>
+
+        <div class="callout callout--note">
+          <div class="callout__title">Gate reference, if you want a second source</div>
+          <p>All seven gates and their truth tables are covered in Saylor CS301 <strong>Unit 3: Fundamentals of Digital Logic Design</strong>. Log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> and navigate to Unit 3. Everything you need for this lab is on this page &mdash; CS301 is optional reinforcement, not a prerequisite.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Scaffold boundary — read this
+           ============================================================ -->
+      <section id="sec-scope">
+        <h2>How This Lab Relates to Assignment 2</h2>
+
+        <p>Assignment 2 is graded by the <strong>lecture</strong> course, CSC 210. This lab is a recommended companion and <strong>no CSC 210 grade depends on attending it</strong>. So it is worth being explicit about exactly where the two overlap, rather than letting you guess.</p>
+
+        <p>Three of the circuits you build today are also Assignment 2 circuits. Today they are taught as <em>Logisim technique</em> &mdash; how to place a gate, wire a pin, poke an input, verify a table. Two more of Assignment 2's circuits are deliberately <strong>not</strong> touched here, and you build those on your own.</p>
+
+        <table class="scope-table">
+          <thead>
+            <tr><th>Circuit</th><th>Where</th><th>What that means</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>NAND_NOT</td><td class="scope-lab">Guided in lab</td><td>Built together, step by step. Also Assignment 2 Part E Circuit 1.</td></tr>
+            <tr><td>NAND_AND</td><td class="scope-lab">Guided in lab</td><td>Built together. Also Assignment 2 Part E Circuit 2.</td></tr>
+            <tr><td>NAND_OR</td><td class="scope-lab">You derive it, in the room</td><td>You work it out; the instructor circulates but does not demo it. Also Assignment 2 Part E Circuit 3.</td></tr>
+            <tr><td>02-XOR-from-NAND</td><td class="scope-lab">Lab only</td><td>Not on any assignment. Pure practice &mdash; and the hardest thinking you will do today.</td></tr>
+            <tr><td>03-DeMorgan2-Check</td><td class="scope-lab">Lab only</td><td>Proves De Morgan's <em>second</em> law. Not on any assignment.</td></tr>
+            <tr><td>BOOLEAN_EXPR</td><td class="scope-solo">On your own</td><td>Assignment 2 Part E Circuit 4. Not built here.</td></tr>
+            <tr><td>DEMORGAN_CHECK</td><td class="scope-solo">On your own</td><td>Assignment 2 Part E Circuit 5, proving De Morgan's <em>first</em> law. Today's version proves the second law, using the same technique. You will know how; you still have to build it.</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout--note">
+          <div class="callout__title">If you are not in the lab section</div>
+          <p>Nothing here is required to complete Assignment 2. The lecture pages cover the same derivations, and the assignment's instructions are written to stand on their own. This lab removes friction; it does not hold anything back from you.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Part 1 — semester file
+           ============================================================ -->
+      <section id="sec-part1">
+        <h2>Part 1 — Your Semester File <span class="points-badge">~12 min</span></h2>
+
+        <p>Everything you build this semester lives in one Logisim file. Today it gains five circuits. By December it contains a CPU.</p>
+
+        <div class="callout callout--warn">
+          <div class="callout__title">Rename your file now</div>
+          <p>Lab 1 asked you to name your semester file <code>LastName_CSC210.circ</code>. The lecture course's Assignment 2 asks for <code>CSC210_YourName.circ</code>. These are the same file, and the lecture course is the one issuing grades &mdash; so <strong>rename it to <code>CSC210_YourName.circ</code> now</strong> and use that name for the rest of the semester.</p>
+          <p>Renaming a <code>.circ</code> file is safe. Logisim stores no reference to its own filename, and your <code>01-ByteReader</code> circuit is unaffected. Do this before you open the file, not after.</p>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">1</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Rename, then open</div>
+            <p>Rename the file to <code>CSC210_YourName.circ</code> using your actual name, then open it in Logisim. You should see your <code>main</code> circuit and <code>01-ByteReader</code> in the explorer pane at the upper left.</p>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">2</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Learn the one keystroke that matters today</div>
+            <p><strong>Project &rarr; Add Circuit</strong> creates a new, empty circuit as a tab inside <em>this same file</em>. You will use it five times today. It is the only correct way to add a circuit in this course.</p>
+          </div>
+        </div>
+
+        <div class="callout callout--warn">
+          <div class="callout__title">The single-file rule, restated because it costs people points every semester</div>
+          <p><strong>All circuits must be contained within this single <code>.circ</code> file &mdash; no external file links.</strong> Do not create a new file per circuit and link them together. Your file is opened on the instructor's machine in isolation, with none of your other files present. A circuit that lives in another file will be missing, and the submission is graded as incomplete.</p>
+          <p><strong>File &rarr; New</strong> makes a new file. <strong>Project &rarr; Add Circuit</strong> makes a new tab. Today, always the second one.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Part 2 — NAND_NOT
+           ============================================================ -->
+      <section id="sec-part2">
+        <h2>Part 2 — NOT from NAND <span class="points-badge">~10 min &middot; guided</span></h2>
+
+        <p>Start with the smallest possible claim: one NAND gate, wired to itself, behaves exactly like a NOT gate. If that is true, then the humble inverter is not a separate kind of hardware &mdash; it is a NAND gate with its inputs tied together.</p>
+
+        <p>Look at the NAND truth table and read only the two rows where both inputs are the same. When A and B are both 0, NAND outputs 1. When both are 1, NAND outputs 0. Tie the inputs together and those are the <em>only</em> two rows that can happen &mdash; and they are exactly the NOT truth table.</p>
+
+        <div class="recipe">
+          <div class="recipe__k">Circuit tab</div><div class="recipe__v"><code>NAND_NOT</code></div>
+          <div class="recipe__k">NAND gates</div><div class="recipe__v">1</div>
+          <div class="recipe__k">Pins</div><div class="recipe__v">One input <code>A</code>, one output <code>Y</code></div>
+          <div class="recipe__k">Wiring</div><div class="recipe__v"><code>Y = A NAND A</code> &mdash; the single input feeds <em>both</em> NAND inputs</div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">1</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Add the circuit</div>
+            <p><strong>Project &rarr; Add Circuit</strong>, name it exactly <code>NAND_NOT</code>. Capitalization and the underscore matter &mdash; this name is graded in the lecture assignment.</p>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">2</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Place the pins</div>
+            <p>From the <strong>Wiring</strong> library, place one <strong>Pin</strong> on the left and one on the right. Select the right-hand pin and, in the attribute table at the lower left, set <strong>Output?</strong> to <strong>Yes</strong>. Set the left pin's <strong>Label</strong> to <code>A</code> and the right pin's to <code>Y</code>.</p>
+            <p>Label every pin, every time. An unlabeled pin costs points in the lecture assignment and makes your own circuit unreadable a month from now.</p>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">3</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Place the NAND gate</div>
+            <p>From the <strong>Gates</strong> library, place a <strong>NAND Gate</strong> between the two pins. Leave its <strong>Number of Inputs</strong> at 2.</p>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">4</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Wire it &mdash; input A to <em>both</em> NAND inputs</div>
+            <p>Drag from pin <code>A</code> to the NAND's upper input. Then drag from anywhere on that same wire to the NAND's lower input. Logisim will draw a junction dot where the wire branches; that dot means one signal is feeding two places, which is exactly what you want.</p>
+            <p>Then wire the NAND output to pin <code>Y</code>.</p>
+          </div>
+        </div>
+
+        <div class="lab-verify">
+          <div class="lab-verify__title">Checkpoint</div>
+          <p>Switch to the <strong>poke</strong> tool (the pointing hand). Click pin <code>A</code> to toggle it.</p>
+          <ul>
+            <li><code>A = 0</code> &rarr; <code>Y</code> should read <strong>1</strong></li>
+            <li><code>A = 1</code> &rarr; <code>Y</code> should read <strong>0</strong></li>
+          </ul>
+          <p>Two rows, both checked. That is what "verified against its truth table" means for a one-input circuit &mdash; you tested every input that exists, not a sample.</p>
+        </div>
+
+        <details class="lab-troubleshoot">
+          <summary>Troubleshooting &mdash; my wire is blue, or the output won't change</summary>
+          <dl>
+            <dt>A wire is blue</dt>
+            <dd>Blue means the value is <em>undefined</em> &mdash; something is not connected. Almost always this is one NAND input left floating because the branch wire didn't attach. Zoom in and look for the junction dot.</dd>
+
+            <dt>A wire is red</dt>
+            <dd>Red means conflict &mdash; two outputs are driving the same wire. You have probably wired the NAND's output back into an input, or dropped a second gate on top of the first.</dd>
+
+            <dt>Clicking the pin does nothing</dt>
+            <dd>You are still holding the wiring tool. Press the poke tool in the toolbar (the hand icon) and try again.</dd>
+
+            <dt>The output reads the same as the input</dt>
+            <dd>You placed an AND gate rather than a NAND. Look for the small bubble on the output side of the symbol &mdash; no bubble means no inversion.</dd>
+          </dl>
+        </details>
+      </section>
+
+      <!-- ============================================================
+           Part 3 — NAND_AND
+           ============================================================ -->
+      <section id="sec-part3">
+        <h2>Part 3 — AND from NAND <span class="points-badge">~12 min &middot; guided</span></h2>
+
+        <p>NAND is literally "AND, then inverted." So to get AND back, invert it again &mdash; and you already know how to invert with a NAND, because you just built it.</p>
+
+        <p>This is the first time in this course that a new circuit is made entirely out of an old one. Notice the shape of the move; you will make it again every week for the rest of the semester.</p>
+
+        <div class="recipe">
+          <div class="recipe__k">Circuit tab</div><div class="recipe__v"><code>NAND_AND</code></div>
+          <div class="recipe__k">NAND gates</div><div class="recipe__v">2</div>
+          <div class="recipe__k">Pins</div><div class="recipe__v">Inputs <code>A</code>, <code>B</code>; output <code>Y</code></div>
+          <div class="recipe__k">Wiring</div><div class="recipe__v"><code>g1 = A NAND B</code>, then <code>Y = g1 NAND g1</code></div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">1</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Add the circuit and its pins</div>
+            <p><strong>Project &rarr; Add Circuit</strong>, name it <code>NAND_AND</code>. Place two input pins labeled <code>A</code> and <code>B</code>, and one output pin labeled <code>Y</code>.</p>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">2</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Stage 1 — the NAND</div>
+            <p>Place a NAND gate. Wire <code>A</code> to its upper input and <code>B</code> to its lower input. Its output is now <code>(A&middot;B)'</code>.</p>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">3</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Stage 2 — the inverter you already know</div>
+            <p>Place a second NAND gate to the right. Wire the first NAND's output to <strong>both</strong> inputs of the second &mdash; the same tie-the-inputs-together trick from Part 2. Wire the second NAND's output to <code>Y</code>.</p>
+            <p>Algebraically: <code>((A&middot;B)')' = A&middot;B</code>. The second inversion cancels the first.</p>
+          </div>
+        </div>
+
+        <div class="lab-verify">
+          <div class="lab-verify__title">Checkpoint &mdash; all four rows, not two</div>
+          <p>Poke every combination and confirm you get the AND table:</p>
+          <ul>
+            <li><code>0, 0 &rarr; 0</code></li>
+            <li><code>0, 1 &rarr; 0</code></li>
+            <li><code>1, 0 &rarr; 0</code></li>
+            <li><code>1, 1 &rarr; 1</code></li>
+          </ul>
+          <p>Two inputs means four rows. Test all four. A circuit that happens to be right for three of them is not right.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Widget 1 — anchored after Part 3
+           ============================================================ -->
+      <section id="sec-widget-bench">
+        <h2>Interactive: NAND Derivation Bench</h2>
+
+        <p>Use this to check your own circuit against the truth. Pick the gate you just built, poke your Logisim circuit through every input combination, record what <em>your</em> circuit actually produced, and press Check. If a row is wrong, the bench tells you which NAND stage to look at rather than making you re-derive the whole thing.</p>
+
+        <p>Come back to this widget after Part 5 and again after Part 6 &mdash; it covers all four gates you build today.</p>
+
+        <div class="widget-card" id="widget-bench">
+          <div class="widget-card__title">Widget 1: NAND Derivation Bench</div>
+          <div class="widget-card__subtitle">Record what your circuit did. Do not record what you think it should have done.</div>
+
+          <div class="nd-targets" id="nd-targets" role="group" aria-label="Choose target gate"></div>
+
+          <div class="nd-recipe" id="nd-recipe"></div>
+
+          <table class="nd-table" id="nd-table">
+            <thead id="nd-thead"></thead>
+            <tbody id="nd-tbody"></tbody>
+          </table>
+
+          <div style="text-align:center;">
+            <button type="button" class="widget-btn" id="nd-check">Check my circuit</button>
+            <button type="button" class="widget-btn widget-btn--outline" id="nd-reset">Reset</button>
+          </div>
+
+          <div class="nd-feedback" id="nd-feedback" role="status" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Part 4 — subcircuits
+           ============================================================ -->
+      <section id="sec-part4">
+        <h2>Part 4 — Subcircuits: Build Once, Reuse Forever <span class="points-badge">~10 min &middot; guided</span></h2>
+
+        <p>Here is the technique the rest of this course depends on. Any circuit in your file can be dropped into any other circuit as a single component. Your <code>NAND_AND</code> is not just a diagram &mdash; it is now a part you own.</p>
+
+        <p>This matters more than it sounds. By Week 8 you will build a RAM out of registers, and each register out of flip-flops, and each flip-flop out of NAND gates. That only stays manageable because each layer becomes one box you stop thinking about.</p>
+
+        <div class="lab-step">
+          <div class="lab-step__num">1</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Go somewhere you can experiment</div>
+            <p>Click on your <code>main</code> circuit in the explorer pane. This is scratch space &mdash; nothing here is graded.</p>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">2</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Instance the subcircuit</div>
+            <p>In the explorer pane, click <strong>once</strong> on <code>NAND_AND</code> to select it as a tool, then click in the canvas to place it. A box appears with two inputs on the left labeled <code>A</code> and <code>B</code>, and one output on the right labeled <code>Y</code>.</p>
+            <p><strong>Those labels are your pin labels.</strong> This is why Part 2 insisted on labeling &mdash; unlabeled pins produce an anonymous box whose inputs you cannot tell apart.</p>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">3</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Notice the shape</div>
+            <p>In Logisim <strong>Classic</strong>, the instanced subcircuit is drawn with its gate-level appearance rather than a featureless rectangle. That is the specific reason this course uses Classic and not Evolution: you can look at a circuit and see what it is.</p>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">4</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Prove it is live, not a copy</div>
+            <p>Wire two input pins and one output pin to the instance and poke it. It behaves exactly like the circuit inside. Now double-click the instance &mdash; Logisim jumps into the <code>NAND_AND</code> tab. Change something there, come back, and the instance's behavior changed with it.</p>
+            <p>One definition, many uses. Fix a bug once and every instance is fixed.</p>
+          </div>
+        </div>
+
+        <div class="lab-verify">
+          <div class="lab-verify__title">Checkpoint</div>
+          <p>You have a working <code>NAND_AND</code> instance inside <code>main</code>, and you have double-clicked into it and back out. Leave the instance there &mdash; you may reuse it, and <code>main</code> is not graded either way.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Part 5 — NAND_OR (independent)
+           ============================================================ -->
+      <section id="sec-part5">
+        <h2>Part 5 — OR from NAND <span class="points-badge">~10 min &middot; you derive it</span></h2>
+
+        <p>This one you work out yourself. The instructor will circulate, but there is no demo &mdash; you have everything you need.</p>
+
+        <p><strong>The hint, and it is the whole answer if you read it carefully:</strong> De Morgan's law says <code>A + B = (A' &middot; B')'</code>. Read the right-hand side out loud as a wiring instruction: invert A, invert B, then NAND those two together. You already know how to invert with a NAND.</p>
+
+        <div class="recipe">
+          <div class="recipe__k">Circuit tab</div><div class="recipe__v"><code>NAND_OR</code></div>
+          <div class="recipe__k">NAND gates</div><div class="recipe__v">3</div>
+          <div class="recipe__k">Pins</div><div class="recipe__v">Inputs <code>A</code>, <code>B</code>; output <code>Y</code></div>
+          <div class="recipe__k">Your job</div><div class="recipe__v">Work out the wiring from the hint above, then verify all four rows</div>
+        </div>
+
+        <div class="lab-verify">
+          <div class="lab-verify__title">Checkpoint &mdash; the OR table</div>
+          <ul>
+            <li><code>0, 0 &rarr; 0</code></li>
+            <li><code>0, 1 &rarr; 1</code></li>
+            <li><code>1, 0 &rarr; 1</code></li>
+            <li><code>1, 1 &rarr; 1</code></li>
+          </ul>
+          <p>Scroll back to the Derivation Bench, select <strong>OR</strong>, and record what your circuit actually did. If a row disagrees, the bench will tell you which stage to inspect.</p>
+        </div>
+
+        <div class="callout callout--note">
+          <div class="callout__title">Why this one is worth struggling with for a few minutes</div>
+          <p>Parts 2 and 3 were transcription &mdash; you followed wiring instructions. This is the first time you translate an algebraic identity into hardware yourself. That translation, expression to circuit, is the actual skill this course is teaching. Assignment 2 Part D asks for it on paper; here you do it with your hands.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Part 6 — XOR (independent)
+           ============================================================ -->
+      <section id="sec-part6">
+        <h2>Part 6 — XOR from NAND <span class="points-badge">~14 min &middot; the hard one</span></h2>
+
+        <p>XOR is where NAND universality stops feeling like a trick and starts feeling like a fact. There is no "invert it twice" shortcut here. Four NAND gates, and the middle two share a wire in a way that is not obvious until you see it.</p>
+
+        <p>This circuit appears on no assignment. It is here because it is the first circuit in this course you cannot build by pattern-matching, and that experience is worth more than the circuit is.</p>
+
+        <div class="recipe">
+          <div class="recipe__k">Circuit tab</div><div class="recipe__v"><code>02-XOR-from-NAND</code></div>
+          <div class="recipe__k">NAND gates</div><div class="recipe__v">4</div>
+          <div class="recipe__k">Pins</div><div class="recipe__v">Inputs <code>A</code>, <code>B</code>; output <code>Y</code></div>
+          <div class="recipe__k">Structure</div><div class="recipe__v">Gate 1 takes A and B. Gates 2 and 3 each take one original input <em>and</em> gate 1's output. Gate 4 combines gates 2 and 3.</div>
+        </div>
+
+        <p>Try it from that structural description first. Give it a real attempt &mdash; five minutes of being stuck here is the point of the exercise. When you want the exact wiring, open the panel below.</p>
+
+        <details class="lab-troubleshoot">
+          <summary>Show me the exact wiring</summary>
+          <dl>
+            <dt>Gate 1</dt>
+            <dd><code>g1 = A NAND B</code></dd>
+            <dt>Gate 2</dt>
+            <dd><code>g2 = A NAND g1</code> &mdash; input A branches to feed both this gate and gate 1</dd>
+            <dt>Gate 3</dt>
+            <dd><code>g3 = B NAND g1</code> &mdash; likewise for B, and <code>g1</code> branches to feed both gates 2 and 3</dd>
+            <dt>Gate 4</dt>
+            <dd><code>Y = g2 NAND g3</code></dd>
+            <dt>Why it works</dt>
+            <dd>Expanding gives <code>Y = A&middot;B' + A'&middot;B</code> &mdash; exactly "the inputs differ," which is XOR.</dd>
+          </dl>
+        </details>
+
+        <div class="lab-verify">
+          <div class="lab-verify__title">Checkpoint &mdash; the XOR table</div>
+          <ul>
+            <li><code>0, 0 &rarr; 0</code></li>
+            <li><code>0, 1 &rarr; 1</code></li>
+            <li><code>1, 0 &rarr; 1</code></li>
+            <li><code>1, 1 &rarr; 0</code></li>
+          </ul>
+          <p>Verify in the Derivation Bench with <strong>XOR</strong> selected.</p>
+        </div>
+
+        <div class="callout callout--note">
+          <div class="callout__title">Four gates, and that is the minimum</div>
+          <p>Four two-input NAND gates is the smallest XOR that exists. If you find a three-gate version, you have made a wiring error somewhere &mdash; check it against the table before you celebrate.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Part 7 — splitters and tunnels
+           ============================================================ -->
+      <section id="sec-part7">
+        <h2>Part 7 — Splitters and Tunnels <span class="points-badge">~6 min &middot; demo</span></h2>
+
+        <p>Nothing to submit here. This is a technique preview, because next week's circuits are the first ones wide enough to become unreadable without it.</p>
+
+        <div class="lab-step">
+          <div class="lab-step__num">1</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Tunnels — a named wire with no line</div>
+            <p>From the <strong>Wiring</strong> library, place a <strong>Tunnel</strong> and give it a <strong>Label</strong>, say <code>CLK</code>. Place a second tunnel anywhere else with the <em>same</em> label. The two points are now electrically connected with no wire drawn between them.</p>
+            <p>Use this for signals that go everywhere &mdash; a clock, a reset line. Do not use it to hide a mess; a tunnel you forgot about is a bug you cannot see.</p>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">2</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Splitters — one fat wire, many thin ones</div>
+            <p>Place a <strong>Splitter</strong> and set <strong>Bit Width In</strong> to 8 and <strong>Fan Out</strong> to 8. It turns one 8-bit bus into eight individual 1-bit wires, and works in both directions.</p>
+            <p>Your Lab 1 byte reader used an 8-bit pin. A splitter is how you get at bit 3 of that byte on its own &mdash; which is exactly what Week 3's adder will need.</p>
+          </div>
+        </div>
+
+        <div class="lab-verify">
+          <div class="lab-verify__title">Checkpoint</div>
+          <p>You have placed one tunnel pair and one splitter in <code>main</code> and seen each do its thing. That is enough. Delete them or leave them &mdash; <code>main</code> is not graded.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Part 8 — De Morgan proof
+           ============================================================ -->
+      <section id="sec-part8">
+        <h2>Part 8 — De Morgan's Second Law, as a Circuit You Can Poke <span class="points-badge">~10 min</span></h2>
+
+        <p>You have been told that <code>(A + B)' = A' &middot; B'</code>. Now build both sides of that equation as separate circuits, drive them from the same two inputs, and wire an XOR gate across their outputs to an LED. The XOR lights only if the two sides ever disagree.</p>
+
+        <p>Poke all four input combinations. The LED never lights. That is not a demonstration of the law &mdash; for two variables, testing all four rows <em>is</em> the proof, exhaustively.</p>
+
+        <p>And this is where Part 4 pays off: you are not building this out of gates. You are building it out of the circuits you already own.</p>
+
+        <div class="recipe">
+          <div class="recipe__k">Circuit tab</div><div class="recipe__v"><code>03-DeMorgan2-Check</code></div>
+          <div class="recipe__k">Built from</div><div class="recipe__v">Instances of <code>NAND_OR</code>, <code>NAND_NOT</code> (&times;3), <code>NAND_AND</code>, plus one XOR gate</div>
+          <div class="recipe__k">Pins</div><div class="recipe__v">Inputs <code>A</code>, <code>B</code>; outputs <code>LEFT</code>, <code>RIGHT</code>, <code>DISAGREE</code></div>
+          <div class="recipe__k">Left side</div><div class="recipe__v"><code>(A + B)'</code> &mdash; NAND_OR instance feeding a NAND_NOT instance</div>
+          <div class="recipe__k">Right side</div><div class="recipe__v"><code>A' &middot; B'</code> &mdash; two NAND_NOT instances feeding a NAND_AND instance</div>
+          <div class="recipe__k">Harness</div><div class="recipe__v">XOR gate across LEFT and RIGHT &rarr; output pin <code>DISAGREE</code></div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">1</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Add the circuit and shared inputs</div>
+            <p><strong>Project &rarr; Add Circuit</strong>, name it <code>03-DeMorgan2-Check</code>. Place input pins <code>A</code> and <code>B</code> on the left.</p>
+            <p><strong>Both halves must be driven by the same two pins.</strong> That is what makes the comparison mean anything &mdash; two circuits fed from separate inputs prove nothing about each other.</p>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">2</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Build the left side</div>
+            <p>Instance <code>NAND_OR</code>, wire <code>A</code> and <code>B</code> into it. Instance <code>NAND_NOT</code> and feed it the OR's output. Wire that to an output pin labeled <code>LEFT</code>. You have built <code>(A + B)'</code>.</p>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">3</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Build the right side</div>
+            <p>Instance <code>NAND_NOT</code> twice. Branch <code>A</code> into the first and <code>B</code> into the second. Instance <code>NAND_AND</code> and feed it both inverted signals. Wire that to an output pin labeled <code>RIGHT</code>. You have built <code>A' &middot; B'</code>.</p>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">4</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Wire the disagreement detector</div>
+            <p>Place one <strong>XOR Gate</strong> from the Gates library. Feed it <code>LEFT</code> and <code>RIGHT</code>. Wire its output to an output pin labeled <code>DISAGREE</code>.</p>
+            <p>XOR outputs 1 exactly when its inputs differ. So <code>DISAGREE</code> is the alarm: 1 means the two sides of the identity produced different answers.</p>
+          </div>
+        </div>
+
+        <div class="lab-verify">
+          <div class="lab-verify__title">Checkpoint &mdash; the proof</div>
+          <p>Poke all four combinations of <code>A</code> and <code>B</code>. In every one:</p>
+          <ul>
+            <li><code>LEFT</code> and <code>RIGHT</code> read the same value</li>
+            <li><code>DISAGREE</code> stays <strong>0</strong></li>
+          </ul>
+          <p>If <code>DISAGREE</code> ever goes to 1, you have not disproved De Morgan &mdash; you have a wiring error. Find which side changed and check it against the recipe.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Widget 2 — anchored after Part 8
+           ============================================================ -->
+      <section id="sec-widget-demorgan">
+        <h2>Interactive: De Morgan Poke Proof</h2>
+
+        <p>The same circuit, in software. Toggle A and B and watch both sides move together. The widget tracks which of the four input combinations you have tested, so you can see when the proof is actually complete rather than assuming it.</p>
+
+        <div class="widget-card" id="widget-demorgan">
+          <div class="widget-card__title">Widget 2: De Morgan Poke Proof</div>
+          <div class="widget-card__subtitle">De Morgan's second law &mdash; <code>(A + B)' = A' &middot; B'</code></div>
+
+          <div class="dm-inputs">
+            <button type="button" class="dm-toggle" id="dm-a" aria-pressed="false">A=0</button>
+            <button type="button" class="dm-toggle" id="dm-b" aria-pressed="false">B=0</button>
+          </div>
+
+          <div class="dm-sides">
+            <div class="dm-side">
+              <div class="dm-side__label">LEFT</div>
+              <div class="dm-side__expr">(A + B)'</div>
+              <div class="dm-side__val" id="dm-left">1</div>
+            </div>
+            <div class="dm-side">
+              <div class="dm-side__label">RIGHT</div>
+              <div class="dm-side__expr">A' &middot; B'</div>
+              <div class="dm-side__val" id="dm-right">1</div>
+            </div>
+          </div>
+
+          <div class="dm-led">
+            <span class="dm-led__lamp" id="dm-lamp"></span>
+            <span class="dm-led__text" id="dm-text">DISAGREE = 0 &mdash; the two sides agree</span>
+          </div>
+
+          <div class="dm-log" id="dm-log" role="status" aria-live="polite">Tested 1 of 4 input combinations.</div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Assignment
+           ============================================================ -->
+      <section id="sec-assignment">
+        <h2>Assignment: Completion Check 2</h2>
+
+        <div class="lab-meta">
+          <div class="lab-meta__item">
+            <span class="lab-meta__label">Points</span>
+            <span class="lab-meta__value">10</span>
+          </div>
+          <div class="lab-meta__item">
+            <span class="lab-meta__label">Due</span>
+            <span class="lab-meta__value lab-meta__value--due">Monday, Aug 31, 2026 &middot; 11:59 PM</span>
+          </div>
+          <div class="lab-meta__item">
+            <span class="lab-meta__label">Submit via</span>
+            <span class="lab-meta__value">Canvas &mdash; Lab 2 Completion Check</span>
+          </div>
+          <div class="lab-meta__item">
+            <span class="lab-meta__label">Assesses</span>
+            <span class="lab-meta__value">CSLO 1</span>
+          </div>
+        </div>
+
+        <p>This checks that the five circuits from today exist in your semester file, are named correctly, and actually work. It is not a test of understanding &mdash; everything required was built during the session. If you finished in class, you are submitting work you already have.</p>
+
+        <h3>What to Submit</h3>
+        <p>Upload <strong>one file</strong> to the Canvas assignment:</p>
+        <ul>
+          <li><code>CSC210_YourName.circ</code> &mdash; your semester Logisim file, containing <code>NAND_NOT</code>, <code>NAND_AND</code>, <code>NAND_OR</code>, <code>02-XOR-from-NAND</code>, and <code>03-DeMorgan2-Check</code> as circuit tabs, alongside <code>main</code> and <code>01-ByteReader</code> from Lab 1.</li>
+        </ul>
+
+        <div class="callout callout--warn">
+          <div class="callout__title">Submission Requirement &mdash; Read Before Uploading</div>
+          <p><strong>All circuits must be contained within this single <code>.circ</code> file &mdash; no external file links.</strong> Your file will be opened on the instructor's machine, in isolation, with none of your other files present. If it references a circuit stored in another file, that reference will be broken and the submission will be graded as incomplete.</p>
+          <p>This requirement applies to every Logisim assignment in this course, all semester.</p>
+        </div>
+
+        <h3>Grading Rubric</h3>
+        <table>
+          <thead>
+            <tr><th>Criterion</th><th>Points</th><th>Full credit requires</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>NAND_NOT</code></td>
+              <td>2</td>
+              <td>Tab named exactly <code>NAND_NOT</code>. Built from one NAND gate. Correct output for both inputs. Pins labeled.</td>
+            </tr>
+            <tr>
+              <td><code>NAND_AND</code></td>
+              <td>2</td>
+              <td>Tab named exactly <code>NAND_AND</code>. Built from NAND gates only. Correct for all four input combinations. Pins labeled.</td>
+            </tr>
+            <tr>
+              <td><code>NAND_OR</code></td>
+              <td>2</td>
+              <td>Tab named exactly <code>NAND_OR</code>. Built from NAND gates only. Correct for all four input combinations. Pins labeled.</td>
+            </tr>
+            <tr>
+              <td><code>02-XOR-from-NAND</code></td>
+              <td>2</td>
+              <td>Correct for all four input combinations, built from NAND gates only. A circuit using a built-in XOR gate earns 0 for this row.</td>
+            </tr>
+            <tr>
+              <td><code>03-DeMorgan2-Check</code></td>
+              <td>2</td>
+              <td>Both halves present and driven from the same <code>A</code> and <code>B</code> pins, XOR harness wired to a <code>DISAGREE</code> output, and <code>DISAGREE</code> reads 0 for all four input combinations.</td>
+            </tr>
+            <tr class="rubric-total">
+              <td>Total</td>
+              <td>10</td>
+              <td>&nbsp;</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p style="font-size:var(--fs-sm);color:var(--color-text-muted);"><strong>CSLO alignment.</strong> This assignment supports <strong>CSLO&nbsp;1</strong> (describe the organization and architecture of a computer system) by establishing, at the gate level, that a single universal component is sufficient to construct every logic function the rest of the course depends on. It is a completion check and does not itself carry SLO assessment evidence; the graded evidence for Week 2 is Assignment 2 in the lecture course, and the first Logisim Checkpoint follows in Week 5.</p>
+
+        <div class="callout callout--forward">
+          <div class="callout__title">If You Could Not Finish in Class</div>
+          <p>Every part of this lab can be completed on your own before the deadline &mdash; the steps on this page are the same ones we walked through together, and the Derivation Bench above will verify each circuit for you. Parts 5 and 6 are the ones most likely to be unfinished; both have the full wiring available on this page if you get genuinely stuck.</p>
+          <p>If you are blocked on a tool problem rather than a concept, contact the instructor before the due date rather than after it.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Widget 3 — pre-submission checklist
+           ============================================================ -->
+      <section id="sec-checklist">
+        <h2>Interactive: Pre-Submission Checklist</h2>
+
+        <p>Work through this immediately before you upload. It takes about two minutes and catches the failures that cost points.</p>
+
+        <div class="widget-card" id="widget-checklist">
+          <div class="widget-card__title">Widget 3: Pre-Submission Checklist</div>
+          <div class="widget-card__subtitle">Check each item only after you have actually verified it &mdash; not because it sounds right.</div>
+
+          <ul class="lab-checklist" id="ck-list">
+            <li>
+              <input type="checkbox" id="ck-1">
+              <label for="ck-1">My file is named <code>CSC210_YourName.circ</code> using my <em>actual</em> name, not the Lab 1 name.</label>
+            </li>
+            <li>
+              <input type="checkbox" id="ck-2">
+              <label for="ck-2">My file has five new circuit tabs: <code>NAND_NOT</code>, <code>NAND_AND</code>, <code>NAND_OR</code>, <code>02-XOR-from-NAND</code>, <code>03-DeMorgan2-Check</code> &mdash; spelled and capitalized exactly.</label>
+            </li>
+            <li>
+              <input type="checkbox" id="ck-3">
+              <label for="ck-3">I poked <em>every</em> input combination on each circuit &mdash; two rows for <code>NAND_NOT</code>, four rows for the rest &mdash; not just one or two.</label>
+            </li>
+            <li>
+              <input type="checkbox" id="ck-4">
+              <label for="ck-4">Every pin in every circuit has a label.</label>
+            </li>
+            <li>
+              <input type="checkbox" id="ck-5">
+              <label for="ck-5">The four NAND-derived circuits use <strong>only NAND gates</strong> &mdash; no AND, OR, or NOT gates snuck in.</label>
+            </li>
+            <li>
+              <input type="checkbox" id="ck-6">
+              <label for="ck-6">In <code>03-DeMorgan2-Check</code>, <code>DISAGREE</code> stayed at 0 for all four input combinations.</label>
+            </li>
+            <li>
+              <input type="checkbox" id="ck-7">
+              <label for="ck-7">No wire anywhere is blue or red.</label>
+            </li>
+            <li>
+              <input type="checkbox" id="ck-8">
+              <label for="ck-8"><strong>All circuits are contained within this single <code>.circ</code> file &mdash; no external file links.</strong></label>
+            </li>
+            <li>
+              <input type="checkbox" id="ck-9">
+              <label for="ck-9">I closed Logisim, reopened the file from my folder, and everything was still there.</label>
+            </li>
+          </ul>
+
+          <div class="checklist-status" id="ck-status" aria-live="polite">0 of 9 verified</div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Forward reference
+           ============================================================ -->
+      <section id="sec-next">
+        <h2>What Comes Next</h2>
+
+        <p>You now own a gate library made of nothing but NAND, and you know how to reuse a circuit instead of rebuilding it. Both of those are prerequisites for what happens next.</p>
+
+        <p>Individual gates make decisions about single bits. Next week's lab builds the first circuits that compute something a person would recognize as arithmetic &mdash; a half adder, then a full adder, then a chain of them wide enough to add real numbers. And decoders, which are how a circuit answers the question "which one?" &mdash; the mechanism that will later let a CPU pick a register and a memory address.</p>
+
+        <p>Bring your semester file. Next week's circuits are built from this week's.</p>
+      </section>
+
+  </main>
+
+  <!-- ==================== Footer ==================== -->
+  <footer class="sp-footer">
+    CSC210L — Computer Organization &amp; Architecture Lab &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <!-- ==================== Scripts ==================== -->
+  <script src="../../shared/logic.js"></script>
+  <script>
+  /* ============================================================
+     Widget 1: NAND Derivation Bench
+     ============================================================
+     Students record the output their own Logisim circuit produced
+     for each input combination; the bench compares that against
+     the truth computed by window.CSCLogic and, on a mismatch,
+     names the NAND stage most likely at fault.
+
+     Expected values are never hard-coded here — they come from
+     CSCLogic.gates so this widget cannot drift from the kernel
+     the lecture SPAs and the assignment were verified against.
+     ============================================================ */
+  (function () {
+    'use strict';
+
+    var L = window.CSCLogic;
+
+    var TARGETS = {
+      NOT: {
+        label: 'NOT',
+        arity: 1,
+        gates: 1,
+        recipe: '<strong>1 NAND.</strong> <code>Y = A NAND A</code> — the single input feeds both NAND inputs.',
+        stages: ['the single NAND gate — check that A really branches into BOTH of its inputs']
+      },
+      AND: {
+        label: 'AND',
+        arity: 2,
+        gates: 2,
+        recipe: '<strong>2 NANDs.</strong> <code>g1 = A NAND B</code>, then <code>Y = g1 NAND g1</code>.',
+        stages: ['stage 1 (A NAND B) — if all four rows are inverted, you are reading g1 and never built stage 2',
+                 'stage 2 (the inverter) — check that g1 branches into both inputs of the second NAND']
+      },
+      OR: {
+        label: 'OR',
+        arity: 2,
+        gates: 3,
+        recipe: '<strong>3 NANDs.</strong> <code>Y = (A NAND A) NAND (B NAND B)</code> — invert each input, then NAND the results.',
+        stages: ['the two inverters — each input must feed both inputs of its own NAND',
+                 'the combining NAND — it takes the two INVERTED signals, not the raw A and B']
+      },
+      XOR: {
+        label: 'XOR',
+        arity: 2,
+        gates: 4,
+        recipe: '<strong>4 NANDs.</strong> <code>g1 = A NAND B</code>; <code>g2 = A NAND g1</code>; <code>g3 = B NAND g1</code>; <code>Y = g2 NAND g3</code>.',
+        stages: ['g1 — both A and B feed it, and its output must branch to BOTH g2 and g3',
+                 'g2 and g3 — g2 takes A (not B) with g1; g3 takes B (not A) with g1',
+                 'g4 — it combines g2 and g3, not g1 with anything']
+      }
+    };
+
+    var order = ['NOT', 'AND', 'OR', 'XOR'];
+    var current = 'NOT';
+    var observed = {};          // rowIndex -> 0 | 1
+
+    function expected(key, a, b) {
+      var g = L.gates[key];
+      return g.arity === 1 ? g.fn(a) : g.fn(a, b);
+    }
+
+    function rows(arity) {
+      var out = [], i;
+      var n = arity === 1 ? 2 : 4;
+      for (i = 0; i < n; i++) {
+        out.push(arity === 1 ? [i] : [(i >> 1) & 1, i & 1]);
+      }
+      return out;
+    }
+
+    function renderTargets() {
+      var host = document.getElementById('nd-targets');
+      host.innerHTML = '';
+      order.forEach(function (k) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'widget-btn' + (k === current ? '' : ' widget-btn--outline');
+        b.textContent = TARGETS[k].label + ' from NAND';
+        b.setAttribute('aria-pressed', k === current ? 'true' : 'false');
+        b.addEventListener('click', function () {
+          current = k;
+          observed = {};
+          render();
+        });
+        host.appendChild(b);
+      });
+    }
+
+    function render() {
+      var t = TARGETS[current];
+      renderTargets();
+      document.getElementById('nd-recipe').innerHTML =
+        'Target: <strong>' + t.label + '</strong> &nbsp;·&nbsp; ' + t.recipe;
+
+      var thead = document.getElementById('nd-thead');
+      var tbody = document.getElementById('nd-tbody');
+      thead.innerHTML = t.arity === 1
+        ? '<tr><th>A</th><th>What your circuit produced</th></tr>'
+        : '<tr><th>A</th><th>B</th><th>What your circuit produced</th></tr>';
+
+      tbody.innerHTML = '';
+      rows(t.arity).forEach(function (r, idx) {
+        var tr = document.createElement('tr');
+        tr.id = 'nd-row-' + idx;
+        var cells = r.map(function (v) { return '<td><code>' + v + '</code></td>'; }).join('');
+        tr.innerHTML = cells + '<td></td>';
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'nd-out-btn';
+        btn.textContent = '?';
+        btn.setAttribute('aria-label',
+          'Output your circuit produced for row ' + (idx + 1) + '. Click to cycle between unknown, 0 and 1.');
+        btn.addEventListener('click', function () {
+          var cur = observed[idx];
+          if (cur === undefined) { observed[idx] = 0; }
+          else if (cur === 0)    { observed[idx] = 1; }
+          else                   { delete observed[idx]; }
+          paint(idx, btn);
+          hideFeedback();
+        });
+        tr.lastChild.appendChild(btn);
+        tbody.appendChild(tr);
+        paint(idx, btn);
+      });
+      hideFeedback();
+    }
+
+    function paint(idx, btn) {
+      var v = observed[idx];
+      btn.textContent = v === undefined ? '?' : String(v);
+      btn.classList.toggle('on', v === 1);
+      var tr = document.getElementById('nd-row-' + idx);
+      if (tr) tr.classList.remove('nd-row--bad');
+    }
+
+    function hideFeedback() {
+      var f = document.getElementById('nd-feedback');
+      f.className = 'nd-feedback';
+      f.innerHTML = '';
+    }
+
+    function show(kind, html) {
+      var f = document.getElementById('nd-feedback');
+      f.className = 'nd-feedback visible nd-feedback--' + kind;
+      f.innerHTML = html;
+    }
+
+    function check() {
+      var t = TARGETS[current];
+      var rs = rows(t.arity);
+      var missing = [], bad = [];
+
+      rs.forEach(function (r, idx) {
+        if (observed[idx] === undefined) { missing.push(idx + 1); return; }
+        var exp = expected(current, r[0], t.arity === 1 ? 0 : r[1]);
+        if (observed[idx] !== exp) {
+          bad.push(idx);
+          var tr = document.getElementById('nd-row-' + idx);
+          if (tr) tr.classList.add('nd-row--bad');
+        }
+      });
+
+      if (missing.length) {
+        show('error', 'Record every row first. Still missing: row ' + missing.join(', row ') +
+          '. Poke your circuit — do not guess.');
+        return;
+      }
+
+      if (!bad.length) {
+        show('success', '<strong>Verified.</strong> Your ' + t.label + ' circuit matches the truth table on all ' +
+          rs.length + ' rows, using ' + t.gates + ' NAND gate' + (t.gates === 1 ? '' : 's') +
+          '. That is an exhaustive test, not a sample — this circuit is correct.');
+        return;
+      }
+
+      var rowList = bad.map(function (i) {
+        var r = rs[i];
+        return t.arity === 1 ? 'A=' + r[0] : 'A=' + r[0] + ',B=' + r[1];
+      }).join('  ·  ');
+
+      var hint;
+      if (bad.length === rs.length) {
+        hint = '<strong>Every row is wrong</strong>, which usually means the output is inverted — you are probably reading the circuit one NAND stage too early, or one too late.';
+      } else if (bad.length === 1) {
+        hint = '<strong>One row wrong</strong> almost always means a floating or mis-branched input rather than a wrong design. Look for a blue wire at that input combination.';
+      } else {
+        hint = '<strong>Some rows right, some wrong</strong> points at a wiring error inside the derivation rather than the wrong recipe.';
+      }
+
+      show('error',
+        '<strong>Mismatch on:</strong> ' + rowList + '<br>' + hint +
+        '<br><br><strong>Where to look, in order:</strong><ul><li>' +
+        t.stages.join('</li><li>') + '</li></ul>');
+    }
+
+    function init() {
+      if (!L || !L.gates) return;   // logic.js missing — leave the markup inert rather than throwing
+      render();
+      document.getElementById('nd-check').addEventListener('click', check);
+      document.getElementById('nd-reset').addEventListener('click', function () {
+        observed = {};
+        render();
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else { init(); }
+  })();
+
+  /* ============================================================
+     Widget 2: De Morgan Poke Proof
+     ============================================================
+     Mirrors the 03-DeMorgan2-Check circuit built in Part 8.
+     Both sides are evaluated through CSCLogic rather than
+     hand-coded, and coverage of all four input combinations is
+     tracked so "the proof is complete" is something the student
+     can see rather than assume.
+     ============================================================ */
+  (function () {
+    'use strict';
+
+    var L = window.CSCLogic;
+    var A = 0, B = 0;
+    var seen = {};
+
+    function evalExpr(src, a, b) {
+      return L.evaluate(L.parse(src), { A: a, B: b });
+    }
+
+    function update() {
+      var left  = evalExpr("(A+B)'", A, B);
+      var right = evalExpr("A'B'",   A, B);
+      var dis   = left ^ right;
+
+      seen[A + '' + B] = true;
+
+      document.getElementById('dm-a').textContent = 'A=' + A;
+      document.getElementById('dm-b').textContent = 'B=' + B;
+      document.getElementById('dm-a').setAttribute('aria-pressed', A ? 'true' : 'false');
+      document.getElementById('dm-b').setAttribute('aria-pressed', B ? 'true' : 'false');
+      document.getElementById('dm-a').classList.toggle('on', A === 1);
+      document.getElementById('dm-b').classList.toggle('on', B === 1);
+
+      document.getElementById('dm-left').textContent  = left;
+      document.getElementById('dm-right').textContent = right;
+
+      document.getElementById('dm-lamp').classList.toggle('lit', dis === 1);
+      document.getElementById('dm-text').innerHTML = dis
+        ? 'DISAGREE = 1 — the sides differ'
+        : 'DISAGREE = 0 — the two sides agree';
+
+      var n = Object.keys(seen).length;
+      document.getElementById('dm-log').textContent = n < 4
+        ? 'Tested ' + n + ' of 4 input combinations. The proof is not complete until all four have been poked.'
+        : 'All 4 input combinations tested, and DISAGREE never went high. For two variables that is not evidence — it is a complete proof.';
+    }
+
+    function init() {
+      if (!L || !L.parse) return;
+      document.getElementById('dm-a').addEventListener('click', function () { A ^= 1; update(); });
+      document.getElementById('dm-b').addEventListener('click', function () { B ^= 1; update(); });
+      update();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else { init(); }
+  })();
+
+  /* ============================================================
+     Widget 3: Pre-Submission Checklist
+     ============================================================ */
+  (function () {
+    'use strict';
+
+    function update() {
+      var boxes = document.querySelectorAll('#ck-list input[type="checkbox"]');
+      var done = 0, i;
+      for (i = 0; i < boxes.length; i++) {
+        var li = boxes[i].closest('li');
+        if (boxes[i].checked) { done++; li.classList.add('checked'); }
+        else { li.classList.remove('checked'); }
+      }
+      var status = document.getElementById('ck-status');
+      status.textContent = done === boxes.length
+        ? 'All ' + boxes.length + ' verified — you are ready to upload.'
+        : done + ' of ' + boxes.length + ' verified';
+      status.classList.toggle('checklist-status--ready', done === boxes.length);
+    }
+
+    function init() {
+      var boxes = document.querySelectorAll('#ck-list input[type="checkbox"]');
+      for (var i = 0; i < boxes.length; i++) {
+        boxes[i].addEventListener('change', update);
+      }
+      update();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else { init(); }
+  })();
+  </script>
+
+</body>
+</html>

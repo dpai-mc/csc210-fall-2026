@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="lab-01">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210L — Lab 1: Toolchain Setup &amp; Seeing Binary</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+  /* ============================================================
+     Lab 1 — Page-specific styles
+     ============================================================ */
+
+  /* ------------------------------------------------------------
+     Lab structural components (.lab-meta, .lab-step, .lab-verify,
+     .lab-troubleshoot, .lab-checklist, .checklist-status,
+     .rubric-total, .widget-btn:disabled) were PROMOTED to
+     shared/style.css on 2026-08-23, per Course Standards §8,
+     once Lab 2 provided the second real use. Do not re-inline
+     them here. What remains below is Lab 1 specific only.
+     ------------------------------------------------------------ */
+
+  /* ---------- Byte Reader widget (Lab 1 specific) ---------- */
+  /* Cells are sized larger than the lecture SPAs' .bit-cell because this
+     widget is the page's primary manipulable object, not an illustration. */
+  .bd-bits {
+    display: flex;
+    gap: var(--space-xs);
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: var(--space-xs);
+  }
+  .bd-bit {
+    width: 46px;
+    height: 46px;
+    font-family: var(--font-mono);
+    font-size: var(--fs-md);
+    font-weight: 700;
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius);
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: background .12s, border-color .12s, color .12s;
+  }
+  .bd-bit:hover { border-color: var(--color-primary-lt); }
+  .bd-bit.on {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+  }
+  .bd-bit:focus-visible {
+    outline: 3px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  .bd-labels {
+    display: flex;
+    gap: var(--space-xs);
+    justify-content: center;
+    flex-wrap: wrap;
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-md);
+  }
+  .bd-labels span { width: 46px; text-align: center; }
+
+  .bd-probes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--space-md);
+    margin-top: var(--space-md);
+  }
+  .bd-probe {
+    background: var(--color-code-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: var(--space-md);
+    text-align: center;
+  }
+  .bd-probe--bonus { border-style: dashed; }
+  .bd-probe__label {
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-xs);
+  }
+  .bd-probe__value {
+    font-family: var(--font-mono);
+    font-size: var(--fs-md);
+    font-weight: 700;
+    color: var(--color-primary);
+    word-break: break-all;
+  }
+
+  /* ---------- Conversion Drill widget (Lab 1 specific) ---------- */
+  .dr-prompt {
+    background: var(--color-code-bg);
+    border-radius: var(--radius);
+    padding: var(--space-md);
+    margin-bottom: var(--space-md);
+    font-size: var(--fs-md);
+    text-align: center;
+  }
+  .dr-answer-row {
+    display: flex;
+    gap: var(--space-sm);
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-bottom: var(--space-md);
+  }
+  .dr-answer-row input {
+    font-family: var(--font-mono);
+    font-size: var(--fs-base);
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background: var(--color-bg);
+    color: var(--color-text);
+    flex: 1;
+    min-width: 180px;
+  }
+  .dr-answer-row input:focus {
+    outline: none;
+    border-color: var(--color-primary-lt);
+    box-shadow: 0 0 0 2px rgba(41,128,185,.2);
+  }
+  .dr-answer-row input.error { border-color: var(--color-danger); background: #fdf0ef; }
+  .dr-answer-row input.correct { border-color: var(--color-success); background: #f0faf4; }
+  .dr-feedback {
+    display: none;
+    padding: var(--space-md);
+    border-radius: var(--radius);
+    font-size: var(--fs-sm);
+  }
+  .dr-feedback.visible { display: block; }
+  .dr-feedback--success { background: #f0faf4; color: var(--color-success); }
+  .dr-feedback--error { background: #fdf0ef; color: var(--color-danger); }
+  .dr-score {
+    font-size: var(--fs-sm);
+    color: var(--color-text-muted);
+    text-align: right;
+    margin-bottom: var(--space-sm);
+  }
+
+  @media (max-width: 600px) {
+    .bd-bit, .bd-labels span { width: 36px; }
+    .bd-bit { height: 36px; font-size: var(--fs-sm); }
+  }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== Header ==================== -->
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210L — Computer Organization &amp; Architecture Lab</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Lab 1 &rsaquo; <span>Toolchain Setup &amp; Seeing Binary</span>
+    </nav>
+  </header>
+
+  <!-- ==================== Main Content (Single Column) ==================== -->
+  <main class="sp-main sp-main--full">
+
+      <h1>Lab 1 — Toolchain Setup &amp; Seeing Binary</h1>
+
+      <div class="lab-meta">
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Lab Session</span>
+          <span class="lab-meta__value">Tuesday, Aug 18, 2026</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">In-Class Time</span>
+          <span class="lab-meta__value">90 minutes</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Format</span>
+          <span class="lab-meta__value">Completes in class</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Assignment</span>
+          <span class="lab-meta__value">Completion Check 1 &mdash; 10 pts</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Due</span>
+          <span class="lab-meta__value lab-meta__value--due">Mon, Aug 24 &middot; 11:59 PM</span>
+        </div>
+      </div>
+
+      <div class="callout callout--hook">
+        <div class="callout__title">Why This Lab Exists</div>
+        <p><strong>What we have:</strong> Numbers as humans write them, and a lecture that claims a computer represents all of them using nothing but two voltage states.</p>
+        <p><strong>What we can't do yet:</strong> See it. Right now that claim is something you were told. You have no way to hold a byte, change it, and watch its meaning change.</p>
+        <p><strong>What we can do after today:</strong> Build a working circuit that takes eight bits of input and displays that same byte simultaneously in binary, hexadecimal, and decimal &mdash; and run a program on a simulated MIPS processor that prints the same value. Two tools, one byte, three ways of reading it.</p>
+      </div>
+
+      <p>There is also a practical reason this is Lab 1 and not Lab 2. Every circuit you build for the rest of this semester lives in a <strong>single Logisim file that you create today</strong>. Every MIPS program you write runs in MARS. If those tools are not working by the end of this session, everything downstream is blocked. So the first 90 minutes are spent making absolutely certain that they work &mdash; on your machine, at the correct version, with a file you can open next week and every week after.</p>
+
+      <p>Take this seriously even though it feels like housekeeping. The most common way a student falls behind in this course is not conceptual difficulty. It is a tool that never quite got installed correctly in Week 1.</p>
+
+      <!-- ============================================================
+           Section — Learning Outcomes
+           ============================================================ -->
+      <section id="sec-outcomes">
+        <h2>What You Will Be Able to Do</h2>
+
+        <p>By the end of this session you will be able to:</p>
+
+        <ol>
+          <li><strong>Launch Logisim Classic 2.7.1</strong> and confirm the version, and explain why this course does not use Logisim Evolution.</li>
+          <li><strong>Launch MARS</strong> and confirm your Java runtime is working.</li>
+          <li><strong>Create and organize the single <code>.circ</code> file</strong> that will hold every circuit you build this semester, using named circuit tabs.</li>
+          <li><strong>Use the five Logisim tools</strong> you need for the entire course: select, wire, add component, poke, and probe.</li>
+          <li><strong>Build a circuit</strong> that displays one byte in binary, hexadecimal, and unsigned decimal at the same time.</li>
+          <li><strong>Convert a byte between bases by hand</strong> and verify your answer against hardware rather than an answer key.</li>
+          <li><strong>Load, assemble, and run a MIPS program in MARS</strong>, and locate the Registers and Data Segment panes.</li>
+        </ol>
+
+        <div class="callout callout--forward">
+          <div class="callout__title">CS301 Reference</div>
+          <p>The number-representation material behind this lab is covered in Saylor CS301 <strong>Unit 2</strong>. Log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> and navigate to Unit 2. CS301 does not cover Logisim or MARS setup &mdash; the procedures on this page are the sole source for that.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Section — Before You Arrive
+           ============================================================ -->
+      <section id="sec-before">
+        <h2>Before You Arrive</h2>
+
+        <p>Bring a laptop with at least 500&nbsp;MB free and the ability to install software on it. If your machine is managed by an employer or by someone else and you cannot install applications, tell the instructor <em>before</em> the session rather than during it &mdash; there is a workaround, but it takes a few minutes to arrange.</p>
+
+        <p>Both tools require Java. Most machines already have it. You do not need to install Java in advance; Step&nbsp;5 below tells you how to check and what to do if it is missing.</p>
+      </section>
+
+      <!-- ============================================================
+           Section — Part 1: Logisim
+           ============================================================ -->
+      <section id="sec-part-1">
+        <h2>Part 1 — Install and Verify Logisim Classic 2.7.1</h2>
+
+        <p>Logisim is a digital circuit simulator. It is the laboratory of this course: every hardware idea from logic gates through a complete CPU gets built and tested here. You will spend more time in Logisim than in any other tool this semester.</p>
+
+        <p><strong>You must use Logisim Classic version 2.7.1.</strong> Not 3.x, not "Logisim Evolution," not whatever version a search engine offers first. The next section explains why this is not an arbitrary preference.</p>
+
+        <div class="lab-step">
+          <div class="lab-step__num">1</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Download from the course SharePoint</div>
+            <p>Both the Windows and macOS builds are posted on the course SharePoint site. Download the one matching your operating system. Do not download Logisim from anywhere else &mdash; other sources will hand you Evolution or a modified build.</p>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">2</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Launch it</div>
+            <p><strong>Windows:</strong> run the downloaded <code>.exe</code>. <br>
+            <strong>macOS:</strong> the first launch will likely be blocked because the app is unsigned. Right-click (or Control-click) the app icon and choose <strong>Open</strong>, then confirm. Double-clicking will not work the first time; this is normal and is not a sign of a bad download.</p>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">3</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Verify the version &mdash; this is graded</div>
+            <p>Open <strong>Help &rarr; About</strong>. The dialog must read <strong>2.7.1</strong>. Take a screenshot of this dialog now; you will submit it.</p>
+            <p>If it reads anything else &mdash; especially if the window title says "Logisim-evolution" &mdash; you have the wrong program. Delete it and download again from SharePoint.</p>
+          </div>
+        </div>
+
+        <div class="lab-verify">
+          <div class="lab-verify__title">Checkpoint</div>
+          <p>Logisim opens to an empty canvas with a component tree on the left, and Help &rarr; About shows 2.7.1. You have a screenshot of that dialog.</p>
+        </div>
+
+        <details class="lab-troubleshoot">
+          <summary>Troubleshooting &mdash; Logisim won't start</summary>
+          <dl>
+            <dt>Nothing happens when I double-click (macOS)</dt>
+            <dd>Right-click the app and choose Open, then confirm the security prompt. This is required only on first launch. If it still fails, check System Settings &rarr; Privacy &amp; Security for a "was blocked" message with an Open Anyway button.</dd>
+
+            <dt>"Java not found" or "no Java runtime"</dt>
+            <dd>Skip ahead to Part 3, Step 5, install Java, then come back.</dd>
+
+            <dt>It opens but the window is tiny or blank</dt>
+            <dd>Resize the window manually. On some high-DPI displays Logisim 2.7.1 opens at an awkward size. This is a cosmetic quirk of a 2011-era application, not a broken install.</dd>
+
+            <dt>My machine won't let me install anything</dt>
+            <dd>Tell the instructor. Do not spend lab time fighting a locked-down machine.</dd>
+          </dl>
+        </details>
+      </section>
+
+      <!-- ============================================================
+           Section — Part 2: Why not Evolution
+           ============================================================ -->
+      <section id="sec-part-2">
+        <h2>Part 2 — Why Not Logisim Evolution?</h2>
+
+        <p>Logisim Evolution is a newer, actively maintained fork. It is a good program. It is also the wrong program for this course, for one specific reason that matters enormously to how you will learn.</p>
+
+        <p>In this course you will build roughly forty circuits, and nearly every one of them will be reused as a component inside a larger circuit. A flip-flop becomes part of a register. A register becomes part of a register file. A register file becomes part of a CPU. By Week 14 you will be looking at a diagram containing a dozen subcircuits at once, and you will need to understand what you are looking at.</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>&nbsp;</th>
+              <th>Logisim Classic 2.7.1 <em>(this course)</em></th>
+              <th>Logisim Evolution</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>How a subcircuit is drawn</strong></td>
+              <td>Its actual gate-level shape</td>
+              <td>A plain labeled rectangle</td>
+            </tr>
+            <tr>
+              <td><strong>Reading a complex circuit</strong></td>
+              <td>You can see the structure at a glance</td>
+              <td>You must read every label to know what anything is</td>
+            </tr>
+            <tr>
+              <td><strong>What that means for you</strong></td>
+              <td>The picture teaches you</td>
+              <td>The picture is a block diagram you have to decode</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>Visual circuit comprehension &mdash; looking at a circuit and understanding what it does <em>without reading a description</em> &mdash; is a learning outcome of this course, not a convenience. Evolution's rectangles quietly remove that outcome. That is why the constraint exists.</p>
+
+        <div class="callout callout--aha">
+          <div class="callout__title">The Rule Behind the Rule</div>
+          <p>You will meet several constraints like this one during the semester: build everything from primitive gates, never use the built-in Adder or RAM components, use decoders rather than multiplexers for control. Each looks like an arbitrary restriction and each exists for the same underlying reason &mdash; <strong>nothing in this course is allowed to be magic.</strong> If a component appears in your circuit, you built it, and you can explain every wire inside it.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Section — Part 3: MARS
+           ============================================================ -->
+      <section id="sec-part-3">
+        <h2>Part 3 — Install MARS and Verify Java</h2>
+
+        <p>MARS (MIPS Assembly and Runtime Simulator) is where you will write assembly language starting in Week&nbsp;5. It shows you the processor's registers and memory while your program runs, one instruction at a time. Where Logisim shows you the hardware, MARS shows you the same machine from the programmer's side.</p>
+
+        <p>You are installing it today, five weeks before you need it, for one reason: if your Java runtime is broken you want to discover that now, in a room with an instructor, rather than the night before your first MIPS assignment is due.</p>
+
+        <div class="lab-step">
+          <div class="lab-step__num">4</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Download and launch MARS</div>
+            <p>Download <code>Mars.jar</code> from the course SharePoint. It is a single Java archive &mdash; there is no installer. Double-click it to run.</p>
+            <p>On macOS, the same unsigned-app block applies: right-click &rarr; Open the first time.</p>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">5</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">If MARS will not open, check Java</div>
+            <p>Open a terminal (macOS: Terminal; Windows: Command Prompt or PowerShell) and run:</p>
+            <pre><code>java -version</code></pre>
+            <p>If you see a version number, Java is installed and the problem is elsewhere &mdash; ask the instructor. If you see "command not found" or "not recognized," install a current Java runtime, then try again. Any recent Java 8 or later release will run both Logisim 2.7.1 and MARS.</p>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">6</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Run the smoke-test program</div>
+            <p>In MARS, choose <strong>File &rarr; New</strong>, then copy this program into the editor pane exactly as written:</p>
+            <pre><code># CSC210L Lab 1 — MARS smoke test
+# Prints a message, then prints the value 66.
+
+        .data
+msg:    .asciiz "MARS is running. Your value is: "
+
+        .text
+        .globl main
+main:
+        li   $v0, 4          # syscall 4 = print string
+        la   $a0, msg
+        syscall
+
+        li   $t0, 66         # 66 = 0x42 = 0100 0010
+        li   $v0, 1          # syscall 1 = print integer
+        move $a0, $t0
+        syscall
+
+        li   $v0, 10         # syscall 10 = exit
+        syscall</code></pre>
+            <p>Save it as <code>lab01_smoketest.asm</code>. Then <strong>assemble</strong> it (Run &rarr; Assemble, or the wrench-and-screwdriver toolbar button) and <strong>run</strong> it (Run &rarr; Go, or the green play button).</p>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">7</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Find the two panes that matter</div>
+            <p>You are not learning MIPS today. You are learning where to look. Locate these two and nothing else:</p>
+            <ul>
+              <li><strong>Registers pane</strong> (right side) &mdash; every MIPS register and its current value. After running, <code>$t0</code> holds 66. Switch its display to hexadecimal and it reads <code>0x00000042</code>. Same value, different base &mdash; exactly what you are about to build in Logisim.</li>
+              <li><strong>Data Segment pane</strong> (bottom) &mdash; memory, address by address. Your string <code>msg</code> lives here. You will spend a lot of time in this pane in Week&nbsp;8.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="lab-verify">
+          <div class="lab-verify__title">Checkpoint</div>
+          <p>The Run I/O pane at the bottom of MARS reads:</p>
+          <pre><code>MARS is running. Your value is: 66</code></pre>
+          <p>You can point to the Registers pane and the Data Segment pane. Take a screenshot showing the program assembled and this output; you will submit it.</p>
+        </div>
+
+        <details class="lab-troubleshoot">
+          <summary>Troubleshooting &mdash; MARS errors</summary>
+          <dl>
+            <dt>"Error in line N: ..." when I assemble</dt>
+            <dd>Almost always a copy-paste problem. Check for a missing colon after <code>msg</code>, a smart quote (<code>&ldquo;</code>) instead of a straight quote (<code>"</code>) around the string, or a missing <code>.text</code> directive. Retype the offending line by hand.</dd>
+
+            <dt>It assembles but nothing prints</dt>
+            <dd>You assembled but did not run. Assemble and Run are two separate actions in MARS.</dd>
+
+            <dt>The .jar opens in an archive utility instead of running</dt>
+            <dd>Your OS has associated <code>.jar</code> files with a zip tool. Run it from a terminal instead: <code>java -jar Mars.jar</code></dd>
+          </dl>
+        </details>
+      </section>
+
+      <!-- ============================================================
+           Section — Part 4: The semester file
+           ============================================================ -->
+      <section id="sec-part-4">
+        <h2>Part 4 — Create Your Semester <code>.circ</code> File</h2>
+
+        <p>This is the single most important five minutes of the lab, and the part students most often get wrong &mdash; usually in Week 12, when it is expensive to fix.</p>
+
+        <div class="callout callout--hook">
+          <div class="callout__title">The Rule</div>
+          <p><strong>Every circuit you build in CSC210 lives in one <code>.circ</code> file for the entire semester.</strong> Not one file per week. Not one file per circuit with a master file linking them together. <em>One file</em>, which grows a new circuit tab each week, from today through the final project.</p>
+        </div>
+
+        <p>Here is why this matters more than it sounds. Logisim lets a circuit reference a subcircuit stored in a <em>different</em> file. If you build each week's work in a new file and link them together, your master file opens beautifully on your own machine &mdash; because all the linked files are sitting right there in your folder. When you submit only the master file, it arrives on the instructor's machine with every one of those references broken. What renders is an empty shell.</p>
+
+        <p>This happens every single semester, and it is graded as incomplete, because a circuit that does not function when opened in isolation has not been demonstrated to work. Starting the habit correctly today costs you five minutes. Repairing it in Week 12 costs an evening.</p>
+
+        <div class="lab-step">
+          <div class="lab-step__num">8</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Create the file with the required name</div>
+            <p>In Logisim: <strong>File &rarr; Save As</strong>. Name it using your own last name:</p>
+            <pre><code>Pai_CSC210.circ</code></pre>
+            <p>Save it somewhere you will not lose it &mdash; a dedicated CSC210 folder, not your Downloads folder. If you use cloud storage that syncs (OneDrive, iCloud Drive, Google Drive), that is a good choice: it gives you version history if something goes wrong.</p>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">9</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Add a new circuit &mdash; leave <code>main</code> alone</div>
+            <p>A new Logisim file contains one circuit, named <code>main</code>. <strong>Do not rename it and do not build your graded work in it.</strong> In this course <code>main</code> stays permanently empty and serves a different purpose &mdash; see the next step.</p>
+            <p>Instead, choose <strong>Project &rarr; Add Circuit&hellip;</strong> and name the new circuit:</p>
+            <pre><code>01-ByteReader</code></pre>
+            <p>It appears in the Explorer pane beneath <code>main</code>. Double-click it to open it for editing. This is where you build.</p>
+            <p>Use this naming convention all semester: a two-digit number for the order you built it, then a descriptive name with no spaces. By Week 14 your Explorer pane will read like a table of contents &mdash; <code>01-ByteReader</code>, <code>04-SRLatch</code>, <code>05-Register8</code>, <code>06-ALU8</code>, and so on.</p>
+            <p>Logisim lists circuits in the order they were added, newest at the bottom, and has no alphabetical sort. The number prefix is not there to trigger a sort &mdash; it is there so the order stays <em>readable</em>, and so that a circuit's name tells you when in the course it came from. If you ever need to rearrange the list, use <strong>Project &rarr; Move Circuit Up</strong> and <strong>Move Circuit Down</strong>.</p>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">10</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Understand what <code>main</code> is for</div>
+            <p><code>main</code> is your <strong>scratch sheet</strong>. It is deliberately left empty and unnamed so that you always have a blank workspace available inside your one project file.</p>
+            <p>Use it whenever you want to try something without risking working circuitry: sketch an idea in <code>main</code>, poke at it, break it, throw it away. When something in <code>main</code> actually works and you want to keep it:</p>
+            <ol>
+              <li>Select everything in <code>main</code> (<strong>Edit &rarr; Select All</strong>), then <strong>Edit &rarr; Copy</strong>.</li>
+              <li><strong>Project &rarr; Add Circuit&hellip;</strong> and give it a proper numbered name.</li>
+              <li><strong>Edit &rarr; Paste</strong> into the new circuit.</li>
+              <li>Go back to <code>main</code>, select all, and delete &mdash; leaving it empty for next time.</li>
+            </ol>
+            <p>This gives you a place to experiment that costs nothing, without ever tempting you to start a second <code>.circ</code> file.</p>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">11</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Save, close, and reopen</div>
+            <p>Save the file. Then close Logisim completely and open the file again from your folder.</p>
+            <p>It will open showing the empty <code>main</code> circuit &mdash; that is correct and expected, not a sign that your work vanished. Look at the Explorer pane on the left and confirm <code>01-ByteReader</code> is listed below it.</p>
+            <p>This sounds pointlessly cautious. It is the cheapest possible test that your file is real, saved where you think it is, and not sitting unsaved in a temp directory.</p>
+          </div>
+        </div>
+
+        <div class="lab-verify">
+          <div class="lab-verify__title">Checkpoint</div>
+          <p><code>LastName_CSC210.circ</code> exists in a folder you can find, contains an empty <code>main</code> plus a second circuit named <code>01-ByteReader</code>, and survives being closed and reopened.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Section — Part 5: Logisim orientation
+           ============================================================ -->
+      <section id="sec-part-5">
+        <h2>Part 5 — Logisim Orientation: Five Tools</h2>
+
+        <p>Logisim's toolbar has more buttons than you need. For the entire semester you will use five things constantly and the rest rarely. Learn these five now and the interface stops being an obstacle.</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Tool</th>
+              <th>What it does</th>
+              <th>When you reach for it</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Select</strong> (arrow)</td>
+              <td>Selects, moves, and deletes components</td>
+              <td>Rearranging a circuit; deleting a mistake</td>
+            </tr>
+            <tr>
+              <td><strong>Wire</strong></td>
+              <td>Drags a wire between two points</td>
+              <td>Constantly. This is most of circuit building.</td>
+            </tr>
+            <tr>
+              <td><strong>Poke</strong> (hand)</td>
+              <td>Changes an input's value while the circuit runs</td>
+              <td>Testing. This is how you verify anything.</td>
+            </tr>
+            <tr>
+              <td><strong>Pin</strong> (Wiring library)</td>
+              <td>An input or output connection point</td>
+              <td>Every circuit needs inputs and outputs</td>
+            </tr>
+            <tr>
+              <td><strong>Probe</strong> (Wiring library)</td>
+              <td>Displays the value on a wire, in a base you choose</td>
+              <td>Debugging. Your most useful tool all semester.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>Two conventions to absorb now, because they will save you hours later:</p>
+
+        <ul>
+          <li><strong>Green wire = value 0. Bright green = value 1. Red = error.</strong> A red wire almost always means two outputs are fighting over the same wire, or a bit-width mismatch. When something red appears, stop and find it &mdash; do not build on top of it.</li>
+          <li><strong>Blue/grey wire = unknown value.</strong> Usually an input that isn't connected to anything yet.</li>
+        </ul>
+
+        <div class="callout callout--forward">
+          <div class="callout__title">A Habit Worth Starting Today</div>
+          <p>Probes are free and they cost nothing to leave in place. When your Week&nbsp;13 CPU refuses to execute an instruction, the difference between a twenty-minute fix and a lost evening is whether you already had probes on the interesting wires. Place them liberally, starting now.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Section — Part 6: First circuit
+           ============================================================ -->
+      <section id="sec-part-6">
+        <h2>Part 6 — Your First Circuit: One Byte, Three Ways</h2>
+
+        <p>Now build something. The circuit is deliberately tiny &mdash; three components and a few wires &mdash; because the point is not circuit complexity. The point is the idea underneath it.</p>
+
+        <p>A byte is eight bits. Those eight bits do not have a base. <code>01000010</code> is not "a binary number" that we then convert into decimal; it is a pattern of eight voltage levels, and binary, hexadecimal, and decimal are three different <em>notations we use to talk about that pattern</em>. Reading the same wire three ways at once makes that concrete in a way a conversion table cannot.</p>
+
+        <div class="lab-verify">
+          <div class="lab-verify__title">Before You Start</div>
+          <p>Double-click <code>01-ByteReader</code> in the Explorer pane so that it &mdash; not <code>main</code> &mdash; is the circuit you are editing. The name of the circuit you are currently editing appears in bold in the Explorer pane.</p>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">12</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Place an 8-bit input pin</div>
+            <p>Open the <strong>Wiring</strong> library in the Explorer pane and select <strong>Pin</strong>. Before placing it, look at the attribute table in the lower-left corner and set:</p>
+            <ul>
+              <li><strong>Output?</strong> &rarr; <code>No</code> &nbsp;(this makes it an <em>input</em> pin)</li>
+              <li><strong>Data Bits</strong> &rarr; <code>8</code></li>
+              <li><strong>Label</strong> &rarr; <code>BYTE</code></li>
+            </ul>
+            <p>Click on the canvas to place it. You should see a rectangle displaying eight bit positions.</p>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">13</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Place three probes, each with a different radix</div>
+            <p>From the same Wiring library, select <strong>Probe</strong>. Place three of them to the right of your pin. Select each one in turn and set its <strong>Radix</strong> attribute:</p>
+            <ul>
+              <li>Probe 1 &rarr; Radix <code>Binary</code>, Label <code>BIN</code></li>
+              <li>Probe 2 &rarr; Radix <code>Hexadecimal</code>, Label <code>HEX</code></li>
+              <li>Probe 3 &rarr; Radix <code>Decimal (unsigned)</code>, Label <code>DEC</code></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">14</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Wire all three probes to the same pin</div>
+            <p>Using the Wire tool, drag from the output side of your <code>BYTE</code> pin to each probe. All three probes connect to the <em>same</em> wire &mdash; branch it rather than running three separate wires from the pin.</p>
+            <p>This is the whole idea made physical: <strong>one wire, one value, three readings.</strong> Nothing converts anything. The probes are just three different ways of printing the same eight voltages.</p>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">15</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Poke it</div>
+            <p>Switch to the <strong>Poke</strong> tool (the hand) and click individual bit positions inside the <code>BYTE</code> pin to toggle them between 0 and 1. Watch all three probes update simultaneously.</p>
+            <p>Set the byte to <code>01000010</code>. Your probes should read <code>01000010</code>, <code>42</code>, and <code>66</code>. That is the same value MARS printed in Part&nbsp;3 &mdash; and, if you interpret it as ASCII instead, the capital letter <code>B</code>.</p>
+          </div>
+        </div>
+
+        <div class="lab-verify">
+          <div class="lab-verify__title">Checkpoint</div>
+          <p>Poking any bit changes all three probe readings at once. Setting the byte to <code>01000010</code> gives you binary <code>01000010</code>, hex <code>42</code>, and decimal <code>66</code>. <strong>Save your file.</strong></p>
+        </div>
+
+        <div class="callout callout--aha">
+          <div class="callout__title">The Point of This Circuit</div>
+          <p>The byte does not "know" it is 66. It does not know it is <code>0x42</code>, and it does not know it is the letter B. It is eight voltages. <strong>Meaning comes from how something chooses to read it</strong> &mdash; a probe's radix setting, a MIPS instruction, a text editor, an image decoder. Change the reader, and the same bits mean something entirely different.</p>
+          <p>Hold onto this. In Week&nbsp;11 you will build a circuit that reads a byte as an <em>instruction</em> and uses it to control the rest of a CPU. Same eight wires. Different reader.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Section — Widget 1: Byte Reader
+           ============================================================ -->
+      <section id="sec-widget-byte">
+        <h2>Interactive: The Byte Reader</h2>
+
+        <p>This widget mirrors the circuit you just built. Click the bits to toggle them, exactly as you would with the Poke tool in Logisim. Use it to check your circuit's behavior &mdash; if your Logisim probes disagree with this widget for the same bit pattern, something in your wiring is wrong.</p>
+
+        <div class="widget-card" id="widget-byte-reader">
+          <div class="widget-card__title">Widget 1: Byte Reader</div>
+          <div class="widget-card__subtitle">Click any bit to toggle it. All readings update at once &mdash; one value, four notations.</div>
+
+          <div class="bd-labels" aria-hidden="true">
+            <span>128</span><span>64</span><span>32</span><span>16</span><span>8</span><span>4</span><span>2</span><span>1</span>
+          </div>
+
+          <div class="bd-bits" id="bd-bits" role="group" aria-label="Eight toggleable bits, most significant first">
+            <!-- Populated dynamically -->
+          </div>
+
+          <div class="widget-actions" style="justify-content:center;display:flex;gap:var(--space-sm);flex-wrap:wrap;margin-top:var(--space-md);">
+            <button class="widget-btn widget-btn--primary widget-btn--small" onclick="ByteReader.setValue(66)">Set to 66 (0x42)</button>
+            <button class="widget-btn widget-btn--outline widget-btn--small" onclick="ByteReader.setValue(255)">Set to 255</button>
+            <button class="widget-btn widget-btn--outline widget-btn--small" onclick="ByteReader.randomize()">Random</button>
+            <button class="widget-btn widget-btn--outline widget-btn--small" onclick="ByteReader.setValue(0)">Clear</button>
+          </div>
+
+          <div class="bd-probes" aria-live="polite">
+            <div class="bd-probe">
+              <div class="bd-probe__label">Probe: Binary</div>
+              <div class="bd-probe__value" id="bd-binary">00000000</div>
+            </div>
+            <div class="bd-probe">
+              <div class="bd-probe__label">Probe: Hexadecimal</div>
+              <div class="bd-probe__value" id="bd-hex">00</div>
+            </div>
+            <div class="bd-probe">
+              <div class="bd-probe__label">Probe: Decimal (unsigned)</div>
+              <div class="bd-probe__value" id="bd-decimal">0</div>
+            </div>
+            <div class="bd-probe bd-probe--bonus">
+              <div class="bd-probe__label">If read as ASCII</div>
+              <div class="bd-probe__value" id="bd-ascii">NUL</div>
+            </div>
+          </div>
+
+          <p style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-top:var(--space-md);margin-bottom:0;">The ASCII box is shown with a dashed border because it is <em>not</em> part of the circuit you build in Logisim &mdash; it is here to make the point that a fourth reader would give a fourth meaning for the same eight bits.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Section — Part 7: Partner drill
+           ============================================================ -->
+      <section id="sec-part-7">
+        <h2>Part 7 — Partner Conversion Drill</h2>
+
+        <p>Pair up. You are going to convert bytes between bases by hand and check your answers <em>against your circuit</em> rather than against an answer key. This is a small thing that changes the exercise: an answer key tells you that you were wrong, while a circuit shows you what is actually true and lets you find your own error.</p>
+
+        <div class="lab-step">
+          <div class="lab-step__num">16</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">Take turns, six rounds each</div>
+            <p>Partner A names a value in one base &mdash; say, "hex 3F." Partner B writes the other two representations on paper <em>without touching the computer</em>. Then Partner B pokes the value into their Logisim circuit and both of you read the probes.</p>
+            <p>Swap roles and repeat. Six rounds each, mixing which base is the starting point.</p>
+          </div>
+        </div>
+
+        <div class="lab-step">
+          <div class="lab-step__num">17</div>
+          <div class="lab-step__body">
+            <div class="lab-step__title">When you disagree with the circuit, find out why</div>
+            <p>The interesting part is the errors. Two mistakes account for most of them:</p>
+            <ul>
+              <li><strong>Bit-position slips</strong> &mdash; getting 32 and 16 the wrong way round. The place values from left to right are 128, 64, 32, 16, 8, 4, 2, 1. Write them above your bits until you no longer need to.</li>
+              <li><strong>Hex grouping errors</strong> &mdash; each hex digit is exactly four bits. Split the byte down the middle: <code>0100 0010</code> is <code>4</code> and <code>2</code>, so <code>0x42</code>. Never convert a byte to hex by going through decimal; group by four and read directly.</li>
+            </ul>
+          </div>
+        </div>
+
+        <p>The widget below gives you the same drill when you do not have a partner, or as practice before the assignment is due.</p>
+      </section>
+
+      <!-- ============================================================
+           Section — Widget 2: Conversion drill
+           ============================================================ -->
+      <section id="sec-widget-drill">
+        <h2>Interactive: Solo Conversion Drill</h2>
+
+        <div class="widget-card" id="widget-drill">
+          <div class="widget-card__title">Widget 2: Conversion Drill</div>
+          <div class="widget-card__subtitle">Convert by hand first, then check. Aim for eight correct in a row before you consider yourself fluent.</div>
+
+          <div class="dr-score" id="dr-score">Correct: 0 &nbsp;|&nbsp; Attempted: 0 &nbsp;|&nbsp; Streak: 0</div>
+
+          <div class="dr-prompt" id="dr-prompt">Click &ldquo;New Question&rdquo; to begin.</div>
+
+          <div class="dr-answer-row">
+            <label for="dr-answer" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Your answer</label>
+            <input type="text" id="dr-answer" placeholder="Your answer" autocomplete="off"
+                   onkeydown="if(event.key==='Enter')ConversionDrill.check()" disabled>
+            <button class="widget-btn widget-btn--accent" id="dr-check" onclick="ConversionDrill.check()" disabled>Check</button>
+            <button class="widget-btn widget-btn--outline" id="dr-new" onclick="ConversionDrill.newQuestion()">New Question</button>
+          </div>
+
+          <div class="dr-feedback" id="dr-feedback" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Section — Assignment
+           ============================================================ -->
+      <section id="sec-assignment">
+        <h2>Assignment: Completion Check 1</h2>
+
+        <div class="lab-meta">
+          <div class="lab-meta__item">
+            <span class="lab-meta__label">Points</span>
+            <span class="lab-meta__value">10</span>
+          </div>
+          <div class="lab-meta__item">
+            <span class="lab-meta__label">Due</span>
+            <span class="lab-meta__value lab-meta__value--due">Monday, Aug 24, 2026 &middot; 11:59 PM</span>
+          </div>
+          <div class="lab-meta__item">
+            <span class="lab-meta__label">Submit via</span>
+            <span class="lab-meta__value">Canvas &mdash; Lab 1 Completion Check</span>
+          </div>
+          <div class="lab-meta__item">
+            <span class="lab-meta__label">Assesses</span>
+            <span class="lab-meta__value">CSLO 1</span>
+          </div>
+        </div>
+
+        <p>This assignment verifies that your working environment is real and that your semester file is correctly structured. It is not a test of understanding &mdash; it is a test of readiness. Everything required was done during the lab session; if you finished in class, you are submitting work you already have.</p>
+
+        <h3>What to Submit</h3>
+
+        <p>Upload <strong>three files</strong> to the Canvas assignment:</p>
+
+        <ol>
+          <li><strong><code>LastName_CSC210.circ</code></strong> &mdash; your semester Logisim file, containing the <code>01-ByteReader</code> circuit.</li>
+          <li><strong>A screenshot of Logisim's Help &rarr; About dialog</strong>, showing version 2.7.1.</li>
+          <li><strong>A screenshot of MARS</strong> with <code>lab01_smoketest.asm</code> assembled and the Run I/O pane showing <code>MARS is running. Your value is: 66</code>.</li>
+        </ol>
+
+        <div class="callout callout--hook">
+          <div class="callout__title">Submission Requirement &mdash; Read Before Uploading</div>
+          <p><strong>All circuits must be contained within this single <code>.circ</code> file &mdash; no external file links.</strong> Your file will be opened on the instructor's machine, in isolation, with none of your other files present. If it references a circuit stored in another file, that reference will be broken and the submission will be graded as incomplete.</p>
+          <p>This requirement applies to every Logisim assignment in this course, all semester.</p>
+        </div>
+
+        <h3>Grading Rubric</h3>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Criterion</th>
+              <th>Points</th>
+              <th>Full credit requires</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Logisim version verified</td>
+              <td>3</td>
+              <td>About dialog screenshot clearly shows <strong>2.7.1</strong>. Any other version, including Evolution, earns 0 for this row.</td>
+            </tr>
+            <tr>
+              <td>MARS running</td>
+              <td>2</td>
+              <td>Screenshot shows the program assembled <em>and</em> the correct output in the Run I/O pane.</td>
+            </tr>
+            <tr>
+              <td>Semester file exists and opens</td>
+              <td>3</td>
+              <td>File is named <code>LastName_CSC210.circ</code>, opens without error in isolation, and reports no missing external references.</td>
+            </tr>
+            <tr>
+              <td>Circuit added and populated</td>
+              <td>2</td>
+              <td>A circuit named <code>01-ByteReader</code> exists alongside <code>main</code>, and contains an 8-bit input pin wired to at least three probes with different radix settings. Building the byte reader inside <code>main</code> instead of a named circuit earns partial credit.</td>
+            </tr>
+            <tr class="rubric-total">
+              <td>Total</td>
+              <td>10</td>
+              <td>&nbsp;</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p style="font-size:var(--fs-sm);color:var(--color-text-muted);"><strong>CSLO alignment.</strong> This assignment supports <strong>CSLO&nbsp;1</strong> (describe the organization and architecture of a computer system) by establishing the circuit-simulation environment in which every architectural concept in this course is built and demonstrated. It is a readiness check and does not itself carry SLO assessment evidence; the graded evidence begins with Logisim Checkpoint&nbsp;1 in the lecture course.</p>
+
+        <div class="callout callout--forward">
+          <div class="callout__title">If You Could Not Finish in Class</div>
+          <p>Everything in Parts 1 through 6 can be completed on your own before the deadline &mdash; the steps on this page are the same ones we walked through together. If you get stuck on a tool problem rather than a concept, contact the instructor before the due date rather than after it. A blocked install is not a reason to submit nothing.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Section — Widget 3: Submission checklist
+           ============================================================ -->
+      <section id="sec-checklist">
+        <h2>Interactive: Pre-Submission Checklist</h2>
+
+        <p>Work through this immediately before you upload. It takes about two minutes and catches the failures that cost points.</p>
+
+        <div class="widget-card" id="widget-checklist">
+          <div class="widget-card__title">Widget 3: Pre-Submission Checklist</div>
+          <div class="widget-card__subtitle">Check each item only after you have actually verified it &mdash; not because it sounds right.</div>
+
+          <ul class="lab-checklist" id="ck-list">
+            <li>
+              <input type="checkbox" id="ck-1" onchange="SubmitCheck.update()">
+              <label for="ck-1">Logisim <strong>Help &rarr; About</strong> reads 2.7.1, and I have a screenshot of it.</label>
+            </li>
+            <li>
+              <input type="checkbox" id="ck-2" onchange="SubmitCheck.update()">
+              <label for="ck-2">MARS assembled and ran the smoke test, and my screenshot shows the output line, not just the code.</label>
+            </li>
+            <li>
+              <input type="checkbox" id="ck-3" onchange="SubmitCheck.update()">
+              <label for="ck-3">My file is named <code>LastName_CSC210.circ</code> using my <em>actual</em> last name.</label>
+            </li>
+            <li>
+              <input type="checkbox" id="ck-4" onchange="SubmitCheck.update()">
+              <label for="ck-4">My file contains a circuit named <code>01-ByteReader</code>, and <code>main</code> is still present and still empty.</label>
+            </li>
+            <li>
+              <input type="checkbox" id="ck-5" onchange="SubmitCheck.update()">
+              <label for="ck-5">The circuit has an 8-bit input pin wired to three probes, and poking a bit changes all three readings.</label>
+            </li>
+            <li>
+              <input type="checkbox" id="ck-6" onchange="SubmitCheck.update()">
+              <label for="ck-6"><strong>All circuits are contained within this single <code>.circ</code> file &mdash; no external file links.</strong></label>
+            </li>
+            <li>
+              <input type="checkbox" id="ck-7" onchange="SubmitCheck.update()">
+              <label for="ck-7">I closed Logisim, reopened the file from my folder, and everything was still there.</label>
+            </li>
+            <li>
+              <input type="checkbox" id="ck-8" onchange="SubmitCheck.update()">
+              <label for="ck-8">I am uploading all three files, and I know where each one is on my disk.</label>
+            </li>
+          </ul>
+
+          <div class="checklist-status" id="ck-status" aria-live="polite">0 of 8 verified</div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           Section — Forward reference
+           ============================================================ -->
+      <section id="sec-forward">
+        <h2>What Comes Next</h2>
+
+        <p>Today you built a circuit with no logic in it. Eight bits went in, and the same eight bits came out and were displayed. Nothing was computed, nothing was decided, nothing was remembered.</p>
+
+        <p>That is the limitation Lab&nbsp;2 attacks. Next week you build gates &mdash; circuits that take inputs and produce an output that is <em>different</em> from the input, according to a rule. And you will build them all from a single component type, the NAND gate, because it turns out one gate is enough to build every logical operation that exists.</p>
+
+        <div class="progression">
+          <div class="progression__item completed">
+            <div class="progression__label">Lab 1 &mdash; Toolchain &amp; Binary</div>
+            <div class="progression__detail">Tools working; one byte, read three ways</div>
+          </div>
+          <div class="progression__item active">
+            <div class="progression__label">Lab 2 &mdash; Gates from NAND</div>
+            <div class="progression__detail">Building AND, OR, NOT, and XOR from a single gate type</div>
+          </div>
+          <div class="progression__item">
+            <div class="progression__label">Lab 3 &mdash; Adders and Decoders</div>
+            <div class="progression__detail">Gates combined into circuits that do arithmetic</div>
+          </div>
+          <div class="progression__item">
+            <div class="progression__label">Lab 4 &mdash; Latches and Flip-Flops</div>
+            <div class="progression__detail">The week logic becomes memory</div>
+          </div>
+        </div>
+
+        <blockquote>
+          Everything you build for the next sixteen weeks goes into the file you created today. By December it will contain a working processor. Do not lose it &mdash; and do not start a second one.
+        </blockquote>
+      </section>
+
+  </main>
+
+  <!-- ==================== Footer ==================== -->
+  <footer class="sp-footer">
+    CSC210L — Computer Organization &amp; Architecture Lab &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <!-- ==================== Scripts ==================== -->
+  <script>
+  /* ============================================================
+     Widget 1: Byte Reader
+     ============================================================
+     Mirrors the Logisim circuit built in Part 6: one 8-bit value
+     displayed simultaneously in binary, hex, unsigned decimal,
+     and (as a bonus reader) ASCII.  State is a single integer.
+     ============================================================ */
+  (function () {
+    'use strict';
+
+    var ASCII_CONTROL = ['NUL','SOH','STX','ETX','EOT','ENQ','ACK','BEL','BS','TAB','LF','VT','FF','CR','SO','SI',
+                         'DLE','DC1','DC2','DC3','DC4','NAK','SYN','ETB','CAN','EM','SUB','ESC','FS','GS','RS','US'];
+
+    var ByteReader = {
+      value: 0,
+
+      /* ---------- Build the eight bit buttons once ---------- */
+      build: function () {
+        var container = document.getElementById('bd-bits');
+        if (!container) return;
+        var html = '';
+        for (var i = 7; i >= 0; i--) {
+          html += '<button type="button" class="bd-bit" id="bd-bit-' + i + '" ' +
+                  'data-bit="' + i + '" aria-pressed="false" ' +
+                  'aria-label="Bit ' + i + ', place value ' + Math.pow(2, i) + '" ' +
+                  'onclick="ByteReader.toggle(' + i + ')">0</button>';
+        }
+        container.innerHTML = html;
+        this.render();
+      },
+
+      /* ---------- State changes ---------- */
+      toggle: function (bit) {
+        this.value = this.value ^ (1 << bit);
+        this.render();
+      },
+
+      setValue: function (v) {
+        this.value = v & 0xFF;
+        this.render();
+      },
+
+      randomize: function () {
+        this.setValue(Math.floor(Math.random() * 256));
+      },
+
+      /* ---------- Formatting helpers ---------- */
+      toBinary: function (v) {
+        var s = (v >>> 0).toString(2);
+        while (s.length < 8) s = '0' + s;
+        return s;
+      },
+
+      toHex: function (v) {
+        var s = (v >>> 0).toString(16).toUpperCase();
+        while (s.length < 2) s = '0' + s;
+        return s;
+      },
+
+      toAscii: function (v) {
+        if (v < 32) return ASCII_CONTROL[v];
+        if (v === 32) return 'space';
+        if (v === 127) return 'DEL';
+        if (v > 127) return '(not ASCII)';
+        return String.fromCharCode(v);
+      },
+
+      /* ---------- Render ---------- */
+      render: function () {
+        var bits = this.toBinary(this.value);
+        for (var i = 7; i >= 0; i--) {
+          var el = document.getElementById('bd-bit-' + i);
+          if (!el) continue;
+          var on = ((this.value >> i) & 1) === 1;
+          el.textContent = on ? '1' : '0';
+          el.classList.toggle('on', on);
+          el.setAttribute('aria-pressed', on ? 'true' : 'false');
+        }
+        document.getElementById('bd-binary').textContent = bits;
+        document.getElementById('bd-hex').textContent = this.toHex(this.value);
+        document.getElementById('bd-decimal').textContent = String(this.value);
+        document.getElementById('bd-ascii').textContent = this.toAscii(this.value);
+      }
+    };
+
+    window.ByteReader = ByteReader;
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function () { ByteReader.build(); });
+    } else {
+      ByteReader.build();
+    }
+
+  })();
+  </script>
+
+  <script>
+  /* ============================================================
+     Widget 2: Conversion Drill
+     ============================================================
+     Solo version of the Part 7 partner drill.  Generates a random
+     byte, presents it in one base, asks for it in another, and
+     scores a running streak.
+     ============================================================ */
+  (function () {
+    'use strict';
+
+    var BASES = [
+      { key: 'binary',  label: 'Binary',      radix: 2,  pad: 8 },
+      { key: 'hex',     label: 'Hexadecimal', radix: 16, pad: 2 },
+      { key: 'decimal', label: 'Decimal',     radix: 10, pad: 0 }
+    ];
+
+    var ConversionDrill = {
+      value: 0,
+      target: null,
+      correct: 0,
+      attempted: 0,
+      streak: 0,
+      answered: true,
+
+      /* ---------- Formatting ---------- */
+      format: function (v, base) {
+        var s = (v >>> 0).toString(base.radix);
+        if (base.radix === 16) s = s.toUpperCase();
+        while (s.length < base.pad) s = '0' + s;
+        return s;
+      },
+
+      /* ---------- Question generation ---------- */
+      newQuestion: function () {
+        this.value = Math.floor(Math.random() * 256);
+
+        var sourceIdx = Math.floor(Math.random() * BASES.length);
+        var targetIdx = Math.floor(Math.random() * BASES.length);
+        while (targetIdx === sourceIdx) {
+          targetIdx = Math.floor(Math.random() * BASES.length);
+        }
+
+        var source = BASES[sourceIdx];
+        this.target = BASES[targetIdx];
+        this.answered = false;
+
+        var shown = this.format(this.value, source);
+        var prefix = (source.key === 'hex') ? '0x' : '';
+
+        document.getElementById('dr-prompt').innerHTML =
+          'Convert ' + source.label + ' <code>' + prefix + shown + '</code> to <strong>' + this.target.label + '</strong>.';
+
+        var input = document.getElementById('dr-answer');
+        input.value = '';
+        input.disabled = false;
+        input.className = '';
+        document.getElementById('dr-check').disabled = false;
+
+        var feedback = document.getElementById('dr-feedback');
+        feedback.className = 'dr-feedback';
+        feedback.innerHTML = '';
+
+        input.focus();
+      },
+
+      /* ---------- Checking ---------- */
+      check: function () {
+        if (this.answered || !this.target) return;
+
+        var input = document.getElementById('dr-answer');
+        var feedback = document.getElementById('dr-feedback');
+        var given = input.value.trim().replace(/^0[xXbB]/, '');
+        var expected = this.format(this.value, this.target);
+
+        if (given === '') return;
+
+        // Leading zeros are acceptable on any base; compare numerically
+        // where possible, and fall back to a normalized string compare.
+        var givenNum = parseInt(given, this.target.radix);
+        var isCorrect = !isNaN(givenNum) && givenNum === this.value &&
+                        /^[0-9A-Fa-f]+$/.test(given);
+
+        // Reject digits that are invalid in the target base (e.g. "9" in binary)
+        if (this.target.radix === 2 && !/^[01]+$/.test(given)) isCorrect = false;
+        if (this.target.radix === 10 && !/^[0-9]+$/.test(given)) isCorrect = false;
+
+        this.attempted++;
+        this.answered = true;
+        input.disabled = true;
+        document.getElementById('dr-check').disabled = true;
+
+        if (isCorrect) {
+          this.correct++;
+          this.streak++;
+          input.className = 'correct';
+          feedback.className = 'dr-feedback dr-feedback--success visible';
+          feedback.innerHTML = '<strong>&#10004; Correct.</strong> ' +
+            '<code>' + this.format(this.value, BASES[0]) + '</code> = ' +
+            '<code>0x' + this.format(this.value, BASES[1]) + '</code> = ' +
+            '<code>' + this.value + '</code>';
+        } else {
+          this.streak = 0;
+          input.className = 'error';
+          feedback.className = 'dr-feedback dr-feedback--error visible';
+          feedback.innerHTML = '<strong>&#10008; Not quite.</strong> You wrote <code>' + given + '</code>; ' +
+            'the answer is <code>' + expected + '</code>.<br>' +
+            'That byte is <code>' + this.format(this.value, BASES[0]) + '</code> = ' +
+            '<code>0x' + this.format(this.value, BASES[1]) + '</code> = ' +
+            '<code>' + this.value + '</code>. Poke it into your circuit and look at it.';
+        }
+
+        this.renderScore();
+      },
+
+      renderScore: function () {
+        document.getElementById('dr-score').innerHTML =
+          'Correct: ' + this.correct + ' &nbsp;|&nbsp; Attempted: ' + this.attempted +
+          ' &nbsp;|&nbsp; Streak: ' + this.streak +
+          (this.streak >= 8 ? ' &mdash; <strong>fluent</strong>' : '');
+      }
+    };
+
+    window.ConversionDrill = ConversionDrill;
+
+  })();
+  </script>
+
+  <script>
+  /* ============================================================
+     Widget 3: Pre-Submission Checklist
+     ============================================================
+     Counts verified items and reports readiness.  Deliberately
+     has no persistence -- the checklist is a thinking prompt at
+     submission time, not a saved record.
+     ============================================================ */
+  (function () {
+    'use strict';
+
+    var TOTAL_ITEMS = 8;
+
+    var SubmitCheck = {
+      update: function () {
+        var boxes = document.querySelectorAll('#ck-list input[type="checkbox"]');
+        var count = 0;
+        for (var i = 0; i < boxes.length; i++) {
+          var li = boxes[i].parentNode;
+          if (boxes[i].checked) {
+            count++;
+            li.classList.add('checked');
+          } else {
+            li.classList.remove('checked');
+          }
+        }
+
+        var status = document.getElementById('ck-status');
+        if (count === TOTAL_ITEMS) {
+          status.className = 'checklist-status checklist-status--ready';
+          status.innerHTML = '&#10004; All ' + TOTAL_ITEMS + ' verified &mdash; you are ready to submit.';
+        } else {
+          status.className = 'checklist-status';
+          status.textContent = count + ' of ' + TOTAL_ITEMS + ' verified';
+        }
+      }
+    };
+
+    window.SubmitCheck = SubmitCheck;
+
+  })();
+  </script>
+
+</body>
+</html>

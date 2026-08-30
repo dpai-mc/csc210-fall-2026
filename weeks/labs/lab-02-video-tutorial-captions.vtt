@@ -1,0 +1,697 @@
+WEBVTT
+Kind: captions
+Language: en-US
+
+00:00:00.000 --> 00:00:06.200
+Aloha, sorry that I can't be there with you guys today, but I got called into jury duty.
+
+00:00:13.760 --> 00:00:19.936
+Anyway, what I want to do is get you started on Lab 2 in this video. Let's get started on
+
+00:00:19.936 --> 00:00:32.950
+Lab 2. Yeah, what we're going to do is build some gates using NAND gates. Okay, just to show that NAND is
+
+00:00:32.950 --> 00:00:43.653
+universal. And then we'll also turn a finished circuit into a subcircuit and put it inside another circuit. We'll look quickly at splitters and
+
+00:00:43.653 --> 00:00:56.760
+tunnels and then lay out De Morgan's second law which would light an LED if it ever failed. I'm not going to do that one
+
+00:00:56.760 --> 00:01:05.970
+For you because you're going to do a bunch of them yourself. Okay, so basically I'm going to do NAND_NOT guided in the lab —
+
+00:01:05.970 --> 00:01:13.753
+we'll go through it step by step and build it and then we'll do NAND_AND. You're going to have to derive the NAND_OR.
+
+00:01:13.753 --> 00:01:26.340
+Notice. These are all part of Assignment 2 so you're actually working on Assignment 2 and Lab 2 overlap a little bit. Okay, so
+
+00:01:26.340 --> 00:01:33.536
+You're gonna have to derive the NAND_OR. Notice XOR from NAND Not in the assignment — practice.
+
+00:01:33.536 --> 00:01:35.000
+That's for you to do.
+
+00:01:37.520 --> 00:01:44.451
+The DeMorgan2 check. These say "not in the assignment," but they should still be in your lab.
+
+00:01:49.060 --> 00:01:59.212
+These two the Boolean expression and the DeMorgan2 check those are part of your Assignment 2 so we're not gonna touch them here.
+
+00:01:59.212 --> 00:02:09.980
+Okay, so this one proves De Morgan's first law this one over here for the lab proves De Morgan's second law so you
+
+00:02:09.980 --> 00:02:18.180
+need your lab should include NAND_NOT, NAND_AND, NAND_OR and XOR from NAND.
+
+00:02:24.580 --> 00:02:36.540
+Okay semester file rename it you can rename it outside Logisim, or open it and rename it, which is what I did I opened it in here and
+
+00:02:36.540 --> 00:02:43.460
+then I renamed it now I'm going to be playing with this one.
+
+00:02:43.460 --> 00:02:57.059
+Okay, so this is you know here's our information you know here's our information you know here's our information up
+
+00:02:57.059 --> 00:03:10.943
+in the corner it's not open yet so let me open the file File, Open Recent you can see I renamed it —
+
+00:03:10.943 --> 00:03:20.221
+there are two of them I think this is the one we did last week.
+
+00:03:20.221 --> 00:03:29.518
+Okay, and you can see inside here I have main and ByteReader and you can open ByteReader and you can see what ByteReader looks
+
+00:03:29.518 --> 00:03:38.840
+like. All right, so now we'll get into the lab so let me blow this up to take the whole screen.
+
+00:03:41.560 --> 00:03:54.139
+And go into the lab. Okay, so I renamed it so we're going to add a circuit. Okay, it's an empty circuit and we're
+
+00:03:54.139 --> 00:04:05.248
+going to name that NAND_NOT okay so it's a NOT gate from a nand gate.
+
+00:04:05.248 --> 00:04:13.560
+All right, that's what we're going to do so let's go in here and.
+
+00:04:16.600 --> 00:04:25.960
+Let's uh wow that's off the screen let's shrink that down I'm sorry it needs to be so that we can see it.
+
+00:04:29.400 --> 00:04:42.931
+Okay so in here we're gonna go Project, Add Circuit my circuit name it's going
+
+00:04:42.931 --> 00:04:54.410
+to be NAND_NOT say. Okay, and then over here we look and you see it's here it has the magnifying glass over it that
+
+00:04:54.410 --> 00:04:58.760
+means that's the one we've selected. All right, so let me get rid of that.
+
+00:05:02.360 --> 00:05:13.662
+Okay so from our gates we'll open up our gates and we're going to grab a nand gate and we're going to put it
+
+00:05:13.662 --> 00:05:27.205
+in and we're going to make it two inputs. All right, so from the input side we'll have
+
+00:05:27.205 --> 00:05:35.602
+two inputs we're making a NOT gate so I'll make this two inputs this.
+
+00:05:35.602 --> 00:05:42.792
+Okay, we're making a NOT gate so it has one input and what we're going to do is we're going to take that input
+
+00:05:42.792 --> 00:05:51.812
+and we're going to split it and put it into both inputs of the NAND all right so here's our input we'll grab one
+
+00:05:51.812 --> 00:06:00.840
+of those and we'll just butt it up against this one you see it's connected they're all dark green let's label this one A.
+
+00:06:03.000 --> 00:06:14.623
+Okay and we have one output make a little wire we'll grab the round one we'll put it on the end it's connected and
+
+00:06:14.623 --> 00:06:25.640
+we'll call it Y and it's going we're going to change three-state from Yes to No.
+
+00:06:25.640 --> 00:06:29.160
+Okay, so here's our nand gate.
+
+00:06:35.480 --> 00:06:41.080
+Okay that operates like a NOT gate and so how do we know that.
+
+00:06:41.080 --> 00:06:54.507
+Okay, so we know we have A and Y and y right so for a NOT
+
+00:06:54.507 --> 00:07:02.440
+gate, when A is zero y is one.
+
+00:07:07.240 --> 00:07:14.440
+I don't know if I did very good there that's not bad.
+
+00:07:18.440 --> 00:07:31.400
+You use Ctrl+D to duplicate. Okay, text tool to edit it and when A is one.
+
+00:07:37.480 --> 00:07:45.705
+Y of zero so that's our kind of our truth table right NOT gate. Okay, so with the poke tool: A is zero, Y
+
+00:07:45.705 --> 00:07:51.860
+is one — that's the first row when A is 1, Y is 0 — that's the second row.
+
+00:07:51.860 --> 00:07:55.280
+So this is our NAND gate, our NOT gate, from a NAND.
+
+00:07:55.280 --> 00:08:09.034
+Okay, that's it right there, that's NOT from NAND. So that's the first one, when you put one output, place the pins
+
+00:08:09.034 --> 00:08:13.340
+— an input pin on the left and output pin on the right.
+
+00:08:13.340 --> 00:08:23.720
+Okay, label A, Y. Okay, all right, place a NAND gate from the gates.
+
+00:08:23.720 --> 00:08:30.920
+Okay, see its number of inputs at 2, wire it A to both NAND inputs.
+
+00:08:30.920 --> 00:08:38.973
+Okay, so check when A is 0, it should be 1. Okay, so that's everything.
+
+00:08:38.973 --> 00:08:43.253
+Now, now we want an AND from NAND. Okay, so that's everything.
+
+00:08:43.253 --> 00:08:43.320
+Now, now we want an AND from NAND. Okay, so now we want an AND from NAND.
+
+00:08:43.940 --> 00:08:57.040
+Not a NOT, we want AND from NAND. All right. So we have 2 inputs, A and B and output Y.
+
+00:08:57.040 --> 00:09:08.120
+Let's create that circuit first. So we're gonna go up here. Project.
+
+00:09:08.120 --> 00:09:21.318
+Add circuit. NAND. And there's our blank one, we have
+
+00:09:21.318 --> 00:09:35.098
+two inputs, A, A, and I can use Ctrl+D to duplicate it,
+
+00:09:35.098 --> 00:09:48.514
+Z this way, and this one is B, and we have one
+
+00:09:48.514 --> 00:10:02.076
+output, output, call it Y, and set three-state to No, and then we have some NAND gates, and we have to put
+
+00:10:02.076 --> 00:10:15.824
+in NAND gates. Okay, so now what we've got to do is figure out how to make
+
+00:10:15.824 --> 00:10:25.700
+this work, so that it works. So let's look at the instructions, okay.
+
+00:10:25.700 --> 00:10:32.600
+Place a NAND gate, wire A to the upper input and B to the lower input.
+
+00:10:32.600 --> 00:10:37.220
+Now it's in. A times B, not, right?
+
+00:10:43.220 --> 00:10:53.370
+Okay, so what I want to do here, and this one down here, we're going to move this one there, this one there, we
+
+00:10:53.370 --> 00:11:04.980
+have A goes in, B goes in, and we have an output, and we have a NAND gate.
+
+00:11:05.980 --> 00:11:09.980
+So this is our Y. So this is a NAND gate. The output is now (A AND B)', right, because that's what NAND is.
+
+00:11:09.980 --> 00:11:23.393
+Invert, we should already know, which means we want to NAND it
+
+00:11:23.393 --> 00:11:33.220
+again, and not it, so that we get A times B — because A times B, NOTed twice.
+
+00:11:33.320 --> 00:11:41.792
+So we have A, NAND gate. Is the same as a times B okay so we know what we have a NOT gate created
+
+00:11:41.792 --> 00:11:51.095
+it from NAND gates already so let's go in here and let me show you we could.
+
+00:11:51.095 --> 00:12:05.054
+Okay, we could put an and gate in here. Okay, make it a two input two input and then connect
+
+00:12:05.054 --> 00:12:18.429
+these two right and then connect this to the output. Okay, so when either is zero or one output
+
+00:12:18.429 --> 00:12:25.694
+is zero for an AND gate and when they're both 1, the output is 1.
+
+00:12:25.694 --> 00:12:34.960
+Okay, so they're both 0, it's 0, when A is 1, it's still 0, when A is 0, 1, it's still 0, when it's
+
+00:12:34.960 --> 00:12:45.120
+1, 1, it's 1. So we have an AND gate. All right, that's how you build an AND gate from NAND gates.
+
+00:12:45.120 --> 00:12:55.020
+Now, what we could have done, and this is elsewhere in the thing,.
+
+00:13:00.540 --> 00:13:05.642
+Is kind of taken the NOT gate from the NANDs and dropped it in.
+
+00:13:05.642 --> 00:13:11.900
+We have an input, there's a NOT gate, we have an output.
+
+00:13:11.900 --> 00:13:17.154
+Okay, and notice when we do this, I'm going to either use my input or I'm going to use my input, and then I'm
+
+00:13:17.154 --> 00:13:17.528
+going to OK, either input, or I'm going to OK, either input, or I'm going to OK, either input, or I'm going to OK,
+
+00:13:17.528 --> 00:13:22.636
+or I'm going to OK, and notice when we do this, is zero the output is still zero when they're both one the output
+
+00:13:22.636 --> 00:13:28.933
+is one. Okay, you want to see what this inside here you can double click on the middle and we can see it's an
+
+00:13:28.933 --> 00:13:42.620
+and gate because that's what we had from before. Okay, so we're reusing this in our hand right so since the NAND_NOT it's just
+
+00:13:42.620 --> 00:13:55.940
+a NAND gate with one input pipe to both of it and one output. Okay, when we put that in this NAND_AND
+
+00:13:55.940 --> 00:14:00.740
+gate this is the same.
+
+00:14:11.300 --> 00:14:24.923
+Okay so this box is this shape with one input split to a NAND gate and
+
+00:14:24.923 --> 00:14:34.760
+one output out to Y right because when I double click when I go to this middle of this.
+
+00:14:41.300 --> 00:14:54.847
+I can't if I can't get the double click again right click and go view right that's all it is that's what that box
+
+00:14:54.847 --> 00:15:03.980
+is has one input and one output, with the input feeding both sides of a NAND gate and the output is the output from NAND right
+
+00:15:03.980 --> 00:15:13.066
+that's how you can drag and drop and use things you've already created in other things.
+
+00:15:13.066 --> 00:15:24.328
+Okay, and then typically what I would have done instead is I would have and this isn't anywhere in this assignment but I would
+
+00:15:24.328 --> 00:15:32.416
+have to see this NAND_NOT I would go open that and I would right click and go Edit Circuit Appearance.
+
+00:15:32.416 --> 00:15:36.960
+Okay, here's my circuit.
+
+00:15:41.300 --> 00:15:54.654
+Okay I have an input and an output on a NOT gate you see a NOT gate use what
+
+00:15:54.654 --> 00:16:04.264
+are not gay looks like I could draw a triangle with a circle on it, with an input and an output. Okay, so so
+
+00:16:04.264 --> 00:16:12.510
+if I go to NAND_NOT and if I want to Edit Circuit Appearance and yep to Edit Circuit Appearance here's what it looks like
+
+00:16:12.510 --> 00:16:18.860
+well what I could do is I could redraw this.
+
+00:16:38.460 --> 00:16:43.460
+Change that.
+
+00:17:29.460 --> 00:17:31.460
+I'm going to draw it like this.
+
+00:17:50.460 --> 00:18:02.793
+So I have a triangle I can make the input I can take this input move it there the output this dot is the
+
+00:18:02.793 --> 00:18:11.460
+rotation point let me put it up on top so it rotates around that point and get rid of all those don't need it
+
+00:18:13.460 --> 00:18:22.460
+I have input output oh wait let me move this output over one move it over here and then let me draw a circle.
+
+00:18:34.460 --> 00:18:40.460
+Right there so now I have a circle with the output and an input.
+
+00:18:44.460 --> 00:18:57.127
+Now what's going to happen is when I look at NAND_AND see this it changes the shape of it let me move it over
+
+00:18:57.127 --> 00:19:00.460
+here let me delete all that.
+
+00:19:16.940 --> 00:19:30.473
+Input, output, Y, reset
+
+00:19:30.473 --> 00:19:43.850
+my simulation. Poke tool, okay, now this one, I redrew it
+
+00:19:43.850 --> 00:19:57.480
+to look like this one, but it's actually this one here. And you know it because, right here, over
+
+00:19:57.480 --> 00:20:06.600
+here, you know it because if I click on this and I go.
+
+00:20:06.600 --> 00:20:14.800
+So it's not. It's the NAND_NOT circuit, and I can view it, and that's what you get.
+
+00:20:14.800 --> 00:20:24.160
+Okay so I like to redraw my circuits when I create them so that when I look at them and I use them in
+
+00:20:24.160 --> 00:20:37.880
+other circuits they look proper. Okay anyway, that's a lot of stuff to just do this simple, create this, okay, and then here's a
+
+00:20:37.880 --> 00:20:51.880
+little thing. You can check all these things here, all right,
+
+00:20:51.880 --> 00:21:05.687
+so, so Logisim Classic, I just did all this, but
+
+00:21:05.687 --> 00:21:16.780
+not in this exact example. And you can do this example, but it's exactly the same if you wanted to look at this one
+
+00:21:16.780 --> 00:21:24.713
+and you wanted to use it, so if I'm in main, let's get rid of this one, and I wanted to use this one
+
+00:21:24.713 --> 00:21:29.380
+in a circuit, I could drop it in, now it automatically looks like a box.
+
+00:21:30.380 --> 00:21:35.380
+I have A and B, you can see when I roll over them they say A and B.
+
+00:21:36.380 --> 00:21:39.380
+You know that one doesn't say Y. So, A, B, and Y.
+
+00:21:39.380 --> 00:21:41.380
+Well, I don't like this shape. I don't like it at all.
+
+00:21:41.380 --> 00:21:42.380
+So I can go into NAND and, and I can edit the Circuit Appearance.
+
+00:21:43.380 --> 00:21:54.713
+So here I got, this is the rotation point, here's my output, okay, now when I click on these, the little circuit appears in
+
+00:21:54.713 --> 00:22:00.380
+the middle, okay, and I can see that I'm in the middle of the circuit.
+
+00:22:05.380 --> 00:22:07.780
+Yeah. So, as you can see, the little circuit appears in the lower right hand corner.
+
+00:22:07.780 --> 00:22:20.698
+Let me see if I can, so it's up, so, when I click on one of these, down in the right hand corner, you
+
+00:22:20.698 --> 00:22:26.100
+can see it's blown up and that shows it's B. The bottom one, okay.
+
+00:22:26.100 --> 00:22:31.380
+That's how you'd know which of these which are A, which are B, okay.
+
+00:22:34.380 --> 00:22:43.140
+We draw that, so I don't like this drawing, I want it to look like an actual NAND gate.
+
+00:22:43.140 --> 00:22:56.712
+Okay, so a NAND gate, let's see, look
+
+00:22:56.712 --> 00:23:10.284
+like this one, not really, that doesn't look
+
+00:23:10.284 --> 00:23:22.460
+like. Let's see, what we
+
+00:23:22.460 --> 00:23:36.440
+want is, we want something stylized.
+
+00:23:43.140 --> 00:23:56.032
+This, okay, and then this one we want, uh, to do,
+
+00:23:56.032 --> 00:24:09.140
+to do, to do, no, we want more than fill.
+
+00:24:13.140 --> 00:24:22.020
+That's what it works. Right, this is my NAND gate with a circle on the end.
+
+00:24:31.480 --> 00:24:37.920
+And then I have an output pin, and I have my two input pins.
+
+00:24:43.140 --> 00:24:53.240
+I don't want to get rid of that green one, dot, green one is my rotation, I'm going to put it right there, I
+
+00:24:53.240 --> 00:25:03.148
+don't need this, and then if I want text, I can go, I need one for A, for my A input, I need one
+
+00:25:03.148 --> 00:25:11.860
+for B, for my B input, I need one for Y, for my Y output, okay, and then I can say.
+
+00:25:13.140 --> 00:25:27.074
+So I wrote those, you can only write single line, but let's put A right here, and B, you can put them on the
+
+00:25:27.074 --> 00:25:31.480
+inside, you don't have to, but I like putting them on the inside.
+
+00:25:31.480 --> 00:25:40.000
+This is a NAND gate, and this is Y. Okay, so that's just how it looks.
+
+00:25:40.000 --> 00:25:41.080
+Now if I go back to main, where I had input, I'm going to go back to main.
+
+00:25:43.080 --> 00:25:50.460
+Now I have inputted one, right, it changed what it looked like to what I just did.
+
+00:25:50.460 --> 00:26:04.120
+Not a great diagram, it doesn't really look like this. Okay, but I'm just building it.
+
+00:26:04.120 --> 00:26:11.080
+There's the Circuit Appearance, right, you have these shapes. So I could have done.
+
+00:26:11.080 --> 00:26:24.323
+Oh, I could have done that. Have built an arc. What I normally do
+
+00:26:24.323 --> 00:26:34.160
+is with a built an arc, like.
+
+00:26:43.080 --> 00:26:56.507
+This, put that on a rectangle, so maybe that's a little bit
+
+00:26:56.507 --> 00:27:08.620
+better. Or what you could do is once you do this, the other way you can do it is you get rid of the
+
+00:27:08.620 --> 00:27:17.620
+arc and you can do it by hand with straight lines. There's a line.
+
+00:27:17.620 --> 00:27:31.300
+There's a line. There's a line. Right? Do something
+
+00:27:31.300 --> 00:27:43.040
+like that to get that shape. It looks closer. It's not good, but it's closer.
+
+00:27:43.040 --> 00:27:55.663
+All right, and then you can put your
+
+00:27:55.663 --> 00:28:08.286
+A, your B, rotation, my circle, my output,
+
+00:28:08.286 --> 00:28:19.674
+my Y, and my NAND. My A input and my B input.
+
+00:28:19.674 --> 00:28:33.350
+And delete that stuff. So now when I go here, so anywhere I've used that circuit, it redrew it.
+
+00:28:33.350 --> 00:28:42.940
+Okay? To be just like whatever I drew it. All right, so that's how you use Circuit Appearance.
+
+00:28:43.040 --> 00:28:51.019
+Now you build circuits, and then how you reuse them in other places.
+
+00:28:51.019 --> 00:28:56.259
+Okay, OR from NAND, that's up to you to figure out how to do.
+
+00:28:56.259 --> 00:29:02.306
+XOR from NAND, that's up to you to figure out how to do.
+
+00:29:02.306 --> 00:29:13.715
+Splitters and tunnels. Okay, so a splitter, let's go back to our thing here.
+
+00:29:13.715 --> 00:29:27.480
+So let's go to our reader. Okay? So a splitter, what a splitter does, and it's in wiring, you can take a
+
+00:29:27.480 --> 00:29:33.400
+splitter and it can work either way. Okay? So here's a splitter.
+
+00:29:33.400 --> 00:29:39.982
+It's an 8-bit splitter. You can see it's a left-handed. The Fan Out is 8.
+
+00:29:39.982 --> 00:29:46.012
+Input width. So here's the output fan. So this wire here is an 8-bit wire.
+
+00:29:46.012 --> 00:29:55.508
+Okay? So I can make it, tie it to this. Now every bit here is now one of these bits.
+
+00:29:55.508 --> 00:30:06.791
+Okay? So bit zero is the rightmost. Let me enable my simulation.
+
+00:30:06.791 --> 00:30:19.560
+Let's reset it. Okay? So 0 is the rightmost. So when I tie it, you can see the green color changed up here.
+
+00:30:19.560 --> 00:30:27.633
+It's now 1. Okay? 0, 1, 0, 1. Same with bit 7 is the leftmost.
+
+00:30:27.633 --> 00:30:36.051
+See on here, 7 is now light green, dark green, light green when it's 1, dark green when it's 0.
+
+00:30:36.051 --> 00:30:38.680
+Okay? So I can take 8-bit and split it into 8 bits.
+
+00:30:40.680 --> 00:30:41.480
+Okay, Okay.
+
+00:30:41.480 --> 00:30:44.618
+Okay, When I enable the simulation here, I can split this into 8 1-bits, so this is 1 8-bit, I can split
+
+00:30:44.618 --> 00:30:54.291
+it into 8 1-bit elements. Or I can have it work the other direction and taking eight individual bits and put them in and
+
+00:30:54.291 --> 00:31:01.619
+send them to an 8-bit something. So wires can be however many bits they need to be.
+
+00:31:01.619 --> 00:31:10.120
+It doesn't matter 1-bit, 8-bit, 4-bit, 3-bit, whatever. And you can use the splitter, okay?
+
+00:31:11.680 --> 00:31:25.592
+To split them apart or put them together now there is something called a tunnel. Okay, so we're gonna create
+
+00:31:25.592 --> 00:31:38.230
+a tunnel. Okay, label it DC okay another tunnel
+
+00:31:38.230 --> 00:31:51.940
+set the other direction we're gonna also label it the
+
+00:31:51.940 --> 00:31:55.720
+same label DC okay.
+
+00:32:28.300 --> 00:32:35.200
+Sorry — it says one bit; give it 8 bits.
+
+00:32:40.580 --> 00:32:50.965
+Hook the other one to this and you notice it works. Okay, so what the tunnel is doing as long as in the same
+
+00:32:50.965 --> 00:32:56.567
+name it's like there's a wire between them. Okay, so I can use a tunnel anywhere. Okay, so I can use a tunnel anywhere
+
+00:32:56.567 --> 00:33:05.160
+I can use a我也 Anywhere I need to. Okay, so as long as the names are the same it works the names are different.
+
+00:33:11.120 --> 00:33:21.586
+It doesn't work, because it doesn't know what to tie together okay, so it's just like I just it is a wireless connection instead
+
+00:33:21.586 --> 00:33:24.660
+of a wired connection between the two tunnels.
+
+00:33:27.680 --> 00:33:37.050
+All right, so you can use this to simplify some things I Use them in a couple places just to make it easier to
+
+00:33:37.050 --> 00:33:40.960
+visualize your circuits. I Don't use it everywhere because.
+
+00:33:46.920 --> 00:33:56.740
+Those are tunnels and splitters which are also in the lab for you to look at the last one is De Morgan's law.
+
+00:34:00.880 --> 00:34:11.880
+So De Morgan's law says (A OR B)' equals NOT A AND NOT B So what we want to do is.
+
+00:34:15.300 --> 00:34:25.220
+See if this works, okay, so How we do that is we build the left side, A OR B, and NOT it. We build
+
+00:34:25.220 --> 00:34:36.040
+the right side NOT A AND NOT B And compare the two to each other. So if I'm in here, I'm going to build
+
+00:34:36.040 --> 00:34:44.515
+I'm going to add a new circuit to my project. I don't know what it asks you to call it, but I'm
+
+00:34:44.515 --> 00:34:51.360
+gonna call it DeMorgan2. Okay, so I have two inputs A and B.
+
+00:34:59.240 --> 00:35:06.410
+And I have two inputs B and B so it's going to be. This is going to be. Okay, so let me give you
+
+00:35:06.410 --> 00:35:09.660
+an example it's a.
+
+00:35:12.560 --> 00:35:19.030
+Now I'm going to enter it here. And I'm going to have a common A and B So I'm going to put this down
+
+00:35:19.030 --> 00:35:24.992
+here. So I have two inputs. And this is going to be finally What I want to be I'm not going to get to
+
+00:35:24.992 --> 00:35:36.743
+the rest of this. Okay, so I have a, A or B or gate okay I get output.
+
+00:35:36.743 --> 00:35:50.338
+Okay, this is one side of the equation oh
+
+00:35:50.338 --> 00:36:03.886
+and I got A, NOT it sorry not it after I poured it
+
+00:36:03.886 --> 00:36:16.200
+I need to not it but it NOT gate in this is (A OR B)'.
+
+00:36:26.380 --> 00:36:40.299
+A OR B okay that's what that output represents the other output is
+
+00:36:40.299 --> 00:36:53.583
+what I want the other one I want is the output I need is
+
+00:36:53.583 --> 00:37:06.696
+NOT A and right so what I need to do for this
+
+00:37:06.696 --> 00:37:18.840
+one I need an AND gate and two things AND gate.
+
+00:37:23.880 --> 00:37:36.118
+I need NOT A AND NOT B what is
+
+00:37:36.118 --> 00:37:49.752
+here A, NOT it there's a not
+
+00:37:49.752 --> 00:37:58.260
+be the same thing for B NOT B.
+
+00:38:07.940 --> 00:38:19.110
+This output is NOT A AND NOT B all right and so now what I want to do is compare them. All right, so
+
+00:38:19.110 --> 00:38:32.889
+what I can do is I can use an two-input XOR gate because when XOR gate when they're the same
+
+00:38:32.889 --> 00:38:46.758
+zero when they're different it's one. Okay, so I can wire these into it and I get
+
+00:38:46.758 --> 00:38:48.400
+an output.
+
+00:38:51.260 --> 00:39:04.009
+Here. Okay, so when they're the same zero when they're different when these two results are different it's one so if this ever turns
+
+00:39:04.009 --> 00:39:16.872
+one then these two circuits are not identical. Okay, so now, the poke tool I run through zero zero
+
+00:39:16.872 --> 00:39:30.732
+one zero notice the output is always zero, which means this input which is
+
+00:39:30.732 --> 00:39:43.151
+(A + B)' and this input a not NOT B are always the same — so you get zero, and you would get one if they differed.
+
+00:39:43.151 --> 00:39:53.660
+Okay, and you can turn that into an LED light so that it lights up when they're different but since they're not different it
+
+00:39:53.660 --> 00:40:06.872
+never lights up now if we wanted to make them different let me edit these, just to show.
+
+00:40:12.220 --> 00:40:25.860
+Let's take that NOT gate out now let's run it — notice at 0, 0 they now differ, because the output is one zero one they're different it's one
+
+00:40:25.860 --> 00:40:38.425
+one zero they're the same so it's zero. Okay, so that shows you how using an XOR to compare two single bits you can
+
+00:40:38.425 --> 00:40:46.620
+do that to compare them if you want them to be the same it should always be zero under all conditions.
+
+00:40:51.260 --> 00:41:04.439
+Okay so this is actually the Morgan second law check. Okay, so I have
+
+00:41:04.439 --> 00:41:13.172
+two circuits driven by the exactly the same two inputs so I only have to cycle these into inputs and I get and I
+
+00:41:13.172 --> 00:41:18.539
+checked both circuits against each other. All right, so that's De Morgan's second law and you have to do De Morgan's first law so
+
+00:41:18.539 --> 00:41:22.470
+you have to do De Morgan's second law and you have to do De Morgan's first law all right.
+
+00:41:22.470 --> 00:41:35.190
+All right, that sets you up. That actually does most of Lab 2 for you need to work through the rest of them
+
+00:41:35.190 --> 00:41:40.223
+and make sure those circuits get in your file and submit the file for grading.
+
+00:41:40.223 --> 00:41:49.369
+Okay, so make sure you reach out if you have questions and I should be back next week the jury trial is expected to
+
+00:41:49.369 --> 00:41:54.180
+end on Wednesday and. And today's Monday, so it's only supposed to be two days.
+
+00:41:54.700 --> 00:42:00.400
+So hopefully I'll be there. All right, have a great week.
+
