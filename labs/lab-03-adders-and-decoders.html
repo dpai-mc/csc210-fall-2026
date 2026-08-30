@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="lab-03">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210L — Lab 3: Adders and Decoders</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ----------
+       .lab-*, .scope-table, .logisim-steps, .callout--*, .points-badge and
+       the aside component are all in shared/style.css. What follows is only
+       what this page alone needs. */
+
+    /* Live-session marker. Lab 2 shipped with a recorded walkthrough; this
+       one is guided live, and the pacing blocks below are the instructor's
+       running order as much as the student's. Marked so a student reading
+       ahead knows which parts are done together and which are not. */
+    .live-tag {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: var(--fs-xs);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      padding: 2px var(--space-sm);
+      border-radius: 999px;
+      vertical-align: middle;
+      margin-left: var(--space-sm);
+    }
+    .live-tag--together { background: var(--color-success); color: #fff; }
+    .live-tag--solo     { background: var(--color-danger, #b3261e); color: #fff; }
+
+    /* The carry-chain probe table — students fill this in during the demo,
+       so the cells need to be big enough to write in on a printout. */
+    .probe-table td.fill {
+      background: var(--color-code-bg);
+      min-width: 52px;
+      height: 32px;
+    }
+    .probe-table td:first-child { font-family: var(--font-mono); white-space: nowrap; }
+
+    @media print {
+      .sp-header, .sp-footer, .no-print { display: none; }
+      .lab-step { break-inside: avoid; }
+      .aside-optional { display: none; }
+      a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== Header ==================== -->
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210L — Computer Organization &amp; Architecture Lab</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Lab 3 &rsaquo; <span>Adders and Decoders</span>
+    </nav>
+  </header>
+
+  <!-- ==================== Main ==================== -->
+  <main class="sp-main sp-main--full">
+
+    <h1>Lab 3 — Adders and Decoders</h1>
+
+    <div class="lab-meta">
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Lab Session</span>
+        <span class="lab-meta__value">Tuesday, Sep 1, 2026</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">In-Class Time</span>
+        <span class="lab-meta__value">90 minutes</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Format</span>
+        <span class="lab-meta__value">Live on Zoom &mdash; finish on your own</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Assignment</span>
+        <span class="lab-meta__value">Completion Check 3 &mdash; 10 pts</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Due</span>
+        <span class="lab-meta__value lab-meta__value--due">Sun, Sep 6 &middot; 11:59 PM</span>
+      </div>
+    </div>
+
+    <div class="callout callout--hook">
+      <div class="callout__title">Why This Lab Exists</div>
+      <p><strong>What we have:</strong> A gate library built from NAND, and the technique that makes the rest of the semester possible &mdash; build a circuit once, then instance it wherever you need it.</p>
+      <p><strong>What we can't do yet:</strong> Compute anything a person would call arithmetic. Every circuit in your file so far answers a question about one or two bits.</p>
+      <p><strong>What we can do after today:</strong> Add. Not "simulate addition" &mdash; actually add, with a circuit whose answer appears because electricity crossed some gates. And select: turn a binary code into a one-of-N choice, which is how a processor will later pick a register or a memory address.</p>
+    </div>
+
+    <div class="callout callout--warn">
+      <div class="callout__title">This is the first lab that does not finish in 90 minutes</div>
+      <p>That is deliberate, not a scheduling accident. We build the pieces together in the session; two circuits are yours to finish afterwards. Budget an hour or so at home this week.</p>
+      <p>Both of the take-home circuits are needed again in <strong>Lab 5</strong> and <strong>Lab 8</strong>. Leaving them undone does not just cost you this week's completion check &mdash; it means arriving at a later lab without a part it assumes you have.</p>
+    </div>
+
+    <!-- ============================================================
+         Outcomes
+         ============================================================ -->
+    <section id="sec-outcomes">
+      <h2>What You Will Be Able to Do</h2>
+      <ul>
+        <li>Build a <strong>half adder</strong> and verify it against all four input combinations.</li>
+        <li>Build a <strong>full adder</strong> out of two half adders and an OR gate &mdash; your first circuit assembled from circuits you already built rather than from gates.</li>
+        <li>Chain full adders into a ripple-carry adder and <strong>watch a carry propagate</strong> with probes on the carry chain.</li>
+        <li>Build a <strong>2-to-4 decoder</strong> from gates, and a <strong>2-to-1 multiplexer</strong>, and be able to say precisely what the difference is.</li>
+        <li>Finish on your own: widen the adder to 8 bits, and build the 3-to-8 decoder.</li>
+      </ul>
+    </section>
+
+    <!-- ============================================================
+         Before you arrive
+         ============================================================ -->
+    <section id="sec-before">
+      <h2>Before You Arrive</h2>
+      <ul>
+        <li>Your semester file <code>CSC210_YourName.circ</code>, containing <code>NAND_NOT</code>, <code>NAND_AND</code>, <code>NAND_OR</code>, <code>02-XOR-from-NAND</code> and <code>03-DeMorgan2-Check</code> from Lab 2.</li>
+        <li>Logisim Classic 2.7.1 open and working. If it is not, come ten minutes early &mdash; do not spend this session installing software.</li>
+        <li>Read this week's lecture pages on the half adder and the full adder. <strong>This lab does not re-teach why a full adder needs three inputs</strong>; it assumes you have seen that and gets straight to building.</li>
+      </ul>
+
+      <div class="callout callout--note">
+        <div class="callout__title">You may use built-in gates today &mdash; but only gates</div>
+        <p>Last week everything came from NAND, to prove universality. That point is made. From now on you may place AND, OR, NOT, XOR and the rest directly from the toolbar.</p>
+        <p>What stays banned, all semester: Logisim's built-in <strong>Adder, Decoder, Multiplexer, Register, RAM and ROM</strong> components. Those are the things you are here to build. Using one is not a shortcut; it is skipping the exercise.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Scaffold boundary
+         ============================================================ -->
+    <section id="sec-scope">
+      <h2>How This Lab Relates to Assignment 3</h2>
+
+      <p>Assignment 3 is graded by the <strong>lecture</strong> course, CSC 210. This lab is a recommended companion and <strong>no CSC 210 grade depends on attending it</strong>. So here is exactly where the two overlap, rather than leaving you to guess.</p>
+
+      <table class="scope-table">
+        <thead>
+          <tr><th>Circuit</th><th>Where</th><th>What that means</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>HALF_ADDER</td><td class="scope-lab">Guided in lab</td><td>Built together. Also Assignment 3 Part C.</td></tr>
+          <tr><td>FULL_ADDER</td><td class="scope-lab">Guided in lab</td><td>Built together, from two <code>HALF_ADDER</code> instances. Also Assignment 3 Part C.</td></tr>
+          <tr><td>04-Ripple4-Demo</td><td class="scope-lab">Lab only</td><td>A four-stage adder, built together to watch the carry travel. <strong>Not on any assignment</strong> &mdash; see the note below about why it is four bits and not eight.</td></tr>
+          <tr><td>DECODER_2TO4</td><td class="scope-lab">Guided in lab</td><td>Built together. Also Assignment 3 Part C.</td></tr>
+          <tr><td>05-Mux2to1</td><td class="scope-lab">Lab only</td><td>Built together so the decoder-versus-multiplexer distinction is something you have wired, not just read. Not on any assignment.</td></tr>
+          <tr><td>ADDER_8BIT</td><td class="scope-solo">On your own</td><td>Assignment 3 Part C, worth 15 points &mdash; the most of any single circuit. Started here in concept; built by you.</td></tr>
+          <tr><td>DECODER_3TO8</td><td class="scope-solo">On your own</td><td>Assignment 3 Part C. Same method as the 2&times;4, one input wider.</td></tr>
+          <tr><td>DECODER_4TO16</td><td class="scope-solo">On your own</td><td>Assignment 3 Part C. <strong>Not touched in this lab at all.</strong> Same method again, two inputs wider.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout--note">
+        <div class="callout__title">If you are not in the lab section</div>
+        <p>Nothing here is required to complete Assignment 3. The lecture pages cover the same circuits, and the assignment's instructions stand on their own. This lab removes friction; it does not hold anything back from you.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART 1 — Half adder
+         ============================================================ -->
+    <section id="sec-part1">
+      <h2>Part 1 — The Half Adder <span class="points-badge">~10 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <p>The smallest circuit that adds anything. Two bits in, two bits out &mdash; because <code>1 + 1</code> is <code>10</code>, and two digits do not fit in one.</p>
+
+      <div class="lab-step">
+        <div class="lab-step__num">1</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">New circuit tab</div>
+          <p><strong>Project &rarr; Add Circuit</strong>, named exactly <code>HALF_ADDER</code>. Capitals and underscore &mdash; the lecture assignment checks the name, and Week 6 will look for it.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">2</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Two inputs, two outputs</div>
+          <p>Place two input pins labeled <code>a</code> and <code>b</code>, and two output pins labeled <code>sum</code> and <code>carry</code>. Label them now &mdash; an unlabeled pin becomes an anonymous stub the moment you instance this circuit somewhere else.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">3</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Two gates. That is the whole circuit.</div>
+          <p>An <strong>XOR</strong> fed by <code>a</code> and <code>b</code> drives <code>sum</code>. An <strong>AND</strong> fed by the same two inputs drives <code>carry</code>. Branch each input wire so both gates see it.</p>
+          <p>Look at what that says: the sum column of the addition table <em>is</em> XOR's truth table, and the carry column <em>is</em> AND's. Nobody designed that coincidence &mdash; it is what those gates already were.</p>
+        </div>
+      </div>
+
+      <div class="lab-verify">
+        <div class="lab-verify__title">Checkpoint</div>
+        <p>Poke all four input combinations. Every one, not a sample &mdash; four rows is a complete proof for a two-input circuit.</p>
+        <table style="max-width:360px;">
+          <thead><tr><th>a</th><th>b</th><th>sum</th><th>carry</th></tr></thead>
+          <tbody>
+            <tr><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+            <tr><td>0</td><td>1</td><td>1</td><td>0</td></tr>
+            <tr><td>1</td><td>0</td><td>1</td><td>0</td></tr>
+            <tr><td>1</td><td>1</td><td><strong>0</strong></td><td><strong>1</strong></td></tr>
+          </tbody>
+        </table>
+        <p>That last row is the entire reason this circuit is called a <em>half</em> adder. It produces a carry, and it has nowhere to accept one.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART 2 — Full adder
+         ============================================================ -->
+    <section id="sec-part2">
+      <h2>Part 2 — The Full Adder <span class="points-badge">~18 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <p>Every column of a multi-bit addition except the rightmost has three things arriving: two operand bits and a carry from the column to its right. The half adder has two inputs. So it is not enough &mdash; anywhere but the far right.</p>
+
+      <p>This is the first circuit you build out of <em>circuits</em> rather than out of gates, and that shift is the point of the exercise.</p>
+
+      <div class="lab-step">
+        <div class="lab-step__num">1</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">New tab, three inputs</div>
+          <p><strong>Project &rarr; Add Circuit</strong>, named <code>FULL_ADDER</code>. Input pins <code>a</code>, <code>b</code>, <code>cin</code>. Output pins <code>sum</code>, <code>cout</code>.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">2</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Instance two half adders</div>
+          <p>In the explorer pane, click <code>HALF_ADDER</code> once to select it as a tool, then click twice in the canvas to place two instances.</p>
+          <p>Notice they are drawn with their gate-level shape rather than as blank rectangles. That is Logisim <strong>Classic</strong>, and it is precisely why this course does not use Evolution &mdash; you can look at a circuit and see what is inside it.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">3</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Wire the first stage</div>
+          <p>Feed <code>a</code> and <code>b</code> into the first half adder. Its <code>sum</code> is the partial sum; its <code>carry</code> is the first of two possible carries.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">4</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Wire the second stage</div>
+          <p>Feed the partial sum and <code>cin</code> into the second half adder. Its <code>sum</code> is the full adder's <code>sum</code> &mdash; wire it to the output pin. Its <code>carry</code> is the second possible carry.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">5</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">The OR gate, and why it is an OR</div>
+          <p>Feed both carries into an <strong>OR</strong> gate; its output is <code>cout</code>.</p>
+          <p>Worth pausing on. A carry out can arise from <em>either</em> stage, and both being true at once is impossible &mdash; work through why. So OR is exactly right, and this is also why you cannot simply join the two carry wires together: in a real circuit that is two outputs fighting over one wire, and in Logisim it lights up as an error.</p>
+        </div>
+      </div>
+
+      <div class="lab-verify">
+        <div class="lab-verify__title">Checkpoint &mdash; all eight, systematically</div>
+        <p>Three inputs means eight combinations. Count in binary as you poke &mdash; <code>000</code>, <code>001</code>, <code>010</code>, <code>011</code>, <code>100</code>, <code>101</code>, <code>110</code>, <code>111</code> &mdash; so you cannot lose your place and skip one.</p>
+        <table style="max-width:460px;">
+          <thead><tr><th>cin</th><th>a</th><th>b</th><th>sum</th><th>cout</th></tr></thead>
+          <tbody>
+            <tr><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+            <tr><td>0</td><td>0</td><td>1</td><td>1</td><td>0</td></tr>
+            <tr><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td></tr>
+            <tr><td>0</td><td>1</td><td>1</td><td>0</td><td>1</td></tr>
+            <tr><td>1</td><td>0</td><td>0</td><td>1</td><td>0</td></tr>
+            <tr><td>1</td><td>0</td><td>1</td><td>0</td><td>1</td></tr>
+            <tr><td>1</td><td>1</td><td>0</td><td>0</td><td>1</td></tr>
+            <tr><td>1</td><td>1</td><td>1</td><td>1</td><td>1</td></tr>
+          </tbody>
+        </table>
+        <p><strong>Do not move on until all eight are right.</strong> The next circuit contains four copies of this one, and a bug here becomes four bugs that look like a wiring problem.</p>
+      </div>
+
+      <details class="lab-troubleshoot">
+        <summary>It's wrong on some rows &mdash; where to look</summary>
+        <dl>
+          <dt><code>sum</code> is right, <code>cout</code> is always 0</dt>
+          <dd>The OR gate is probably fed from one carry twice instead of from both. Follow each of its two input wires back and confirm they reach different half adders.</dd>
+          <dt><code>sum</code> is wrong only when <code>cin</code> is 1</dt>
+          <dd><code>cin</code> is likely wired into the first half adder instead of the second. The first stage sees only <code>a</code> and <code>b</code>.</dd>
+          <dt>Everything is wrong, and it was fine last week</dt>
+          <dd>Open <code>HALF_ADDER</code> and re-poke its four rows. A fault in the definition shows up in every instance at once.</dd>
+          <dt>A wire is red or blue-grey</dt>
+          <dd>Red is a conflict &mdash; two outputs driving one wire. Blue-grey is floating &mdash; nothing driving it at all. Both are wiring, not logic.</dd>
+        </dl>
+      </details>
+    </section>
+
+    <!-- ============================================================
+         PART 3 — Ripple-carry demo
+         ============================================================ -->
+    <section id="sec-part3">
+      <h2>Part 3 — Watching a Carry Travel <span class="points-badge">~20 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <p>Now chain them. Each stage handles one column; each stage's <code>cout</code> becomes the next stage's <code>cin</code>, running from the least significant bit upward &mdash; exactly the way you were taught to add on paper.</p>
+
+      <!-- Standards §0.1: a demonstration narrower than the deliverable must
+           state the demo width, the required width, and what changes. -->
+      <div class="callout callout--warn">
+        <div class="callout__title">Read this before you build: today's circuit is four bits, your assignment needs eight</div>
+        <p><strong>What we build together now:</strong> a <strong>four</strong>-stage adder, in a tab called <code>04-Ripple4-Demo</code>. Four is enough to watch a carry travel and it fits on screen where everyone can see it.</p>
+        <p><strong>What Assignment 3 requires:</strong> <code>ADDER_8BIT</code> &mdash; an <strong>eight</strong>-stage adder, with 8-bit <code>a</code>, <code>b</code> and <code>sum</code> pins. That is a separate circuit tab, and it is worth 15 points.</p>
+        <p><strong>What changes when you widen it:</strong> nothing conceptual. Four more <code>FULL_ADDER</code> instances, four more links in the carry chain, and splitters that break an 8-bit bus into eight wires instead of a 4-bit one into four. The method is identical. It is longer, not harder.</p>
+        <p><strong>And one thing that does <em>not</em> work</strong> &mdash; this catches people every year: you cannot build <code>ADDER_8BIT</code> by chaining two copies of today's four-bit adder. It would produce correct sums, and it would still not meet the requirement, because Assignment 3 asks specifically for <strong>eight <code>FULL_ADDER</code> instances</strong> in one circuit. Build the eight-bit version from full adders directly.</p>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">1</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">New tab, four instances</div>
+          <p><strong>Project &rarr; Add Circuit</strong>, named <code>04-Ripple4-Demo</code>. Place four <code>FULL_ADDER</code> instances in a row. Leave room between them &mdash; the carry chain is the thing we want to see, and cramped instances hide it.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">2</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Wire the carry chain</div>
+          <p>Stage 0's <code>cout</code> to stage 1's <code>cin</code>. Stage 1's to stage 2's. Stage 2's to stage 3's. Stage 0's <code>cin</code> comes from an input pin; stage 3's <code>cout</code> goes to an output pin.</p>
+          <p>Give the chain some vertical space so those three wires are visible as a chain rather than lost among the operand wires.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">3</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Operands and sum</div>
+          <p>Two 4-bit input pins, <code>a</code> and <code>b</code>, each through a splitter into four individual bits. Bit 0 to stage 0, and so on. Four sum bits back through a splitter into one 4-bit <code>sum</code> output.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">4</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Probe the carry chain &mdash; this is the actual point of Part 3</div>
+          <p>Place a <strong>probe</strong> on each of the three carry wires between stages, and one on the final <code>cout</code>. Probes display a wire's value without changing anything.</p>
+          <p>Now set <code>a = 1111</code> and <code>b = 0001</code> and read the probes.</p>
+        </div>
+      </div>
+
+      <div class="lab-verify">
+        <div class="lab-verify__title">Checkpoint &mdash; fill this in as we go</div>
+        <p>Three input pairs. Watch what the probes do, and write down the carry chain each time.</p>
+        <table class="probe-table">
+          <thead>
+            <tr><th>a + b</th><th>c out of bit 0</th><th>c out of bit 1</th><th>c out of bit 2</th><th>final cout</th><th>sum</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>0011 + 0001</td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+            <tr><td>1111 + 0001</td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+            <tr><td>1000 + 1000</td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+          </tbody>
+        </table>
+        <p>The middle row is the one to look at. A carry is created at bit 0 and survives every stage to the top &mdash; the longest path a signal can take through this circuit, and the reason it is called a <em>ripple</em>-carry adder.</p>
+        <p>Then compare it with the last row. <code>1000 + 1000</code> also sets the final <code>cout</code>, but <strong>no carry travels at all</strong> &mdash; it is created at the top stage and leaves immediately. Two rows, same carry-out, completely different amounts of travelling. Worth noticing that <em>the answer not fitting</em> and <em>the carry having far to go</em> are separate things that happen to share a wire.</p>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">What "the carry travels" does and does not mean</div>
+        <p>Logisim shows you a settled circuit, so it is easy to read the chain as the circuit working through the columns one at a time. It is not doing that.</p>
+        <p><strong>All four stages are computing at once, continuously.</strong> Stage 3 has been producing an output the whole time &mdash; it just was not producing the <em>right</em> one until its carry-in arrived and settled. What ripples is not the work; it is the correctness.</p>
+        <p>That is the difference between a circuit and a program, and it is worth fixing in your head now: a program does one thing at a time, a circuit does everything all the time. Making hardware take turns is a problem you have to solve deliberately &mdash; and that is what the clock is for, next week.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART 4 — Decoder
+         ============================================================ -->
+    <section id="sec-part4">
+      <h2>Part 4 — The 2&times;4 Decoder <span class="points-badge">~15 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <p>Adders compute. Decoders <em>select</em> &mdash; and selection is how a processor picks which register to write, or which memory location to read.</p>
+
+      <p>A decoder takes an <em>n</em>-bit code and raises exactly one of its 2<sup>n</sup> outputs: the one that code names. Every other output stays at 0.</p>
+
+      <div class="lab-step">
+        <div class="lab-step__num">1</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">New tab and a 2-bit input</div>
+          <p><strong>Project &rarr; Add Circuit</strong>, named <code>DECODER_2TO4</code>. One input pin named <code>sel</code>, set to <strong>2 bits wide</strong> &mdash; one 2-bit pin, not two 1-bit pins. Four 1-bit output pins named <code>out0</code>, <code>out1</code>, <code>out2</code>, <code>out3</code>.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">2</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Split, then invert</div>
+          <p>Run <code>sel</code> through a splitter to get its two individual bits. Run each bit through a NOT gate as well, so you have <strong>both polarities of both bits</strong> available &mdash; four signals in total.</p>
+          <p>This is the step that makes the rest obvious, and it is the step people skip.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">3</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">One AND gate per output</div>
+          <p>Four 2-input AND gates. Each one is wired to the exact combination that selects it:</p>
+          <ul>
+            <li><code>out0</code> &larr; both bits inverted &nbsp;(<code>sel = 00</code>)</li>
+            <li><code>out1</code> &larr; bit 1 inverted, bit 0 true &nbsp;(<code>sel = 01</code>)</li>
+            <li><code>out2</code> &larr; bit 1 true, bit 0 inverted &nbsp;(<code>sel = 10</code>)</li>
+            <li><code>out3</code> &larr; both bits true &nbsp;(<code>sel = 11</code>)</li>
+          </ul>
+          <p>Each gate is a <strong>minterm</strong> &mdash; one combination and no other. That is the Boolean vocabulary from Week 2 doing real work.</p>
+        </div>
+      </div>
+
+      <div class="lab-verify">
+        <div class="lab-verify__title">Checkpoint</div>
+        <p>Poke <code>sel</code> through all four values. Each time, <strong>exactly one</strong> output should be high and the other three low. If two light up, an AND gate is fed the wrong polarity. If none light up, check that the splitter's bit order is what you think it is.</p>
+        <p>That property has a name &mdash; the output is <strong>one-hot</strong> &mdash; and it is the whole reason decoders are used for selection.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART 5 — Mux and the distinction
+         ============================================================ -->
+    <section id="sec-part5">
+      <h2>Part 5 — A Multiplexer, and the Difference That Matters <span class="points-badge">~15 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <p>We build this one so the distinction is something you have wired rather than something you have read. It takes about five minutes.</p>
+
+      <div class="lab-step">
+        <div class="lab-step__num">1</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">New tab</div>
+          <p><strong>Project &rarr; Add Circuit</strong>, named <code>05-Mux2to1</code>. Input pins <code>d0</code>, <code>d1</code> (the data) and <code>sel</code> (1 bit). One output pin, <code>y</code>.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">2</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Build it from a decoder plus gating</div>
+          <p>NOT <code>sel</code> to get both polarities. AND <code>d0</code> with <code>sel'</code>. AND <code>d1</code> with <code>sel</code>. OR those two results into <code>y</code>.</p>
+          <p>Look at what you just did: the NOT plus the two ANDs <em>are</em> a one-bit decoder, gating the data. A multiplexer is a decoder with data pushed through it.</p>
+        </div>
+      </div>
+
+      <div class="lab-verify">
+        <div class="lab-verify__title">Checkpoint</div>
+        <p>Set <code>d0 = 0</code>, <code>d1 = 1</code>. Toggle <code>sel</code>: <code>y</code> follows <code>d1</code> when <code>sel = 1</code> and <code>d0</code> when <code>sel = 0</code>. Now change the data pins while holding <code>sel</code> fixed and confirm <code>y</code> follows whichever input is selected.</p>
+        <p>That is the thing to notice: <strong>the data went through</strong>.</p>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Decoders select. Multiplexers route.</div>
+        <p>Put the two circuits side by side, because you now have both.</p>
+        <ul>
+          <li>A <strong>decoder</strong> answers <em>"which one?"</em> Its inputs are a code. Its outputs are selection signals. <strong>No data passes through it</strong> &mdash; its outputs go and switch something else on.</li>
+          <li>A <strong>multiplexer</strong> answers <em>"which value?"</em> Its inputs are data plus a code. <strong>One of its data inputs reaches the output.</strong></li>
+        </ul>
+        <p>They are duals: a decoder fans one code out to many lines; a mux funnels many lines down to one. And as you just built, <strong>a decoder is a component of a multiplexer &mdash; never a kind of one.</strong></p>
+        <p><strong>The convention for the rest of this course:</strong> decoders do control and addressing &mdash; which register, which memory row, which ALU operation. Multiplexers do data-path routing, where several sources feed one destination. When you build the CPU, you will use both, for exactly these different jobs.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART 6 — On your own
+         ============================================================ -->
+    <section id="sec-part6">
+      <h2>Part 6 — Finish On Your Own <span class="points-badge">~45&ndash;60 min</span><span class="live-tag live-tag--solo">Your own</span></h2>
+
+      <p>Two circuits. Both use methods you have now used in the room, and both are needed again later &mdash; the adder becomes the ALU's arithmetic core in <strong>Lab 6</strong>, and the decoder shows up in RAM addressing in <strong>Lab 8</strong>. Neither is optional if you want those labs to go smoothly.</p>
+
+      <h3><code>ADDER_8BIT</code> &mdash; the four-bit adder, widened</h3>
+
+      <ol class="logisim-steps">
+        <li>New circuit tab named <code>ADDER_8BIT</code>. This is a <strong>new tab</strong>, not an edit of <code>04-Ripple4-Demo</code> &mdash; keep the four-bit demo intact.</li>
+        <li>Input pins <code>a</code> and <code>b</code> at <strong>8 bits</strong>; <code>cin</code> at 1 bit. Output pin <code>sum</code> at <strong>8 bits</strong>; <code>cout</code> at 1 bit.</li>
+        <li>Place <strong>eight</strong> <code>FULL_ADDER</code> instances. Not two four-bit adders &mdash; eight full adders, in one circuit.</li>
+        <li>Splitters break <code>a</code> and <code>b</code> into eight bits each; a splitter recombines the eight sum bits into the 8-bit <code>sum</code>.</li>
+        <li>Chain the carries LSB to MSB, exactly as in the demo. Bit 0 takes <code>cin</code>; bit 7's <code>cout</code> is the circuit's <code>cout</code>.</li>
+        <li><strong>Set <code>cin</code>'s pull behaviour to pull-down</strong> so it resets to 0. Otherwise the adder can come up holding a stale carry and be wrong by exactly one on your first test, while every gate is wired correctly. That is a miserable thing to hunt for.</li>
+        <li>Verify at least: <code>10000001 + 10000001</code> (which overflows into <code>cout</code>), one addition with no carry anywhere, and one with <code>cin = 1</code>.</li>
+      </ol>
+
+      <h3><code>DECODER_3TO8</code> &mdash; the decoder, one input wider</h3>
+
+      <ol class="logisim-steps">
+        <li>New circuit tab named <code>DECODER_3TO8</code>. Input pin <code>sel</code> at <strong>3 bits</strong>; eight 1-bit outputs <code>out0</code> through <code>out7</code>.</li>
+        <li>Split <code>sel</code> into three bits; invert each so you have six signals.</li>
+        <li><strong>Eight 3-input AND gates</strong>, one per output, each wired to the combination that selects it. <code>sel = 000</code> raises <code>out0</code>; <code>sel = 111</code> raises <code>out7</code>.</li>
+        <li>Verify all eight values. Exactly one output high, every time.</li>
+      </ol>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Assignment 3 also wants a 4&times;16 decoder, which we did not touch</div>
+        <p><code>DECODER_4TO16</code> is on Assignment 3 and appears nowhere in this lab. It is the same method a third time: four input bits, eight polarities, sixteen 4-input AND gates.</p>
+        <p><strong>Build it by extending the pattern, not by combining two 3&times;8 decoders.</strong> Cascading is a leftover from when decoders came as fixed-size chips, and it needs an enable input that yours does not have. The lecture assignment says the same thing, and it is checked.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Completion check
+         ============================================================ -->
+    <section id="sec-assignment">
+      <h2>Assignment: Completion Check 3</h2>
+
+      <div class="lab-meta">
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Points</span>
+          <span class="lab-meta__value">10</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Due</span>
+          <span class="lab-meta__value lab-meta__value--due">Sunday, Sep 6, 2026 &middot; 11:59 PM</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Submit via</span>
+          <span class="lab-meta__value">Canvas &mdash; Lab 3 Completion Check</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Assesses</span>
+          <span class="lab-meta__value">CSLO 1</span>
+        </div>
+      </div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Why this is due Sunday and not Monday</div>
+        <p>Monday Sep 7 is <strong>Labor Day</strong> &mdash; campus is closed. The week after this one is also short and carries <strong>Quiz 1</strong>, which covers Weeks 1 through 4. Finishing this inside Week 3 keeps a compressed week from getting worse.</p>
+      </div>
+
+      <h3>What to Submit</h3>
+      <p>Upload <strong>one file</strong> to the Canvas assignment:</p>
+      <ul>
+        <li><code>CSC210_YourName.circ</code> &mdash; your semester file, now containing <code>HALF_ADDER</code>, <code>FULL_ADDER</code>, <code>04-Ripple4-Demo</code>, <code>DECODER_2TO4</code>, <code>05-Mux2to1</code>, <code>ADDER_8BIT</code> and <code>DECODER_3TO8</code>, alongside everything from Labs 1 and 2.</li>
+      </ul>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Submission Requirement &mdash; Read Before Uploading</div>
+        <p><strong>All circuits are contained within this single .circ file — no external file links.</strong></p>
+        <p>Every circuit this semester lives as a tab in one file. A "master" file that links to circuits stored elsewhere opens as a broken circuit on the grader's machine, and it is the most common way students lose points in this course. Open your file, confirm every tab listed above is present in the explorer pane, and upload that one file.</p>
+      </div>
+
+      <h3>Grading Rubric</h3>
+      <table>
+        <thead>
+          <tr><th>Criterion</th><th>Points</th><th>Full credit requires</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>HALF_ADDER</code></td>
+            <td>1</td>
+            <td>Tab named exactly <code>HALF_ADDER</code>. Pins <code>a</code>, <code>b</code>, <code>sum</code>, <code>carry</code>. Correct for all four inputs.</td>
+          </tr>
+          <tr>
+            <td><code>FULL_ADDER</code></td>
+            <td>2</td>
+            <td>Tab named exactly <code>FULL_ADDER</code>. Built from two <code>HALF_ADDER</code> instances plus an OR. Correct for all eight inputs.</td>
+          </tr>
+          <tr>
+            <td><code>04-Ripple4-Demo</code></td>
+            <td>1</td>
+            <td>Four <code>FULL_ADDER</code> instances chained LSB to MSB, with probes on the carry wires.</td>
+          </tr>
+          <tr>
+            <td><code>DECODER_2TO4</code></td>
+            <td>1</td>
+            <td>2-bit <code>sel</code> pin. Exactly one output high for each of the four input values, correctly ordered.</td>
+          </tr>
+          <tr>
+            <td><code>05-Mux2to1</code></td>
+            <td>1</td>
+            <td>Selects between <code>d0</code> and <code>d1</code> correctly. Built from gates, not the built-in multiplexer component.</td>
+          </tr>
+          <tr>
+            <td><code>ADDER_8BIT</code></td>
+            <td>3</td>
+            <td>Eight <code>FULL_ADDER</code> instances in one circuit. 8-bit <code>a</code>, <code>b</code>, <code>sum</code>; 1-bit <code>cin</code>, <code>cout</code>. Correct sums including a case that overflows into <code>cout</code>.</td>
+          </tr>
+          <tr>
+            <td><code>DECODER_3TO8</code></td>
+            <td>1</td>
+            <td>3-bit <code>sel</code>, eight one-hot outputs, correctly ordered.</td>
+          </tr>
+          <tr class="rubric-total">
+            <td>Total</td>
+            <td>10</td>
+            <td>&nbsp;</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p style="font-size:var(--fs-sm);color:var(--color-text-muted);"><strong>CSLO alignment.</strong> This assignment supports <strong>CSLO&nbsp;1</strong> (describe basic computer architecture, organization and design) by establishing at the circuit level that arithmetic and selection are built from the gate library established in Lab 2. It is a completion check and does not itself carry SLO assessment evidence; the graded evidence for Week 3 is Assignment 3 in the lecture course, and the first Logisim Checkpoint follows in Lab 5.</p>
+
+      <h3>Before You Upload</h3>
+      <ul class="lab-checklist">
+        <li>Seven new tabs present, named exactly as listed above</li>
+        <li><code>FULL_ADDER</code> verified against all eight input combinations</li>
+        <li><code>ADDER_8BIT</code> built from eight <code>FULL_ADDER</code> instances &mdash; not two four-bit adders, not hand-wired gates</li>
+        <li><code>ADDER_8BIT</code>'s <code>cin</code> set to pull-down</li>
+        <li>Both decoders produce exactly one high output for every input value</li>
+        <li>No built-in Adder, Decoder or Multiplexer components anywhere in the file</li>
+        <li>Labs 1 and 2 circuits still present &mdash; nothing was deleted or replaced</li>
+        <li><strong>All circuits are contained within this single .circ file — no external file links</strong></li>
+      </ul>
+    </section>
+
+    <!-- ============================================================
+         What comes next
+         ============================================================ -->
+    <section id="sec-next">
+      <h2>What Comes Next</h2>
+
+      <p>You can now add, and you can select. Between them, those are most of what a processor does to data.</p>
+
+      <p>But look at what every circuit in your file has in common: change the inputs and the old answer is gone. Nothing you have built can hold a value. There is no way to store a result, and therefore no way to do one thing and then another &mdash; which is what a program is.</p>
+
+      <p><strong>Next week is the pivot point of this course.</strong> Two NAND gates, wired back into each other, produce something that is not a logic function at all: a circuit that remembers. Everything after it &mdash; registers, RAM, the program counter, the whole idea of a machine that executes one instruction and then the next &mdash; is built on that one trick.</p>
+
+      <p>Next week is also <strong>Quiz 1</strong>, covering Weeks 1 through 4, and a short week because of Labor Day. Come with this week's circuits finished.</p>
+    </section>
+
+  </main>
+
+  <!-- ==================== Footer ==================== -->
+  <footer class="sp-footer">
+    CSC210L — Computer Organization &amp; Architecture Lab &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+</body>
+</html>
