@@ -70,6 +70,10 @@
     }
 
     /* Placeholder styling for the not-yet-recorded overview video */
+    /* Retained deliberately although Week 3's video is now live: this file
+       is the template Week 4's orientation SPA is copied from, and it will
+       open in the placeholder state. If you copy it forward, re-read the
+       copy rule above the video block before writing the placeholder text. */
     .video-pending {
       display: flex;
       align-items: center;
@@ -215,17 +219,12 @@
               <!-- PLACEHOLDER: replace with the standard iframe and set VIDEO_ID
                    below once the Fall 2026 recording exists.
                    See docs/CSC210-Week3-VideoBrief.md. -->
-              <!-- COPY RULE (Standards, and it has bitten twice now): a
-                   placeholder must never promise a date that the act of
-                   shipping will falsify. Week 2's placeholder said "before
-                   the module opens" and the module opened without it; that
-                   wording was then copied forward into Week 3. Say "later
-                   this week" or give no date at all. Do not reintroduce a
-                   deadline here when copying this block to Week 4. -->
-              <div class="video-pending">
-                <p><strong>Video coming soon.</strong><br>
-                The Week 3 overview video will be posted later this week. Nothing on this page depends on it &mdash; start with page 1 whenever you are ready.</p>
-              </div>
+              <iframe id="youtube-player"
+                      src="https://www.youtube.com/embed/8ofGda3JNww?enablejsapi=1&amp;cc_load_policy=1&amp;iv_load_policy=3&amp;modestbranding=1&amp;rel=0"
+                      title="CSC210 Week 3 Overview: Adders and Decoders"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allowfullscreen loading="lazy"></iframe>
             </div>
             <div class="video-caption">Closed captions available. Use the transcript panel to jump to any point in the video.</div>
           </div>
@@ -233,11 +232,102 @@
             <h3 class="sr-only" id="transcript-heading">Video transcript</h3>
             <div class="transcript-panel" id="transcript-container"
                  role="group" aria-labelledby="transcript-heading">
-              <p class="transcript-loading">The searchable, click-to-seek transcript will appear here once the video is posted.</p>
+              <p class="transcript-loading">Loading transcript&hellip;</p>
             </div>
             <p class="sr-only" role="status" aria-live="polite" id="transcript-status"></p>
           </div>
         </div>
+      </div>
+
+      <h3 id="topic-index-heading">Find a topic in the video</h3>
+
+      <p>The video runs a little over an hour and works straight through, but most of it is Logisim demonstration &mdash; so when you are stuck on one specific thing, jump to it rather than scrubbing. <strong>Click any time below and the video seeks there.</strong> The transcript panel beside the video is searchable too.</p>
+
+      <div class="topic-index" id="topic-index" aria-labelledby="topic-index-heading">
+          <div class="topic-index__group">Getting oriented</div>
+          <ul class="topic-index__list">
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="0" aria-label="Jump to 0:00 &mdash; Welcome, and what Week 3 covers">0:00</button><span class="topic-index__label">Welcome, and what Week 3 covers</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="32" aria-label="Jump to 0:32 &mdash; The week's two families: circuits that compute, circuits that select">0:32</button><span class="topic-index__label">The week's two families: circuits that compute, circuits that select</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="79" aria-label="Jump to 1:19 &mdash; What you build this week &mdash; and why you keep it">1:19</button><span class="topic-index__label">What you build this week &mdash; and why you keep it</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="182" aria-label="Jump to 3:02 &mdash; The four pages, and the order to read them">3:02</button><span class="topic-index__label">The four pages, and the order to read them</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="206" aria-label="Jump to 3:26 &mdash; Assignment 3, and the one <code>.circ</code> file">3:26</button><span class="topic-index__label">Assignment 3, and the one <code>.circ</code> file</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="230" aria-label="Jump to 3:50 &mdash; Where Week 3 sits: computation now, memory next week">3:50</button><span class="topic-index__label">Where Week 3 sits: computation now, memory next week</span></li>
+          </ul>
+          <div class="topic-index__group">The half adder</div>
+          <ul class="topic-index__list">
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="242" aria-label="Jump to 4:02 &mdash; Naming your circuits">4:02</button><span class="topic-index__label">Naming your circuits</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="284" aria-label="Jump to 4:44 &mdash; Adder pins: A, B, carry-in, sum, carry-out">4:44</button><span class="topic-index__label">Adder pins: A, B, carry-in, sum, carry-out</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="326" aria-label="Jump to 5:26 &mdash; Starting the half adder in Logisim">5:26</button><span class="topic-index__label">Starting the half adder in Logisim</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="398" aria-label="Jump to 6:38 &mdash; Binary columns, and where a carry comes from">6:38</button><span class="topic-index__label">Binary columns, and where a carry comes from</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="468" aria-label="Jump to 7:48 &mdash; The four input combinations">7:48</button><span class="topic-index__label">The four input combinations</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="530" aria-label="Jump to 8:50 &mdash; Sum is XOR, carry is AND">8:50</button><span class="topic-index__label">Sum is XOR, carry is AND</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="551" aria-label="Jump to 9:11 &mdash; Building the half adder">9:11</button><span class="topic-index__label">Building the half adder</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="660" aria-label="Jump to 11:00 &mdash; Adding the XOR gate">11:00</button><span class="topic-index__label">Adding the XOR gate</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="695" aria-label="Jump to 11:35 &mdash; Adding the AND gate">11:35</button><span class="topic-index__label">Adding the AND gate</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="726" aria-label="Jump to 12:06 &mdash; Wire junctions &mdash; when a crossing actually connects">12:06</button><span class="topic-index__label">Wire junctions &mdash; when a crossing actually connects</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="760" aria-label="Jump to 12:40 &mdash; Testing it against the truth table">12:40</button><span class="topic-index__label">Testing it against the truth table</span></li>
+          </ul>
+          <div class="topic-index__group">The full adder</div>
+          <ul class="topic-index__list">
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="832" aria-label="Jump to 13:52 &mdash; Why a full adder needs three inputs">13:52</button><span class="topic-index__label">Why a full adder needs three inputs</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="900" aria-label="Jump to 15:00 &mdash; Two half adders plus an OR gate">15:00</button><span class="topic-index__label">Two half adders plus an OR gate</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="1042" aria-label="Jump to 17:22 &mdash; Building it &mdash; copy the half adder, don't rebuild it">17:22</button><span class="topic-index__label">Building it &mdash; copy the half adder, don't rebuild it</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="1130" aria-label="Jump to 18:50 &mdash; Adding the carry-in">18:50</button><span class="topic-index__label">Adding the carry-in</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="1206" aria-label="Jump to 20:06 &mdash; Sizing gate inputs to exactly what you need">20:06</button><span class="topic-index__label">Sizing gate inputs to exactly what you need</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="1255" aria-label="Jump to 20:55 &mdash; The eight-row truth table">20:55</button><span class="topic-index__label">The eight-row truth table</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="1402" aria-label="Jump to 23:22 &mdash; Verifying it in simulation">23:22</button><span class="topic-index__label">Verifying it in simulation</span></li>
+          </ul>
+          <div class="topic-index__group">Circuit appearance &mdash; making a reusable block</div>
+          <ul class="topic-index__list">
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="1463" aria-label="Jump to 24:23 &mdash; Why redraw a circuit as a block">24:23</button><span class="topic-index__label">Why redraw a circuit as a block</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="1509" aria-label="Jump to 25:09 &mdash; Edit circuit appearance">25:09</button><span class="topic-index__label">Edit circuit appearance</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="1544" aria-label="Jump to 25:44 &mdash; Square inputs, round outputs, and the point of rotation">25:44</button><span class="topic-index__label">Square inputs, round outputs, and the point of rotation</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="1586" aria-label="Jump to 26:26 &mdash; Drawing the shape">26:26</button><span class="topic-index__label">Drawing the shape</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="1800" aria-label="Jump to 30:00 &mdash; Placing the pins">30:00</button><span class="topic-index__label">Placing the pins</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="1904" aria-label="Jump to 31:44 &mdash; Adding pin labels">31:44</button><span class="topic-index__label">Adding pin labels</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="1972" aria-label="Jump to 32:52 &mdash; Dragging the full adder into another circuit">32:52</button><span class="topic-index__label">Dragging the full adder into another circuit</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="1999" aria-label="Jump to 33:19 &mdash; Saving, and a pin that misbehaves">33:19</button><span class="topic-index__label">Saving, and a pin that misbehaves</span></li>
+          </ul>
+          <div class="topic-index__group">The 8-bit ripple-carry adder</div>
+          <ul class="topic-index__list">
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="2107" aria-label="Jump to 35:07 &mdash; Chaining eight full adders">35:07</button><span class="topic-index__label">Chaining eight full adders</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="2131" aria-label="Jump to 35:31 &mdash; Splitters, and matching bit positions">35:31</button><span class="topic-index__label">Splitters, and matching bit positions</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="2166" aria-label="Jump to 36:06 &mdash; Carry-out to carry-in, all the way up">36:06</button><span class="topic-index__label">Carry-out to carry-in, all the way up</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="2286" aria-label="Jump to 38:06 &mdash; Building the 8-bit adder in Logisim">38:06</button><span class="topic-index__label">Building the 8-bit adder in Logisim</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="2324" aria-label="Jump to 38:44 &mdash; Adding and configuring the splitter">38:44</button><span class="topic-index__label">Adding and configuring the splitter</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="2489" aria-label="Jump to 41:29 &mdash; Wiring A and B into the full adders">41:29</button><span class="topic-index__label">Wiring A and B into the full adders</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="2530" aria-label="Jump to 42:10 &mdash; The 8-bit sum output">42:10</button><span class="topic-index__label">The 8-bit sum output</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="2644" aria-label="Jump to 44:04 &mdash; Carry-in, and chaining the next stage">44:04</button><span class="topic-index__label">Carry-in, and chaining the next stage</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="2703" aria-label="Jump to 45:03 &mdash; Simulating it">45:03</button><span class="topic-index__label">Simulating it</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="2805" aria-label="Jump to 46:45 &mdash; Circuit appearance for the 8-bit adder">46:45</button><span class="topic-index__label">Circuit appearance for the 8-bit adder</span></li>
+          </ul>
+          <div class="topic-index__group">Decoders</div>
+          <ul class="topic-index__list">
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="2854" aria-label="Jump to 47:34 &mdash; Circuits that select">47:34</button><span class="topic-index__label">Circuits that select</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="2945" aria-label="Jump to 49:05 &mdash; Why every input needs its NOT">49:05</button><span class="topic-index__label">Why every input needs its NOT</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="2977" aria-label="Jump to 49:37 &mdash; Building the 2&times;4 decoder">49:37</button><span class="topic-index__label">Building the 2&times;4 decoder</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="3064" aria-label="Jump to 51:04 &mdash; Adding the NOT gates">51:04</button><span class="topic-index__label">Adding the NOT gates</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="3095" aria-label="Jump to 51:35 &mdash; The four AND gates">51:35</button><span class="topic-index__label">The four AND gates</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="3171" aria-label="Jump to 52:51 &mdash; Adding the outputs">52:51</button><span class="topic-index__label">Adding the outputs</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="3231" aria-label="Jump to 53:51 &mdash; Reading the AND inputs as binary numbers">53:51</button><span class="topic-index__label">Reading the AND inputs as binary numbers</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="3255" aria-label="Jump to 54:15 &mdash; Wiring and testing each output">54:15</button><span class="topic-index__label">Wiring and testing each output</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="3427" aria-label="Jump to 57:07 &mdash; Decoder circuit appearance">57:07</button><span class="topic-index__label">Decoder circuit appearance</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="3546" aria-label="Jump to 59:06 &mdash; The 4&times;16 decoder, and how it scales">59:06</button><span class="topic-index__label">The 4&times;16 decoder, and how it scales</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="3674" aria-label="Jump to 1:01:14 &mdash; Multiplexers, and why this course uses decoders">1:01:14</button><span class="topic-index__label">Multiplexers, and why this course uses decoders</span></li>
+          </ul>
+          <div class="topic-index__group">Wrapping up</div>
+          <ul class="topic-index__list">
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="3733" aria-label="Jump to 1:02:13 &mdash; Encoders and comparators &mdash; not on the assignment">1:02:13</button><span class="topic-index__label">Encoders and comparators &mdash; not on the assignment</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="3769" aria-label="Jump to 1:02:49 &mdash; Where each circuit ends up in the CPU">1:02:49</button><span class="topic-index__label">Where each circuit ends up in the CPU</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="3864" aria-label="Jump to 1:04:24 &mdash; Assignment 3 recap">1:04:24</button><span class="topic-index__label">Assignment 3 recap</span></li>
+            <li class="topic-index__item"><button type="button" class="topic-index__time" data-seek="3895" aria-label="Jump to 1:04:55 &mdash; Closing">1:04:55</button><span class="topic-index__label">Closing</span></li>
+          </ul>
+      </div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">One thing to watch: the circuit names in the video are informal</div>
+        <p>In the demonstration these circuits get called &ldquo;half adder,&rdquo; &ldquo;full adder,&rdquo; &ldquo;8-bit ripple adder&rdquo; and &ldquo;two by four decoder&rdquo; &mdash; which is how you say them out loud, not what you name them in your file.</p>
+        <p><strong>The graded names are the ones on Assignment 3:</strong> <code>HALF_ADDER</code>, <code>FULL_ADDER</code>, <code>ADDER_8BIT</code>, <code>DECODER_2TO4</code>, <code>DECODER_3TO8</code>, <code>DECODER_4TO16</code> &mdash; capitals and underscores exactly as written. Three points ride on it, and Week 6 looks for those exact names. The video says as much around <strong>4:02</strong>: use the names the assignment gives you.</p>
       </div>
     </section>
 
@@ -409,23 +499,1945 @@
   </footer>
 
   <!-- ==================== Video + Transcript Sync (CSC210 Video Embed Standard) ==================== -->
-  <!-- PLACEHOLDER STATE.  To activate once the Fall 2026 recording exists:
-       1. Set VIDEO_ID below to the new YouTube id.
-       2. Paste the cleaned VTT into vttContent.
-       3. Replace the .video-pending div in the video section with the standard iframe:
-          <iframe id="youtube-player"
-                  src="https://www.youtube.com/embed/VIDEO_ID?enablejsapi=1&cc_load_policy=1&iv_load_policy=3&modestbranding=1&rel=0"
-                  title="CSC210 Week 3 Overview"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  referrerpolicy="strict-origin-when-cross-origin"
-                  allowfullscreen loading="lazy"></iframe>
-       The script below already handles all three and no-ops until then. -->
+  <!-- ACTIVE. Video 8ofGda3JNww, recorded 2026-08-30, embedded per the
+       Video Embedding Standard (Standards §10): enablejsapi for click-to-seek,
+       captions on by default, no related videos, inlined VTT rather than a
+       fetched file so the page stays self-contained in the Canvas iframe. -->
   <script>
   (function () {
     'use strict';
 
-    var VIDEO_ID = '';          // <-- set once recorded
-    var vttContent = ``;        // <-- paste cleaned VTT once available
+    var VIDEO_ID = '8ofGda3JNww';
+
+    /* Transcript source: weeks/week03/csc210wk3-corrected.vtt — the
+       Whisper output with its hallucinated passages removed and its
+       technical terms corrected ("full ladder" -> "full adder",
+       "knotted" -> "NOTted", "an N gate" -> "an AND gate", and so on).
+       Inlined per Standards §10 so this SPA stays self-contained inside
+       the Canvas iframe. Keep the two copies in step: if the YouTube
+       captions are re-uploaded from the .vtt, re-paste it here too. */
+    var vttContent = `WEBVTT
+
+00:00:00.000 --> 00:00:08.240
+Aloha and welcome to week three. So last week, week two, we went from making decisions from
+
+00:00:08.240 --> 00:00:17.000
+voltage. So basically kind of Boolean algebra, how do logic gates work, what are AND and NANDs,
+
+00:00:17.140 --> 00:00:26.080
+and how can we make small little circuits. So this week, we're going to move from that
+
+00:00:26.080 --> 00:00:32.640
+kind of theoretical to building things. Okay, and this week's all about two basic
+
+00:00:32.640 --> 00:00:39.660
+combinational circuits. The first one is the adder circuit. So how do we actually add bits
+
+00:00:39.660 --> 00:00:44.360
+together and a byte together? Like how do we add two bytes to get the right answer?
+
+00:00:45.060 --> 00:00:54.860
+And then also, how do we select what circuit to use? So typically, you have a bunch of different
+
+00:00:54.860 --> 00:00:55.960
+things you can do.
+
+00:00:56.080 --> 00:01:02.400
+In our 8-bit CPU, we're going to have seven different things that our arithmetic logic unit
+
+00:01:02.400 --> 00:01:11.720
+can do. And how do I choose which one I'm going to do is our selector circuit. Okay, so
+
+00:01:11.720 --> 00:01:16.560
+that's what we're doing this week.
+
+00:01:19.640 --> 00:01:26.060
+And so basically, what we're going to build, as you go through these, you should build,
+
+00:01:26.080 --> 00:01:31.440
+these because you need them. Okay, you're going to need them for your final project,
+
+00:01:31.560 --> 00:01:35.540
+your 8-bit CPU, and you also need it for this week's assignment, you have to turn these in.
+
+00:01:36.340 --> 00:01:46.940
+But half adder, which is adding two one-bit things together with no carry. So it's just I have two
+
+00:01:46.940 --> 00:01:52.120
+bits, I'm going to add them together, right? Zero plus zero is zero, zero plus one is one,
+
+00:01:52.120 --> 00:01:56.040
+one plus zero is zero, one plus one is two, which in binary is,
+
+00:01:56.080 --> 00:02:03.700
+one, zero. Okay, which is zero, but then you carry the one to the next set of bits to the left.
+
+00:02:04.840 --> 00:02:10.580
+Okay, but a half adder doesn't deal with that carry part. So a full adder deals with the carry
+
+00:02:10.580 --> 00:02:16.660
+part. And then we got to stick eight of these adders together to get an 8-bit adder, or one
+
+00:02:16.660 --> 00:02:23.560
+byte adder. Okay, and that's a ripple-carry adder, we call it. And then we have these decoder
+
+00:02:23.560 --> 00:02:25.300
+circuits. Okay.
+
+00:02:26.080 --> 00:02:32.920
+Three of them, we have a two to four, which means I have a two-bit input signal, and I have to choose
+
+00:02:32.920 --> 00:02:39.720
+one of four outputs. Okay, one of four circuits to use. I have a three to eight, meaning if I have
+
+00:02:39.720 --> 00:02:46.580
+three inputs, I have up to eight possible outputs that I can choose. And then the four to 16, which
+
+00:02:46.580 --> 00:02:53.660
+is if I have four inputs, I can choose up to 16 different, or I can select 16 different output
+
+00:02:53.660 --> 00:02:55.680
+circuits. Okay.
+
+00:02:56.080 --> 00:03:02.640
+So that's what you need to build this week. That's the homework assignment this week. Okay, the
+
+00:03:02.640 --> 00:03:10.040
+video that I'm talking about is going to be right here. Okay, and so from gates to adders, so it's
+
+00:03:10.040 --> 00:03:16.720
+kind of a whole thing of how do you get to a full adder. And then we do the ripple-carry adder. I
+
+00:03:16.720 --> 00:03:24.120
+would do them in this order. Okay, so gates to adders, ripple carry, then circuits that select,
+
+00:03:24.120 --> 00:03:26.000
+and then encoders.
+
+00:03:26.080 --> 00:03:34.760
+And then you're assignment three, which is what I just said. Okay, you're going to use that same
+
+00:03:34.760 --> 00:03:41.560
+.circ file that you used last week. And we're just going to add all these circuits as new circuits
+
+00:03:42.600 --> 00:03:48.360
+inside our Logisim file.
+
+00:03:50.840 --> 00:03:55.720
+All right, so we're here at computation. And then next week, we're going to do memory.
+
+00:03:56.600 --> 00:03:59.740
+How do we store bits and bytes?
+
+00:04:02.080 --> 00:04:13.300
+Okay, so if we look at adders real quick, I'm not going to do all these for you. But if we look at
+
+00:04:13.300 --> 00:04:19.120
+adders, so we're going to start adding things together, okay.
+
+00:04:21.220 --> 00:04:22.040
+So
+
+00:04:24.400 --> 00:04:25.480
+make sure when you add,
+
+00:04:26.080 --> 00:04:27.340
+you name your things.
+
+00:04:28.780 --> 00:04:33.520
+It's easiest if you use the names I'm providing you. You don't have to, but it's easiest if you do,
+
+00:04:33.560 --> 00:04:36.960
+because then it's easier for me to troubleshoot any issues you have.
+
+00:04:38.440 --> 00:04:38.780
+Okay.
+
+00:04:44.680 --> 00:04:52.360
+Okay, so we have an adder, we have A and B are inputs. C, which is carry-in. So Cin is our carry-in
+
+00:04:53.380 --> 00:04:53.840
+bit.
+
+00:04:54.760 --> 00:04:56.080
+We have the sum, which is the,
+
+00:04:56.240 --> 00:05:01.040
+the result. And then we have a carry-out, meaning our result.
+
+00:05:02.080 --> 00:05:06.700
+So we have two eight bits. We're adding together. Our result requires nine bits, basically.
+
+00:05:07.480 --> 00:05:11.260
+So we'll have a extra thing that we got to carry-out and do something with.
+
+00:05:14.140 --> 00:05:14.640
+Okay.
+
+00:05:15.460 --> 00:05:17.020
+So let's talk about half adder.
+
+00:05:18.460 --> 00:05:24.700
+This talks about it a lot and how to produce them. And it shows a half adder.
+
+00:05:24.700 --> 00:05:25.900
+So let me,
+
+00:05:26.080 --> 00:05:34.840
+I'm going to go to Logisim and what we will do in Logisim.
+
+00:05:37.120 --> 00:05:38.620
+Okay. So you're for over here, right?
+
+00:05:40.240 --> 00:05:50.920
+This isn't a blank one. You'll, you'll have something in there and you're going to add a circuit and we'll call it half adder.
+
+00:05:52.420 --> 00:05:55.240
+I think in the lab, in the assignment, it tells you what to call it.
+
+00:05:55.240 --> 00:05:59.240
+But for this, for this lecture, I'm just going to call it half adder.
+
+00:06:02.380 --> 00:06:03.760
+And then say, okay,
+
+00:06:03.860 --> 00:06:07.080
+and so I have this zoom on so that we can see it better.
+
+00:06:09.240 --> 00:06:10.980
+Alright. And so,
+
+00:06:13.980 --> 00:06:16.520
+let me turn the zoom off
+
+00:06:18.560 --> 00:06:22.060
+the magnifier.
+
+00:06:23.920 --> 00:06:24.860
+Alright. So,
+
+00:06:24.860 --> 00:06:28.780
+when we are looking at an adder
+
+00:06:29.980 --> 00:06:34.060
+and let me open a blank workbook
+
+00:06:35.100 --> 00:06:38.140
+and let me close up okay when we're looking at
+
+00:06:38.140 --> 00:06:46.300
+a blank adder okay we have two bits here's our bits oops nine bits
+
+00:06:46.300 --> 00:06:50.940
+we have bits a and b
+
+00:06:51.500 --> 00:06:58.140
+sorry okay and then the a value
+
+00:06:58.780 --> 00:07:01.740
+and the b value
+
+00:07:03.020 --> 00:07:10.700
+we have a sum and a carry-out right so if the sum is greater than
+
+00:07:10.700 --> 00:07:14.940
+so in any column of numbers we can only have
+
+00:07:14.940 --> 00:07:20.540
+a zero or a one we can't have a two because it's binary just like in
+
+00:07:20.540 --> 00:07:20.920
+decimal
+
+00:07:20.940 --> 00:07:25.100
+which is base ten we can have zero to nine we can't put
+
+00:07:25.100 --> 00:07:29.180
+ten in any one column when the result is ten
+
+00:07:29.180 --> 00:07:32.380
+zero goes in the column and one gets carried which means
+
+00:07:32.380 --> 00:07:38.780
+ten of whatever that is in this case in binary a zero when you have two it's
+
+00:07:38.780 --> 00:07:44.460
+one zero in binary and so the zero goes in the column and the one is the carry
+
+00:07:44.460 --> 00:07:48.940
+to the next column over right so when we have two bits we have
+
+00:07:48.940 --> 00:07:50.540
+four possible combinations
+
+00:07:50.940 --> 00:07:54.140
+oops i shouldn't do it that way we have
+
+00:07:54.140 --> 00:07:56.860
+two bits a and b
+
+00:07:57.420 --> 00:08:03.180
+that means delete these right we have two bits
+
+00:08:08.860 --> 00:08:17.820
+two bits a and b okay so they could be zero zero
+
+00:08:17.820 --> 00:08:20.780
+okay zero and one so we can add zero and zero
+
+00:08:20.780 --> 00:08:26.220
+together we could add zero and one and we get one and zero together
+
+00:08:28.380 --> 00:08:31.900
+zero together and we can add one plus one
+
+00:08:31.900 --> 00:08:35.500
+okay when i add zero plus zero that's zero
+
+00:08:35.500 --> 00:08:44.220
+with no carry zero plus one is one with no carry right one plus zero is one
+
+00:08:44.220 --> 00:08:50.540
+and no carry and one plus one is zero with a carry okay
+
+00:08:50.780 --> 00:08:55.740
+so to build this circuit what we're going to do is if you look at the sum
+
+00:08:55.740 --> 00:09:04.460
+column zero one one zero that's a XOR gate okay
+
+00:09:04.460 --> 00:09:08.540
+and if we look at the carry zero zero zero one
+
+00:09:08.540 --> 00:09:11.740
+that's an AND gate
+
+00:09:11.980 --> 00:09:20.380
+an AND gate all right so when i'm building a half adder
+
+00:09:20.780 --> 00:09:30.220
+a half adder okay i have two inputs i have an a input
+
+00:09:31.980 --> 00:09:37.020
+and and i'm just going to make these all pull down so whenever i do anything
+
+00:09:37.020 --> 00:09:44.780
+you'll restart at zero okay and i have a b input
+
+00:09:44.780 --> 00:09:47.340
+to do
+
+00:09:47.340 --> 00:09:50.780
+the b input
+
+00:09:51.500 --> 00:09:55.420
+and i'm going to make that pull down as well
+
+00:09:55.420 --> 00:10:01.580
+so that always starts at zero whenever i okay and i have two outputs
+
+00:10:01.580 --> 00:10:06.300
+i'm going to have the sum
+
+00:10:06.300 --> 00:10:08.620
+sum
+
+00:10:10.780 --> 00:10:15.180
+i'll make that pull down as well and say it's not tri-state it's only two
+
+00:10:15.180 --> 00:10:16.940
+states and now
+
+00:10:17.340 --> 00:10:22.220
+if I want what I can do is I can use a control D for shortcut to duplicate it
+
+00:10:22.220 --> 00:10:35.140
+so now I have another output and this one we will call carry-out and normally
+
+00:10:35.140 --> 00:10:43.340
+I just use Cout as carry-out all right so in our spreadsheet we said the sum is
+
+00:10:43.340 --> 00:11:00.200
+just the XOR gate of A and B okay so we go to gates and we want an XOR to do to
+
+00:11:00.200 --> 00:11:10.760
+do XOR and we want it to be 2-input all right and so I'm going to move
+
+00:11:10.760 --> 00:11:13.280
+everything around
+
+00:11:13.360 --> 00:11:20.380
+it is dude so when you do these wires you can only do 90 degrees and then you have to
+
+00:11:20.380 --> 00:11:26.300
+do another one but I will move to some down here so it's just straight okay
+
+00:11:26.300 --> 00:11:35.420
+home all right and then to carry-out is an and
+
+00:11:35.420 --> 00:11:42.700
+gate of the same A and B things okay so what I need is an AND gate
+
+00:11:42.700 --> 00:11:43.080
+and
+
+00:11:43.320 --> 00:11:53.340
+the carry-out again I'm gonna make it a 2-input AND gate I'm gonna make the top
+
+00:11:53.340 --> 00:12:06.640
+one a and then make the bottom one B now when these cross okay you can see what
+
+00:12:06.640 --> 00:12:10.260
+these dots are that says there's connection if there's no dot it means
+
+00:12:10.260 --> 00:12:14.760
+they're not connected okay and they've don't they won't you won't get a dot
+
+00:12:14.760 --> 00:12:24.540
+there unless you actually actually stop your wire on the line then you'll get a
+
+00:12:24.540 --> 00:12:33.000
+dot if you don't and do that if you don't if you just go across that it
+
+00:12:33.000 --> 00:12:39.980
+won't make a connection okay and so then let's add this carry-out
+
+00:12:40.260 --> 00:12:49.440
+okay so this is a half adder it's called a half adder it's just a XOR gate
+
+00:12:49.440 --> 00:12:55.080
+and an AND gate and again it's only two bits all right if I want to compare it
+
+00:12:55.080 --> 00:13:02.260
+zero plus zero zero we get in simulation mode if I want I can always go make sure
+
+00:13:02.260 --> 00:13:06.920
+simulations enabled reset just so I always start at a clean fresh slate
+
+00:13:06.920 --> 00:13:09.980
+state okay I said zero zero is zero
+
+00:13:09.980 --> 00:13:19.800
+carry a zero zero and one is one carry zero one and zero is one carry zero and
+
+00:13:19.800 --> 00:13:30.680
+then one and one is sum of zero carry one okay so my half adder right matches
+
+00:13:30.680 --> 00:13:39.980
+this perfectly that's how I know it's good all right so that's what this little
+
+00:13:39.980 --> 00:13:49.580
+sheet shows basically just shows those four conditions okay and there's a
+
+00:13:49.580 --> 00:13:52.520
+little simulation if you want to play with the half adder simulation but you
+
+00:13:52.520 --> 00:13:59.380
+can just do it yourself and Logisim okay so in a full adder okay in this
+
+00:13:59.380 --> 00:14:05.520
+case I'm just showing a four bit plus a four bit okay one plus one is zero carry
+
+00:14:05.520 --> 00:14:13.200
+the 1 now I have three inputs 1 plus 1 plus 1 is 3 which is 1 1 in binary so
+
+00:14:13.200 --> 00:14:21.020
+the right one is 1 carry the 1 1 plus 1 is 2 which is 0 carry a 1 1 plus 0 plus
+
+00:14:21.020 --> 00:14:30.060
+0 is 1 okay and there's a little simulation kind of walks through each
+
+00:14:30.060 --> 00:14:36.140
+one or you can do individual steps okay
+
+00:14:40.500 --> 00:14:50.880
+all right so this is how you do multiple bits how you chain them together and
+
+00:14:50.880 --> 00:14:55.560
+that's the next one ripple carry first we need to build something that will
+
+00:14:55.560 --> 00:14:59.340
+allow us to add three things together not two things
+
+00:15:00.060 --> 00:15:06.640
+we need to add the carry okay so um this just series of pictures walks through
+
+00:15:06.640 --> 00:15:13.840
+how you do it you have your a and B I spread these out okay so I do a plus B
+
+00:15:13.840 --> 00:15:23.160
+get that result and then I add the carry into that because a plus B is a value
+
+00:15:23.160 --> 00:15:25.440
+and I need to add the third one okay to get the sum.
+
+00:15:27.620 --> 00:15:34.580
+and then to get the carry-out what I do is I have a plus B so when they're both
+
+00:15:34.580 --> 00:15:46.400
+one okay then the AND will be one if the result of a plus B is one and the carry
+
+00:15:46.400 --> 00:15:53.900
+in is one the AND will be one so if you look this top one on the bottom one this
+
+00:15:53.900 --> 00:16:00.200
+is the first half adder then internally I have a second half adder okay this
+
+00:16:00.200 --> 00:16:05.540
+half adder takes the result of a plus B sum and adds it to carry-in to get the
+
+00:16:05.540 --> 00:16:13.280
+sum of all three it takes a plus B right the result of a plus B and ANDs it with
+
+00:16:13.280 --> 00:16:20.660
+a carry-in okay and then I or that or the two ANDs together because if this
+
+00:16:20.660 --> 00:16:23.860
+one and this one is one
+
+00:16:23.900 --> 00:16:35.160
+then this will be 0 so this AND will be 0 no matter what if one of these is 0 but
+
+00:16:36.040 --> 00:16:45.360
+the other is one this will be one or both or one this will be 1 okay and then
+
+00:16:45.360 --> 00:16:52.660
+if the carry-in is one then this AND will be one okay this carry-in is
+
+00:16:52.660 --> 00:16:53.360
+already zero because only one
+
+00:16:53.360 --> 00:16:53.860
+this carry-in is already zero because only one
+
+00:16:53.900 --> 00:16:59.980
+one of them is one right so typically only one of these out of the ANDs will be one
+
+00:16:59.980 --> 00:17:03.420
+and we don't care which one it is a carry-out is a carry-out
+
+00:17:03.420 --> 00:17:08.780
+right so this is the this internal is the second
+
+00:17:08.780 --> 00:17:16.980
+half adder and then we or the two carries because if either is one or both then the carry-out is
+
+00:17:16.980 --> 00:17:22.960
+still one all right so you can build this i'm not going to build it for you you can build it
+
+00:17:22.960 --> 00:17:29.660
+the only thing i will say actually maybe i will build it i will build it real quick
+
+00:17:29.660 --> 00:17:33.140
+and the reason i want to build it real quick is because
+
+00:17:33.140 --> 00:17:41.160
+so i will create a new project add circuit i'm going to call it full adder
+
+00:17:41.160 --> 00:17:47.880
+full adder or whatever it tells you to do and so what i'm going to do is i'm going to take my
+
+00:17:47.880 --> 00:17:52.080
+half out i'm not going to drag my half adder in here what i'm going to do is open up my half adder
+
+00:17:52.960 --> 00:17:55.300
+make sure i'm on select edit mode
+
+00:17:55.300 --> 00:18:03.260
+i'm going to select everything copy it ctrl c or you can go edit copy
+
+00:18:03.260 --> 00:18:08.500
+ctrl c edit copy then i'm going to go full adder and i'm going to go edit paste
+
+00:18:08.500 --> 00:18:12.300
+so i have all that stuff in there i don't have to rebuild it
+
+00:18:12.300 --> 00:18:21.760
+all right so what i need to do is i need to move this off of here i need to move this off of here
+
+00:18:22.960 --> 00:18:24.720
+okay
+
+00:18:24.720 --> 00:18:28.920
+i need to move this over
+
+00:18:28.920 --> 00:18:32.840
+i'm going to delete this one for now
+
+00:18:32.840 --> 00:18:38.300
+this carry-out it's got to go down a little bit
+
+00:18:38.300 --> 00:18:41.800
+i take this straight oh i don't like that
+
+00:18:41.800 --> 00:18:50.320
+okay now i need another input
+
+00:18:50.320 --> 00:18:52.940
+right i need to do this over here
+
+00:18:52.960 --> 00:18:55.760
+i'm going to carry-in
+
+00:18:55.760 --> 00:18:59.720
+i'm going to call it Cin
+
+00:18:59.720 --> 00:19:02.400
+okay i'm going to leave it as unchanged
+
+00:19:02.400 --> 00:19:06.260
+which means it'll be whatever it is
+
+00:19:06.260 --> 00:19:11.720
+okay and so the first thing i want to do is do the sum with the Cin
+
+00:19:11.720 --> 00:19:17.460
+so Cin is going to come in
+
+00:19:17.460 --> 00:19:22.800
+and i need another one of these i like using ctrl d because i find it's faster than if i
+
+00:19:22.960 --> 00:19:25.760
+were to use the Cin
+
+00:19:25.760 --> 00:19:29.120
+okay so this goes here
+
+00:19:29.120 --> 00:19:32.200
+and this becomes now my sum
+
+00:19:32.200 --> 00:19:37.100
+of three bits
+
+00:19:37.100 --> 00:19:44.820
+and i need a second and
+
+00:19:44.820 --> 00:19:46.960
+okay i'm going to and
+
+00:19:46.960 --> 00:19:49.860
+the sum
+
+00:19:49.860 --> 00:19:52.800
+plus
+
+00:19:52.960 --> 00:19:54.960
+It's going to be Cin
+
+00:19:54.960 --> 00:19:55.960
+Cin
+
+00:19:55.960 --> 00:20:01.100
+Cin is the new one right
+
+00:20:01.100 --> 00:20:06.820
+and then i need an OR gate
+
+00:20:06.820 --> 00:20:16.240
+or the result from the two ands together
+
+00:20:16.240 --> 00:20:19.120
+again i always
+
+00:20:19.120 --> 00:20:22.120
+update these to be exactly the number of inputs that i need
+
+00:20:22.960 --> 00:20:25.960
+um
+
+00:20:25.960 --> 00:20:31.960
+it'll work usually if you have if you have five and you only choose two of them it should still work properly but
+
+00:20:31.960 --> 00:20:35.960
+um i don't like relying on that
+
+00:20:35.960 --> 00:20:39.960
+also sometimes especially in a complicated diagram
+
+00:20:39.960 --> 00:20:44.960
+you might get the wrong something accidentally connected if you have extra ones
+
+00:20:44.960 --> 00:20:47.960
+and so i like not having extra ones
+
+00:20:47.960 --> 00:20:50.960
+okay there we go
+
+00:20:50.960 --> 00:20:52.960
+so now
+
+00:20:52.960 --> 00:20:55.960
+if i were to build for a full adder
+
+00:20:55.960 --> 00:20:56.960
+okay
+
+00:20:56.960 --> 00:21:01.960
+so if i do a full adder
+
+00:21:01.960 --> 00:21:06.960
+which has a b and Cin
+
+00:21:06.960 --> 00:21:11.960
+right so i go a b Cin
+
+00:21:11.960 --> 00:21:15.960
+sum Cout for carry-out
+
+00:21:15.960 --> 00:21:20.960
+because i have three i have zero zero zero
+
+00:21:20.960 --> 00:21:21.960
+okay
+
+00:21:21.960 --> 00:21:24.960
+zero zero one
+
+00:21:24.960 --> 00:21:25.960
+oops
+
+00:21:25.960 --> 00:21:30.960
+one
+
+00:21:30.960 --> 00:21:35.960
+zero one zero
+
+00:21:35.960 --> 00:21:38.960
+it doesn't matter what order you have these in
+
+00:21:38.960 --> 00:21:41.960
+because you're just basically
+
+00:21:41.960 --> 00:21:47.960
+repeating them all there's eight possible combinations because there's three things two to the third is eight
+
+00:21:47.960 --> 00:21:49.960
+okay
+
+00:21:49.960 --> 00:21:50.960
+um
+
+00:21:50.960 --> 00:21:53.960
+the top are
+
+00:21:53.960 --> 00:22:00.960
+you know a is four zeros four ones
+
+00:22:00.960 --> 00:22:04.960
+there's patterns basically
+
+00:22:04.960 --> 00:22:07.960
+b pattern is zero zero one one zero zero one one
+
+00:22:07.960 --> 00:22:10.960
+zero one zero one zero one zero one
+
+00:22:10.960 --> 00:22:13.960
+or just start with all zeros add one
+
+00:22:13.960 --> 00:22:14.960
+add one to that
+
+00:22:14.960 --> 00:22:16.960
+one zero add one one one
+
+00:22:16.960 --> 00:22:19.960
+add one to be one zero zero add one one zero one
+
+00:22:19.960 --> 00:22:20.960
+that kind of thing
+
+00:22:20.960 --> 00:22:21.960
+okay
+
+00:22:21.960 --> 00:22:22.960
+so
+
+00:22:22.960 --> 00:22:25.960
+zero plus zero plus zero is zero
+
+00:22:25.960 --> 00:22:26.960
+with no carry
+
+00:22:26.960 --> 00:22:29.960
+zero plus zero plus one is one
+
+00:22:29.960 --> 00:22:31.960
+with no carry
+
+00:22:31.960 --> 00:22:35.960
+zero plus one plus zero is one with no carry
+
+00:22:35.960 --> 00:22:38.960
+zero one one is two
+
+00:22:38.960 --> 00:22:41.960
+which is zero carry a one
+
+00:22:41.960 --> 00:22:44.960
+one zero zero is one
+
+00:22:44.960 --> 00:22:46.960
+with no carry
+
+00:22:46.960 --> 00:22:48.960
+one zero one is two
+
+00:22:48.960 --> 00:23:02.400
+so that's 0 with a carry of 1. 110 is 2, which is 0, carry a 1. And 111 is 3, which is 1 plus 1 carry.
+
+00:23:03.920 --> 00:23:11.540
+Okay, so this would be our truth table, if you will, for a full adder circuit.
+
+00:23:11.540 --> 00:23:22.980
+Okay, so if we did our thing here, and we do a simulation on our full adder, right?
+
+00:23:22.980 --> 00:23:36.120
+0, 0, 0, 0, carry nothing. 0, 0, 1, 1. 0, 1, 0, 1 with no carry. 0, 1, 1, 0 with a carry.
+
+00:23:37.540 --> 00:23:40.920
+1, 0, 0, 1.
+
+00:23:41.540 --> 00:23:52.540
+No carry. 1, 0, 1. 0 with a carry. Okay, 1, 1, 0. 0 with a carry. And then 1, 1, 1 is 1 with a carry.
+
+00:23:53.420 --> 00:23:58.360
+Okay, so it matches. Everything matches. So this is our full adder. And now we need to use our
+
+00:23:58.360 --> 00:24:06.500
+full adder. And so what you want to do, or what I like to do, and I suggest you do so that you can,
+
+00:24:06.500 --> 00:24:11.140
+it's easier to reuse these circuits and other circuits, because that's what we want to do is
+
+00:24:11.140 --> 00:24:11.520
+go.
+
+00:24:11.540 --> 00:24:19.580
+I have a circuit. I'm going to create a circuit to use another circuit. Okay, so in the, in this,
+
+00:24:23.320 --> 00:24:26.760
+the sum, so it goes through all the same stuff. But then here's where
+
+00:24:26.760 --> 00:24:37.220
+what I do is, if you look at this, I redraw my adder circuit as this kind of funky,
+
+00:24:38.120 --> 00:24:40.420
+two straight lines, little
+
+00:24:40.420 --> 00:24:52.100
+inset, straight output line. Okay. And I label, see these blue ones, there's three blue ones,
+
+00:24:52.200 --> 00:24:59.420
+A, B, and Cin. So there's three inputs. And then there's a Cout and a sum. So I put the Cout at
+
+00:24:59.420 --> 00:25:06.880
+the top, sum at the right, Cin at the bottom, A and B on the left. Okay, and this is my full adder
+
+00:25:06.880 --> 00:25:07.320
+circuit.
+
+00:25:09.380 --> 00:25:10.200
+In your,
+
+00:25:10.420 --> 00:25:18.280
+in Logisim, how you do that is, you're on this circuit, you right click on the name.
+
+00:25:20.120 --> 00:25:22.240
+Let me fill it up a little bit.
+
+00:25:25.360 --> 00:25:31.460
+Okay, in your adder circuit, here's my full adder. I'm gonna right click and go edit circuit appearance.
+
+00:25:32.800 --> 00:25:40.120
+Alright, so that creates, that shows you what, if I were to drag it in to a different circuit, this is what it will look like.
+
+00:25:40.120 --> 00:25:41.840
+That's not very helpful.
+
+00:25:43.880 --> 00:25:44.500
+Okay,
+
+00:25:44.500 --> 00:25:46.020
+it's not very helpful at all.
+
+00:25:46.020 --> 00:25:47.900
+But what you do want to do is,
+
+00:25:47.900 --> 00:25:51.820
+so on all of them, the square ones,
+
+00:25:54.160 --> 00:25:58.140
+are inputs, and the round ones are outputs, and then there's a green one,
+
+00:25:58.940 --> 00:26:00.940
+which let me move that,
+
+00:26:01.300 --> 00:26:03.080
+I could move it.
+
+00:26:03.080 --> 00:26:05.560
+So this green one is a circle with a line.
+
+00:26:06.200 --> 00:26:09.820
+What that is, is the place, the point of rotation,
+
+00:26:10.120 --> 00:26:14.880
+so you can rotate north south east west it'll rotate around wherever you put
+
+00:26:14.880 --> 00:26:26.080
+this all right so I like to redraw it like this and then I name every line
+
+00:26:28.620 --> 00:26:31.620
+okay
+
+00:26:31.620 --> 00:26:48.080
+I'm just counting dots so I go two down and then two down one in or one down one
+
+00:26:48.080 --> 00:26:57.560
+in one down one in two down okay and then one two three four five across to
+
+00:26:57.560 --> 00:27:00.560
+the same point as that
+
+00:27:01.620 --> 00:27:08.640
+right so what you want to do in here you can leave all this stuff here there's a
+
+00:27:08.640 --> 00:27:17.820
+couple ways to do it you can use this a kind of a freeform tool and you can go
+
+00:27:17.820 --> 00:27:21.320
+okay so I'm going to start here
+
+00:27:23.820 --> 00:27:27.920
+I'm trying to start on this dot
+
+00:27:31.620 --> 00:27:49.840
+I'm going to do it that I did something wrong there let me I didn't like it okay
+
+00:27:49.840 --> 00:27:59.920
+so let me go back here let me delete that see if I can get this to work all
+
+00:27:59.920 --> 00:28:01.120
+right
+
+00:28:01.120 --> 00:28:08.800
+so if I click it'll start the drag for the straight lines like vertical and
+
+00:28:08.800 --> 00:28:16.460
+horizontal you'll this shift key down it'll stay perfectly straight for the
+
+00:28:16.460 --> 00:28:25.020
+next one you can't do that because you want it to go to a certain place so you
+
+00:28:25.020 --> 00:28:31.100
+just click where the next point goes hold down two
+
+00:28:31.120 --> 00:28:34.420
+one two three four five so I want to go
+
+00:28:34.420 --> 00:28:51.120
+here and hold it down go up to and I'll go back to here got rid of that oh I
+
+00:28:51.120 --> 00:28:56.680
+know why I should have used this one instead of the one I used because it's
+
+00:28:56.680 --> 00:28:59.760
+open this one's closed
+
+00:29:01.120 --> 00:29:13.800
+let me delete the one I just did let me use the closed one and do the same thing
+
+00:29:13.800 --> 00:29:17.240
+start here
+
+00:29:19.920 --> 00:29:27.120
+went down to one and over two down one over two
+
+00:29:27.120 --> 00:29:29.120
+down one over two
+
+00:29:32.060 --> 00:29:37.220
+shift down two two three four or five
+
+00:29:37.220 --> 00:29:48.660
+and up two vertically for two and then back to where we started
+
+00:29:48.660 --> 00:29:51.780
+okay so I have that shape whether it's Exactly the same or not I don't know
+
+00:29:51.780 --> 00:29:54.340
+now what I want to do
+
+00:29:54.340 --> 00:29:59.880
+is well you can use this little thing to denote it to to the circuit in my cell phone
+
+00:29:59.880 --> 00:30:00.920
+well you can get the model
+
+00:30:00.920 --> 00:30:02.040
+It might get in your way.
+
+00:30:03.700 --> 00:30:05.620
+Okay, so you might want to move it.
+
+00:30:05.820 --> 00:30:06.540
+It might get in your way.
+
+00:30:07.440 --> 00:30:11.320
+This top one is our top one in our circuit, which is A.
+
+00:30:12.100 --> 00:30:14.840
+I don't know if you saw that, but every time you select an A, an input,
+
+00:30:15.320 --> 00:30:19.900
+down in the right-hand corner, it shows the whole circuit design.
+
+00:30:19.900 --> 00:30:26.680
+All right, so let me turn the magnifier on.
+
+00:30:26.680 --> 00:30:33.420
+And so when I select something, I get a little circuit down here
+
+00:30:33.420 --> 00:30:37.220
+in the corner, and it went away, but hopefully you can see that.
+
+00:30:41.600 --> 00:30:44.160
+When you select the input or output, it gives you a little circuit
+
+00:30:44.160 --> 00:30:46.900
+down in the right-hand side, so you can tell which one it is.
+
+00:30:48.480 --> 00:30:51.400
+Okay, so that's the bottom output.
+
+00:30:52.300 --> 00:30:56.260
+Usually in the order they are in your diagram.
+
+00:30:56.680 --> 00:31:07.700
+Okay, so this is the top one, which is A. So I'm going to put that right there.
+
+00:31:08.840 --> 00:31:13.320
+This is the next one down, which is B. I'm going to put that there.
+
+00:31:14.740 --> 00:31:17.040
+This is carry-in, because this is the third one down.
+
+00:31:18.380 --> 00:31:19.080
+Put it there.
+
+00:31:20.760 --> 00:31:22.180
+This one's sum.
+
+00:31:22.180 --> 00:31:24.640
+This is the top one, so it goes there.
+
+00:31:25.840 --> 00:31:26.680
+This is carry-out.
+
+00:31:26.680 --> 00:31:29.620
+It's the bottom one, so we'll go up there.
+
+00:31:31.240 --> 00:31:35.860
+This is the point of rotation, so I'm just going to stick it on the corner.
+
+00:31:37.260 --> 00:31:41.420
+Okay, I don't want this anymore, so I'll grab all that, and I'll hit delete key.
+
+00:31:43.020 --> 00:31:44.760
+Okay, then I want to put labels.
+
+00:31:45.820 --> 00:31:50.360
+Okay, now the funky thing about the fit label is you can only do one line at a time.
+
+00:31:50.860 --> 00:31:55.200
+And so I have A, B, C, and Cout in sum.
+
+00:31:55.200 --> 00:32:09.680
+So what I like to do, I just click A, click somewhere else B, click somewhere else Cin, click somewhere else Cout, click somewhere else sum.
+
+00:32:09.680 --> 00:32:23.760
+Okay, so I've put them all in, and I grab my arrow tool, and then I move them to right next to the elements so that I hopefully, when I see this, when I drag it into another circuit, I can see it.
+
+00:32:23.760 --> 00:32:24.160
+Okay.
+
+00:32:25.200 --> 00:32:29.160
+I'll be able to know what's what.
+
+00:32:30.500 --> 00:32:31.020
+Okay.
+
+00:32:32.720 --> 00:32:35.680
+Cout, and then sum is to the right.
+
+00:32:37.260 --> 00:32:38.780
+Okay, so there's my circuit.
+
+00:32:39.540 --> 00:32:42.560
+This is a one-bit full adder.
+
+00:32:43.360 --> 00:32:45.780
+Three bits are added, but it's only that.
+
+00:32:48.660 --> 00:32:52.400
+Okay, so now when I use this, so let me go back.
+
+00:32:52.400 --> 00:32:54.560
+If I go to main, it's an empty one.
+
+00:32:54.560 --> 00:32:58.980
+When I use a full adder, if I click on it and drag it in, it'll look like that.
+
+00:32:58.980 --> 00:33:08.900
+So I know this is my A input, these are my B inputs, this is my sum output, this is my Cout output, this is my Cin input.
+
+00:33:08.900 --> 00:33:19.560
+Okay, and if I want to look at the circuit, I can right click on it and go view the circuit, and there's a problem with my circuit.
+
+00:33:19.560 --> 00:33:23.980
+I didn't, it didn't save.
+
+00:33:23.980 --> 00:33:24.500
+Okay.
+
+00:33:24.900 --> 00:33:25.960
+All those lines.
+
+00:33:26.240 --> 00:33:27.200
+So let me save it.
+
+00:33:30.700 --> 00:33:32.840
+It's going to ask me for a name.
+
+00:33:35.320 --> 00:33:36.700
+I was building the...
+
+00:33:40.000 --> 00:33:46.260
+Call week three demo.
+
+00:33:46.260 --> 00:33:48.440
+All right.
+
+00:33:48.780 --> 00:33:53.260
+So somehow Cin now is...
+
+00:33:54.500 --> 00:33:57.000
+All messed up, but the easiest way is just reset.
+
+00:33:57.000 --> 00:33:58.640
+I don't know why that...
+
+00:34:00.740 --> 00:34:06.940
+Cin, data bit, output no, 1, no, unchanged, Cin.
+
+00:34:17.700 --> 00:34:18.160
+There we go.
+
+00:34:19.000 --> 00:34:19.900
+Sometime you have to...
+
+00:34:19.900 --> 00:34:21.280
+I don't know why that's...
+
+00:34:24.500 --> 00:34:28.860
+Oh, yes, we're fine.
+
+00:34:28.860 --> 00:34:36.000
+Sometimes it gets tied to other circuits and just tell it no if it does, if it says that.
+
+00:34:36.000 --> 00:34:38.500
+Okay.
+
+00:34:38.500 --> 00:34:49.000
+So anyway, we can get rid of this one.
+
+00:34:49.000 --> 00:34:49.500
+Okay.
+
+00:34:49.500 --> 00:34:52.200
+So what we're going to do...
+
+00:34:52.200 --> 00:34:53.700
+What you need to do...
+
+00:34:53.700 --> 00:34:59.700
+You need to do here's the full adder simulation, which doesn't quite look right.
+
+00:35:01.700 --> 00:35:04.400
+Um, it's hard to get it to work right.
+
+00:35:07.000 --> 00:35:12.340
+Is the ripple-carry adder, and it's a chaining of eight bits.
+
+00:35:14.340 --> 00:35:14.840
+Okay.
+
+00:35:14.840 --> 00:35:18.940
+And so what we're going to do is now instead of one bit inputs, we're going to take eight
+
+00:35:18.940 --> 00:35:21.740
+bit inputs two of them.
+
+00:35:22.060 --> 00:35:22.900
+And then we're going to take the two zero inputs.
+
+00:35:23.100 --> 00:35:28.460
+two zero point locations at point zero
+
+00:35:31.860 --> 00:35:37.260
+okay so if you look at these whenever you create a fan-out and that's what this
+
+00:35:37.260 --> 00:35:42.420
+black thing is this black thing that goes down this is called a fan-out or
+
+00:35:42.420 --> 00:35:48.300
+splitter okay and you can number they're automatically numbered and you can flip
+
+00:35:48.300 --> 00:35:52.860
+them so that they're numbered zero to seven or seven to zero either way but
+
+00:35:52.860 --> 00:35:59.300
+what you want to do is you want to make sure the zero from A and the zero from B
+
+00:35:59.300 --> 00:36:06.960
+go to the same full adder as you need to add the two zeros together and the carry
+
+00:36:06.960 --> 00:36:14.740
+out from that is the carry-in to the two bits at location one right and the out
+
+00:36:14.740 --> 00:36:21.780
+Cout of the two bits at location one is the Cin to the two bits at location two
+
+00:36:21.780 --> 00:36:22.840
+and you go
+
+00:36:22.840 --> 00:36:34.340
+like that up to seven so in mine if you look so I did Cin at the bottom and
+
+00:36:34.340 --> 00:36:45.000
+Cout at the top right so I have a and B 0 & 0 at the bottom a Cin of 0 that I set
+
+00:36:45.000 --> 00:36:52.720
+to be zero it's meant to always be 0 but sometimes it might be one it's like your
+
+00:36:52.840 --> 00:37:01.620
+adding 16 bits together to 16 bits then the left bit you know the left eight bits has a carry from
+
+00:37:01.620 --> 00:37:10.760
+the right eight bits potentially okay so out to in out to in out to in out to in out to in out to
+
+00:37:10.760 --> 00:37:18.560
+in out to in right the difference a's and b's to each one of those and then each one of these goes
+
+00:37:18.560 --> 00:37:27.620
+to an output an 8-bit output where the sum of the two zero bits have to be go to the zero bit
+
+00:37:27.620 --> 00:37:35.800
+location in the output the sum of the two one bits go to the one bit output okay so the number the
+
+00:37:35.800 --> 00:37:44.660
+the splitter numbers have to match zero zero zero one one one two two two up to seven okay so if
+
+00:37:44.660 --> 00:37:47.000
+I'm building this it's called a ripple-carry adder
+
+00:37:48.560 --> 00:38:06.500
+I'm building this in Logisim so I'm gonna add a new circuit okay 8-bit ripple-carry adder okay so I'm
+
+00:38:06.500 --> 00:38:17.360
+a bit ripple-carry adder I'd have two inputs a but a is now eight bits instead of one okay
+
+00:38:18.560 --> 00:38:29.960
+alright and I have another one called B so I'm just gonna take a and duplicate it
+
+00:38:34.040 --> 00:38:44.800
+and change its name to B right and in wiring there's a thing called a splitter
+
+00:38:48.540 --> 00:38:57.780
+oops and wiring there's a thing called a splitter and we want to grab a splitter
+
+00:38:57.780 --> 00:39:04.680
+and we want to stick it in our design right now splitter comes in as a two
+
+00:39:04.680 --> 00:39:12.380
+bits let's get rid of this magnifier
+
+00:39:12.380 --> 00:39:21.540
+okay it comes in as two bits and we need it to be eight okay so the fan out is
+
+00:39:21.540 --> 00:39:36.440
+eight and the width is eight okay and I want let's see the right-handed I want
+
+00:39:36.440 --> 00:39:41.840
+to be right-handed okay and I want zero on the bottom and seven on the top
+
+00:39:42.380 --> 00:39:47.880
+okay so I have to go here and I have to flip these
+
+00:39:59.760 --> 00:40:08.980
+let me see bit width
+
+00:40:12.380 --> 00:40:19.820
+what I want definitely want right-handed
+
+00:40:23.320 --> 00:40:33.180
+this start bar zero one two three so I'm doing in the opposite order
+
+00:40:39.720 --> 00:40:41.740
+okay so seven at the top
+
+00:40:42.380 --> 00:40:56.120
+zero is at the bottom okay right-handed and then you can just wire these up okay
+
+00:40:56.120 --> 00:41:03.380
+and so here's the zero bit and if I go into simulation mode when the first one
+
+00:41:03.380 --> 00:41:10.520
+is one see how that's like green that's a zero bit this is the one bit the two
+
+00:41:10.520 --> 00:41:19.100
+bit okay and then we want to do is we're gonna add those I mean I just use
+
+00:41:19.100 --> 00:41:23.460
+the ctrl D oops
+
+00:41:29.480 --> 00:41:36.680
+all right so I have a bits and B bits okay I'm not gonna build it all but what
+
+00:41:36.680 --> 00:41:40.380
+we want to do is we use full adders
+
+00:41:40.520 --> 00:41:45.700
+okay and I'll just use the first one for the first two and then you can do the
+
+00:41:45.700 --> 00:42:00.560
+rest off the diagram but here is A zero and so a zero has to go to here right
+
+00:42:00.560 --> 00:42:10.500
+and B zero has to go to here okay the sum is gonna go to an 8-bit
+
+00:42:10.520 --> 00:42:29.900
+output output yes 8-bit with tri-state no this is some so let me shrink that
+
+00:42:29.900 --> 00:42:36.200
+down a little bit so that you can see it and then again we want a fan splitter on
+
+00:42:36.200 --> 00:42:50.840
+this we wanted to face West that's West bit width is 8 8
+
+00:42:50.840 --> 00:42:58.360
+the zeros on the top we want zero to be on the bottom 0 1 2 3 4
+
+00:42:58.360 --> 00:43:02.500
+okay so let's do it the other way
+
+00:43:02.760 --> 00:43:05.760
+seven six
+
+00:43:06.200 --> 00:43:22.700
+and so instead of zero to seven top to bottom it's seven to zero from the top
+
+00:43:22.700 --> 00:43:31.980
+to the bottom okay so here's our output we have this stuck here so the zero sum
+
+00:43:31.980 --> 00:43:35.160
+has to go here
+
+00:43:36.200 --> 00:43:43.200
+okay
+
+00:43:43.200 --> 00:43:46.200
+oops
+
+00:43:46.200 --> 00:43:50.200
+let me see if I can do this
+
+00:43:50.200 --> 00:43:54.700
+okay then we want to have a full adder
+
+00:43:54.700 --> 00:44:04.200
+where the Cout from this becomes the Cin to that we do need a Cin here
+
+00:44:04.200 --> 00:44:05.200
+okay
+
+00:44:06.200 --> 00:44:11.440
+so we do need a one bit input and we want this to face north because we want
+
+00:44:11.440 --> 00:44:21.480
+that little blue dot on the top so we can tie it in and this is Cin full
+
+00:44:21.480 --> 00:44:35.080
+behavior 0 pull down okay now this one has to be the next bit over for a
+
+00:44:36.200 --> 00:44:37.480
+B
+
+00:44:37.480 --> 00:44:41.780
+right it's Cout goes here and then
+
+00:44:41.780 --> 00:44:45.440
+next bit over for B
+
+00:44:51.200 --> 00:44:55.600
+okay its sum has to go
+
+00:44:59.140 --> 00:45:03.200
+to one okay and so um if I did this as a simulation I would do I mean to build a
+
+00:45:03.200 --> 00:45:05.680
+simulation I would do I mean to build a
+
+00:45:05.680 --> 00:45:08.680
+I mean to build it, I would build all eight of them.
+
+00:45:08.680 --> 00:45:12.480
+So I could add zero, one, two, three, four, five, six, seven,
+
+00:45:12.480 --> 00:45:15.660
+and then sequentially put the outputs out
+
+00:45:15.660 --> 00:45:18.620
+to show you that it works, right?
+
+00:45:18.620 --> 00:45:21.900
+When A is one, when A zero is one,
+
+00:45:21.900 --> 00:45:24.680
+the output is zero, but it's one.
+
+00:45:24.680 --> 00:45:28.880
+When A and B are both one, it should be zero, carry a one,
+
+00:45:28.880 --> 00:45:30.360
+right, zero, carry a one.
+
+00:45:33.400 --> 00:45:35.160
+All right, and if there was a Cin,
+
+00:45:35.160 --> 00:45:40.160
+and you can see Cout because one plus one from one
+
+00:45:40.200 --> 00:45:41.880
+is zero, carry a one.
+
+00:45:44.960 --> 00:45:49.960
+Now if it was one, one, then B would be one coming in
+
+00:45:51.380 --> 00:45:55.740
+plus the Cin one, it would be zero, carry a one.
+
+00:45:55.740 --> 00:45:58.380
+It won't show up because we have nothing on two.
+
+00:45:59.520 --> 00:46:00.960
+There's no input to two.
+
+00:46:03.360 --> 00:46:04.700
+I mean, here's the carry-out.
+
+00:46:04.700 --> 00:46:06.940
+It's here, and then we'd have to go,
+
+00:46:06.940 --> 00:46:08.840
+this would go to another adder,
+
+00:46:08.840 --> 00:46:11.240
+and the result of that adder would go into here.
+
+00:46:12.800 --> 00:46:16.640
+Okay, so I know it's working properly.
+
+00:46:18.360 --> 00:46:20.860
+You would build this eight-bit adder this way
+
+00:46:23.600 --> 00:46:24.700
+so that it would look like this.
+
+00:46:24.700 --> 00:46:27.880
+You have all eight of them added together,
+
+00:46:27.880 --> 00:46:30.940
+and then the seven plus seven bits,
+
+00:46:30.940 --> 00:46:33.740
+if there's a carry-out, it just goes to a carry-out bit.
+
+00:46:34.700 --> 00:46:38.360
+Okay, and you have your eight-bit output.
+
+00:46:45.460 --> 00:46:47.660
+Okay, and then I basically built essentially
+
+00:46:47.660 --> 00:46:51.320
+the same diagram for my circuit diagram
+
+00:46:51.320 --> 00:46:53.000
+for the eight-bit adder.
+
+00:46:53.000 --> 00:46:55.180
+The only difference was I made it bigger.
+
+00:46:56.400 --> 00:46:59.620
+Remember before the right side was two, it's now four,
+
+00:46:59.620 --> 00:47:04.540
+and I used the same angles for these lines, but I had a two,
+
+00:47:04.540 --> 00:47:09.380
+like a two span of dots here.
+
+00:47:09.380 --> 00:47:11.580
+All right, one two, a flat,
+
+00:47:12.500 --> 00:47:14.440
+whereas a previous one didn't have the flat.
+
+00:47:14.440 --> 00:47:16.260
+This one has a flat to make it bigger,
+
+00:47:16.260 --> 00:47:18.580
+and now I know it's an eight-bit adder that way.
+
+00:47:19.760 --> 00:47:22.040
+All right, we can do circuit appearance,
+
+00:47:22.040 --> 00:47:23.480
+redraw it exactly the same way.
+
+00:47:25.920 --> 00:47:27.960
+Okay, so that's the adder.
+
+00:47:27.960 --> 00:47:30.900
+It's going to be in your ALU, so you need that. The next one,
+
+00:47:34.540 --> 00:47:41.200
+is circuits that select which are decoders okay we're gonna use decoders
+
+00:47:41.200 --> 00:47:49.420
+so I spent a lot of time about decoders okay and it's a selector of what we want
+
+00:47:49.420 --> 00:47:56.800
+to do okay so basically we have two inputs I can select for one of four
+
+00:47:56.800 --> 00:48:05.880
+possible column outputs but one of four possible circuits I can energize one or
+
+00:48:05.880 --> 00:48:11.520
+four possible circuits or so like one of four possible results and I'm not
+
+00:48:11.520 --> 00:48:16.040
+passing them through I'm just selecting them but to build a decoder what you
+
+00:48:16.040 --> 00:48:22.340
+have to do for every input you have to also have the NOTted value of the input
+
+00:48:22.340 --> 00:48:26.740
+okay so this is a 2-input, 4-output
+
+00:48:26.780 --> 00:48:33.720
+you have four outputs called out zero one two three and your out zero is the
+
+00:48:33.720 --> 00:48:41.740
+output for when both a and B are zero and both a and B are zero I want this
+
+00:48:41.740 --> 00:48:47.240
+one selected and none of the rest when a is zero and B is one I want this one
+
+00:48:47.240 --> 00:48:51.840
+selected but none of the rest a is one B is zero I want this one selected but
+
+00:48:51.840 --> 00:48:59.520
+none of the rest and when a is one and B is one I want this one selected okay
+
+00:48:59.520 --> 00:49:05.720
+and you could set this up as two one bit inputs or one two bit input where you
+
+00:49:05.720 --> 00:49:14.100
+have a little splitter to take them but the basic way you build it you have two
+
+00:49:14.100 --> 00:49:21.820
+inputs and you have to NOT them all right so you need all those four inputs
+
+00:49:21.820 --> 00:49:28.720
+in order to build a decoder if it's a 4 by 16 you have four inputs and you have
+
+00:49:28.720 --> 00:49:37.280
+ABCD but you also have the four NOTted versions of A, B, C, and D all right so in our in Logisim
+
+00:49:37.280 --> 00:49:51.040
+if I were to build this so let me add a circuit for a two by four decoder okay
+
+00:49:51.040 --> 00:50:00.340
+so it's a two input so I need two inputs and I want this facing south okay
+
+00:50:00.340 --> 00:50:11.500
+I'll use pull down and this one is a and let me put this on the north so it's
+
+00:50:11.500 --> 00:50:20.600
+above it okay so I have two inputs a and B the second one will be B
+
+00:50:21.040 --> 00:50:37.720
+here's a here's B input and then I need two more inputs essentially or two more
+
+00:50:37.720 --> 00:50:50.800
+sir two more values not a and not B so how I get them
+
+00:50:51.040 --> 00:51:09.660
+is I use a NOT gate on a here's a was across and so this is NOT A -- line up in
+
+00:51:09.660 --> 00:51:21.040
+a line down this is NOT A, okay similarly from B I put a NOT gate off of B so
+
+00:51:21.040 --> 00:51:35.200
+and I go this is NOT B, okay so I have these four inputs okay so then I need
+
+00:51:35.200 --> 00:51:42.620
+four AND gates one for each of the outputs okay so they're gonna be two
+
+00:51:42.620 --> 00:51:50.920
+input AND gates okay and the first one is I'm gonna label it when a is zero and
+
+00:51:51.040 --> 00:52:02.040
+B is zero so I'm gonna call it zero zero okay okay for those so what you can do
+
+00:52:02.040 --> 00:52:07.760
+is if you have to I use ctrl D a lot like shift select to get both of them
+
+00:52:07.760 --> 00:52:20.460
+ctrl D now I have four okay so then I'm zero zero zero one that's
+
+00:52:21.040 --> 00:52:32.500
+zero one one zero and I'll explain how to do do this so one zero I'm just
+
+00:52:32.500 --> 00:52:39.400
+building my structure and one one okay when I have a three by eight I have ABC
+
+00:52:39.400 --> 00:52:46.660
+NOT A, NOT B, NOT C and I have eight of these AND gates one for each of my
+
+00:52:46.660 --> 00:52:50.840
+selections and I have an output
+
+00:52:51.040 --> 00:53:00.940
+each one goes to an output I didn't want that little tail on the end so I
+
+00:53:00.940 --> 00:53:08.740
+just deleted it and started over okay and each one is good so an output and
+
+00:53:08.740 --> 00:53:19.000
+the first one we call out zero and it is not tri-state
+
+00:53:21.040 --> 00:53:25.160
+and so I'm gonna and don't worry that it's red right now it's red because
+
+00:53:25.160 --> 00:53:33.400
+there's no no connection to the AND gate
+
+00:53:37.560 --> 00:53:40.200
+okay
+
+00:53:41.980 --> 00:53:50.940
+one out two and out three.
+
+00:53:51.020 --> 00:53:57.120
+if you look at the inputs in this inside the AND gates and you convert them to
+
+00:53:57.120 --> 00:54:04.700
+decimal that's what these numbers are 0 0 is that is number 0 0 1 is number 1 1 0
+
+00:54:04.700 --> 00:54:15.620
+is number 2 1 1 is number 3 ok so here's how this works when a and B are 0 I want
+
+00:54:15.620 --> 00:54:25.040
+out 0 to be 1 ok so this is my a input here so I go to A or NOT A, whichever one
+
+00:54:25.040 --> 00:54:30.720
+is high because I want it to be high and I go B or NOT B, whichever one is high
+
+00:54:30.720 --> 00:54:42.620
+ok so I use NOT A, NOT B to get 1 1 to have output of 1 all right so a and B or
+
+00:54:42.620 --> 00:54:45.600
+0 1 so I have to go the simulation mode
+
+00:54:45.600 --> 00:54:54.420
+real quick change B to 1 ok 0 1 notice out 0 is no longer 1 so then I'm gonna
+
+00:54:54.420 --> 00:55:03.060
+go over here ok a has to go to either A or NOT A, whichever one is 1 so it not a
+
+00:55:03.060 --> 00:55:13.560
+is 1 B goes to B or NOT B, whichever one is 1 in this case it goes to B ok so by
+
+00:55:13.560 --> 00:55:14.300
+simulation
+
+00:55:15.600 --> 00:55:26.820
+when it's 0 0 out 0 when it's 0 1 it's out 1 ok now when it's 1 0 I want it to
+
+00:55:26.820 --> 00:55:39.420
+be out 2 well 1 0 go back to edit 1 0 a I would use the top is a goes to 1
+
+00:55:39.420 --> 00:55:45.300
+because they have to both have to go to the light green help B goes to NOT B
+
+00:55:45.300 --> 00:56:00.980
+B right simulation right double check 0 0 input out 0 0 1 input out 1 1 0 input
+
+00:56:00.980 --> 00:56:09.800
+out 2 and now I want 1 1 input and what is its output going to be we want that to
+
+00:56:09.800 --> 00:56:14.920
+be out 3 so for out 3 we have to go back to edit mode to
+
+00:56:15.300 --> 00:56:37.460
+change it this has to go to a and this one has to go to B is there B is one
+
+00:56:37.460 --> 00:56:46.060
+all right and that's how I you build it that's the entire 2x4 built okay the
+
+00:56:46.060 --> 00:56:50.620
+only thing I would do is I would clean this up in because I don't need this
+
+00:56:50.620 --> 00:56:55.680
+stub here I would delete it so I don't have extra wires just hanging out I'm
+
+00:56:55.680 --> 00:57:01.780
+these two up here these two wires here they're just pointing to the NOT so I
+
+00:57:01.780 --> 00:57:04.360
+know what they are
+
+00:57:05.580 --> 00:57:07.180
+all right so
+
+00:57:07.180 --> 00:57:11.460
+that's how you build a decoder and then
+
+00:57:11.460 --> 00:57:18.040
+from an interface standpoint what I do for my decoders when I'm doing my
+
+00:57:18.040 --> 00:57:26.000
+circuit design here is a two input for output okay you can make it bigger or
+
+00:57:26.000 --> 00:57:30.300
+not depending upon how you want to do it this size is fine the only thing I would
+
+00:57:30.300 --> 00:57:36.300
+do is I would take these A and B so this is A and I would put them on the side
+
+00:57:36.300 --> 00:57:36.880
+and
+
+00:57:37.180 --> 00:57:52.120
+this was the bottom one B all right and then I would go I have a I have B right
+
+00:57:52.120 --> 00:58:06.880
+I have Oh zero one okay two and actually what I normally do if they're this
+
+00:58:06.880 --> 00:58:18.220
+close I don't do all of them I do every other so all these I will do zero and
+
+00:58:18.220 --> 00:58:28.840
+two just okay so a is here all right B is here
+
+00:58:30.120 --> 00:58:36.820
+out zero out two
+
+00:58:36.880 --> 00:58:41.380
+all right and normally I probably would make a little bit bigger to spread them
+
+00:58:41.380 --> 00:58:48.180
+out so I could put inside here inside of it or you could put it above it but you
+
+00:58:48.180 --> 00:58:57.180
+just never know you could say so this is a 2 by 4 right so it's a 2 by 4 decoder
+
+00:58:57.180 --> 00:59:02.420
+so you can put it here and just look funky when you rotate it that's okay so
+
+00:59:02.420 --> 00:59:05.040
+you know what it is
+
+00:59:06.880 --> 00:59:18.480
+right in here I built it double double and I just show those 4 by 16 decoder
+
+00:59:18.480 --> 00:59:26.540
+where this is a 4-bit input not a 1-bit input it's a 4-bit input okay so instead
+
+00:59:26.540 --> 00:59:32.160
+of using individual bits I made the input of 4 bits and then put a splitter
+
+00:59:32.160 --> 00:59:36.540
+on it to grab the four outputs
+
+00:59:36.880 --> 00:59:45.960
+so a short one so this one here I made this one similar to this one where I
+
+00:59:45.960 --> 00:59:54.520
+took a 2-bit input and use a splitter so I have A and NOT A so a B so better
+
+00:59:54.520 --> 00:59:59.200
+what you want the first one to be a or the second one to be a it doesn't matter
+
+00:59:59.200 --> 01:00:04.400
+but it does matter but you just need to know okay and then
+
+01:00:04.400 --> 01:00:06.780
+then all these in a 4 by 16 instead of
+
+01:00:06.880 --> 01:00:12.800
+four input AND gates and instead of four of them there's 16 of them because you have four inputs
+
+01:00:12.800 --> 01:00:19.520
+two to the fourth is 16 possible outputs hopefully that makes sense hopefully you're able to build
+
+01:00:19.520 --> 01:00:26.720
+them and three by eight is a three bit input but for every input the key is for every input you
+
+01:00:26.720 --> 01:00:33.360
+have to NOT it as well so you have twice as many signals going to your AND gates as you have bits
+
+01:00:33.360 --> 01:00:37.040
+that are input or twice as many signals that you could select from
+
+01:00:40.400 --> 01:00:43.920
+okay so that's selection using decoders
+
+01:00:46.640 --> 01:00:51.600
+okay and you build these this is why you're going to need them you don't have to build them twice
+
+01:00:51.600 --> 01:00:57.680
+you build them once and then you just drag and drop two of them into your thing your
+
+01:01:00.800 --> 01:01:01.760
+circuit if you need it
+
+01:01:03.360 --> 01:01:14.320
+all right so let's see this is the 4 by 16. okay then there's multiplexers and this explains
+
+01:01:14.320 --> 01:01:20.560
+i don't use multiplexers in the 8-bit simulated CPU that we're building i only use
+
+01:01:20.560 --> 01:01:28.160
+decoders because i find them easier to deal with and understand a multiplexer is slightly different
+
+01:01:28.800 --> 01:01:32.960
+in that what a decoder does is it selects a circuit
+
+01:01:33.360 --> 01:01:39.360
+it selects a wire basically what a multiplexer does is it has all the
+
+01:01:39.360 --> 01:01:45.300
+inputs coming in but only has one output and it chooses which of those
+
+01:01:45.300 --> 01:01:51.300
+inputs to pass through okay decoder is separate and you have to send it to a
+
+01:01:51.300 --> 01:01:58.860
+wire and in later designs I'll show you how we use the decoder to select what
+
+01:01:58.860 --> 01:02:06.540
+we're doing okay so he's decoded it's a select a wire that we want to use he's
+
+01:02:06.540 --> 01:02:13.020
+in multiplexer to take all the wires in and pass through only this value we want
+
+01:02:13.020 --> 01:02:24.000
+coming out okay so that's what this talks about okay encoders and
+
+01:02:24.000 --> 01:02:28.620
+comparators these are important things neither is in your assignment
+
+01:02:28.860 --> 01:02:35.460
+should try to understand these concepts we will be building a comparator and a
+
+01:02:35.460 --> 01:02:49.980
+bit comparator and as part of our ALU but we're not doing it now okay okay so
+
+01:02:49.980 --> 01:02:56.400
+for your for our CPU you need an 8-bit adder but to build an 8-bit adder you
+
+01:02:56.400 --> 01:02:58.620
+need a full adder
+
+01:02:58.620 --> 01:03:03.220
+okay and on the way you're gonna build a half adder so you know half adder full
+
+01:03:03.220 --> 01:03:10.520
+adder 8-bit adder a two by four or two to four decoder a three to eight and a
+
+01:03:10.520 --> 01:03:17.380
+four to sixteen okay and where we use these two to four we use these we have
+
+01:03:17.380 --> 01:03:23.240
+four different registers in our CPU that we're gonna
+
+01:03:23.240 --> 01:03:28.520
+use in so using the decoder to pick what register we want we have the ALU has
+
+01:03:28.520 --> 01:03:35.240
+eight seven actually seven different things it could do so we use the decoder
+
+01:03:35.240 --> 01:03:42.140
+to choose okay we have two bits of our opcode and we're not opcode yet but
+
+01:03:42.140 --> 01:03:46.760
+when we get to doing the programming assembly programming you'll start
+
+01:03:46.760 --> 01:03:53.860
+understanding opcodes use two bits of our signal as the opcode I mean three
+
+01:03:53.860 --> 01:03:57.920
+bits sorry three bits of our signal as the opcode and those three bits
+
+01:03:57.920 --> 01:03:58.500
+determine our signal.
+
+01:03:58.500 --> 01:04:01.380
+it's gonna determine which of these seven things we're going to do in our ALU
+
+01:04:01.380 --> 01:04:09.020
+and then we need our four by sixteen or four to sixteen to choose what RAM
+
+01:04:09.020 --> 01:04:24.220
+bytes were using okay so that's kind of where we're up in your assignment
+
+01:04:24.220 --> 01:04:28.380
+everything goes in the same file the one CSC210_YourName
+
+01:04:28.500 --> 01:04:35.380
+dot circ you add the new circuits in you want a half adder a full adder an 8-bit adder and
+
+01:04:35.380 --> 01:04:42.340
+although they're all for those already in this video a two to four decoder which i went over
+
+01:04:42.340 --> 01:04:50.660
+already a three to eight and a four to sixteen and then there's some simple little questions
+
+01:04:50.660 --> 01:04:52.420
+and you turn in your Logisim file
+
+01:04:55.860 --> 01:04:58.100
+okay so hopefully that's all clear to everybody
+
+01:04:58.740 --> 01:05:00.740
+um if you have questions make sure you reach out
+
+01:05:04.820 --> 01:05:10.420
+and hopefully everything's going well and we'll i'll be grading whatever you submitted for
+
+01:05:10.420 --> 01:05:15.940
+assignment two this week and getting those back to you so um hopefully i'll get a first
+
+01:05:15.940 --> 01:05:20.580
+glimpse at where you're at in Logisim and then this one's a little bit more complex
+
+01:05:20.580 --> 01:05:26.580
+so if you do have questions make sure you reach out all right thanks talk to you soon bye
+`;
 
     var player, timeUpdater, parsedTranscript = [];
 
@@ -557,7 +2569,39 @@
       });
     };
 
+    /* Topic index -> player seek.
+       Deliberately buttons wired to the embedded player rather than
+       youtu.be?t= links: a time-link would navigate the Canvas iframe away
+       from this SPA, which is the Standards §5 failure mode. If the player
+       never comes up, the index degrades to a plain reference list rather
+       than to buttons that silently do nothing. */
+    function wireTopicIndex() {
+      var idx = document.getElementById('topic-index');
+      if (!idx) return;
+      var btns = idx.querySelectorAll('.topic-index__time');
+
+      if (!VIDEO_ID) { idx.classList.add('topic-index--static'); return; }
+
+      Array.prototype.forEach.call(btns, function (btn) {
+        btn.addEventListener('click', function () {
+          var t = parseInt(btn.getAttribute('data-seek'), 10);
+          if (!player || !player.seekTo) return;
+          player.seekTo(t, true);
+          player.playVideo();
+          // Bring the player back into view — the index sits below it, and on
+          // a short viewport a seek with the video off-screen looks like a
+          // dead button.
+          var frame = document.getElementById('video-container');
+          if (frame && frame.scrollIntoView) {
+            frame.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        });
+      });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
+      wireTopicIndex();
+
       // No video yet: leave the placeholder copy in place and skip the API.
       if (!VIDEO_ID || !vttContent.trim()) { syncTranscriptHeight(); return; }
 
