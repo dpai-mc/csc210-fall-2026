@@ -8,150 +8,16 @@
   <style>
   /* ============================================================
      Lab 1 — Page-specific styles
-     ============================================================
-     NOTE FOR FUTURE LABS: .lab-step, .lab-outcome, .lab-verify,
-     .lab-troubleshoot, .lab-checklist and .rubric-total are
-     structural components that will recur in every lab SPA.
-     Once Lab 2 exists and the rule bodies can be diffed against
-     a second real use (per Course Standards §8), promote them to
-     shared/style.css. They are inline here because a single
-     instance cannot be verified as duplication.
      ============================================================ */
 
-  /* ---------- Lab metadata bar ---------- */
-  .lab-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-md);
-    padding: var(--space-md) var(--space-lg);
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-    margin-bottom: var(--space-lg);
-    font-size: var(--fs-sm);
-  }
-  .lab-meta__item { display: flex; flex-direction: column; }
-  .lab-meta__label {
-    font-size: var(--fs-xs);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .05em;
-    color: var(--color-text-muted);
-  }
-  .lab-meta__value { font-weight: 600; }
-  .lab-meta__value--due { color: var(--color-danger); }
-
-  /* ---------- Numbered procedure steps ---------- */
-  .lab-step {
-    display: flex;
-    gap: var(--space-md);
-    padding: var(--space-md) 0;
-    border-bottom: 1px solid var(--color-border);
-  }
-  .lab-step:last-child { border-bottom: none; }
-  .lab-step__num {
-    flex-shrink: 0;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: var(--color-primary);
-    color: #fff;
-    font-family: var(--font-mono);
-    font-size: var(--fs-sm);
-    font-weight: 700;
-  }
-  .lab-step__body { flex: 1; min-width: 0; }
-  .lab-step__body p:last-child { margin-bottom: 0; }
-  .lab-step__title { font-weight: 700; margin-bottom: var(--space-xs); }
-
-  /* ---------- Verification / outcome box ---------- */
-  .lab-verify {
-    background: #f0faf4;
-    border: 1px solid var(--color-success);
-    border-left: 4px solid var(--color-success);
-    border-radius: var(--radius);
-    padding: var(--space-md) var(--space-lg);
-    margin: var(--space-md) 0;
-  }
-  .lab-verify__title {
-    font-size: var(--fs-xs);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .05em;
-    color: var(--color-success);
-    margin-bottom: var(--space-xs);
-  }
-  .lab-verify p:last-child, .lab-verify ul:last-child { margin-bottom: 0; }
-
-  /* ---------- Troubleshooting disclosure ---------- */
-  .lab-troubleshoot {
-    background: var(--color-code-bg);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-    padding: var(--space-sm) var(--space-md);
-    margin: var(--space-md) 0;
-  }
-  .lab-troubleshoot summary {
-    cursor: pointer;
-    font-weight: 600;
-    font-size: var(--fs-sm);
-    color: var(--color-primary);
-  }
-  .lab-troubleshoot summary:hover { color: var(--color-primary-lt); }
-  .lab-troubleshoot[open] summary { margin-bottom: var(--space-sm); }
-  .lab-troubleshoot dl { font-size: var(--fs-sm); }
-  .lab-troubleshoot dt { font-weight: 700; margin-top: var(--space-sm); }
-  .lab-troubleshoot dd { margin-left: 0; color: var(--color-text-muted); }
-
-  /* ---------- Interactive checklist ---------- */
-  .lab-checklist { list-style: none; padding-left: 0; }
-  .lab-checklist li {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--space-sm);
-    padding: var(--space-sm);
-    border-radius: var(--radius);
-    transition: background .15s;
-  }
-  .lab-checklist li:hover { background: var(--color-code-bg); }
-  .lab-checklist input[type="checkbox"] {
-    margin-top: 4px;
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-    cursor: pointer;
-    accent-color: var(--color-success);
-  }
-  .lab-checklist label { cursor: pointer; font-size: var(--fs-sm); }
-  .lab-checklist li.checked label { color: var(--color-text-muted); text-decoration: line-through; }
-
-  .checklist-status {
-    margin-top: var(--space-md);
-    padding: var(--space-md);
-    border-radius: var(--radius);
-    font-weight: 600;
-    font-size: var(--fs-sm);
-    text-align: center;
-    background: var(--color-code-bg);
-    color: var(--color-text-muted);
-  }
-  .checklist-status--ready {
-    background: #f0faf4;
-    color: var(--color-success);
-    border: 1px solid var(--color-success);
-  }
-
-  /* ---------- Rubric total row ---------- */
-  .rubric-total td { font-weight: 700; background: var(--color-code-bg); }
-
-  /* ---------- Disabled widget buttons ----------
-     Matches the .widget-btn:disabled rule already used by the Week 1
-     lecture SPAs; promote to shared/style.css when those are next
-     touched, rather than adding a third copy. */
-  .widget-btn:disabled { opacity: .5; cursor: not-allowed; }
+  /* ------------------------------------------------------------
+     Lab structural components (.lab-meta, .lab-step, .lab-verify,
+     .lab-troubleshoot, .lab-checklist, .checklist-status,
+     .rubric-total, .widget-btn:disabled) were PROMOTED to
+     shared/style.css on 2026-08-23, per Course Standards §8,
+     once Lab 2 provided the second real use. Do not re-inline
+     them here. What remains below is Lab 1 specific only.
+     ------------------------------------------------------------ */
 
   /* ---------- Byte Reader widget (Lab 1 specific) ---------- */
   /* Cells are sized larger than the lecture SPAs' .bit-cell because this
