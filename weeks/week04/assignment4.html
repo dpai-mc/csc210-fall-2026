@@ -38,6 +38,31 @@
       border-radius: 3px;
       margin-top: 3px;
     }
+    /* Cross-references to the week's learning pages. Plain text by rule --
+       Course Standards §5 forbids linking one SPA to another, because a
+       link would load the target inside THIS page's Canvas iframe. Students
+       navigate by the Canvas module list, so the reference names the page. */
+    .where-taught {
+      font-size: var(--fs-sm);
+      color: var(--color-text-muted);
+      background: var(--color-code-bg);
+      border-left: 3px solid var(--color-primary-lt);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: var(--space-xs) var(--space-md);
+      margin: var(--space-sm) 0 var(--space-md);
+    }
+    .where-taught__label {
+      font-weight: 700;
+      color: var(--color-primary);
+      text-transform: uppercase;
+      font-size: var(--fs-xs);
+      letter-spacing: .04em;
+      margin-right: var(--space-xs);
+    }
+    /* Learning-page titles, wherever they appear -- the cross-reference
+       lines and the mapping table should name a page the same way. */
+    cite { font-style: normal; font-weight: 600; color: var(--color-text); }
+
     .rubric-table th { font-size: var(--fs-sm); }
     .rubric-table td { font-size: var(--fs-sm); vertical-align: top; }
     .rubric-table td:first-child { width: 20%; }
@@ -130,6 +155,45 @@
       <p><strong>Three pins. There is no <code>Q'</code> on <code>MEM_1BIT</code></strong> &mdash; the latch inside produces one and it is deliberately not brought out, because nothing downstream reads it. Adding a fourth pin is not a bonus; it is a mismatch with the specification.</p>
 
       <p>Set <strong>all</strong> input pins on both circuits to <strong>2-state</strong> with <strong>pull-down</strong> behaviour.</p>
+
+      <h3>Where each circuit is taught</h3>
+
+      <p>Both circuits are built and explained in this week's learning pages before you are asked to submit them. If a step below does not make sense, the page named here is where the reasoning behind it lives &mdash; go back to it rather than guessing at the wiring.</p>
+
+      <table>
+        <thead><tr><th>Circuit</th><th>Learning page</th><th>Section</th><th>What that page gives you</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>SR_LATCH</code></td>
+            <td><cite>Feedback: The S-R Latch</cite></td>
+            <td>4.2</td>
+            <td>The construction, the two-stable-states argument, the active-LOW convention, and the Latch Bench widget. Section 4.3 covers the forbidden state.</td>
+          </tr>
+          <tr>
+            <td><code>MEM_1BIT</code></td>
+            <td><cite>Telling a Circuit When</cite></td>
+            <td>4.4</td>
+            <td>The four-gate construction derived step by step, why the forbidden state is unreachable, transparency, and the three-step storage procedure. <strong>This is the cell your CPU is made of.</strong></td>
+          </tr>
+          <tr>
+            <td><em>D flip-flop &mdash; not built</em></td>
+            <td><cite>Telling a Circuit When</cite></td>
+            <td>4.5</td>
+            <td>How edge triggering differs from a level-sensitive cell, and where your machine uses each. Needed for Part B Q6, which asks you to reason about a device you do not construct.</td>
+          </tr>
+          <tr>
+            <td><em>Timing diagrams</em></td>
+            <td><cite>Seeing It in Time</cite></td>
+            <td>4.6</td>
+            <td>How to read and draw a waveform, with all three devices on one shared time axis. This is the skill Part B assesses.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <div class="callout__title">Why these are names and not links</div>
+        <p>Every page in this course is embedded in its own Canvas page. A link from this handout to another one would load that page <em>inside this page's frame</em> rather than opening it properly, so the references above name the page and leave the navigating to the Canvas module list. Find the title in the module and open it there.</p>
+      </div>
     </section>
 
     <!-- ============================================================
@@ -137,6 +201,9 @@
          ============================================================ -->
     <section id="part-a">
       <h2>Part A — How Feedback Becomes Memory <span class="q-pts">(20 points)</span></h2>
+
+      <p class="where-taught"><span class="where-taught__label">Where this is taught</span>
+        Q1&ndash;Q3 are answerable from <cite>Feedback: The S-R Latch</cite>, section 4.2 &mdash; particularly the paragraph tracing both stable configurations. Q4 is from <cite>Telling a Circuit When</cite>, section 4.4, where the four-gate construction is derived rather than presented.</p>
 
       <div class="q-block">
         <p><span class="q-num">Q1.</span> <span class="q-pts">5 points</span></p>
@@ -167,10 +234,13 @@
     <section id="part-b">
       <h2>Part B — Timing Analysis <span class="q-pts">(15 points)</span></h2>
 
+      <p class="where-taught"><span class="where-taught__label">Where this is taught</span>
+        <cite>Seeing It in Time</cite>, section 4.6 &mdash; the Timing Diagram Explorer there drives all three devices from one input, which is the comparison Q7 asks you to describe. <code>MEM_1BIT</code>'s behaviour is section 4.4 of <cite>Telling a Circuit When</cite>; the flip-flop's is section 4.5 of the same page. Lab 4 practises the same drawing on a different input pattern.</p>
+
       <div class="callout">
         <div class="callout__title">Before you start</div>
         <p>Draw by hand, or in any tool you like. <strong>Neatness is not graded; correctness is.</strong> Print this page, or copy the axes onto your own paper.</p>
-        <p><strong>Q6 asks about a flip-flop you did not build.</strong> That is deliberate — section 4.5 explains how one behaves and the page 3 widget shows it beside your memory cell. The point of the question is the comparison, and reasoning about a device from its stated behaviour is a skill you will use constantly with real datasheets.</p>
+        <p><strong>Q6 asks about a flip-flop you did not build.</strong> That is deliberate — section 4.5 of <cite>Telling a Circuit When</cite> explains how one behaves, and the Timing Diagram Explorer on <cite>Seeing It in Time</cite> shows it beside your memory cell. The point of the question is the comparison, and reasoning about a device from its stated behaviour is a skill you will use constantly with real datasheets.</p>
       </div>
 
       <p>Use the signals below for Q5 and Q6. The two given rows are identical in both questions; only the device changes.</p>
@@ -241,6 +311,9 @@
 
       <h3>Circuit 1 — <code>SR_LATCH</code></h3>
 
+      <p class="where-taught"><span class="where-taught__label">Where this is taught</span>
+        <cite>Feedback: The S-R Latch</cite>, section 4.2. Build it there first with the Latch Bench widget if the cross-coupling is not clear from the steps below. Section 4.3 explains the flicker you will see at startup, so read it before you conclude you have miswired something.</p>
+
       <div class="logisim-steps">
         <ol>
           <li>Create a new circuit tab named exactly <code>SR_LATCH</code>.</li>
@@ -267,6 +340,9 @@
       </div>
 
       <h3>Circuit 2 — <code>MEM_1BIT</code></h3>
+
+      <p class="where-taught"><span class="where-taught__label">Where this is taught</span>
+        <cite>Telling a Circuit When</cite>, section 4.4, which derives this construction one gate at a time and shows it as built in Logisim. <strong>This is the circuit the rest of the course is made of</strong> &mdash; Week 5 instantiates eight of them as a register, and every register, the program counter, the MAR, the IR and every populated byte of RAM in your finished CPU is built from this cell. It is worth the extra pass through 4.4 if anything here is unclear.</p>
 
       <div class="logisim-steps">
         <ol>
