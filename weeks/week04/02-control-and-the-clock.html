@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w4-02">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 4: Telling a Circuit When</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ----------
+       This page has no widget. What is here is the master-slave block
+       diagram's own styling and the two-column comparison table's column
+       widths -- nothing that recurs elsewhere. */
+
+    .ms-svg {
+      width: 100%;
+      max-width: 520px;
+      height: auto;
+      margin: 0 auto;
+      display: block;
+      overflow: visible;
+    }
+    /* Deliberately NOT .gate-body. This diagram is at block level and
+       describes a circuit students do not build, so it is drawn as a
+       schematic — dashed outlines, no pin stubs, no Logisim styling — to
+       signal that it is an explanation rather than an instruction. Week 3
+       trained students that a circuit figure is something to construct. */
+    .ms-svg .ms-block {
+      fill: var(--color-code-bg);
+      stroke: var(--color-text-muted);
+      stroke-width: 2;
+      stroke-dasharray: 6 4;
+      rx: 6;
+    }
+    .ms-svg text { font-family: var(--font-mono); font-size: 14px; fill: var(--color-text); }
+    .ms-svg .ms-name { font-weight: 700; }
+    .ms-svg .ms-cond { font-family: var(--font-sans); font-size: 11px; fill: var(--color-text-muted); }
+    .ms-svg .ms-wire { stroke: var(--color-text-muted); stroke-width: 2.5; fill: none; }
+    .ms-svg .ms-bubble { fill: var(--color-surface); stroke: var(--color-text-muted); stroke-width: 2; }
+
+    /* The two-design table is the section's payoff and wants the middle
+       column to breathe rather than the labels. */
+    .design-table td:first-child { width: 26%; }
+    .design-table td:nth-child(2) { width: 34%; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 4 &rsaquo; <span>Page 2: Telling a Circuit When</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Telling a Circuit When</h1>
+    <p><strong>Sections 4.4 &ndash; 4.5</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1.75 hours</p>
+
+    <!-- ============================================================
+         4.4
+         ============================================================ -->
+    <section id="sec-4-4">
+      <h2>4.4 &nbsp; The 1-Bit Memory Cell: Adding a Time Window</h2>
+
+      <p>Page 1 ended on an argument. The S-R latch has a state it should not be left in, and the answer is not a rule telling people to avoid it &mdash; because the circuit cannot read rules. The answer is to build something that <em>cannot get there</em>.</p>
+
+      <p>This page does that. It also solves a second problem you have not been told about yet, and it solves both with the same two gates.</p>
+
+      <h3>The second problem</h3>
+
+      <p>The latch on page 1 changes the instant an input moves. There is no way to tell it <em>not yet</em>.</p>
+
+      <p>That is fine when you are poking it by hand. It is useless in a machine, where a value on a shared wire is passing by and eight different registers all have to decide whether this one is for them. Storage that cannot be told <em>when</em> is not storage you can build a computer out of.</p>
+
+      <h3>Deriving the fix</h3>
+
+      <p>So we want two things: <strong>one</strong> data input instead of two, and a second input that grants permission.</p>
+
+      <p>Call them <code>In</code> (the value) and <code>Set</code> (the permission). Both active HIGH this time &mdash; a 1 means "yes".</p>
+
+      <p>Start with the obvious move: put a NAND in front, fed by <code>In</code> and <code>Set</code>, and send its output to the latch's set side.</p>
+
+      <ul>
+        <li>While <code>Set</code>=0, that gate outputs 1 no matter what <code>In</code> does. The set side is not asserted. Good &mdash; that is the permission working.</li>
+        <li>While <code>Set</code>=1, that gate outputs <code>In</code> inverted.</li>
+      </ul>
+
+      <p>Now we need the reset side too, and it needs the <em>opposite</em> polarity of <code>In</code>. The obvious thing is to add an inverter. But look at what the first gate is already producing while <code>Set</code>=1: it is producing <code>In</code> inverted. <strong>The inverter already exists.</strong></p>
+
+      <p>So feed a second NAND from that first gate's output and <code>Set</code>. While <code>Set</code>=1 it inverts again, giving back <code>In</code> itself; while <code>Set</code>=0 it outputs 1, same as the other one.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Four gates, not five</div>
+        <p>Two cross-coupled NANDs for the latch, two more in front for the gating, and <strong>the first gating gate doubles as the inverter</strong>. No separate NOT.</p>
+        <p>This is the same move as noticing that a spare pin can do a second job &mdash; a small economy that falls out of looking at what you already have rather than adding what you think you need. Real designs are full of them.</p>
+      </div>
+
+      <div class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/GATED_Latch.png" loading="lazy"
+             alt="A gated latch built from four NAND gates. On the left, the inputs In and Set feed the first NAND gate. That gate's output feeds a second NAND gate, which also takes Set. The two front gates' outputs feed the set and reset inputs of a pair of cross-coupled NAND gates on the right, which produce the stored output.">
+        <div class="circuit-canvas__caption">The four-NAND memory cell. Click to enlarge. The two gates on the right are the latch from page 1, unchanged; the two on the left are the gating that fixes both of its problems.</div>
+      </div>
+
+      <h3>Why the forbidden state is now unreachable</h3>
+
+      <p>The forbidden state needs <strong>both</strong> latch inputs low at the same time. Trace what that would require here.</p>
+
+      <p>The first gate goes low only when <code>In</code>=1 and <code>Set</code>=1. The second gate goes low only when the first gate's output is 1 and <code>Set</code>=1 &mdash; and the first gate's output being 1 means <code>In</code> was <em>not</em> 1.</p>
+
+      <p>So reaching the forbidden state would require <code>In</code> to be 1 and not-1 simultaneously.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Designed out, not avoided</div>
+        <p>Nobody has to remember a rule. Nobody has to be careful. The bad combination is <strong>not reachable by any sequence of inputs</strong>, because the wiring makes it a contradiction.</p>
+        <p>That is what page 1 was building toward: the engineering answer to a hazard is a structure in which it cannot occur, not a warning in the documentation.</p>
+      </div>
+
+      <h3>What it does, and how you use it</h3>
+
+      <table class="tt">
+        <thead><tr><th><code>Set</code></th><th><code>In</code></th><th><code>Q</code></th><th></th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>0</td><td><em>holds</em></td><td>Not listening</td></tr>
+          <tr><td>0</td><td>1</td><td><em>holds</em></td><td>Not listening &mdash; <code>In</code> is ignored entirely</td></tr>
+          <tr><td>1</td><td>0</td><td>0</td><td>Following <code>In</code></td></tr>
+          <tr><td>1</td><td>1</td><td>1</td><td>Following <code>In</code></td></tr>
+        </tbody>
+      </table>
+
+      <p><strong>To store a bit</strong> &mdash; this is the procedure you will use for the rest of the course:</p>
+
+      <ol>
+        <li>Put the value you want to store on <code>In</code>.</li>
+        <li>Raise <code>Set</code> to 1.</li>
+        <li>Return <code>Set</code> to 0. The value is now fixed in <code>Q</code> and stays there until the next time <code>Set</code> goes high.</li>
+      </ol>
+
+      <div class="callout">
+        <div class="callout__title">Storage is whenever <code>Set</code> is 0</div>
+        <p>Read that table again and notice which rows are the normal case. In a running machine <code>Set</code> is low almost all of the time &mdash; the cell spends its whole life holding, and writing is a brief interruption.</p>
+        <p>That is the opposite of how most people first picture memory. Storing is not the active thing the circuit does. Storing is what it does when nothing is happening to it.</p>
+      </div>
+
+      <h3>Transparency</h3>
+
+      <p>While <code>Set</code> is 1, the output <em>follows</em> the input continuously &mdash; change <code>In</code> and <code>Q</code> changes with it, immediately, for as long as the permission lasts. The cell is said to be <strong>transparent</strong> during that window.</p>
+
+      <p>Right now that is just a description. Section 4.5 is about what it costs.</p>
+    </section>
+
+    <!-- ============================================================
+         4.4 continued — the component
+         ============================================================ -->
+    <section id="sec-4-4-component">
+      <h3>This is <code>MEM_1BIT</code>, and it is the cell your CPU is made of</h3>
+
+      <p>Give this circuit a tab of its own called <code>MEM_1BIT</code>, with exactly three pins.</p>
+
+      <table class="pin-table">
+        <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><code>In</code></td><td>1</td><td>in</td><td>Active HIGH &mdash; the value to store</td></tr>
+          <tr><td><code>Set</code></td><td>1</td><td>in</td><td>Active HIGH &mdash; while 1, <code>Q</code> follows <code>In</code>; at 0 it holds</td></tr>
+          <tr><td><code>Q</code></td><td>1</td><td>out</td><td>The stored bit</td></tr>
+        </tbody>
+      </table>
+
+      <div class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/S-R-latch-logisim.png" loading="lazy"
+             alt="The finished one-bit memory circuit as built in Logisim, showing the four NAND gates wired together with input pins labelled In and Set on the left and a single output pin labelled Q on the right.">
+        <div class="circuit-canvas__caption">The finished cell in Logisim, with its pins named. Click to enlarge.</div>
+      </div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Three things about this interface that are not negotiable</div>
+        <p><strong>There is no <code>Q'</code> output.</strong> The latch inside produces one, and it is not brought out to a pin, because nothing downstream reads it. A pin nothing uses is a wire to maintain and a thing to mis-connect. Interfaces get smaller as designs settle.</p>
+        <p><strong>Set both input pins to 2-state with pull-down behaviour.</strong> Pull-down means they come up at 0 after a simulation reset &mdash; and with these active-HIGH inputs, 0 means "not being written", which is the harmless state.</p>
+        <p>Notice that is the <em>same</em> pin setting that made your raw <code>SR_LATCH</code> come up flickering on page 1. A pull-down is just a pin coming up at 0; whether 0 is safe depends entirely on what the pin means. Here it is safe. There it was the forbidden state.</p>
+        <p><strong>Week 5 instantiates these exact pins, eight times.</strong> A different name or a fourth pin means the register does not wire up.</p>
+      </div>
+
+      <details class="aside-optional">
+        <summary>Optional: what other books call this circuit</summary>
+        <div class="aside-optional__skip">
+          <p>Purely a vocabulary note, so that outside reading matches what you built. Nothing here is assessed.</p>
+        </div>
+        <p>This course calls the component <code>MEM_1BIT</code> and its inputs <code>In</code> and <code>Set</code>, matching the build page and what you will hear in lab.</p>
+        <p>Most textbooks call a circuit with one data input and one enable a <strong>gated D latch</strong> &mdash; "D" for data. If you look this up, that is the term to search for. A <em>gated S-R latch</em> is a near relative with separately gated set and reset inputs; ours has one data input, so it is the D form.</p>
+      </details>
+
+      <h3>Give it a face</h3>
+
+      <p>One last step, and it is graded: <strong>edit the circuit's appearance</strong> so the block reads as a labelled square rather than as Logisim's default.</p>
+
+      <div class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/1-bit-mem.png" loading="lazy"
+             alt="The one-bit memory circuit shown as a small labelled square block, with its input pins on the left side and its single output pin on the right.">
+        <div class="circuit-canvas__caption">The same circuit as a component. This is what you will be placing eight of, next week.</div>
+      </div>
+
+      <p>This is not decoration. Next week you place eight of these side by side; the week after, more again. Eight gate-level tangles on one canvas is unreadable. Eight labelled blocks is a diagram you can follow.</p>
+
+      <p>It is also the other half of why this course uses Logisim Classic. Gate-level shapes make <em>primitives</em> legible &mdash; you can see an XOR is an XOR. A clean block makes a <em>composite</em> legible. Same argument about seeing structure at a glance, applied at two different scales.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Where the Set line comes from</div>
+        <p>You have a cell that stores when told to. Something has to do the telling &mdash; and in your CPU that something is the control unit, raising <code>Set</code> on exactly the register that should capture what is on the bus. The decoders you built in Week 3 are what turn "register 2" into the one <code>Set</code> line that goes high.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         4.5
+         ============================================================ -->
+    <section id="sec-4-5">
+      <h2>4.5 &nbsp; Level and Edge: Where Your CPU Uses Each</h2>
+
+      <p>Your memory cell is transparent while <code>Set</code> is high. This section is about what that costs, how your machine pays it, and about the one place in your CPU that solves the problem a completely different way.</p>
+
+      <h3>1. What transparency costs</h3>
+
+      <p>While <code>Set</code> is high, a value passes <em>through</em> the cell and out the other side. If whatever is feeding <code>In</code> changed during that window, the cell would capture the new thing instead of the thing you meant.</p>
+
+      <p>Worse: imagine a path where a cell's output eventually comes back around to its own input &mdash; through an adder, say, and back. A counter is exactly that. If the permission window is open long enough, the value can go round the loop more than once. The circuit does not do the wrong thing so much as do the right thing an unpredictable number of times, which is harder to debug and much harder to trust.</p>
+
+      <h3>2. How your machine actually solves it</h3>
+
+      <p>Here is the answer, and it is not a rule about being careful. It is the shape of the control signals.</p>
+
+      <p>Moving a value from one register to another &mdash; call them R1 and R2 &mdash; takes four steps, <strong>in this order</strong>:</p>
+
+      <ol>
+        <li>R1's <code>enable</code> goes high. R1's value is now on the bus.</li>
+        <li>R2's <code>Set</code> goes high. R2 takes the value from the bus.</li>
+        <li>R2's <code>Set</code> goes low. The value is now held in R2.</li>
+        <li>R1's <code>enable</code> goes low. R1 stops driving the bus.</li>
+      </ol>
+
+      <div class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/RegisterTimingSetup.png" loading="lazy"
+             alt="Two waveforms drawn one above the other on the same time axis. The upper waveform, labelled R1 enable, rises first and stays high for a wide interval. The lower waveform, labelled R2 set, rises after R1 enable has already gone high and falls again before R1 enable falls, so each set pulse sits entirely inside an enable pulse. The pattern repeats three times.">
+        <div class="circuit-canvas__caption">The <code>set</code> pulse sits <strong>inside</strong> the <code>enable</code> pulse — it starts later and ends earlier. That nesting is the whole answer.</div>
+      </div>
+
+      <p>Read the picture. The source register drives the bus for the <em>entire</em> time the destination is transparent, and for a moment either side of it. <strong>The data on the bus cannot change during the window, because the thing putting it there has not stopped yet.</strong></p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">The same move as page 1, one level up</div>
+        <p>Section 4.4 removed the forbidden state by making it unreachable in the wiring. This removes the transparency hazard by <strong>shaping the control signals</strong> so the dangerous case cannot arise.</p>
+        <p>Neither is a rule anyone has to follow. Both are structures in which the bad thing is not available. That is what engineering a hazard away looks like, and you have now seen it twice in two pages.</p>
+      </div>
+
+      <p>Notice what this costs: a register-to-register move takes <strong>four steps</strong> rather than one. And something has to produce those four steps, in order, every time. That something is the clock.</p>
+
+      <h3>3. The clock</h3>
+
+      <p>Week 3 closed by promising that the clock arrives this week. Here it is.</p>
+
+      <p>A clock is a signal that does nothing but alternate. It carries no data. Its entire job is to say <em>now</em> &mdash; and then <em>now</em> again, forever, at a steady rate.</p>
+
+      <p>That is the mechanism by which a machine that computes everything continuously is persuaded to take turns. Every circuit you have built is always doing its thing, all the time, as fast as electricity crosses it. Left alone, they would all do it at once and trip over each other. The clock is what divides that continuous activity into <em>steps</em>, so that things can happen in an order.</p>
+
+      <h3>4. And why the clock itself needs something new</h3>
+
+      <p>The clock in your CPU is advanced by a single input &mdash; you toggle it by hand while testing, and later it runs on its own. Every time that input goes from 0 to 1, the machine advances one phase.</p>
+
+      <p>Think about what that requires. The device has to change state <strong>once per transition</strong> and then <em>ignore the input while it is held</em>. A level-sensitive cell cannot do that: while the input is high, it keeps responding. Hold the input up for a second and a level-sensitive counter would race through millions of phases.</p>
+
+      <p>What is needed is a device that acts on the <em>change</em> and not on the level. That device is an <strong>edge-triggered flip-flop</strong>, and your CPU's clock is built from one.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">The distinction, in one line each</div>
+        <p><strong>Level-triggered:</strong> responds the whole time the control signal is high. Your memory cell.</p>
+        <p><strong>Edge-triggered:</strong> responds only at the instant the control signal changes, and ignores it otherwise. Your clock.</p>
+      </div>
+
+      <h3>5. Both, in your machine, doing different jobs</h3>
+
+      <table class="design-table">
+        <thead><tr><th>Part of the CPU</th><th>What holds the bit</th><th>Why that one</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>The datapath</strong><br><span style="color:var(--color-text-muted);font-size:var(--fs-sm);">registers, RAM, the program counter, the memory address register</span></td>
+            <td>Level-sensitive <code>MEM_1BIT</code>, written by a <code>Set</code> pulse</td>
+            <td>Simple to build and easy to trace with a probe &mdash; and the control signals already guarantee the data is stable across the whole pulse, so the transparency problem never arises.</td>
+          </tr>
+          <tr>
+            <td><strong>The control section</strong><br><span style="color:var(--color-text-muted);font-size:var(--fs-sm);">the clock</span></td>
+            <td>Edge-triggered flip-flop</td>
+            <td>It must advance exactly once per input transition and ignore the input while it is held. Only an edge-triggered device does that.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p><strong>Neither of these is a compromise.</strong> Each is the right device for the job it does, and a machine that used one everywhere would be worse at something. That is worth holding on to, because it is easy to read "our registers aren't clocked" as a shortcut. It isn't one &mdash; it is a design decision with reasons, and you have just read them.</p>
+
+      <h3>6. How an edge-triggered device is built</h3>
+
+      <p>You are not building one, but you should know how the trick works, because it uses the cell you just made.</p>
+
+      <p>Put <strong>two</strong> gated cells in series and drive their enables with <em>opposite</em> polarities of the clock:</p>
+
+      <div class="circuit-canvas">
+        <svg class="ms-svg" viewBox="0 0 520 210" role="img" aria-labelledby="ms-title ms-desc">
+          <title id="ms-title">Master-slave construction of an edge-triggered flip-flop</title>
+          <desc id="ms-desc">A schematic block diagram. An input D on the left feeds the first of two blocks drawn in series, labelled master and slave. The clock signal passes through an inverting bubble before reaching the master's enable, and reaches the slave's enable directly. The master is annotated as open while the clock is 0; the slave is annotated as open while the clock is 1. The slave's output on the right is labelled Q. Because the two annotations are opposites, the two blocks are never open at the same time.</desc>
+
+          <path class="ms-wire" d="M20,70 H120"/>
+          <text class="ms-name" x="20" y="60">D</text>
+
+          <rect class="ms-block" x="120" y="36" width="130" height="68"/>
+          <text class="ms-name" x="150" y="66">master</text>
+          <text class="ms-cond" x="134" y="88">open while clk = 0</text>
+
+          <path class="ms-wire" d="M250,70 H300"/>
+
+          <rect class="ms-block" x="300" y="36" width="130" height="68"/>
+          <text class="ms-name" x="336" y="66">slave</text>
+          <text class="ms-cond" x="314" y="88">open while clk = 1</text>
+
+          <path class="ms-wire" d="M430,70 H495"/>
+          <text class="ms-name" x="465" y="60">Q</text>
+
+          <path class="ms-wire" d="M60,170 H185 V112"/>
+          <circle class="ms-bubble" cx="185" cy="104" r="7"/>
+          <path class="ms-wire" d="M120,170 H365 V104"/>
+          <text class="ms-name" x="18" y="176">clk</text>
+          <circle class="node node--lo" cx="120" cy="170" r="4"/>
+        </svg>
+        <div class="circuit-canvas__caption">Master–slave. The bubble on the master's enable is an inverter, and it is the entire mechanism: the two blocks are never open at the same time.</div>
+      </div>
+
+      <p>While the clock is 0 the master is open and tracks <code>D</code>; the slave is closed and holds. When the clock rises, the master closes &mdash; freezing whatever <code>D</code> was <em>just before</em> the rise &mdash; and the slave opens and takes that frozen value.</p>
+
+      <p>Because the two are never open together, <strong>there is never a path from <code>D</code> straight through to <code>Q</code></strong>. One value moves through, once, per rising edge. That is edge-triggering, built out of two level-triggered parts.</p>
+
+      <div class="callout">
+        <div class="callout__title">Setup and hold, briefly</div>
+        <p>"The value just before the edge" needs a small qualification: the input has to be <em>steady</em> for a moment before the edge and for a moment after it, or the capture is unreliable. Those two moments are called <strong>setup</strong> and <strong>hold</strong> times.</p>
+        <p>You do not need numbers for them now. You need to know the idea exists, because in Week 11 "everything must settle before the next phase" stops being a fact about chips and becomes a constraint you have to satisfy in your own design.</p>
+      </div>
+
+      <p>One footnote for when you meet the real thing: the flip-flop in your CPU's clock is a <strong>J-K</strong> with both of its inputs tied high, which makes it toggle on every edge rather than copy an input. Different type, same edge behaviour, and Week 11 is where you will place one.</p>
+
+      <h3>7. Why you are not building one this week</h3>
+
+      <p>Since Week 3 this course has been consistent: every circuit you build reappears later as a component of something bigger. A flip-flop would break that pattern, so here is the honest reason it is not on the assignment.</p>
+
+      <p><strong>You build the cells your datapath is made of.</strong> The clock's flip-flop arrives in Week 11 along with the circuit that uses it, and there you will place a ready-made one rather than build it &mdash; because building a J-K from gates is a week this course does not have, and it is not what this course is teaching you. What you needed from it, you now have: you know what edge-triggering is, why it exists, and where your machine uses it.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Next</div>
+        <p>Three devices &mdash; the raw latch, your memory cell, and a flip-flop &mdash; given the same input on the same time axis. The difference between <em>following</em> and <em>sampling</em> is hard to describe and immediately obvious once you see it drawn.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <!-- Click-to-enlarge overlay -->
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-labelledby="lightbox-caption">
+    <button type="button" class="lightbox__close" id="lightbox-close" aria-label="Close enlarged view">&times;</button>
+    <img class="lightbox__img" id="lightbox-img" src="" alt="">
+    <p class="lightbox__caption" id="lightbox-caption"></p>
+    <p class="lightbox__hint">Click anywhere or press Escape to close</p>
+  </div>
+
+  <script>
+  (function () {
+    'use strict';
+    var box = document.getElementById('lightbox');
+    var img = document.getElementById('lightbox-img');
+    var cap = document.getElementById('lightbox-caption');
+    var closeBtn = document.getElementById('lightbox-close');
+
+    function open(src, alt) {
+      img.src = src; img.alt = alt; cap.textContent = alt;
+      box.classList.add('open');
+      closeBtn.focus();
+    }
+    function close() { box.classList.remove('open'); img.src = ''; }
+
+    Array.prototype.forEach.call(document.querySelectorAll('.zoomable'), function (el) {
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('role', 'button');
+      el.setAttribute('aria-label', 'Enlarge: ' + (el.getAttribute('alt') || 'figure'));
+      el.addEventListener('click', function () { open(el.src, el.getAttribute('alt') || ''); });
+      el.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(el.src, el.getAttribute('alt') || ''); }
+      });
+    });
+    box.addEventListener('click', close);
+    closeBtn.addEventListener('click', function (e) { e.stopPropagation(); close(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+  })();
+  </script>
+</body>
+</html>

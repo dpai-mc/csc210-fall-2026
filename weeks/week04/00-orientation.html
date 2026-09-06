@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w4-00">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 4 Orientation: The Week Logic Becomes Memory</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific: the video placeholder ----------
+       Everything else on this page uses shared components. This block
+       exists only until the Week 4 overview video is recorded; see the
+       three-step swap instructions in the script block at the bottom. */
+    .video-pending {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      height: 100%;
+      min-height: 320px;
+      padding: var(--space-xl);
+      background: var(--color-code-bg);
+      color: var(--color-text-muted);
+      font-size: var(--fs-sm);
+      border-radius: var(--radius);
+    }
+
+    /* The two-circuit summary on the frame page. Deliberately not a
+       .pin-table -- that component is for interface specifications the
+       student must match exactly, and this is an at-a-glance list. Using
+       the specification styling here would dilute what it signals in the
+       assignment, where it matters. */
+    .part-list {
+      list-style: none;
+      padding: 0;
+      margin: var(--space-md) 0;
+    }
+    .part-list li {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: var(--space-sm);
+      padding: var(--space-sm) 0;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .part-list li:last-child { border-bottom: none; }
+    .part-list code {
+      font-weight: 700;
+      color: var(--color-primary);
+      flex: 0 0 auto;
+    }
+    .part-list span { color: var(--color-text-muted); font-size: var(--fs-sm); }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 4 &rsaquo; <span>Orientation</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Week 4 — The Week Logic Becomes Memory</h1>
+    <p><strong>Sequential Logic &amp; 1-Bit Memory</strong> &nbsp;|&nbsp; <strong>09/07 – 09/13</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~8 hours</p>
+
+    <!-- ============================================================
+         A — The gap
+         ============================================================ -->
+    <section id="sec-gap">
+      <div class="callout callout--hook">
+        <div class="callout__title">Where you are, and what is missing</div>
+
+        <p><strong>What you built last week:</strong> circuits that do real work. An 8-bit adder that adds two whole bytes. Decoders at three widths that turn a binary code into a one-of-N selection. Real components, built to spec, that go into the CPU you finish this course with.</p>
+
+        <p><strong>What you can't do yet:</strong> remember any of it. Every circuit you have built is <em>combinational</em> &mdash; its output depends only on what its inputs are right now. Change the inputs and the previous answer is not stored somewhere; it is simply gone.</p>
+
+        <p>That rules out more than it first appears. You cannot add three numbers, because there is nowhere to keep the first sum while you fetch the third. You cannot count. You cannot do one thing <em>and then</em> another, because "and then" requires remembering that the first thing happened. Without memory there are no programs &mdash; only a fixed shape that transforms whatever is presented to it.</p>
+
+        <p><strong>What you will be able to do by the end of this week:</strong> store a single bit that persists until you deliberately change it &mdash; built from two NAND gates wired back into each other. No new component, no special memory ingredient. Then control <em>when</em> it is allowed to change, and build the memory cell that every register in your CPU is made of.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         B — This is the pivot
+         ============================================================ -->
+    <section id="sec-pivot">
+      <h2>This is the pivot</h2>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">The week the machine gets a past</div>
+        <p>Every week so far has added a capability. This week changes what kind of machine you are building.</p>
+        <p>Before this week, a circuit was a shape that transformed whatever was presented to it. After this week, a circuit can have a <strong>past</strong>. Registers, RAM, the program counter, and the entire idea of a machine that does one instruction <em>and then</em> the next all rest on the two gates you wire together in this module.</p>
+      </div>
+
+      <p>Week 2 proved that NAND can build any logic function. This week collects on that a second time, in a way the universality proof did not predict: <strong>two NAND gates can build something that is not a logic function at all.</strong> A logic function's output is determined by its inputs. This circuit's output is not &mdash; and that is exactly what makes it memory.</p>
+
+      <h3>What you build, and where it goes</h3>
+
+      <ul class="part-list">
+        <li><code>SR_LATCH</code> <span>Two cross-coupled NAND gates. The mechanism, in its rawest form &mdash; and the one circuit this semester that you build to understand rather than to use.</span></li>
+        <li><code>MEM_1BIT</code> <span>Four NAND gates. <strong>Your CPU's memory cell.</strong> Week 5 places eight of them side by side to make a register, and every register, the program counter, the memory address register and every byte of RAM in your finished machine is made of these.</span></li>
+      </ul>
+
+      <p>Two circuits is the smallest number any week has asked for, and it is deliberate. This week is short &mdash; see below &mdash; and the hours it has belong to understanding the first one properly rather than to building a third.</p>
+    </section>
+
+    <!-- ============================================================
+         C — Short week
+         ============================================================ -->
+    <section id="sec-short-week">
+      <h2>This week is short. Here is how to spend it.</h2>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Two things compress this week</div>
+        <ul>
+          <li><strong>Labor Day is Monday 09/07.</strong> The week effectively starts Tuesday.</li>
+          <li><strong>Quiz 1 covers Weeks 1&ndash;4</strong> and is open all week, Monday through Sunday 09/13. One attempt, 60 minutes, open notes.</li>
+        </ul>
+      </div>
+
+      <p><strong>On the quiz being open all week:</strong> the window is wide so you can choose when you are <em>ready</em> &mdash; not so you can take it early. Twenty-five of its hundred points are Week 4 material, and you have one attempt. Read this week's pages first.</p>
+
+      <p><strong>Assignment 4 is deliberately smaller than Assignment 3</strong> &mdash; 60 points, a bit over an hour, two circuits instead of six. The quiz is where this week's assessment weight sits.</p>
+
+      <p>If you do one thing before Tuesday, read page 1. Lab 4 builds the latch with your hands; the reading is what makes the build mean something.</p>
+    </section>
+
+    <!-- ============================================================
+         D — Learning path
+         ============================================================ -->
+    <section id="sec-path">
+      <h2>This week's learning path</h2>
+
+      <div class="callout">
+        <div class="callout__title">Read these in order &mdash; and this week that matters</div>
+        <p>Last week's pages branched: you could work on decoders even if carry propagation had you stuck. <strong>Week 4 does not branch.</strong> Each circuit is built from the one before it, and page 3's whole argument depends on page 2. There is no section to skip ahead to, so if you get stuck, the thing to do is ask rather than move on.</p>
+      </div>
+
+      <div class="spa-card-grid">
+        <div class="spa-card">
+          <div class="spa-card__number">Page 1</div>
+          <div class="spa-card__title">Feedback: The S-R Latch</div>
+          <div class="spa-card__time">~2.25 hours &nbsp;|&nbsp; Sections 4.1&ndash;4.3</div>
+          <div class="spa-card__desc">Why nothing so far remembers. Then two NAND gates that do &mdash; with a bench you can poke, one gate delay at a time. Then the state the circuit should not be left in, and what it teaches.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+
+        <div class="spa-card">
+          <div class="spa-card__number">Page 2</div>
+          <div class="spa-card__title">Telling a Circuit When</div>
+          <div class="spa-card__time">~1.75 hours &nbsp;|&nbsp; Sections 4.4&ndash;4.5</div>
+          <div class="spa-card__desc">The four-gate memory cell your CPU is actually built from &mdash; and then the clock, why your machine's registers do not use one, and the one place in your CPU that does.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+
+        <div class="spa-card">
+          <div class="spa-card__number">Page 3</div>
+          <div class="spa-card__title">Seeing It in Time</div>
+          <div class="spa-card__time">~0.75 hours &nbsp;|&nbsp; Sections 4.6&ndash;4.7</div>
+          <div class="spa-card__desc">Three devices, one time axis, the same input. The difference between following and sampling, drawn rather than described &mdash; and the sentence that opens Week 5.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+
+        <div class="spa-card">
+          <div class="spa-card__number">Assignment 4</div>
+          <div class="spa-card__title">Sequential Circuits</div>
+          <div class="spa-card__time">~1.25 hours &nbsp;|&nbsp; 60 points</div>
+          <div class="spa-card__desc">Four written questions on how feedback becomes memory, three on timing, and both circuits built in Logisim. Submit the same <code>.circ</code> file you have been adding to since Week 2.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         E — Setup gate
+         ============================================================ -->
+    <section id="sec-setup">
+      <h2>Your <code>.circ</code> file continues</h2>
+
+      <div class="tool-card">
+        <div class="tool-card__icon" aria-hidden="true">&#128295;</div>
+        <div>
+          <div class="tool-card__name">No new install this week</div>
+          <div class="tool-card__desc">Open the same <code>CSC210_YourName.circ</code> you have been building since Week 2. This week's two circuits are <strong>new tabs in that same file</strong>. Nothing from Weeks 2 or 3 gets deleted or replaced.</div>
+        </div>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">One file, all semester</div>
+        <p>Every circuit you build in this course lives in one <code>.circ</code> file as a separate tab. Not a file per week, not a "master" file that links to others &mdash; <strong>one file</strong>. A submission that references circuits living in other files opens as a broken circuit on the grading machine and is marked incomplete.</p>
+      </div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Which components you may use &mdash; and the shortcut that appears this week</div>
+        <p>You may freely use anything from Logisim's <strong>Wiring</strong> folder (input and output pins, splitters, tunnels, constants, probes) and anything from <strong>Gates</strong> (NAND, AND, OR, NOT, NOR, XOR, XNOR, and the buffers).</p>
+        <p><strong>Do not use anything from Plexers, Arithmetic, or Memory.</strong></p>
+        <p>That last one matters this week for the first time. Logisim's <strong>Memory</strong> folder contains a D Flip-Flop, an S-R Flip-Flop and a Register &mdash; components that would do this week's work for you in about ten seconds. Using one produces a circuit that <em>functions</em> and teaches nothing, and every checkpoint from Week 5 onward instantiates <em>your</em> <code>MEM_1BIT</code>. Build it yourself.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         F — Progression
+         ============================================================ -->
+    <section id="sec-progression">
+      <h2>Where Week 4 fits</h2>
+
+      <div class="progression">
+        <div class="progression__item completed">
+          <div class="progression__label">Week 1 &mdash; Representation</div>
+          <div class="progression__detail">Any data can be written as 0s and 1s.</div>
+        </div>
+        <div class="progression__item completed">
+          <div class="progression__label">Week 2 &mdash; Mechanism</div>
+          <div class="progression__detail">Gates make decisions from voltage. NAND builds them all.</div>
+        </div>
+        <div class="progression__item completed">
+          <div class="progression__label">Week 3 &mdash; Computation</div>
+          <div class="progression__detail">Adders and decoders. Circuits that do useful work &mdash; and forget it instantly.</div>
+        </div>
+        <div class="progression__item active">
+          <div class="progression__label">Week 4 &mdash; Memory</div>
+          <div class="progression__detail">A circuit that holds a bit. The last rung of Phase 1, and the one everything after it stands on.</div>
+        </div>
+        <div class="progression__item">
+          <div class="progression__label">Week 5 &mdash; The Register &nbsp;<em>(Phase 2 begins)</em></div>
+          <div class="progression__detail">Eight of this week's memory cells, side by side. And your first MIPS program, where <code>$t0</code> is a name for exactly that circuit.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         G — Week overview video
+         ============================================================ -->
+    <section id="sec-video">
+      <h2>Week 4 overview video</h2>
+
+      <div class="video-breakout">
+        <div class="video-transcript-row">
+          <div class="video-col">
+            <div class="video-frame" id="video-container">
+              <!-- PLACEHOLDER — see the three-step swap block in the script below.
+                   Replace this div with the standard iframe, set VIDEO_ID, and
+                   paste the cleaned WEBVTT into vttContent. -->
+              <div class="video-pending">
+                <p>The Week 4 overview video will be posted later this week.<br>
+                   The pages in this module are complete and do not depend on it &mdash; start with page 1.</p>
+              </div>
+            </div>
+            <div class="video-caption">When posted, closed captions will be available and the transcript panel will jump to any point in the video.</div>
+          </div>
+          <div class="transcript-col">
+            <h2 class="sr-only">Video transcript</h2>
+            <div class="transcript-panel" id="transcript-container" role="region"
+                 aria-live="polite"
+                 aria-label="Video transcript. Select a line to jump to that point in the video. The line currently being spoken is announced as the video plays.">
+              <p class="transcript-loading">The transcript will appear here with the video.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <script>
+  (function () {
+    'use strict';
+
+    /* ============================================================
+       SWAPPING IN THE VIDEO — three steps
+       ============================================================
+       1. Set VIDEO_ID below to the YouTube id.
+       2. Paste the cleaned WEBVTT between the backticks in vttContent.
+          (SRT converts to WEBVTT by replacing the comma in each timestamp
+          with a period and adding a WEBVTT header line.)
+       3. In the markup above, replace the .video-pending div with:
+
+          <iframe id="youtube-player"
+                  src="https://www.youtube.com/embed/VIDEO_ID_HERE?enablejsapi=1&amp;cc_load_policy=1&amp;iv_load_policy=3&amp;modestbranding=1&amp;rel=0"
+                  title="CSC210 Week 4 Overview: The Week Logic Becomes Memory"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerpolicy="strict-origin-when-cross-origin"
+                  allowfullscreen loading="lazy"></iframe>
+
+       Everything below no-ops cleanly while VIDEO_ID is empty, so the page
+       is correct and complete as it stands.
+       ============================================================ */
+
+    var VIDEO_ID = '';
+    var vttContent = ``;
+
+    var player, timeUpdater, parsedTranscript = [];
+
+    function timeToSeconds(timeStr) {
+      if (!timeStr) return 0;
+      var parts = timeStr.trim().split(':');
+      if (parts.length === 2) {
+        return (parseInt(parts[0]) || 0) * 60 + (parseFloat(parts[1]) || 0);
+      } else if (parts.length === 3) {
+        return (parseInt(parts[0]) || 0) * 3600 + (parseInt(parts[1]) || 0) * 60 + (parseFloat(parts[2]) || 0);
+      }
+      return 0;
+    }
+
+    function parseVtt(vttText) {
+      var cues = vttText.trim().split(/\n\n+/);
+      var parsedCues = [];
+      cues.forEach(function (cueBlock) {
+        if (cueBlock.indexOf('WEBVTT') === 0 || cueBlock.trim() === '') return;
+        var lines = cueBlock.trim().split('\n');
+        var timeLine = lines.filter(function (l) { return l.indexOf('-->') !== -1; })[0];
+        if (!timeLine) return;
+        var parts = timeLine.split(' --> ');
+        var textLines = lines.slice(lines.indexOf(timeLine) + 1);
+        parsedCues.push({
+          start: timeToSeconds(parts[0]),
+          end: timeToSeconds(parts[1]),
+          text: textLines.join(' ').trim()
+        });
+      });
+      return parsedCues;
+    }
+
+    function populateTranscript() {
+      var container = document.getElementById('transcript-container');
+      if (!container) return;
+      container.innerHTML = '';
+      parsedTranscript.forEach(function (cue) {
+        var lineEl = document.createElement('div');
+        lineEl.className = 'transcript-line';
+        lineEl.dataset.start = cue.start;
+        lineEl.dataset.end = cue.end;
+        lineEl.textContent = cue.text;
+        lineEl.setAttribute('role', 'button');
+        lineEl.setAttribute('tabindex', '0');
+        var seekTo = function () {
+          if (player && player.seekTo) { player.seekTo(cue.start, true); player.playVideo(); }
+        };
+        lineEl.addEventListener('click', seekTo);
+        lineEl.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); seekTo(); }
+        });
+        container.appendChild(lineEl);
+      });
+    }
+
+    function highlightCurrentLine() {
+      if (!player || !player.getCurrentTime) return;
+      var currentTime = player.getCurrentTime();
+      var lines = document.querySelectorAll('#transcript-container .transcript-line');
+      lines.forEach(function (line) {
+        var start = parseFloat(line.dataset.start);
+        var end = parseFloat(line.dataset.end);
+        if (currentTime >= start && currentTime < end) {
+          if (!line.classList.contains('active-transcript-line')) {
+            var prev = document.querySelector('#transcript-container .active-transcript-line');
+            if (prev) prev.classList.remove('active-transcript-line');
+            line.classList.add('active-transcript-line');
+            line.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else {
+          line.classList.remove('active-transcript-line');
+        }
+      });
+    }
+
+    function syncTranscriptHeight() {
+      var videoContainer = document.getElementById('video-container');
+      var transcriptContainer = document.getElementById('transcript-container');
+      if (!videoContainer || !transcriptContainer) return;
+      // Match the transcript panel's height to the video only when the two
+      // columns are ACTUALLY side by side. Detected by comparing their rendered
+      // positions rather than by a viewport-width test, so this stays in sync
+      // with the flex-wrap rule in shared/style.css regardless of how wide the
+      // Canvas iframe happens to be. (The old matchMedia('(min-width: 1024px)')
+      // test measured the iframe, not the browser window, and disagreed with
+      // the CSS whenever Canvas gave the page less than 1024px.)
+      var videoCol = videoContainer.closest('.video-col');
+      var transcriptCol = transcriptContainer.closest('.transcript-col');
+      var sideBySide = !!(videoCol && transcriptCol) && Math.abs(
+        transcriptCol.getBoundingClientRect().top - videoCol.getBoundingClientRect().top) < 2;
+      // Both height and max-height are set: .transcript-panel carries a fixed
+      // height: 24rem, so setting max-height alone could only ever shrink the
+      // panel, never grow it to match a taller video.
+      if (sideBySide) {
+        transcriptContainer.style.height = videoContainer.offsetHeight + 'px';
+        transcriptContainer.style.maxHeight = videoContainer.offsetHeight + 'px';
+      } else {
+        transcriptContainer.style.height = '24rem';
+        transcriptContainer.style.maxHeight = '24rem';
+      }
+    }
+
+    window.onYouTubeIframeAPIReady = function () {
+      if (!VIDEO_ID || !document.getElementById('youtube-player')) return;
+      player = new YT.Player('youtube-player', {
+        videoId: VIDEO_ID,
+        events: {
+          onStateChange: function (event) {
+            clearInterval(timeUpdater);
+            if (event.data === YT.PlayerState.PLAYING) {
+              timeUpdater = setInterval(highlightCurrentLine, 300);
+            }
+          }
+        }
+      });
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      // No video yet: leave the placeholder copy in place and skip the API.
+      if (!VIDEO_ID || !vttContent.trim()) { syncTranscriptHeight(); return; }
+
+      parsedTranscript = parseVtt(vttContent);
+      populateTranscript();
+      setTimeout(syncTranscriptHeight, 100);
+      if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+        var tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      } else {
+        window.onYouTubeIframeAPIReady();
+      }
+    });
+
+    var resizeTimeout;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(syncTranscriptHeight, 250);
+    });
+  })();
+  </script>
+</body>
+</html>

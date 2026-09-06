@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w4-01">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 4: Feedback — The S-R Latch</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific: the latch bench ----------
+       The gate symbols, wires, switches, lamps, step controls, presets and
+       state readout are all shared components. What is here is the two-
+       column bench layout and the latch's own SVG sizing, neither of which
+       recurs elsewhere. */
+
+    .bench {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 150px;
+      gap: var(--space-lg);
+      align-items: start;
+    }
+    @media (max-width: 700px) {
+      .bench { grid-template-columns: 1fr; }
+    }
+
+    /* The latch diagram is wider than a single gate and needs the room --
+       .gate-svg caps at 260px, which is right for one gate and far too
+       narrow for two with feedback routed around them. */
+    .latch-svg {
+      width: 100%;
+      max-width: 480px;
+      height: auto;
+      margin: 0 auto;
+      display: block;
+      overflow: visible;
+    }
+    .latch-svg .gate-body {
+      fill: var(--color-surface);
+      stroke: var(--color-text);
+      stroke-width: 3;
+      stroke-linejoin: round;
+    }
+    .latch-svg text {
+      font-family: var(--font-mono);
+      font-size: 15px;
+      fill: var(--color-text);
+    }
+    .latch-svg .pin-label { font-weight: 700; }
+    .latch-svg .hint {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      fill: var(--color-text-muted);
+    }
+    /* The feedback paths are the point of the circuit, so they are drawn
+       heavier than the input wires and never fade to the "off" grey. */
+    .latch-svg .wire--feedback { stroke-width: 4; }
+
+    .bench__controls {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+    .bench__io-group {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: var(--space-sm);
+    }
+    .bench__io-title {
+      font-size: var(--fs-xs);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-xs);
+    }
+    /* The active-LOW meaning sits under each switch permanently. This is
+       the single most common confusion in the week and a tooltip is not
+       good enough. */
+    .switch-meaning {
+      font-size: var(--fs-xs);
+      color: var(--color-text-muted);
+      margin: calc(-1 * var(--space-xs)) 0 var(--space-sm) 0;
+      line-height: 1.3;
+    }
+    .out-row { display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-xs); }
+    .out-row__name { font-family: var(--font-mono); font-weight: 700; width: 26px; }
+
+    /* Mode toggle. Two buttons rather than a checkbox, because the two
+       states are peers rather than on/off — and .widget-btn[aria-pressed]
+       already carries the selected styling, so this is layout only.
+       Same pattern as week03/02-ripple-carry.html. */
+    .mode-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-xs);
+      align-items: center;
+      margin: var(--space-md) 0 var(--space-sm);
+    }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 4 &rsaquo; <span>Page 1: Feedback — The S-R Latch</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Feedback: The S-R Latch</h1>
+    <p><strong>Sections 4.1 &ndash; 4.3</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~2.25 hours</p>
+
+    <p>Last week ended with a promise. You had just built an adder and three decoders &mdash; real components, correct, reusable &mdash; and the closing page pointed out the one thing none of them could do: remember. Change the inputs and the answer is gone. Not stored badly, not stored somewhere hard to reach. There is nowhere in a combinational circuit for a value to have been kept.</p>
+
+    <p><strong>This page keeps that promise, and it keeps it with two NAND gates.</strong></p>
+
+    <p>Not a new component. Not a memory chip. Two of the gates you built in Week 2, wired so that each one's output feeds the other one's input. That loop holds a bit. It will keep holding it after you let go of the input, and it will keep holding it until you deliberately change it &mdash; which is the entire definition of memory.</p>
+
+    <!-- ============================================================
+         4.1
+         ============================================================ -->
+    <section id="sec-4-1">
+      <h2>4.1 &nbsp; Why Nothing So Far Remembers</h2>
+
+      <p>Every circuit you have built in this course has the same property, and it is worth stating precisely before we break it:</p>
+
+      <div class="callout">
+        <div class="callout__title">The combinational property</div>
+        <p><strong>The output is a function of the present input, and of nothing else.</strong> Give the circuit the same inputs twice and it gives you the same answer twice &mdash; no matter what happened in between.</p>
+      </div>
+
+      <p>That sounds like a guarantee, and in a sense it is. It is also a wall.</p>
+
+      <h3>What it rules out</h3>
+
+      <p>Take your 8-bit adder. It adds two numbers. Now add <em>three</em> numbers.</p>
+
+      <p>You cannot. There is nowhere to put the first sum while you go and fetch the third number. The adder does not have a "hold this for a moment" &mdash; the instant you change its inputs to present the third number, the first sum is gone. Not overwritten, not moved. It was never anywhere; it was just the shape the wires happened to be making.</p>
+
+      <p>The same wall stops everything else:</p>
+
+      <ul>
+        <li><strong>You cannot count.</strong> Counting means knowing what number you were on.</li>
+        <li><strong>You cannot do one thing <em>and then</em> another.</strong> "And then" requires remembering that the first thing happened.</li>
+        <li><strong>You cannot run a program.</strong> A program is a sequence, and a sequence is nothing but "and then" repeated.</li>
+      </ul>
+
+      <p>Without memory there is no such thing as software. There is only a fixed shape that transforms whatever is presented to it &mdash; very fast, entirely correct, and unable to have a second thought.</p>
+
+      <h3>What the missing ingredient is not</h3>
+
+      <p>Before going further, rule two things out, because both are the natural first guess.</p>
+
+      <p><strong>It is not a new kind of gate.</strong> Week 2 proved NAND is universal &mdash; every logic function can be built from NAND alone. So if memory were a logic function, you could already build it. You cannot, which means it is not one.</p>
+
+      <p><strong>It is not more gates.</strong> Any arrangement of gates where signals flow from inputs to outputs is still combinational, no matter how many gates it contains. A million of them in a row is still a shape.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Whatever memory is, it is not a bigger truth table</div>
+        <p>Both dead ends have the same cause: in every circuit so far, signals travel <em>forwards</em>. Inputs on the left, outputs on the right, and nothing ever comes back.</p>
+        <p>Which leaves exactly one structural option nobody has tried. <strong>What if the circuit's own output were one of its inputs?</strong></p>
+      </div>
+
+      <details class="aside-optional">
+        <summary>Optional: a device you already own that has this problem solved</summary>
+        <div class="aside-optional__skip">
+          <p><strong>This aside assumes nothing but everyday experience</strong> &mdash; no programming background, nothing from another course. It is here because it makes the idea land faster for some people. <strong>Skipping it costs you nothing</strong>; the explanation above and below is complete on its own, and no quiz question or assignment problem depends on having read this.</p>
+        </div>
+
+        <p>A wall light switch is <strong>combinational</strong>. The switch position <em>is</em> the state: flick it up and the light is on, flick it down and it is off. You can tell what the lamp is doing by looking at the switch, because the switch holds no history &mdash; it just is where it is.</p>
+
+        <p>A <strong>TV power button</strong> is not like that. It is the <em>same button</em> whether the TV is on or off, and what it does depends on what happened before. Press it when the TV is off and it turns on. Press the identical button again and it turns off. The button has no idea what it is doing; the <em>television</em> is remembering, and the button is just an event.</p>
+
+        <p>You have owned a device with state your whole life. What this week adds is the answer to <em>how</em>.</p>
+
+        <div class="aside-optional__breaks">
+          <p><strong>Where this analogy breaks &mdash; and these matter:</strong></p>
+          <ul>
+            <li><strong>A TV button is a toggle. The latch is not.</strong> The circuit you are about to build has <em>separate</em> set and reset inputs, and setting an already-set latch does nothing the second time. Do not expect the latch to flip back and forth from one input.</li>
+            <li><strong>One input versus two.</strong> The button is a single control. The latch has two, and which one you drive decides which way it goes.</li>
+            <li><strong>It explains the behaviour, not the mechanism.</strong> The TV's state lives inside a chip that is itself full of latches &mdash; so the analogy is describing the thing we are trying to explain, from the outside. The mechanism is the entire subject of 4.2, and there the analogy has nothing to offer.</li>
+          </ul>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============================================================
+         4.2 — THE PIVOT
+         ============================================================ -->
+    <section id="sec-4-2">
+      <h2>4.2 &nbsp; Feedback: The S-R Latch</h2>
+
+      <p>Here is the circuit. Two NAND gates. Each one's output is wired into the other one's input.</p>
+
+      <div class="circuit-canvas">
+        <svg class="latch-svg" viewBox="0 0 470 250" role="img"
+             aria-labelledby="schematic-title schematic-desc">
+          <title id="schematic-title">The NAND S-R latch</title>
+          <desc id="schematic-desc">Two NAND gates drawn one above the other. The input nS enters the upper gate from the left; the input nR enters the lower gate from the left. The upper gate's output is labelled q and also loops down and back into the lower gate's second input. The lower gate's output is labelled nq and also loops up and back into the upper gate's second input. Each gate's output is the other gate's input, forming a closed loop.</desc>
+
+          <!-- input wires -->
+          <path class="wire" d="M60,56 H190"/>
+          <path class="wire" d="M60,194 H190"/>
+
+          <!-- gate bodies -->
+          <path class="gate-body" d="M190,42 H228 A28,28 0 0 1 228,98 H190 Z"/>
+          <circle class="gate-body" cx="262" cy="70" r="6"/>
+          <path class="gate-body" d="M190,152 H228 A28,28 0 0 1 228,208 H190 Z"/>
+          <circle class="gate-body" cx="262" cy="180" r="6"/>
+
+          <!-- output wires -->
+          <path class="wire" d="M268,70 H400"/>
+          <path class="wire" d="M268,180 H400"/>
+
+          <!-- the feedback paths: q down into the lower gate, nq up into the upper -->
+          <path class="wire wire--feedback" d="M300,70 V120 H170 V166 H190"/>
+          <path class="wire wire--feedback" d="M312,180 V132 H178 V84 H190"/>
+          <circle class="node" cx="300" cy="70" r="5"/>
+          <circle class="node" cx="312" cy="180" r="5"/>
+
+          <!-- labels -->
+          <text class="pin-label" x="24" y="61">nS</text>
+          <text class="pin-label" x="24" y="199">nR</text>
+          <text class="pin-label" x="410" y="76">q</text>
+          <text class="pin-label" x="410" y="186">nq</text>
+          <text class="hint" x="22" y="78">0 = set</text>
+          <text class="hint" x="22" y="216">0 = reset</text>
+          <text class="hint" x="196" y="126">the loop</text>
+        </svg>
+        <div class="circuit-canvas__caption">The NAND S-R latch. The two heavy wires in the middle are the whole idea: each gate's output is the other gate's input, so the circuit's present state is part of what determines its present state.</div>
+      </div>
+
+      <p>That is the entire circuit. Two gates and two wires that go backwards. Everything below is a consequence of those two wires.</p>
+
+      <h3>Angle 1 &mdash; the circuit, operated</h3>
+
+      <p>The inputs are called <code>nS</code> and <code>nR</code> &mdash; "not-S" and "not-R" &mdash; and they are <strong>active LOW</strong>. That means you activate them by driving them to <strong>0</strong>, not to 1.</p>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Active LOW, and the naming rule for the rest of the course</div>
+        <p><strong>A pin name beginning with a lowercase <code>n</code> is active LOW.</strong> Drive <code>nS</code> to <strong>0</strong> to set. Drive <code>nR</code> to <strong>0</strong> to reset. Leaving both at 1 does nothing &mdash; and "does nothing" is about to turn out to be the most interesting row in the table.</p>
+        <p>Why write it this way? Because a Logisim pin name cannot carry an overbar, and an apostrophe is a nuisance to type in every later week that uses the component. The <code>n</code> prefix is what this course uses from here on.</p>
+        <p><strong>This is the single most common source of confusion this week.</strong> If a result surprises you, check the polarity first.</p>
+      </div>
+
+      <p>Walk the four combinations by tracing signals rather than reciting a table. Remember the one rule a NAND obeys: <strong>its output is 0 only when all of its inputs are 1.</strong> Any 0 on an input forces the output to 1.</p>
+
+      <p><strong>Set (<code>nS</code>=0, <code>nR</code>=1).</strong> A 0 into the upper gate forces its output <code>q</code> to 1, whatever else is happening. That 1 travels down the feedback wire into the lower gate, which now sees 1 and 1, so <code>nq</code> goes to 0. And that 0 travels back up into the upper gate &mdash; which is already outputting 1 and is now being told to, twice over.</p>
+
+      <p><strong>Reset (<code>nS</code>=1, <code>nR</code>=0)</strong> is the same story with the gates swapped: <code>nq</code> is forced to 1, that 1 feeds the upper gate which now sees 1 and 1, so <code>q</code> goes to 0.</p>
+
+      <h3>The row that is not like the others</h3>
+
+      <p>Now the hold state: both inputs at 1. Neither gate is being forced to do anything. So what does the circuit do?</p>
+
+      <p>Suppose <code>q</code> is 1 and <code>nq</code> is 0. Check it for consistency: the lower gate sees <code>nR</code>=1 and the fed-back <code>q</code>=1 &mdash; two ones &mdash; so it outputs 0. That is <code>nq</code>=0, which is what we assumed. The upper gate sees <code>nS</code>=1 and the fed-back <code>nq</code>=0 &mdash; a zero on an input &mdash; so it outputs 1. That is <code>q</code>=1, which is also what we assumed. <strong>The configuration is self-consistent. Nothing wants to change.</strong></p>
+
+      <p>Now suppose the opposite: <code>q</code> is 0 and <code>nq</code> is 1. The upper gate sees <code>nS</code>=1 and <code>nq</code>=1, so it outputs 0 &mdash; that is <code>q</code>=0. The lower gate sees <code>nR</code>=1 and <code>q</code>=0, so it outputs 1 &mdash; that is <code>nq</code>=1. <strong>Also self-consistent. Also nothing wants to change.</strong></p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Two stable states under identical inputs</div>
+        <p>With <code>nS</code>=1 and <code>nR</code>=1, this circuit has <strong>two</strong> configurations it can sit in forever, and the inputs do not choose between them.</p>
+        <p>So the inputs alone do not determine the output. Something else does &mdash; and the only thing left is <strong>which of the two states the loop settled into earlier</strong>. That is where the bit is. Not in a component, not in a special material. The bit is <em>which stable state this loop is currently in</em>, and it stays there because each gate keeps driving the value that makes the other gate keep driving it.</p>
+        <p><strong>Memory is feedback.</strong> There is no memory ingredient. There is a loop.</p>
+      </div>
+
+      <p>That paragraph is the most important one in this course. Everything from here &mdash; registers, RAM, the program counter, the whole notion of a machine that executes one instruction and then the next &mdash; is that idea, replicated.</p>
+
+      <h3>Angle 2 &mdash; the truth table, and what it cannot say</h3>
+
+      <p>Here is the same circuit as a table. Look at what has to go in the first row.</p>
+
+      <table class="tt">
+        <thead>
+          <tr><th><code>nS</code></th><th><code>nR</code></th><th><code>q</code></th><th><code>nq</code></th><th>Name</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>1</td><td><em>holds</em></td><td><em>holds</em></td><td><strong>Hold</strong> &mdash; keeps whatever it already had</td></tr>
+          <tr><td>0</td><td>1</td><td>1</td><td>0</td><td><strong>Set</strong></td></tr>
+          <tr><td>1</td><td>0</td><td>0</td><td>1</td><td><strong>Reset</strong></td></tr>
+          <tr><td>0</td><td>0</td><td>1</td><td>1</td><td><strong>Forbidden</strong> &mdash; both outputs 1, which contradicts their names</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">The table has a hole in it, and the hole is the memory</div>
+        <p>Every truth table you built in Weeks 2 and 3 could be filled in completely from the inputs alone. That was the definition of the thing you were building.</p>
+        <p><strong>This one cannot.</strong> The first row's output is not a value, it is the word <em>holds</em> &mdash; because writing a 0 or a 1 there would require knowing something the inputs do not tell you. The table is not incomplete by accident. It is incomplete because the circuit is no longer a function of its inputs, and that is precisely what we came here for.</p>
+      </div>
+
+      <h3>Angle 3 &mdash; and where the physical intuition went</h3>
+
+      <p>Section 4.1 offered an optional aside about a TV power button: the same press does different things depending on what happened before. If you read it, this is the moment it pays off &mdash; and if you skipped it, nothing here depends on it.</p>
+
+      <p>The button showed you that devices with a past exist and that you already own several. <strong>This circuit is how that is done.</strong> Not a metaphor for it, not an approximation of it &mdash; the actual mechanism, two gates and a wire that goes backwards, at the bottom of every memory you have ever used.</p>
+    </section>
+
+    <!-- ============================================================
+         WIDGET 1 — The Latch Bench
+         ============================================================ -->
+    <section id="widget-1">
+      <div class="widget-card">
+        <div class="widget-card__title">The Latch Bench</div>
+        <div class="widget-card__subtitle">Drive the inputs and watch the loop settle. Then let go, and watch it hold.</div>
+
+        <div class="preset-row" role="group" aria-label="Preset scenarios">
+          <button type="button" class="preset-btn" data-preset="set">Set, then release</button>
+          <button type="button" class="preset-btn" data-preset="reset">Reset, then release</button>
+          <button type="button" class="preset-btn" data-preset="forbidden">Drive both low</button>
+          <button type="button" class="preset-btn" data-preset="race">Release both at once</button>
+        </div>
+
+        <div class="bench">
+          <div>
+            <svg class="latch-svg" id="bench-svg" viewBox="0 0 470 250" role="img"
+                 aria-label="Live diagram of the NAND S-R latch. The current signal values are announced in the status region below.">
+              <path class="wire" id="w-ns" d="M60,56 H190"/>
+              <path class="wire" id="w-nr" d="M60,194 H190"/>
+
+              <path class="gate-body" d="M190,42 H228 A28,28 0 0 1 228,98 H190 Z"/>
+              <circle class="gate-body" cx="262" cy="70" r="6"/>
+              <path class="gate-body" d="M190,152 H228 A28,28 0 0 1 228,208 H190 Z"/>
+              <circle class="gate-body" cx="262" cy="180" r="6"/>
+
+              <path class="wire" id="w-q"  d="M268,70 H400"/>
+              <path class="wire" id="w-nq" d="M268,180 H400"/>
+
+              <path class="wire wire--feedback" id="w-fb-q"  d="M300,70 V120 H170 V166 H190"/>
+              <path class="wire wire--feedback" id="w-fb-nq" d="M312,180 V132 H178 V84 H190"/>
+              <circle class="node" id="n-q"  cx="300" cy="70"  r="5"/>
+              <circle class="node" id="n-nq" cx="312" cy="180" r="5"/>
+
+              <text class="pin-label" x="24" y="61">nS</text>
+              <text class="pin-label" x="24" y="199">nR</text>
+              <text class="pin-label" x="410" y="76">q</text>
+              <text class="pin-label" x="410" y="186">nq</text>
+              <text class="hint" x="22" y="78">0 = set</text>
+              <text class="hint" x="22" y="216">0 = reset</text>
+            </svg>
+          </div>
+
+          <div class="bench__controls">
+            <div class="bench__io-group">
+              <div class="bench__io-title">Inputs</div>
+              <button type="button" class="input-switch on" id="sw-ns" aria-pressed="false">nS = 1</button>
+              <p class="switch-meaning">Drive to <strong>0</strong> to set</p>
+              <button type="button" class="input-switch on" id="sw-nr" aria-pressed="false">nR = 1</button>
+              <p class="switch-meaning">Drive to <strong>0</strong> to reset</p>
+              <button type="button" class="widget-btn widget-btn--small widget-btn--outline" id="btn-release">
+                Release both inputs
+              </button>
+            </div>
+
+            <div class="bench__io-group">
+              <div class="bench__io-title">Outputs</div>
+              <div class="out-row"><span class="out-row__name">q</span>
+                <div class="output-light output-light--compact" id="lamp-q" aria-label="Output q is 0">0</div></div>
+              <div class="out-row"><span class="out-row__name">nq</span>
+                <div class="output-light output-light--compact" id="lamp-nq" aria-label="Output nq is 1">1</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cost-readout" id="state-readout" role="status" aria-live="polite">
+          State: <strong>Hold</strong> — the latch is keeping the value it already had.
+        </div>
+
+        <div class="mode-row">
+          <span class="sr-only" id="mode-label">Display mode</span>
+          <button type="button" class="widget-btn widget-btn--small" id="mode-instant"
+                  aria-pressed="true" aria-describedby="mode-label">Instant</button>
+          <button type="button" class="widget-btn widget-btn--small" id="mode-stepped"
+                  aria-pressed="false" aria-describedby="mode-label">Settle step by step</button>
+        </div>
+
+        <div id="settle-panel" hidden>
+          <p style="font-size:var(--fs-sm);color:var(--color-text-muted);margin-bottom:var(--space-xs);">
+            Each step is one gate delay. Both gates look at what the wires held a moment ago and update together &mdash;
+            neither goes first, because in a real circuit neither does.
+          </p>
+          <div class="stage-chain" id="settle-chain" aria-live="polite" aria-label="Settle trace, one gate delay per step"></div>
+          <div class="step-nav">
+            <button type="button" class="widget-btn widget-btn--small widget-btn--outline" id="step-back">&larr; Step back</button>
+            <button type="button" class="widget-btn widget-btn--small widget-btn--outline" id="step-fwd">Step forward &rarr;</button>
+            <span id="step-status" style="font-size:var(--fs-sm);color:var(--color-text-muted);"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         4.3
+         ============================================================ -->
+    <section id="sec-4-3">
+      <h2>4.3 &nbsp; The Forbidden State, and What It Teaches</h2>
+
+      <p>Drive both inputs to 0 at once. A 0 on an input forces a NAND's output to 1, so both gates output 1 &mdash; and <code>q</code> and <code>nq</code> are both 1 at the same time.</p>
+
+      <p>Look at what those names promise. <code>nq</code> is supposed to be the <em>complement</em> of <code>q</code>. Right now it is not. The circuit has not broken and nothing is on fire; it is doing exactly what two NAND gates with a 0 on each of them must do. But it is in a state where its own labels are lying, and any circuit downstream that trusts <code>nq</code> to be the opposite of <code>q</code> is now being told something false.</p>
+
+      <div class="callout">
+        <div class="callout__title">The state itself is not really the problem</div>
+        <p>While you hold both inputs at 0, the latch sits there stably. It is useless &mdash; it is not storing anything, both outputs are 1 &mdash; but it is not dangerous.</p>
+        <p><strong>The problem is leaving.</strong></p>
+      </div>
+
+      <h3>The race</h3>
+
+      <p>Release both inputs at the same moment. Both go from 0 back to 1.</p>
+
+      <p>Now both gates are looking at each other's 1 and both are trying to go to 0 &mdash; and the instant either one succeeds, it forces the other one back to 1. Whichever gate gets there first wins, and the loop settles with that gate's output low.</p>
+
+      <p><strong>Which gate gets there first is not determined by anything in the design.</strong> It comes down to which piece of silicon happens to switch a fraction of a nanosecond sooner &mdash; manufacturing variation, temperature, the length of a wire. Two copies of the identical circuit can land differently. The same copy can land differently on two different runs.</p>
+
+      <p>Try it in the bench above with the <strong>Release both at once</strong> preset. Step through it. It does not settle &mdash; the values oscillate and never reach a fixed point, because the honest simulation of "both gates change together and neither goes first" has no answer to give you. That is not the widget avoiding the question. There is no answer.</p>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">What Logisim will show you, and why it is not your fault</div>
+        <p>When you build this circuit and press run, the outputs may flicker between red error states and apparently random values before settling &mdash; and they may settle differently on different runs.</p>
+        <p><strong>A real latch has no defined state at power-on.</strong> Both gates race, one wins on tiny physical differences, and the circuit lands in a stable but arbitrary state. Logisim showing you red is Logisim being honest that nothing has determined the answer yet.</p>
+        <p>This is also why real sequential systems carry a <strong>global reset</strong> that forces every memory element into a known state before anything else happens.</p>
+        <p><strong>And it is what the pull-down setting on your input pins is for.</strong> The assignment asks you to set both inputs to 2-state with pull-down behaviour, so they come up at 0 after a reset. Notice what that means for <em>this</em> circuit: 0 on both inputs is the forbidden state, so your raw latch will come up flickering. That is expected, and page 2's circuit is where that stops being true.</p>
+      </div>
+
+      <h3>The lesson, which is why this is a section and not a footnote</h3>
+
+      <p>The obvious response to a bad state is a rule: <em>never drive both inputs low.</em> Write it in the documentation, tell the students, move on.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">You do not fix a race by being careful</div>
+        <p>A rule is a promise made by a person. The circuit cannot read it, cannot check it, and will do exactly what its wires say the moment something upstream glitches, or a signal arrives a nanosecond early, or a future student wires it up differently.</p>
+        <p>The engineering answer is not to avoid the bad state. It is to <strong>build a circuit that cannot reach it</strong> &mdash; where the forbidden combination is not forbidden by instruction but impossible by construction.</p>
+        <p>That is the next page, and it is also where this circuit turns into the one your CPU is actually made of.</p>
+      </div>
+
+      <h3>One more thing this circuit is, and is not</h3>
+
+      <p>The latch you have just built is <strong>asynchronous</strong>: it responds the moment an input changes, with no clock involved anywhere. That is unusual for this course. From page 2 onward, every component you build changes only when something explicitly tells it to.</p>
+
+      <p>That is not an inconsistency to be tidied away later &mdash; it is the order the ideas have to come in. <strong>Memory has to exist before it can be scheduled.</strong> Showing you the unscheduled version first is what makes the next two pages look like solutions rather than conventions.</p>
+    </section>
+
+    <!-- ============================================================
+         SELF-CHECK A
+         ============================================================ -->
+    <section id="self-check-a">
+      <div class="widget-card">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Two questions, not graded, no record kept. Worth doing before you open Logisim.</div>
+
+        <div class="quiz-question" id="q1-text">1. A circuit's output depends on both its current inputs and its previous state. This describes a:</div>
+        <div class="quiz-options" role="group" aria-labelledby="q1-text">
+          <button type="button" class="quiz-option" data-q="1" data-correct="false">Combinational circuit</button>
+          <button type="button" class="quiz-option" data-q="1" data-correct="true">Sequential circuit</button>
+          <button type="button" class="quiz-option" data-q="1" data-correct="false">Arithmetic logic unit</button>
+        </div>
+        <div class="quiz-feedback" id="q1-fb" role="status" aria-live="polite"></div>
+
+        <div class="quiz-question" id="q2-text" style="margin-top:var(--space-lg);">2. In an S-R latch built from NAND gates, which input combination is the <strong>hold</strong> state?</div>
+        <div class="quiz-options" role="group" aria-labelledby="q2-text">
+          <button type="button" class="quiz-option" data-q="2" data-correct="false">nS = 0, nR = 0</button>
+          <button type="button" class="quiz-option" data-q="2" data-correct="false">nS = 0, nR = 1</button>
+          <button type="button" class="quiz-option" data-q="2" data-correct="true">nS = 1, nR = 1</button>
+        </div>
+        <div class="quiz-feedback" id="q2-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Forward
+         ============================================================ -->
+    <section id="sec-forward">
+      <h2>Where this goes next</h2>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Next: the circuit your CPU is actually made of</div>
+        <p>The forbidden state is not fixed by being careful. It is fixed by building a circuit that cannot reach it &mdash; which is the next page, and which also answers a question this one never asked: <strong>when</strong> should the latch be allowed to change at all?</p>
+        <p>Two more NAND gates in front of this one solve both problems at the same time, and the result is <code>MEM_1BIT</code> &mdash; the memory cell that every register, the program counter, and every byte of RAM in your finished CPU is built from.</p>
+      </div>
+
+      <h3>Reference reading</h3>
+      <p>Log into your Saylor <strong>CS301</strong> account and open <strong>Unit 3: Fundamentals of Digital Logic Design</strong>, which covers sequential logic and latches as general background: <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">learn.saylor.org — CS301</a></p>
+      <p>Note that CS301 presents this material in its own way and at its own depth. <strong>The NAND-specific construction, the active-LOW convention, the two-stable-states argument and the race on release are all covered here rather than there</strong> &mdash; this page is the source for them, and the assignment is written against this page.</p>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    var L = window.CSCLogic;
+
+    /* ---------- A note on the accessibility approach ----------
+       Every interactive control on this page is a real <button>. That is
+       deliberate and it is why there is no tabindex anywhere in this file:
+       buttons are focusable, Enter and Space fire them, and screen readers
+       announce them correctly without help. The Fall 2025 widget this is
+       ported from made the same choice and it was the right one.
+       What we add on top is state that is visual only by default --
+       aria-pressed on the toggles, aria-label on the lamps updated as the
+       values change, and polite live regions on the readout and the step
+       status, since this widget conveys its entire meaning through change. */
+
+    /* ---------- State ----------
+       nS / nR are the CURRENT input levels (1 = inactive, 0 = asserted).
+       q / nq are the latch's current settled outputs. `raceMode` is true
+       when the loop failed to converge, and while it is true the widget
+       must not display an output value -- see the note at renderOutputs. */
+    var nS = 1, nR = 1, q = 0, nq = 1;
+    var raceMode = false;
+    var stepped = false;
+    var trace = [];      // the settle steps for the current transition
+    var traceAt = 0;     // which step is being shown
+
+    function el(id) { return document.getElementById(id); }
+    function setWire(id, hi) {
+      var w = el(id);
+      if (!w) return;
+      w.classList.remove('wire--hi', 'wire--lo');
+      w.classList.add(hi ? 'wire--hi' : 'wire--lo');
+    }
+    function setNode(id, hi) {
+      var n = el(id);
+      if (!n) return;
+      n.classList.remove('node--hi', 'node--lo');
+      n.classList.add(hi ? 'node--hi' : 'node--lo');
+    }
+
+    /* ---------- Apply an input change ----------
+       Everything routes through CSCLogic.srSettle(), which updates both
+       gates simultaneously from their previous values. It reports
+       non-convergence rather than returning a number, and that is the
+       whole reason this widget does not compute anything itself. */
+    function apply() {
+      var r = L.srSettle(nS, nR, q, nq);
+      trace = r.steps;
+      traceAt = trace.length - 1;
+      raceMode = !r.settled;
+      if (r.settled) { q = r.q; nq = r.nq; }
+      render();
+    }
+
+    function stateText() {
+      if (raceMode) {
+        return ['race',
+          'State: <strong>No defined value.</strong> Both gates are trying to go low at once, and ' +
+          'whichever is physically faster wins. That is not knowable — so there is nothing to show you here. ' +
+          'This is a <strong>race</strong>, and it is why the next page exists.'];
+      }
+      if (nS === 0 && nR === 0) {
+        return ['forbidden',
+          'State: <strong>Forbidden.</strong> Both outputs are 1, so <code>nq</code> is not the complement of ' +
+          '<code>q</code> and the names are lying. Stable while you hold it — the trouble starts when you let go.'];
+      }
+      if (nS === 0) return ['ok', 'State: <strong>Set.</strong> <code>q</code> is being driven to 1.'];
+      if (nR === 0) return ['ok', 'State: <strong>Reset.</strong> <code>q</code> is being driven to 0.'];
+      return ['ok', 'State: <strong>Hold.</strong> Neither input is asserted. The latch is keeping the value it already had — ' +
+                    'and nothing but the loop is keeping it.'];
+    }
+
+    function renderOutputs() {
+      var lq = el('lamp-q'), lnq = el('lamp-nq');
+      /* During a race there is no settled value, so the lamps show a
+         question mark rather than a number. Displaying 0 or 1 here would
+         teach that the race has an answer. It does not. */
+      if (raceMode) {
+        lq.textContent = '?'; lnq.textContent = '?';
+        lq.classList.remove('on'); lnq.classList.remove('on');
+        lq.setAttribute('aria-label', 'Output q has no defined value');
+        lnq.setAttribute('aria-label', 'Output nq has no defined value');
+        return;
+      }
+      var showQ = q, showNq = nq;
+      if (stepped && trace.length) {
+        showQ = trace[traceAt].q; showNq = trace[traceAt].nq;
+      }
+      lq.textContent = String(showQ);
+      lnq.textContent = String(showNq);
+      lq.classList.toggle('on', showQ === 1);
+      lnq.classList.toggle('on', showNq === 1);
+      lq.setAttribute('aria-label', 'Output q is ' + showQ);
+      lnq.setAttribute('aria-label', 'Output nq is ' + showNq);
+    }
+
+    function renderSwitches() {
+      var s = el('sw-ns'), r = el('sw-nr');
+      s.textContent = 'nS = ' + nS;
+      r.textContent = 'nR = ' + nR;
+      s.classList.toggle('on', nS === 1);
+      r.classList.toggle('on', nR === 1);
+      s.setAttribute('aria-pressed', String(nS === 0));
+      r.setAttribute('aria-pressed', String(nR === 0));
+    }
+
+    function renderWires() {
+      var showQ = q, showNq = nq;
+      if (stepped && trace.length && !raceMode) {
+        showQ = trace[traceAt].q; showNq = trace[traceAt].nq;
+      }
+      setWire('w-ns', nS === 1);
+      setWire('w-nr', nR === 1);
+      if (raceMode) {
+        /* Nothing is settled, so nothing is coloured as a value. */
+        ['w-q','w-nq','w-fb-q','w-fb-nq'].forEach(function (id) {
+          var w = el(id); if (w) w.classList.remove('wire--hi', 'wire--lo');
+        });
+        setNode('n-q', false); setNode('n-nq', false);
+        return;
+      }
+      setWire('w-q', showQ === 1);   setWire('w-fb-q', showQ === 1);
+      setWire('w-nq', showNq === 1); setWire('w-fb-nq', showNq === 1);
+      setNode('n-q', showQ === 1);   setNode('n-nq', showNq === 1);
+    }
+
+    function renderSettlePanel() {
+      var panel = el('settle-panel');
+      panel.hidden = !stepped;
+      if (!stepped) return;
+
+      var chain = el('settle-chain');
+      chain.innerHTML = '';
+      trace.forEach(function (st, i) {
+        var d = document.createElement('div');
+        d.className = 'stage-chain__stage' +
+          (i === traceAt ? ' stage-chain__stage--active' : (i < traceAt ? ' stage-chain__stage--settled' : ''));
+        d.innerHTML = '<span class="stage-chain__label">delay ' + (i + 1) + '</span>' +
+                      'q=' + st.q +
+                      '<span class="stage-chain__carry' + (st.nq ? ' stage-chain__carry--hi' : '') + '">nq=' + st.nq + '</span>';
+        chain.appendChild(d);
+      });
+
+      var status = el('step-status');
+      if (raceMode) {
+        status.textContent = 'Step ' + (traceAt + 1) + ' of ' + trace.length +
+          ' — and it never stops. The values keep alternating because nothing decides the winner.';
+      } else if (traceAt === trace.length - 1) {
+        status.textContent = 'Step ' + (traceAt + 1) + ' of ' + trace.length + ' — settled. Nothing changes from here.';
+      } else {
+        status.textContent = 'Step ' + (traceAt + 1) + ' of ' + trace.length + ' — still settling.';
+      }
+      el('step-back').disabled = (traceAt <= 0);
+      el('step-fwd').disabled  = (traceAt >= trace.length - 1);
+    }
+
+    function render() {
+      renderSwitches();
+      renderWires();
+      renderOutputs();
+      var st = stateText();
+      var ro = el('state-readout');
+      ro.className = 'cost-readout' +
+        (st[0] === 'race' ? ' cost-readout--race' : (st[0] === 'forbidden' ? ' cost-readout--warn' : ''));
+      ro.innerHTML = st[1];
+      renderSettlePanel();
+    }
+
+    /* ---------- Controls ---------- */
+    function toggle(which) {
+      if (which === 'ns') { nS = nS ? 0 : 1; } else { nR = nR ? 0 : 1; }
+      apply();
+    }
+    el('sw-ns').addEventListener('click', function () { toggle('ns'); });
+    el('sw-nr').addEventListener('click', function () { toggle('nr'); });
+
+    /* The release affordance. Students routinely poke a latch, see it
+       work, and never notice they have only tested the DRIVEN states --
+       so the one row that proves this circuit is memory goes untested.
+       This button exists to make that row unmissable, and it announces
+       the result rather than leaving it to be spotted. */
+    el('btn-release').addEventListener('click', function () {
+      var before = q;
+      var wasForbidden = (nS === 0 && nR === 0);
+      nS = 1; nR = 1;
+      apply();
+      if (!wasForbidden) {
+        el('state-readout').innerHTML =
+          'Both inputs released. <strong>q is still ' + before + '.</strong> ' +
+          'Nothing is driving it now — the loop is holding it on its own. ' +
+          '<em>That is the whole point of this circuit.</em>';
+      }
+    });
+
+    var presets = {
+      set:       function () { nS = 0; nR = 1; apply(); },
+      reset:     function () { nS = 1; nR = 0; apply(); },
+      forbidden: function () { nS = 0; nR = 0; apply(); },
+      race:      function () { nS = 0; nR = 0; apply(); nS = 1; nR = 1; apply(); }
+    };
+    Array.prototype.forEach.call(document.querySelectorAll('.preset-btn'), function (b) {
+      b.addEventListener('click', function () { presets[b.getAttribute('data-preset')](); });
+    });
+
+    function setMode(on) {
+      stepped = on;
+      el('mode-instant').setAttribute('aria-pressed', String(!on));
+      el('mode-stepped').setAttribute('aria-pressed', String(on));
+      /* aria-pressed already carries the visual selected state via the
+         shared .widget-btn[aria-pressed="true"] rule -- no class needed. */
+      if (on && trace.length) { traceAt = 0; }
+      render();
+    }
+    el('mode-instant').addEventListener('click', function () { setMode(false); });
+    el('mode-stepped').addEventListener('click', function () { setMode(true); });
+    el('step-back').addEventListener('click', function () { if (traceAt > 0) { traceAt--; render(); } });
+    el('step-fwd').addEventListener('click', function () { if (traceAt < trace.length - 1) { traceAt++; render(); } });
+
+    /* ---------- Self-check ---------- */
+    Array.prototype.forEach.call(document.querySelectorAll('.quiz-option'), function (opt) {
+      opt.addEventListener('click', function () {
+        var qn = opt.getAttribute('data-q');
+        var correct = opt.getAttribute('data-correct') === 'true';
+        var fb = el('q' + qn + '-fb');
+        /* .correct / .incorrect are the existing shared states; clear
+           them from the group first so only the latest answer is marked. */
+        Array.prototype.forEach.call(
+          document.querySelectorAll('.quiz-option[data-q="' + qn + '"]'),
+          function (o) { o.classList.remove('correct', 'incorrect'); }
+        );
+        opt.classList.add(correct ? 'correct' : 'incorrect');
+        fb.className = 'quiz-feedback ' + (correct ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        if (qn === '1') {
+          fb.innerHTML = correct
+            ? '<strong>Correct.</strong> Sequential — the output depends on the past as well as the present, which is exactly what feedback buys you.'
+            : '<strong>Not quite.</strong> A combinational circuit’s output depends on its inputs alone; an ALU is a combinational circuit that happens to do arithmetic. The word for "depends on the past too" is <strong>sequential</strong>.';
+        } else {
+          fb.innerHTML = correct
+            ? '<strong>Correct.</strong> Both inputs at 1 means neither is asserted — because they are active LOW — so the latch holds.'
+            : '<strong>Not quite — check the polarity.</strong> These inputs are <strong>active LOW</strong>: a 0 asserts them. So <code>nS</code>=0 sets, <code>nR</code>=0 resets, both at 0 is the forbidden state, and the one combination where nothing is being asserted is <strong>1 and 1</strong>. This is the most common slip in Week 4 and it is worth fixing now rather than in Logisim.';
+        }
+      });
+      /* No keydown handler: these are real <button> elements, so Enter and
+         Space already fire click natively. Adding one would double-fire. */
+    });
+
+    apply();
+  })();
+  </script>
+</body>
+</html>

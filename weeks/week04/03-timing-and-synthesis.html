@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w4-03">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 4: Seeing It in Time</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ----------
+       The .waveform* components are shared (they recur in Weeks 5, 11 and
+       13). What is here is only this page's scrubber row. */
+    .scrub-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      flex-wrap: wrap;
+      margin: var(--space-md) 0 var(--space-sm);
+    }
+    .scrub-row input[type="range"] { flex: 1 1 220px; min-width: 180px; }
+    .scrub-row__step {
+      font-family: var(--font-mono);
+      font-size: var(--fs-sm);
+      color: var(--color-text-muted);
+      min-width: 74px;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 4 &rsaquo; <span>Page 3: Seeing It in Time</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Seeing It in Time</h1>
+    <p><strong>Sections 4.6 &ndash; 4.7</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~0.75 hours</p>
+
+    <!-- ============================================================
+         4.6
+         ============================================================ -->
+    <section id="sec-4-6">
+      <h2>4.6 &nbsp; Reading a Timing Diagram</h2>
+
+      <p>Everything so far has been described in words: this one follows, that one samples, this one holds. Words are a poor tool for it. The difference between three storage devices is a difference in <em>when</em>, and when is a picture.</p>
+
+      <h3>How to read one</h3>
+
+      <p>A timing diagram is simple once you have seen one:</p>
+
+      <ul>
+        <li><strong>Time runs left to right.</strong> Each column is one moment.</li>
+        <li><strong>Each row is one signal.</strong> High means 1, low means 0.</li>
+        <li><strong>A vertical line is a change.</strong> Flat means nothing happened.</li>
+      </ul>
+
+      <p>That is the whole notation. What makes it powerful is putting several signals on the <em>same</em> time axis, so you can see what each one was doing at the moment another one changed.</p>
+
+      <h3>Three devices, one input</h3>
+
+      <p>Below, all three devices get the same data and the same control signal. Nothing else differs between them.</p>
+
+      <ul>
+        <li><strong>The raw S-R latch</strong> from page 1, driven so that a 1 sets it and a 0 resets it. It has no enable at all &mdash; nothing can tell it <em>not yet</em>.</li>
+        <li><strong>Your <code>MEM_1BIT</code></strong> from page 2, with the control signal on its <code>Set</code> input.</li>
+        <li><strong>A D flip-flop</strong>, the edge-triggered device from section 4.5, with the same signal used as its clock.</li>
+      </ul>
+
+      <p><strong>Click any cell in the top row to change the input</strong> and watch all three outputs recompute. Drag the scrubber to walk through time one moment at a time and read what is happening.</p>
+    </section>
+
+    <!-- ============================================================
+         WIDGET 2 — Timing Diagram Explorer
+         ============================================================ -->
+    <section id="widget-2">
+      <div class="widget-card">
+        <div class="widget-card__title">Timing Diagram Explorer</div>
+        <div class="widget-card__subtitle">Same input, same control signal, three different storage devices.</div>
+
+        <div class="preset-row" role="group" aria-label="Preset input patterns">
+          <button type="button" class="preset-btn" data-preset="A">Input changes while the window is open</button>
+          <button type="button" class="preset-btn" data-preset="B">Input pulses between two edges</button>
+          <button type="button" class="preset-btn" data-preset="C">Input steady across several edges</button>
+        </div>
+
+        <div class="waveform">
+          <svg class="waveform__plot" id="wf" viewBox="0 0 700 320" role="img"
+               aria-label="Timing diagram with five rows: the data input, the control signal, and the output of each of the three devices. A text version of every value follows the diagram.">
+          </svg>
+        </div>
+
+        <div class="scrub-row">
+          <label for="scrub" class="sr-only">Move through time</label>
+          <button type="button" class="widget-btn widget-btn--small widget-btn--outline" id="scrub-back">&larr;</button>
+          <input type="range" id="scrub" min="0" max="15" value="0" step="1">
+          <button type="button" class="widget-btn widget-btn--small widget-btn--outline" id="scrub-fwd">&rarr;</button>
+          <span class="scrub-row__step" id="scrub-label">Moment 1</span>
+        </div>
+
+        <div class="waveform__caption" id="wf-caption" role="status" aria-live="polite"></div>
+
+        <!-- The diagram is SVG paths, which a screen reader cannot read.
+             This table carries the same information and is regenerated
+             whenever the input changes. It is the accessible version of
+             the widget, not a supplement to it. -->
+        <div class="sr-only" id="wf-table" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section id="sec-4-6-read">
+      <h3>What the picture says</h3>
+
+      <p>Load each preset and look at the three output rows against each other.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Following versus sampling</div>
+        <p><strong>The S-R latch row is identical to the input row.</strong> Always, in every preset. It has no control input, so it has no way to not respond &mdash; it simply is whatever it was last told.</p>
+        <p><strong>Your <code>MEM_1BIT</code> copies the input in bands.</strong> While the control signal is high, its row and the input row move together. The moment the control drops, its row goes flat and stays flat &mdash; holding whatever the input happened to be at that instant.</p>
+        <p><strong>The flip-flop row changes only at the marked edges</strong>, and is flat everywhere else. Between two edges you can do anything you like to the input and the flip-flop's row does not move.</p>
+      </div>
+
+      <p>The second preset is the one worth sitting with. The input goes high, stays high for four moments, and comes back down &mdash; all between two clock edges. <strong>The flip-flop's output never moves at all.</strong> Not delayed, not smoothed. The pulse is invisible to it, because it happened at a time the flip-flop was not looking.</p>
+
+      <p>That is what "sampling" means, and it is the property that makes synchronous design work: a device that only looks at known moments cannot be confused by what happens between them.</p>
+
+      <h3>The skill you should leave with</h3>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Given an input and a control signal, draw the output</div>
+        <p>Being able to do this by hand &mdash; for a level-sensitive cell and for an edge-triggered one, and get the difference right &mdash; is assessed in three places:</p>
+        <ul>
+          <li><strong>Lab 4</strong>, where you draw waveforms and then check them against Logisim.</li>
+          <li><strong>Assignment 4, Part B</strong>, where you draw both and explain where they differ.</li>
+          <li><strong>Quiz 1</strong>, where you are asked about the difference in words.</li>
+        </ul>
+        <p>It is also the skill you will use every time a circuit misbehaves in Weeks 11 through 14. Practise it here, where the answer is on screen.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         4.7
+         ============================================================ -->
+    <section id="sec-4-7">
+      <h2>4.7 &nbsp; Synthesis: You Have Built Memory</h2>
+
+      <p>Two tabs in your <code>.circ</code> file that were not there on Monday.</p>
+
+      <ul>
+        <li><code>SR_LATCH</code> &mdash; two cross-coupled NAND gates. The mechanism in its rawest form, and the one circuit this semester you built in order to understand rather than to use.</li>
+        <li><code>MEM_1BIT</code> &mdash; four NAND gates, three pins. <strong>Your CPU's memory cell.</strong></li>
+      </ul>
+
+      <p>And one idea, which is worth stating once and not padding:</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Memory is feedback</div>
+        <p>There is no memory ingredient. There is a loop &mdash; a circuit whose output is part of its own input, settled into one of two stable states, held there by nothing but its own consistency.</p>
+        <p>Everything above it in the machine is that idea with more wires. A register is eight of them. RAM is thousands. The program counter is one that can also count. There is no second mechanism anywhere in a computer for remembering things.</p>
+      </div>
+
+      <h3>What happens next</h3>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Week 5</div>
+        <p><strong>Eight of these memory cells, wired in parallel with a shared <code>Set</code> line, become a register.</strong></p>
+        <p>That is the entire step. Eight copies of the block you just drew, one control line running to all of them, so that a whole byte is captured at once instead of a bit.</p>
+      </div>
+
+      <p>Week 5 adds one more thing around the outside: a way to get the byte back <em>out</em> onto a shared wire without every register shouting at once. Storing and speaking are two different controls, and you have built the first one.</p>
+
+      <p>Phase 2 also opens a second track. Alongside the register, you start writing MIPS assembly in MARS &mdash; and the first register you will type the name of, <code>$t0</code>, is eight of the circuits sitting in your file right now. The two halves of this course meet there and stay together for the rest of the semester.</p>
+
+      <h3>Before you go</h3>
+
+      <p><strong>Assignment 4</strong> is 60 points and about an hour and a quarter: four written questions on how feedback becomes memory, three on timing, and both circuits built in Logisim. It is deliberately smaller than Assignment 3.</p>
+
+      <p><strong>Quiz 1</strong> covers all four weeks of Phase 1 and is open through Sunday. One attempt, 60 minutes, open notes. Twenty-five of its hundred points are this week's material &mdash; so finish these pages before you start it.</p>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    var L = window.CSCLogic;
+
+    /* ---------- Geometry ---------- */
+    var N = 16, X0 = 132, SW = 34, ROW_H = 56, TOP = 16;
+    var SVG_NS = 'http://www.w3.org/2000/svg';
+
+    /* Row order is deliberate: the two driving signals first, then the
+       three devices, so a reader's eye goes cause-then-effect down the
+       page rather than hunting for the input among the outputs. */
+    var ROWS = [
+      { key: 'in',  label: 'In',        cls: 'waveform__trace--input', kind: 'input' },
+      { key: 'ctl', label: 'Set / clk', cls: 'waveform__trace--clock', kind: 'ctl' },
+      { key: 'sr',  label: 'q  SR latch',  cls: '', kind: 'out' },
+      { key: 'mem', label: 'Q  MEM_1BIT',  cls: '', kind: 'out' },
+      { key: 'dff', label: 'Q  flip-flop', cls: '', kind: 'out' }
+    ];
+
+    var PRESETS = {
+      A: { ctl: [0,0,1,1,1,1,0,0,0,0,1,1,1,0,0,0], In: [0,1,1,0,0,1,1,0,0,1,1,0,1,1,0,0] },
+      B: { ctl: [0,0,0,0,1,1,0,0,0,0,0,0,1,1,0,0], In: [0,0,1,1,0,1,1,1,1,0,0,0,0,1,0,0] },
+      C: { ctl: [0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1], In: [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1] }
+    };
+
+    var dSeq   = PRESETS.A.In.slice();
+    var ctlSeq = PRESETS.A.ctl.slice();
+    var at = 0;
+    var traces = {};
+
+    function el(id) { return document.getElementById(id); }
+    function mk(tag, attrs) {
+      var e = document.createElementNS(SVG_NS, tag);
+      for (var k in attrs) { e.setAttribute(k, attrs[k]); }
+      return e;
+    }
+    function rowTop(i) { return TOP + i * ROW_H; }
+    function yFor(i, v) { return v ? rowTop(i) + 10 : rowTop(i) + 36; }
+
+    /* Build a step-shaped path from a bit array. */
+    function pathFor(i, arr) {
+      var d = 'M' + X0 + ',' + yFor(i, arr[0]);
+      for (var j = 0; j < N; j++) {
+        d += ' H' + (X0 + (j + 1) * SW);
+        if (j + 1 < N && arr[j + 1] !== arr[j]) { d += ' V' + yFor(i, arr[j + 1]); }
+      }
+      return d;
+    }
+
+    /* Every output comes from the shared kernel. This widget draws; it
+       does not decide what a latch or a flip-flop does. */
+    function recompute() {
+      traces.in  = dSeq;
+      traces.ctl = ctlSeq;
+      traces.sr  = L.trace('srlatch',   dSeq, null,   0);
+      traces.mem = L.trace('memcell',   dSeq, ctlSeq, 0);
+      traces.dff = L.trace('dflipflop', dSeq, ctlSeq, 0);
+    }
+
+    function risingEdges() {
+      var e = [];
+      for (var j = 1; j < N; j++) { if (ctlSeq[j - 1] === 0 && ctlSeq[j] === 1) { e.push(j); } }
+      return e;
+    }
+
+    function draw() {
+      var svg = el('wf');
+      while (svg.firstChild) { svg.removeChild(svg.firstChild); }
+
+      var edges = risingEdges();
+
+      /* Guides first, so traces sit on top of them. Each rising edge is
+         carried down through every row, which is what makes the
+         correspondence between an edge and a flip-flop transition
+         visible rather than something the caption has to assert. */
+      edges.forEach(function (j) {
+        var x = X0 + j * SW;
+        svg.appendChild(mk('line', {
+          x1: x, y1: rowTop(1) + 4, x2: x, y2: rowTop(ROWS.length - 1) + 44,
+          'class': 'waveform__edge'
+        }));
+        svg.appendChild(mk('polygon', {
+          points: (x - 5) + ',' + (rowTop(1) - 2) + ' ' + (x + 5) + ',' + (rowTop(1) - 2) + ' ' + x + ',' + (rowTop(1) + 7),
+          'class': 'waveform__edge-tick'
+        }));
+      });
+
+      ROWS.forEach(function (r, i) {
+        if (i % 2 === 1) {
+          svg.appendChild(mk('rect', {
+            x: X0, y: rowTop(i) + 2, width: N * SW, height: ROW_H - 10, 'class': 'waveform__row-band'
+          }));
+        }
+        var t = mk('text', { x: 8, y: rowTop(i) + 28, 'class': 'waveform__label' + (r.kind === 'out' ? '' : ' waveform__label--muted') });
+        t.textContent = r.label;
+        svg.appendChild(t);
+
+        svg.appendChild(mk('path', {
+          d: pathFor(i, traces[r.key]),
+          'class': 'waveform__trace ' + r.cls
+        }));
+      });
+
+      /* Clickable cells on the input row only. */
+      for (var j = 0; j < N; j++) {
+        var cell = mk('rect', {
+          x: X0 + j * SW, y: rowTop(0), width: SW, height: ROW_H - 8,
+          'class': 'waveform__cell', tabindex: '0', role: 'button',
+          'aria-label': 'Moment ' + (j + 1) + ', input is ' + dSeq[j] + '. Activate to change it.'
+        });
+        (function (idx, node) {
+          function flip() { dSeq[idx] = dSeq[idx] ? 0 : 1; recompute(); at = idx; sync(); }
+          node.addEventListener('click', flip);
+          node.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); }
+          });
+        })(j, cell);
+        svg.appendChild(cell);
+      }
+
+      var px = X0 + at * SW + SW / 2;
+      svg.appendChild(mk('line', {
+        x1: px, y1: 4, x2: px, y2: rowTop(ROWS.length - 1) + 46, 'class': 'waveform__playhead'
+      }));
+    }
+
+    /* ---------- The running caption ----------
+       This is where the comparison becomes teaching rather than
+       decoration, so it says what each device is doing and why -- not
+       just what value it holds. */
+    function caption() {
+      var j = at;
+      var ctlNow = ctlSeq[j], inNow = dSeq[j];
+      var isEdge = (j > 0 && ctlSeq[j - 1] === 0 && ctlNow === 1);
+      var parts = [];
+
+      parts.push('<strong>Moment ' + (j + 1) + ':</strong> input is ' + inNow + ', control is ' + ctlNow + '.');
+
+      if (isEdge) {
+        parts.push('The control signal just <strong>rose</strong> — so the flip-flop samples right now, and takes ' + inNow + '.');
+      } else if (ctlNow === 1) {
+        parts.push('The control is high, so <code>MEM_1BIT</code> is <strong>transparent</strong> and its output is following the input. The flip-flop is not looking — the next edge has not arrived.');
+      } else {
+        parts.push('The control is low, so <code>MEM_1BIT</code> is <strong>holding</strong> and ignoring the input entirely. So is the flip-flop.');
+      }
+
+      if (traces.mem[j] !== traces.dff[j]) {
+        parts.push('<strong>They disagree here:</strong> the cell holds ' + traces.mem[j] +
+                   ' and the flip-flop holds ' + traces.dff[j] + '.');
+      }
+      if (traces.sr[j] !== traces.mem[j]) {
+        parts.push('The raw latch has already moved to ' + traces.sr[j] +
+                   ' — it has no control input to stop it.');
+      }
+      return parts.join(' ');
+    }
+
+    /* The text alternative. A waveform drawn as SVG paths is unreadable
+       to a screen reader, and this diagram IS the section's argument --
+       so this is the accessible version of the widget rather than a
+       footnote to it. */
+    function buildTable() {
+      var h = '<p>Text version of the timing diagram. Each row lists its value at each of the sixteen moments, in order.</p><ul>';
+      ROWS.forEach(function (r) {
+        h += '<li>' + r.label.replace(/\s+/g, ' ') + ': ' + traces[r.key].join(', ') + '</li>';
+      });
+      var e = risingEdges();
+      h += '</ul><p>The control signal rises at ' +
+           (e.length ? 'moment ' + e.map(function (x) { return x + 1; }).join(', moment ') : 'no point in this pattern') +
+           '. The flip-flop changes only at those moments.</p>';
+      el('wf-table').innerHTML = h;
+    }
+
+    function sync() {
+      draw();
+      el('scrub').value = String(at);
+      el('scrub-label').textContent = 'Moment ' + (at + 1) + ' of ' + N;
+      el('wf-caption').innerHTML = caption();
+      buildTable();
+    }
+
+    el('scrub').addEventListener('input', function () { at = parseInt(this.value, 10) || 0; sync(); });
+    el('scrub-back').addEventListener('click', function () { if (at > 0) { at--; sync(); } });
+    el('scrub-fwd').addEventListener('click', function () { if (at < N - 1) { at++; sync(); } });
+
+    Array.prototype.forEach.call(document.querySelectorAll('.preset-btn'), function (b) {
+      b.addEventListener('click', function () {
+        var p = PRESETS[b.getAttribute('data-preset')];
+        dSeq = p.In.slice(); ctlSeq = p.ctl.slice();
+        at = 0; recompute(); sync();
+      });
+    });
+
+    recompute();
+    sync();
+  })();
+  </script>
+</body>
+</html>

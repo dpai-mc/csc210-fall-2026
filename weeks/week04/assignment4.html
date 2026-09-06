@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w4-assign">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Assignment 4: Sequential Circuits</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific: assignment layout and print ---------- */
+    .q-block {
+      border-left: 3px solid var(--color-border);
+      padding-left: var(--space-md);
+      margin: var(--space-lg) 0;
+    }
+    .q-num {
+      font-weight: 700;
+      color: var(--color-primary);
+      font-family: var(--font-mono);
+    }
+    .q-pts {
+      font-size: var(--fs-xs);
+      color: var(--color-text-muted);
+      font-weight: 400;
+    }
+    /* Checklist glyphs are styled spans, not live inputs -- this file is a
+       printable handout, and a checkbox that forgets its state between
+       page loads is worse than an honest box to tick on paper. */
+    .check-list { list-style: none; padding: 0; }
+    .check-list li {
+      display: flex; gap: var(--space-sm); align-items: flex-start;
+      padding: var(--space-xs) 0;
+    }
+    .check-box {
+      flex: 0 0 auto;
+      display: inline-block;
+      width: 15px; height: 15px;
+      border: 2px solid var(--color-text-muted);
+      border-radius: 3px;
+      margin-top: 3px;
+    }
+    .rubric-table th { font-size: var(--fs-sm); }
+    .rubric-table td { font-size: var(--fs-sm); vertical-align: top; }
+    .rubric-table td:first-child { width: 20%; }
+
+    /* Part B's figure is drawn on by the student, so the blank rows need
+       real height and a visible baseline to draw against. */
+    .draw-svg { width: 100%; max-width: 640px; height: auto; display: block; margin: 0 auto; }
+    .draw-svg text { font-family: var(--font-mono); font-size: 13px; fill: var(--color-text); }
+    .draw-svg .given { fill: none; stroke: var(--color-primary); stroke-width: 2.5; }
+    .draw-svg .given--clk { stroke: var(--color-text-muted); }
+    .draw-svg .grid { stroke: var(--color-border); stroke-width: 1; stroke-dasharray: 2 3; }
+    .draw-svg .baseline { stroke: var(--color-border); stroke-width: 1.5; }
+    .draw-svg .rowlabel { font-size: 12px; fill: var(--color-text-muted); }
+
+    @media print {
+      .sp-header, .sp-footer { display: none; }
+      .q-block { break-inside: avoid; }
+      body { background: #fff; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 4 &rsaquo; <span>Assignment 4</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Assignment 4: Sequential Circuits</h1>
+    <p>
+      <span class="points-badge">60 points</span>
+      &nbsp; <strong>Assesses:</strong> SLO1 — describe basic computer architecture, organization and design
+      &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1.25 hours
+    </p>
+
+    <p>Four written questions on how feedback becomes memory, three on timing, and two circuits built in Logisim. This assignment is deliberately smaller than Assignment 3 &mdash; Quiz 1 is where this week's assessment weight sits.</p>
+
+    <div class="callout callout--aha">
+      <div class="callout__title">Same file, two new tabs</div>
+      <p>Open the same <code>CSC210_YourName.circ</code> you have been building since Week 2. This week's circuits are <strong>new tabs in that file</strong>. Do not start a new file, and do not link to circuits stored elsewhere.</p>
+      <p><strong>Every circuit must be inside this one <code>.circ</code> file.</strong> A submission that references circuits living in other files opens as a broken circuit on the grading machine and is marked incomplete. This is the most commonly failed requirement in the course.</p>
+    </div>
+
+    <div class="callout callout--warn">
+      <div class="callout__title">Which components you may use</div>
+      <p>Anything from Logisim's <strong>Wiring</strong> folder (pins, splitters, tunnels, constants, probes) and anything from <strong>Gates</strong> (NAND, AND, OR, NOT, NOR, XOR, XNOR, buffers).</p>
+      <p><strong>Nothing from Plexers, Arithmetic, or Memory.</strong> The Memory folder contains a D Flip-Flop, an S-R Flip-Flop and a Register that would do this assignment for you. Using any of them scores zero for that circuit, however well it works &mdash; every checkpoint from Week 5 onward instantiates the cell <em>you</em> built.</p>
+    </div>
+
+    <div class="callout">
+      <div class="callout__title">Active LOW — read this before you wire anything</div>
+      <p><code>SR_LATCH</code>'s inputs <code>nS</code> and <code>nR</code> are <strong>active LOW</strong>: drive them to <strong>0</strong> to act. Both at 1 is the hold state.</p>
+      <p><code>MEM_1BIT</code>'s inputs <code>In</code> and <code>Set</code> are <strong>active HIGH</strong>: a 1 means yes.</p>
+      <p>The polarity changes between the two circuits. If a result surprises you, check this first &mdash; it is the most common mistake in Week 4.</p>
+    </div>
+
+    <!-- ============================================================
+         Interfaces
+         ============================================================ -->
+    <section id="interfaces">
+      <h2>Component interfaces</h2>
+
+      <p>These tables are the <strong>specification</strong>, not reference material. Part C awards points for matching them exactly, and Week 5 instantiates <code>MEM_1BIT</code> as written here &mdash; a different pin name or an extra pin means next week's register does not wire up.</p>
+
+      <h3><code>SR_LATCH</code></h3>
+      <table class="pin-table">
+        <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><code>nS</code></td><td>1</td><td>in</td><td>Active LOW — drive to 0 to SET <code>q</code> to 1</td></tr>
+          <tr><td><code>nR</code></td><td>1</td><td>in</td><td>Active LOW — drive to 0 to RESET <code>q</code> to 0</td></tr>
+          <tr><td><code>q</code></td><td>1</td><td>out</td><td>The stored bit</td></tr>
+          <tr><td><code>nq</code></td><td>1</td><td>out</td><td>The complement of <code>q</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3><code>MEM_1BIT</code></h3>
+      <table class="pin-table">
+        <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><code>In</code></td><td>1</td><td>in</td><td>Active HIGH — the value to store</td></tr>
+          <tr><td><code>Set</code></td><td>1</td><td>in</td><td>Active HIGH — while 1, <code>Q</code> follows <code>In</code>; at 0 it holds</td></tr>
+          <tr><td><code>Q</code></td><td>1</td><td>out</td><td>The stored bit</td></tr>
+        </tbody>
+      </table>
+
+      <p><strong>Three pins. There is no <code>Q'</code> on <code>MEM_1BIT</code></strong> &mdash; the latch inside produces one and it is deliberately not brought out, because nothing downstream reads it. Adding a fourth pin is not a bonus; it is a mismatch with the specification.</p>
+
+      <p>Set <strong>all</strong> input pins on both circuits to <strong>2-state</strong> with <strong>pull-down</strong> behaviour.</p>
+    </section>
+
+    <!-- ============================================================
+         PART A
+         ============================================================ -->
+    <section id="part-a">
+      <h2>Part A — How Feedback Becomes Memory <span class="q-pts">(20 points)</span></h2>
+
+      <div class="q-block">
+        <p><span class="q-num">Q1.</span> <span class="q-pts">5 points</span></p>
+        <p>With <code>nS</code> = 1 and <code>nR</code> = 1, the S-R latch holds its value. Neither NAND gate contains anything that stores a bit &mdash; a NAND gate's output is simply a function of its inputs right now.</p>
+        <p><strong>Explain what is physically holding the value.</strong> Your answer must not use the word "stored" as the explanation.</p>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">Q2.</span> <span class="q-pts">5 points</span></p>
+        <p>Still with <code>nS</code> = 1 and <code>nR</code> = 1, show that <strong>both</strong> <code>q</code> = 0 and <code>q</code> = 1 are self-consistent, by tracing each gate's output in each case. Then state what that fact means about the circuit.</p>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">Q3.</span> <span class="q-pts">5 points</span></p>
+        <p>Every truth table you built in Weeks 2 and 3 could be completed from the inputs alone. The S-R latch's cannot. <strong>Identify which row is the problem and explain precisely what information is missing.</strong></p>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">Q4.</span> <span class="q-pts">5 points</span></p>
+        <p><code>MEM_1BIT</code> cannot reach the forbidden state. <strong>Explain why &mdash; in terms of the wiring, not in terms of a rule the user follows.</strong></p>
+        <p>Your answer should also make clear why <strong>four</strong> gates are enough, and why a separate inverter is not needed.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART B
+         ============================================================ -->
+    <section id="part-b">
+      <h2>Part B — Timing Analysis <span class="q-pts">(15 points)</span></h2>
+
+      <div class="callout">
+        <div class="callout__title">Before you start</div>
+        <p>Draw by hand, or in any tool you like. <strong>Neatness is not graded; correctness is.</strong> Print this page, or copy the axes onto your own paper.</p>
+        <p><strong>Q6 asks about a flip-flop you did not build.</strong> That is deliberate — section 4.5 explains how one behaves and the page 3 widget shows it beside your memory cell. The point of the question is the comparison, and reasoning about a device from its stated behaviour is a skill you will use constantly with real datasheets.</p>
+      </div>
+
+      <p>Use the signals below for Q5 and Q6. The two given rows are identical in both questions; only the device changes.</p>
+
+      <div class="circuit-canvas">
+        <svg class="draw-svg" viewBox="0 0 640 300" role="img" aria-labelledby="drawtitle drawdesc">
+          <title id="drawtitle">Timing axes for Questions 5 and 6</title>
+          <desc id="drawdesc">Four rows sharing one time axis of twelve equal moments. The first row, labelled In, is given: it is low for moments 1 and 2, high for 3 through 5, low for 6 and 7, high for 8 and 9, low for 10, and high for 11 and 12. The second row, labelled Set slash clk, is given: it is low for moments 1 through 3, high for 4 and 5, low for 6 through 8, high for 9, and low for 10 through 12. The third row, labelled Q for the memory cell, is blank for the student to draw. The fourth row, labelled Q for the flip-flop, is also blank.</desc>
+
+          <!-- vertical moment guides -->
+          <g class="grid">
+            <line x1="120" y1="20" x2="120" y2="285"/><line x1="163" y1="20" x2="163" y2="285"/>
+            <line x1="206" y1="20" x2="206" y2="285"/><line x1="249" y1="20" x2="249" y2="285"/>
+            <line x1="292" y1="20" x2="292" y2="285"/><line x1="335" y1="20" x2="335" y2="285"/>
+            <line x1="378" y1="20" x2="378" y2="285"/><line x1="421" y1="20" x2="421" y2="285"/>
+            <line x1="464" y1="20" x2="464" y2="285"/><line x1="507" y1="20" x2="507" y2="285"/>
+            <line x1="550" y1="20" x2="550" y2="285"/><line x1="593" y1="20" x2="593" y2="285"/>
+          </g>
+
+          <!-- In (given): L L H H H L L H H L H H  over 12 moments -->
+          <text class="rowlabel" x="8" y="46">In</text>
+          <path class="given" d="M120,58 H206 V32 H335 V58 H421 V32 H507 V58 H550 V32 H636"/>
+
+          <!-- Set / clk (given): L L L H H L L L H L L L -->
+          <text class="rowlabel" x="8" y="116">Set / clk</text>
+          <path class="given given--clk" d="M120,128 H249 V102 H335 V128 H464 V102 H507 V128 H636"/>
+
+          <!-- blank rows -->
+          <text class="rowlabel" x="8" y="186">Q  (Q5)</text>
+          <text class="rowlabel" x="8" y="200">MEM_1BIT</text>
+          <line class="baseline" x1="120" y1="198" x2="636" y2="198"/>
+
+          <text class="rowlabel" x="8" y="256">Q  (Q6)</text>
+          <text class="rowlabel" x="8" y="270">flip-flop</text>
+          <line class="baseline" x1="120" y1="268" x2="636" y2="268"/>
+
+          <text class="rowlabel" x="120" y="296">1</text><text class="rowlabel" x="206" y="296">3</text>
+          <text class="rowlabel" x="292" y="296">5</text><text class="rowlabel" x="378" y="296">7</text>
+          <text class="rowlabel" x="464" y="296">9</text><text class="rowlabel" x="550" y="296">11</text>
+        </svg>
+        <div class="circuit-canvas__caption">The two given signals, and two blank rows to draw on. Twelve moments; the dashed lines mark the boundaries.</div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">Q5.</span> <span class="q-pts">5 points</span></p>
+        <p>Draw <code>Q</code> for <strong><code>MEM_1BIT</code></strong>, using the <code>Set</code> row as its <code>Set</code> input. Mark every point where <code>Q</code> changes and say what caused it.</p>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">Q6.</span> <span class="q-pts">5 points</span></p>
+        <p>Draw the output for a <strong>D flip-flop</strong>, using the same data row and treating the second row as its <strong>clock</strong>. Mark the rising edges.</p>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">Q7.</span> <span class="q-pts">5 points</span></p>
+        <p>Your two drawings differ. <strong>Identify one moment where <code>MEM_1BIT</code>'s output changes and the flip-flop's does not</strong>, and explain what the flip-flop is doing at that moment instead.</p>
+        <p>Then, in one sentence: <strong>which behaviour does the CPU you are building rely on, and where?</strong></p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART C
+         ============================================================ -->
+    <section id="part-c">
+      <h2>Part C — Logisim Build <span class="q-pts">(25 points)</span></h2>
+
+      <p><span class="q-num">Q8.</span> Build both circuits as separate tabs in your <code>CSC210_YourName.circ</code> file.</p>
+
+      <h3>Circuit 1 — <code>SR_LATCH</code></h3>
+
+      <div class="logisim-steps">
+        <ol>
+          <li>Create a new circuit tab named exactly <code>SR_LATCH</code>.</li>
+          <li>Place <strong>two NAND gates</strong>, one above the other. Two gates is the entire circuit.</li>
+          <li>Add input pins <code>nS</code> and <code>nR</code>. Set both to <strong>2-state</strong> with <strong>pull-down</strong> behaviour.</li>
+          <li>Wire <code>nS</code> to one input of the upper gate; wire <code>nR</code> to one input of the lower gate.</li>
+          <li><strong>Cross-couple them:</strong> the upper gate's output goes to the lower gate's free input, and the lower gate's output goes to the upper gate's free input.</li>
+          <li>Add output pins <code>q</code> (from the upper gate) and <code>nq</code> (from the lower gate).</li>
+        </ol>
+      </div>
+
+      <div class="lab-verify">
+        <div class="lab-verify__title">Verify</div>
+        <table class="tt">
+          <thead><tr><th><code>nS</code></th><th><code>nR</code></th><th>Expect <code>q</code></th><th>Expect <code>nq</code></th></tr></thead>
+          <tbody>
+            <tr><td>0</td><td>1</td><td>1</td><td>0</td></tr>
+            <tr><td>1</td><td>0</td><td>0</td><td>1</td></tr>
+            <tr><td>0</td><td>0</td><td>1</td><td>1</td></tr>
+          </tbody>
+        </table>
+        <p><strong>Then the test that actually matters</strong>, which is not in the table: set the latch (<code>nS</code>=0), then <strong>return <code>nS</code> to 1</strong> and confirm <code>q</code> is still 1. Reset it, release, and confirm <code>q</code> is still 0. That is the behaviour that makes this circuit memory, and it is the one a truth table cannot express.</p>
+        <p><em>Expect flickering or a red error state when the simulation first starts.</em> With pull-down pins the latch comes up with both inputs at 0 — the forbidden state — and it settles unpredictably. That is correct behaviour for this circuit, not a wiring fault.</p>
+      </div>
+
+      <h3>Circuit 2 — <code>MEM_1BIT</code></h3>
+
+      <div class="logisim-steps">
+        <ol>
+          <li>Create a new circuit tab named exactly <code>MEM_1BIT</code>.</li>
+          <li>Place <strong>four NAND gates</strong>. Two of them will be cross-coupled as the latch; two sit in front as the gating.</li>
+          <li>Add input pins <code>In</code> and <code>Set</code> (2-state, pull-down) and one output pin <code>Q</code>.</li>
+          <li><strong>Gate A:</strong> inputs <code>In</code> and <code>Set</code>.</li>
+          <li><strong>Gate B:</strong> inputs are <em>gate A's output</em> and <code>Set</code>. There is no separate NOT gate — gate A is doing that job.</li>
+          <li>Cross-couple the remaining two gates as a latch, and drive them from gate A and gate B.</li>
+          <li>Bring only <code>Q</code> out to a pin. <strong>Do not add a <code>Q'</code> pin.</strong></li>
+          <li><strong>Edit the circuit's appearance</strong> to a labelled square, with <code>In</code> and <code>Set</code> on one side and <code>Q</code> on the other.</li>
+        </ol>
+      </div>
+
+      <div class="lab-verify">
+        <div class="lab-verify__title">Verify</div>
+        <ul>
+          <li>With <code>Set</code> = 1, poke <code>In</code> back and forth. <code>Q</code> should follow it immediately — the cell is <strong>transparent</strong>.</li>
+          <li>Set <code>Set</code> = 0 and poke <code>In</code> again. <code>Q</code> must not move.</li>
+          <li>Run the three-step store: put a value on <code>In</code>, raise <code>Set</code>, drop <code>Set</code>. Confirm the value stays.</li>
+          <li>Confirm there is <strong>no combination at all</strong> of <code>In</code> and <code>Set</code> that drives both internal latch inputs low. There is no such combination — satisfy yourself that this is a property of the wiring rather than something you have to avoid.</li>
+        </ul>
+      </div>
+
+      <h3>Points</h3>
+
+      <table>
+        <thead><tr><th>Item</th><th>Points</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><code>SR_LATCH</code></td><td>10</td><td>Exactly two cross-coupled NAND gates; all four states correct; <strong>hold verified by releasing the input</strong></td></tr>
+          <tr><td><code>MEM_1BIT</code></td><td>12</td><td><strong>Four NAND gates</strong>; pins <code>In</code>, <code>Set</code>, <code>Q</code> and no <code>Q'</code>; transparency and hold both verified</td></tr>
+          <tr><td>Pin names, pin settings, circuit appearance</td><td>2</td><td>2-state pull-down inputs; <code>MEM_1BIT</code>'s appearance edited to a labelled square. <strong>Week 5 instantiates this.</strong></td></tr>
+          <tr><td>Single <code>.circ</code> file; only Wiring and Gates components</td><td>1</td><td></td></tr>
+          <tr><td><strong>Total</strong></td><td><strong>25</strong></td><td></td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">What is and is not marked down</div>
+        <p><strong>A five-gate <code>MEM_1BIT</code> with a separate NOT gate is not wrong.</strong> It behaves identically and you will get most of the marks. But the four-gate version is the one on the build page and the one Week 5 expects, so full marks go to four gates and partial to a correct five.</p>
+        <p><strong>What does score zero is anything from Logisim's Memory folder</strong> — the built-in D Flip-Flop, S-R Flip-Flop or Register — however well the result works. The point of this assignment is that you built the cell.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Rubric
+         ============================================================ -->
+    <section id="rubric">
+      <h2>Grading rubric</h2>
+      <p>Every criterion assesses <strong>SLO1</strong> — describe basic computer architecture, organization and design.</p>
+
+      <table class="rubric-table">
+        <thead>
+          <tr><th>Criterion</th><th>Excellent (90–100%)</th><th>Proficient (75–89%)</th><th>Developing (60–74%)</th><th>Inadequate (&lt;60%)</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Feedback and storage</strong><br><span class="q-pts">Part A, 20 pts · SLO1</span></td>
+            <td>Locates the stored bit in the loop's stable state. Traces both stable configurations correctly. Explains the truth table's gap precisely, and the forbidden state's structural impossibility in <code>MEM_1BIT</code>.</td>
+            <td>Mostly correct. May describe the hold state accurately without fully explaining why two states are self-consistent.</td>
+            <td>Describes behaviour without explaining feedback. Treats "it stores a bit" as the explanation.</td>
+            <td>Cannot explain how the circuit holds a value; treats memory as a property of a gate.</td>
+          </tr>
+          <tr>
+            <td><strong>Timing reasoning</strong><br><span class="q-pts">Part B, 15 pts · SLO1</span></td>
+            <td>Both waveforms correct, with transitions aligned to the right causes and edges. Q7 identifies a real divergence and explains sampling accurately.</td>
+            <td>Waveforms correct with minor alignment errors. Q7 identifies the difference but explains it loosely.</td>
+            <td>One waveform substantially wrong, or the latch and flip-flop behaviours are conflated.</td>
+            <td>Cannot produce a correct output waveform for either device.</td>
+          </tr>
+          <tr>
+            <td><strong>Circuit construction</strong><br><span class="q-pts">Part C, 25 pts · SLO1</span></td>
+            <td>Both circuits correct and correctly named. <code>MEM_1BIT</code> built with four gates, three pins, pull-down 2-state inputs, and an edited appearance. Hold and transparency both verified.</td>
+            <td>Circuits functional; a five-gate <code>MEM_1BIT</code>, or minor naming, pin-setting or appearance issues.</td>
+            <td>A circuit missing or incorrect, or <code>MEM_1BIT</code> carrying a <code>Q'</code> pin or unverified hold behaviour.</td>
+            <td>Submission incomplete, or uses anything from the Memory, Plexers or Arithmetic folders.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p class="rubric-total"><strong>Total: 60 points</strong> &nbsp;—&nbsp; Part A 20 + Part B 15 + Part C 25</p>
+    </section>
+
+    <!-- ============================================================
+         Checklist
+         ============================================================ -->
+    <section id="checklist">
+      <h2>Submission checklist</h2>
+
+      <ul class="check-list">
+        <li><span class="check-box" aria-hidden="true"></span> Both circuits (<code>SR_LATCH</code>, <code>MEM_1BIT</code>) are present as separate tabs</li>
+        <li><span class="check-box" aria-hidden="true"></span> <code>SR_LATCH</code> is exactly two cross-coupled NAND gates</li>
+        <li><span class="check-box" aria-hidden="true"></span> <code>MEM_1BIT</code> is four NAND gates — two cross-coupled, two gating, no separate inverter</li>
+        <li><span class="check-box" aria-hidden="true"></span> <code>MEM_1BIT</code> has exactly three pins: <code>In</code>, <code>Set</code>, <code>Q</code> — no <code>Q'</code></li>
+        <li><span class="check-box" aria-hidden="true"></span> Pin names match the specification exactly, including the active-LOW <code>n</code> prefix on <code>SR_LATCH</code></li>
+        <li><span class="check-box" aria-hidden="true"></span> All input pins are set to <strong>2-state</strong> with <strong>pull-down</strong> behaviour</li>
+        <li><span class="check-box" aria-hidden="true"></span> <code>MEM_1BIT</code>'s circuit appearance has been edited to a labelled square</li>
+        <li><span class="check-box" aria-hidden="true"></span> Hold behaviour verified on both circuits: store a value, release the input, confirm the output stays</li>
+        <li><span class="check-box" aria-hidden="true"></span> <strong>All circuits are contained within this single .circ file — no external file links</strong></li>
+        <li><span class="check-box" aria-hidden="true"></span> Only <strong>Wiring</strong> and <strong>Gates</strong> components are used — nothing from Plexers, Arithmetic or Memory</li>
+        <li><span class="check-box" aria-hidden="true"></span> Part A and Part B answers submitted alongside the <code>.circ</code> file</li>
+      </ul>
+
+      <div class="callout">
+        <div class="callout__title">Resources</div>
+        <p><a href="https://cburch.com/logisim/docs.html" target="_blank" rel="noopener">Logisim documentation</a> — in particular the pages on pin attributes (for the 2-state and pull-down settings) and on editing a circuit's appearance.</p>
+        <p>Log into your Saylor <strong>CS301</strong> account and open <strong>Unit 3: Fundamentals of Digital Logic Design</strong> for background reading on sequential logic: <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">learn.saylor.org — CS301</a></p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+</body>
+</html>
