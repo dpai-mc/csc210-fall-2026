@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="lab-04">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210L — Lab 4: Latches, Timing, and the Memory Cell</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ----------
+       .lab-*, .scope-table, .logisim-steps, .callout--*, .points-badge,
+       .waveform*, .tt, .cost-readout and the checklist components all live
+       in shared/style.css. What follows is only what this page alone needs.
+
+       .live-tag is duplicated from lab-03 rather than promoted: two uses of
+       an identical rule body is the threshold Course Standards §8 sets for
+       consolidation, and this is the second. Promote both to shared on the
+       next pass through either file. */
+
+    .live-tag {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: var(--fs-xs);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      padding: 2px var(--space-sm);
+      border-radius: 999px;
+      vertical-align: middle;
+      margin-left: var(--space-sm);
+    }
+    .live-tag--together { background: var(--color-success); color: #fff; }
+    .live-tag--solo     { background: var(--color-danger, #b3261e); color: #fff; }
+
+    /* Blank rows on the printable timing figure. Students draw on these by
+       hand, so they need a visible high level, a visible low level, and a
+       tick at every step boundary — enough structure to draw against and
+       not so much that it competes with what they draw. */
+    .wf-blank-band { fill: var(--color-code-bg); opacity: .55; }
+    .wf-guide {
+      stroke: var(--color-border);
+      stroke-width: 1;
+      stroke-dasharray: 2 4;
+    }
+    .wf-tick { stroke: var(--color-border); stroke-width: 1; }
+    .wf-step-num {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      fill: var(--color-text-muted);
+      text-anchor: middle;
+    }
+    .wf-level {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      fill: var(--color-text-muted);
+    }
+
+    /* Divergence markers on the self-check bench. Drawn as translucent
+       vertical bands rather than as marks on the trace, because the thing
+       being pointed at is a moment in time, not a point on one line. */
+    .wf-miss { fill: rgba(192, 57, 43, .16); }
+    .waveform__trace--answer {
+      stroke: var(--color-success);
+      stroke-dasharray: 6 4;
+    }
+    .waveform__trace--yours { stroke: var(--color-primary); }
+
+    .mode-row {
+      display: flex;
+      gap: var(--space-sm);
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: var(--space-md);
+    }
+    .widget-btn[aria-pressed="true"] {
+      background: var(--color-primary);
+      color: #fff;
+      border-color: var(--color-primary);
+    }
+
+    @media print {
+      .sp-header, .sp-footer, .no-print { display: none; }
+      .lab-step { break-inside: avoid; }
+      .waveform { break-inside: avoid; }
+      .aside-optional { display: none; }
+      a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== Header ==================== -->
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210L — Computer Organization &amp; Architecture Lab</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Lab 4 &rsaquo; <span>Latches, Timing, and the Memory Cell</span>
+    </nav>
+  </header>
+
+  <!-- ==================== Main ==================== -->
+  <main class="sp-main sp-main--full">
+
+    <h1>Lab 4 — Latches, Timing, and the Memory Cell</h1>
+
+    <div class="lab-meta">
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Lab Session</span>
+        <span class="lab-meta__value">Tuesday, Sep 8, 2026</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">In-Class Time</span>
+        <span class="lab-meta__value">90 minutes</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Format</span>
+        <span class="lab-meta__value">Live on Zoom &mdash; completes in session</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Assignment</span>
+        <span class="lab-meta__value">Completion Check 4 &mdash; 10 pts</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Due</span>
+        <span class="lab-meta__value lab-meta__value--due">Sun, Sep 13 &middot; 11:59 PM</span>
+      </div>
+    </div>
+
+    <div class="callout callout--hook">
+      <div class="callout__title">Why This Lab Exists</div>
+      <p><strong>What we have:</strong> Circuits that compute. An adder that adds two bytes, decoders that turn a code into a one-of-N selection. Every one of them is <em>combinational</em>: its output depends on what its inputs are right now, and on nothing else.</p>
+      <p><strong>What we can't do yet:</strong> Keep anything. Change the inputs and the previous answer is not stored somewhere inconvenient &mdash; it is gone. That rules out more than it sounds like. You cannot add three numbers, because there is nowhere to put the first sum. You cannot count. You cannot do one thing <em>and then</em> another, because "and then" requires remembering that the first thing happened.</p>
+      <p><strong>What we can do after today:</strong> Hold one bit, in a circuit made of two NAND gates wired back into each other &mdash; and then control <em>when</em> that bit is allowed to change. The second of those circuits, <code>MEM_1BIT</code>, is the memory cell your CPU is actually made of. Every register, the program counter, the MAR, the IR and every byte of RAM you build for the rest of this course is made of the circuit you finish today.</p>
+    </div>
+
+    <p>This is the pivot point of the course, and it is worth saying plainly why. Everything you have built so far is a shape that transforms whatever is presented to it. After today, a circuit can have a <strong>past</strong>. That is the difference between a calculator and a computer, and it costs two gates.</p>
+
+    <div class="callout callout--warn">
+      <div class="callout__title">One Thing You Are Not Building Today</div>
+      <p>This week's reading teaches the <strong>clock</strong> and the <strong>edge-triggered D flip-flop</strong>, and you will be asked to reason about a flip-flop on Assignment 4 and on Quiz 1. <strong>You do not build one</strong> &mdash; not in this lab, and not on the assignment.</p>
+      <p>That is deliberate, and it is not a shortcut. Your CPU's datapath does not contain a flip-flop: its registers are level-sensitive <code>MEM_1BIT</code> cells written by a <code>Set</code> line. The machine's one edge-triggered element lives in the clock, and you meet it in Week 11 with the circuit that uses it. Since Week 3 this course has trained you that every circuit you build reappears later &mdash; so when one <em>doesn't</em> get built, you should hear the reason rather than notice the gap.</p>
+    </div>
+
+    <!-- ============================================================
+         Outcomes
+         ============================================================ -->
+    <section id="sec-outcomes">
+      <h2>What You Will Be Able to Do</h2>
+
+      <p>By the end of this session you will be able to:</p>
+
+      <ol>
+        <li><strong>Build an S-R latch</strong> from two cross-coupled NAND gates, and demonstrate that it holds a value after you release the input.</li>
+        <li><strong>Explain where the stored bit is</strong> &mdash; and account for the fact that the same inputs support two different stable outputs.</li>
+        <li><strong>Reach the forbidden state deliberately</strong>, describe why releasing it has no defined outcome, and name that as a race condition.</li>
+        <li><strong>Build <code>MEM_1BIT</code></strong>, the course's four-NAND memory cell, with pins <code>In</code>, <code>Set</code> and <code>Q</code>, and edit its circuit appearance so eight of them are readable side by side next week.</li>
+        <li><strong>Store a value on purpose</strong> using the three-step procedure you will use for the rest of the course: set <code>In</code>, raise <code>Set</code>, drop <code>Set</code>.</li>
+        <li><strong>Draw an output waveform by hand</strong> for a level-sensitive cell and for an edge-triggered flip-flop, given the same input, and get the difference right.</li>
+      </ol>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">CS301 Reference</div>
+        <p>Sequential logic, latches and flip-flops in general are covered in Saylor CS301 <strong>Unit 3: Fundamentals of Digital Logic Design</strong>. Log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> and open Unit 3 as supporting reading. The NAND-specific construction, the active-LOW pin convention, the four-gate <code>MEM_1BIT</code>, and everything on this page about where <em>your</em> machine uses level-sensitive storage are covered here and nowhere else &mdash; CS301 teaches the fully synchronous design that most machines use, and yours is not one of them.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Before you arrive
+         ============================================================ -->
+    <section id="sec-before">
+      <h2>Before You Arrive</h2>
+
+      <p><strong>Read the week's first page before this session.</strong> Not the whole week &mdash; just the S-R latch page. The lab builds the circuit; the reading is what makes the build mean something, and this is the one week where turning up cold costs you the point of the exercise. Twenty minutes, and it is the highest-value twenty minutes of your week.</p>
+
+      <p>Bring your <code>CSC210_YourName.circ</code> file &mdash; the same one you have been adding to since Lab 1. Today adds two tabs to it. Nothing from Lab 1, 2 or 3 gets deleted or replaced.</p>
+
+      <p><strong>Two scheduling facts about this week.</strong> Labor Day was Monday, so the week effectively starts with this lab. And <strong>Quiz 1 is open all week</strong>, Monday through Sunday, covering Weeks 1 through 4 &mdash; one attempt, 60 minutes. Twenty-five of its hundred points are Week 4 material, so do not sit it before you have done today's work and read the week's pages. The last ten minutes of this session are a concept sweep to help you judge when you are ready.</p>
+    </section>
+
+    <!-- ============================================================
+         Scope table
+         ============================================================ -->
+    <section id="sec-scope">
+      <h2>How This Lab Relates to Assignment 4</h2>
+
+      <p>Assignment 4 is 60 points and is smaller than Assignments 2 and 3 on purpose, because Quiz 1 carries this week's assessment weight. Both of its circuits are built here, together, in this session. What the assignment adds is the written reasoning and the timing drawings &mdash; and you practise those here too.</p>
+
+      <table class="scope-table">
+        <thead>
+          <tr><th>Circuit or task</th><th>Where it happens</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>SR_LATCH</code></td>
+            <td class="scope-lab">Guided in lab</td>
+            <td>Built together, two gates. Also Assignment 4 Part C, worth 10 points.</td>
+          </tr>
+          <tr>
+            <td><code>MEM_1BIT</code></td>
+            <td class="scope-lab">Guided in lab</td>
+            <td>Built together, four gates. Also Assignment 4 Part C, worth 12 points &mdash; the most of any single circuit this week, because <strong>Week 5 instantiates eight of them</strong>.</td>
+          </tr>
+          <tr>
+            <td>Circuit appearance for <code>MEM_1BIT</code></td>
+            <td class="scope-lab">Guided in lab</td>
+            <td>Two minutes here saves an unreadable canvas next week. Part of Assignment 4 Part C's 2 points for pins, settings and appearance.</td>
+          </tr>
+          <tr>
+            <td>Timing diagrams, drawn by hand</td>
+            <td class="scope-lab">Practised in lab</td>
+            <td>The exercise here uses a different input pattern from the assignment's. Same skill, so doing this one first is genuine practice rather than a preview of the answers. Assignment 4 Part B, 15 points; also on Quiz 1.</td>
+          </tr>
+          <tr>
+            <td>Written reasoning (Part A)</td>
+            <td class="scope-solo">On your own</td>
+            <td>Four questions about where the stored bit is and why the forbidden state is unreachable in <code>MEM_1BIT</code>. Every one of them is answerable from what you do in this room today &mdash; take notes as you go.</td>
+          </tr>
+          <tr>
+            <td>D flip-flop</td>
+            <td class="scope-solo">Neither &mdash; not built anywhere</td>
+            <td>Taught in the reading, reasoned about on the assignment, <strong>never constructed</strong>. See the note at the top of this page.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============================================================
+         Part 1
+         ============================================================ -->
+    <section id="sec-part-1">
+      <h2>Part 1 — File Check, and One Prohibition That Bites This Week <span class="points-badge">~8 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <p>The standing 30-second check first. Open <code>CSC210_YourName.circ</code> and confirm your Lab 1, 2 and 3 circuits are all still there as tabs in this one file. If any of them live in a separate file, fix it now &mdash; today, with help &mdash; rather than in Week 9 when the audit finds it.</p>
+
+      <div class="lab-step">
+        <div class="lab-step__num">1</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Create today's two tabs</div>
+          <p><strong>Project &rarr; Add Circuit&hellip;</strong> twice, naming them exactly:</p>
+          <pre><code>SR_LATCH
+MEM_1BIT</code></pre>
+          <p>These names are the interface, not a label. Week 5 opens your file and instantiates <code>MEM_1BIT</code> eight times; a tab named <code>Mem1Bit</code> or <code>memory_cell</code> is a tab that later work cannot find. Spelling and capitalization exactly as written.</p>
+        </div>
+      </div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">The Memory Folder Is Off Limits &mdash; and This Is the First Week It Tempts You</div>
+        <p>Logisim Classic's <strong>Memory</strong> folder contains a D Flip-Flop, an S-R Flip-Flop and a Register. Any of them would produce a circuit that works today and teaches you nothing, and every checkpoint from Week 5 onward instantiates <em>your own</em> <code>MEM_1BIT</code>. Using a built-in is the one thing that fails Part C outright.</p>
+        <p>The rule for the whole course, stated the way you should read it: <strong>anything from Wiring or Gates; nothing from Plexers, Arithmetic or Memory.</strong> Wiring and Gates are permitted in full &mdash; that includes splitters, tunnels, constants and probes, all of which you legitimately need. What is prohibited is prohibited because the course is asking you to build that thing yourself.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Part 2 — SR_LATCH
+         ============================================================ -->
+    <section id="sec-part-2">
+      <h2>Part 2 — <code>SR_LATCH</code>: Two Gates That Remember <span class="points-badge">~20 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <p>Two NAND gates. That is the entire circuit &mdash; there is no third component and nothing in it that stores anything. <strong>The storage is the loop.</strong></p>
+
+      <p>Before you place anything, one convention that causes more wrong builds this week than everything else combined. A NAND-built S-R latch has <strong>active-LOW inputs</strong>: they act when you drive them to <strong>0</strong>. The course writes that into the pin name &mdash; <strong>a name beginning with a lowercase <code>n</code> is active LOW</strong>. So <code>nS</code> is "not-S": drive it to <strong>0</strong> to set. Read that sentence twice; it is the thing people get backwards.</p>
+
+      <div class="logisim-steps">
+        <ol>
+          <li>Open the <code>SR_LATCH</code> tab. Place <strong>two NAND gates</strong>, one above the other.</li>
+          <li>Add input pins <code>nS</code> and <code>nR</code>. Set both to <strong>2-state</strong> with <strong>pull-down</strong> behaviour.</li>
+          <li>Wire <code>nS</code> to one input of the <strong>upper</strong> gate; wire <code>nR</code> to one input of the <strong>lower</strong> gate.</li>
+          <li><strong>Cross-couple them.</strong> The upper gate's output goes to the lower gate's free input, and the lower gate's output goes to the upper gate's free input. Each gate's output is the other gate's input.</li>
+          <li>Add output pins <code>q</code> (from the upper gate) and <code>nq</code> (from the lower gate).</li>
+        </ol>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Expect a Mess When the Simulation Starts</div>
+        <p>With pull-down pins, both inputs come up at <strong>0</strong> &mdash; which for this circuit is the <em>forbidden</em> state, and it settles unpredictably. You will likely see flickering, or a red error state on a wire, before anything stabilizes. <strong>That is not a wiring fault and not a Logisim bug.</strong> A real latch has no defined state at power-on; the simulator is being honest that nothing has determined the answer yet. Poke <code>nS</code> or <code>nR</code> to 1 and it will settle. Part 3 is about exactly this.</p>
+      </div>
+
+      <div class="lab-verify">
+        <div class="lab-verify__title">Verify — the driven states</div>
+        <table class="tt">
+          <thead>
+            <tr><th><code>nS</code></th><th><code>nR</code></th><th><code>q</code></th><th><code>nq</code></th><th>Name</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>0</td><td>1</td><td>1</td><td>0</td><td>Set</td></tr>
+            <tr><td>1</td><td>0</td><td>0</td><td>1</td><td>Reset</td></tr>
+            <tr><td>1</td><td>1</td><td><em>holds</em></td><td><em>holds</em></td><td>Hold</td></tr>
+            <tr><td>0</td><td>0</td><td>1</td><td>1</td><td>Forbidden &mdash; both outputs high, which contradicts their names</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="lab-verify">
+        <div class="lab-verify__title">Now the test that actually matters</div>
+        <p>The rows above do not prove this circuit is memory. Three of them could describe an ordinary combinational circuit. Do this instead, slowly, and watch it:</p>
+        <ol>
+          <li>Drive <code>nS</code> to <strong>0</strong>. <code>q</code> goes to 1.</li>
+          <li><strong>Return <code>nS</code> to 1</strong> &mdash; let go of it entirely. Both inputs are now 1 and nothing is driving the circuit.</li>
+          <li><code>q</code> is <strong>still 1</strong>.</li>
+          <li>Now reset it: drive <code>nR</code> to 0, then return it to 1. <code>q</code> is still 0.</li>
+        </ol>
+        <p>Both inputs are at 1 in step 3 and in step 4, and the output is different. <strong>The present inputs do not determine the present output.</strong> That is memory, and it is the only row of the table whose value cannot be written down without knowing what happened earlier.</p>
+      </div>
+
+      <p>Sit with this one for a moment rather than moving straight on &mdash; and if you want the mechanism rather than the demonstration, trace it. With <code>nS</code> = <code>nR</code> = 1, suppose <code>q</code> = 1. Then the lower gate sees 1 and 1, so it outputs 0; the upper gate sees a 0, so it outputs 1 &mdash; which is where we started. It is self-consistent. Now suppose <code>q</code> = 0 instead, and trace it again: <em>that is self-consistent too.</em> Two stable configurations, identical inputs. The stored bit is nothing more than <strong>which of the two the loop settled into</strong>, and which one it is was decided earlier.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Why NAND, Specifically</div>
+        <p>Week 2 proved NAND is universal: it can build any logic function. This circuit is the reason that claim is more interesting than it sounded. <strong>A latch is not a logic function at all</strong> &mdash; its output is not determined by its inputs. Two NAND gates build it anyway. Universality did not predict this, and no truth table describes it.</p>
+        <p>It is also not a toy construction. The NAND-based S-R latch is the circuit real SRAM cells use.</p>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">One Circuit That Does Not Come Back</div>
+        <p>Since Week 3 every circuit you have built has been a component of a later one. <code>SR_LATCH</code> is the exception, and you should hear it said rather than work it out: <strong>nothing later in this course contains it.</strong> <code>MEM_1BIT</code> is a more economical four-gate construction, not a wrapper around this tab.</p>
+        <p>You build it anyway, and you keep it as its own tab, because it is where memory-as-feedback is learned and because Part 3's argument needs a circuit that <em>can</em> reach the bad state. It is also worth 10 points on Assignment 4.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Part 3 — Forbidden state
+         ============================================================ -->
+    <section id="sec-part-3">
+      <h2>Part 3 — The Forbidden State, on Purpose <span class="points-badge">~10 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <p>Drive <strong>both</strong> <code>nS</code> and <code>nR</code> to 0. Both outputs go to <strong>1</strong>. <code>q</code> and <code>nq</code> are both high, which contradicts the one thing their names promise: that one is the complement of the other.</p>
+
+      <p>That is odd but it is not the real problem. The state is reachable, it is stable while you hold it, and it is merely useless. <strong>The real problem is leaving it.</strong></p>
+
+      <div class="lab-step">
+        <div class="lab-step__num">2</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Release both inputs at the same time, several times over</div>
+          <p>From the forbidden state, return <code>nS</code> and <code>nR</code> to 1 together. Both gates now try to drive the loop at once, and which one wins depends on which gate is physically faster.</p>
+          <p>Do it repeatedly. Watch what Logisim does &mdash; oscillation, an error state on the wire, or a value that is not the same one you got last time. <strong>Compare with the person next to you.</strong> If your answers differ, neither of you is wrong; that is the finding.</p>
+        </div>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">This Is a Race Condition &mdash; the First One in This Course</div>
+        <p>The outcome is decided by which of two physical components happens to be faster, and that is not a thing your design controls or your simulator can know. In a real circuit, two runs of the same design can land differently.</p>
+        <p>Then the engineering lesson, which is the reason this is a whole part of the lab rather than a footnote: <strong>you do not fix a race by being careful.</strong> A rule that says "never drive both inputs low" is a rule enforced by a circuit that cannot read it. The fix is to build a circuit in which the bad state is <strong>unreachable</strong> &mdash; which is exactly what you do in Part 4.</p>
+      </div>
+
+      <p>Two more things follow from this, and they are worth having in your notes because the first one costs students an hour every year:</p>
+
+      <ul>
+        <li><strong>The flicker at startup is the same phenomenon.</strong> When the simulation begins, both pull-down inputs are at 0 and both gates race. The circuit lands in a stable but arbitrary state. Nothing has determined the answer, and Logisim showing you that is the simulator being honest rather than broken.</li>
+        <li><strong>This is why real sequential systems carry a global reset</strong> &mdash; a signal that forces every memory element into a known state at power-on, so the machine starts from somewhere defined rather than from whatever the gates decided.</li>
+      </ul>
+
+      <div class="callout callout--note">
+        <div class="callout__title">The Asynchronous Exception, Stated Once</div>
+        <p>This raw latch is <strong>asynchronous</strong>: it responds the moment an input changes, with no clock involved anywhere. That is not an oversight in the design, it is the point &mdash; memory has to exist before it can be scheduled, and seeing the unscheduled version first is what makes control look like a solution instead of a convention.</p>
+        <p>From here on, this course is different. Every storage element you build from Week 5 forward changes <strong>only when something tells it to</strong>, and the clock is what does the telling. <code>SR_LATCH</code> is the one deliberate exception, and this part is why.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Part 4 — MEM_1BIT
+         ============================================================ -->
+    <section id="sec-part-4">
+      <h2>Part 4 — <code>MEM_1BIT</code>: The Cell Your CPU Is Made Of <span class="points-badge">~22 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <p>Two problems are left over from Part 3. The forbidden state is reachable, and the latch changes the instant an input moves &mdash; there is nothing that can say <em>not yet</em>. One circuit fixes both, and it does it by construction rather than by discipline.</p>
+
+      <p>The idea: instead of two inputs that say "set" and "reset," have <strong>one data input</strong> and <strong>one permission input</strong>. Put a NAND in front taking <code>In</code> and <code>Set</code>. Now notice something worth pausing on &mdash; when <code>Set</code> is 1, that gate's output is already <code>In</code> inverted. So a <em>second</em> NAND fed by that output and <code>Set</code> gives you the other polarity for free. <strong>Four gates, not five.</strong> There is no separate inverter, because the first gating gate is already doing that job.</p>
+
+      <div class="logisim-steps">
+        <ol>
+          <li>Open the <code>MEM_1BIT</code> tab. Place <strong>four NAND gates</strong> &mdash; two will be cross-coupled as the latch, two sit in front as the gating.</li>
+          <li>Add input pins <code>In</code> and <code>Set</code> (<strong>2-state, pull-down</strong>) and one output pin <code>Q</code>.</li>
+          <li><strong>Gate A:</strong> inputs <code>In</code> and <code>Set</code>.</li>
+          <li><strong>Gate B:</strong> inputs are <em>gate A's output</em> and <code>Set</code>. Again: there is no NOT gate here.</li>
+          <li>Cross-couple the remaining two gates exactly as you did in <code>SR_LATCH</code>, and drive them from gate A and gate B &mdash; A into the set side, B into the reset side.</li>
+          <li>Bring only <code>Q</code> out to a pin. <strong>Do not add a <code>Q'</code> pin.</strong></li>
+        </ol>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Two Names, and a Missing Pin</div>
+        <p>Textbooks call this circuit a <strong>gated D latch</strong> &mdash; one data input, one enable, output takes the data while enabled. This course calls it <code>MEM_1BIT</code> because that is what it is to your machine and what Week 5 instantiates. Both names describe the same circuit; you will meet the textbook one in outside reading.</p>
+        <p>And the missing <code>Q'</code> is deliberate. <code>SR_LATCH</code> keeps its complement because there the complement <em>is</em> the lesson. Here nothing reads it, and a pin nothing reads is a wire to maintain and a thing to mis-connect. Interfaces get smaller as designs settle.</p>
+      </div>
+
+      <p><strong>Why the pull-down setting means something different here.</strong> Same pin setting as <code>SR_LATCH</code>, opposite effect. These inputs are active-HIGH, so coming up at 0 means "not being written," which is harmless &mdash; where on the raw latch, coming up at 0 was the forbidden state. A pull-down is just a pin coming up at 0; whether 0 is safe depends entirely on what the pin means.</p>
+
+      <div class="lab-verify">
+        <div class="lab-verify__title">Verify — transparency, then hold</div>
+        <ol>
+          <li>Set <code>Set</code> = 1 and poke <code>In</code> back and forth. <code>Q</code> follows it immediately. The cell is <strong>transparent</strong> while <code>Set</code> is high.</li>
+          <li>Return <code>Set</code> = 0 and poke <code>In</code> again, several times. <code>Q</code> does not move.</li>
+          <li>Run the three-step store, which is the procedure you will use for the rest of the course:
+            <br>&mdash; put the value you want on <code>In</code>;
+            <br>&mdash; raise <code>Set</code> to 1;
+            <br>&mdash; drop <code>Set</code> back to 0. The value in <code>Q</code> is now fixed until the next time <code>Set</code> goes high.</li>
+          <li>Satisfy yourself that <strong>no combination at all</strong> of <code>In</code> and <code>Set</code> drives both internal latch inputs low. Try to find one. The forbidden state needs <code>In</code> and its own inverse to be 0 at the same time, and the wiring makes that impossible.</li>
+        </ol>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Both Problems, Solved at Once &mdash; and Neither by Being Careful</div>
+        <p>One input replaced two, so there is no way to ask for set and reset together. And because <code>In</code> and <code>In</code>-inverted can never both be 1, the two latch inputs can never both be 0. <strong>The bad state was not avoided. It was designed out.</strong></p>
+        <p>That is the answer to the question Part 3 left open, and it is a move you will see again: this machine removes hazards by shaping the circuit, not by asking anyone to remember a rule.</p>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">3</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Edit the circuit appearance &mdash; two minutes, and it is graded</div>
+          <p>With the <code>MEM_1BIT</code> tab open, choose <strong>Project &rarr; Edit Circuit Appearance</strong> and draw it as a <strong>labelled square</strong>, with <code>In</code> and <code>Set</code> entering one side and <code>Q</code> leaving the other.</p>
+          <p>This is not cosmetic and it is not optional. <strong>Next week you place eight of these on one canvas.</strong> Eight labelled blocks are readable; eight gate-level tangles are not. It is the flip side of why this course uses Logisim Classic in the first place &mdash; gate-level shapes make primitives legible, clean blocks make composites legible, and both are the same argument about seeing structure at a glance.</p>
+        </div>
+      </div>
+
+      <details class="lab-troubleshoot">
+        <summary>Troubleshooting &mdash; <code>MEM_1BIT</code> misbehaving</summary>
+        <dl>
+          <dt><code>Q</code> never changes, whatever I do</dt>
+          <dd>Check gate B. Its inputs are <em>gate A's output</em> and <code>Set</code> — not <code>In</code> and <code>Set</code>. If both front gates take the same two inputs they produce the same value, and the latch is never told anything.</dd>
+
+          <dt><code>Q</code> follows <code>In</code> even when <code>Set</code> is 0</dt>
+          <dd>One of the front gates is probably bypassed — trace the wire from <code>In</code> and make sure it reaches only gate A, not the cross-coupled pair directly.</dd>
+
+          <dt>Red wire somewhere in the loop</dt>
+          <dd>Two outputs are driving the same wire. In this circuit that usually means a cross-couple was wired to a gate's <em>output</em> instead of its free <em>input</em>.</dd>
+
+          <dt>It flickers like the raw latch did</dt>
+          <dd>If it flickers with <code>Set</code> = 0, the gating is not doing its job — with <code>Set</code> low, both front gates should output 1 and the latch should simply hold. Check that <code>Set</code> reaches <em>both</em> front gates.</dd>
+
+          <dt>I built it with five gates and a NOT, and it works</dt>
+          <dd>It does work, and it is not wrong — it behaves identically. It earns partial credit rather than full on Assignment 4, because the four-gate version is the one Week 5 expects. If you have time in the room, rebuild it as four; if you do not, keep the working one and rebuild it later.</dd>
+        </dl>
+      </details>
+    </section>
+
+    <!-- ============================================================
+         Part 5 — Timing
+         ============================================================ -->
+    <section id="sec-part-5">
+      <h2>Part 5 — Draw It in Time <span class="points-badge">~20 min</span><span class="live-tag live-tag--together">Together, then your own</span></h2>
+
+      <p>This is the segment that pays off furthest. Assignment 4 Part B asks you to draw output waveforms, Quiz 1 asks you to reason about the difference between two devices, and every debugging session for the rest of the course is a question about what happened when. It is a skill, and skills are practised rather than read.</p>
+
+      <p>A timing diagram is simpler than it looks. <strong>Time runs left to right. Each row is one signal. A vertical edge is a transition.</strong> The high level means 1, the low level means 0, and that is the whole notation.</p>
+
+      <p>Below is an input pattern, sixteen moments long. <strong>Print this page, or copy the figure onto paper</strong>, and fill in the two blank rows by hand. Do not use the widget yet &mdash; drawing it first is the exercise, and checking it afterwards is only useful if you committed to an answer.</p>
+
+      <div class="waveform">
+        <svg class="waveform__plot" viewBox="0 0 700 316" role="img"
+             aria-labelledby="fig-title fig-desc">
+          <title id="fig-title">Timing exercise: input waveforms with two blank output rows</title>
+          <desc id="fig-desc">Sixteen time steps. Row 1, In, is: 0,1,1,0,1,0,1,1,0,0,1,1,0,1,0,0. Row 2, Set, is: 0,1,1,0,0,0,0,1,1,0,0,0,0,1,0,0. Row 3 is blank for you to draw MEM_1BIT's Q. Row 4, CLK, is: 0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1, with rising edges at moments 3, 7, 11 and 15. Row 5 is blank for you to draw a D flip-flop's Q.</desc>
+
+          <!-- Row 0: In -->
+          <text x="8" y="44" class="waveform__label">In</text>
+          <path class="waveform__trace waveform__trace--input" d="M132,52H166V26H200H234V52H268V26H302V52H336V26H370H404V52H438H472V26H506H540V52H574V26H608V52H642H676"></path>
+
+          <!-- Row 1: Set -->
+          <text x="8" y="100" class="waveform__label waveform__label--muted">Set</text>
+          <path class="waveform__trace waveform__trace--clock" d="M132,108H166V82H200H234V108H268H302H336H370V82H404H438V108H472H506H540H574V82H608V108H642H676"></path>
+
+          <!-- Row 2: blank, MEM_1BIT Q -->
+          <rect class="wf-blank-band" x="132" y="130" width="544" height="44"></rect>
+          <text x="8" y="150" class="waveform__label">Q of</text>
+          <text x="8" y="164" class="waveform__label">MEM_1BIT</text>
+          <line class="wf-guide" x1="132" y1="138" x2="676" y2="138"></line>
+          <line class="wf-guide" x1="132" y1="164" x2="676" y2="164"></line>
+          <text x="120" y="142" class="wf-level" text-anchor="end">1</text>
+          <text x="120" y="168" class="wf-level" text-anchor="end">0</text>
+          <g class="wf-tick">
+            <line x1="166" y1="134" x2="166" y2="170"></line><line x1="200" y1="134" x2="200" y2="170"></line>
+            <line x1="234" y1="134" x2="234" y2="170"></line><line x1="268" y1="134" x2="268" y2="170"></line>
+            <line x1="302" y1="134" x2="302" y2="170"></line><line x1="336" y1="134" x2="336" y2="170"></line>
+            <line x1="370" y1="134" x2="370" y2="170"></line><line x1="404" y1="134" x2="404" y2="170"></line>
+            <line x1="438" y1="134" x2="438" y2="170"></line><line x1="472" y1="134" x2="472" y2="170"></line>
+            <line x1="506" y1="134" x2="506" y2="170"></line><line x1="540" y1="134" x2="540" y2="170"></line>
+            <line x1="574" y1="134" x2="574" y2="170"></line><line x1="608" y1="134" x2="608" y2="170"></line>
+            <line x1="642" y1="134" x2="642" y2="170"></line>
+          </g>
+
+          <!-- Row 3: CLK -->
+          <text x="8" y="212" class="waveform__label waveform__label--muted">CLK</text>
+          <path class="waveform__trace waveform__trace--clock" d="M132,220H166H200V194H234H268V220H302H336V194H370H404V220H438H472V194H506H540V220H574H608V194H642H676"></path>
+          <g class="waveform__edge">
+            <line x1="200" y1="186" x2="200" y2="286"></line>
+            <line x1="336" y1="186" x2="336" y2="286"></line>
+            <line x1="472" y1="186" x2="472" y2="286"></line>
+            <line x1="608" y1="186" x2="608" y2="286"></line>
+          </g>
+          <g class="waveform__edge-tick">
+            <polygon points="196,190 204,190 200,182"></polygon>
+            <polygon points="332,190 340,190 336,182"></polygon>
+            <polygon points="468,190 476,190 472,182"></polygon>
+            <polygon points="604,190 612,190 608,182"></polygon>
+          </g>
+
+          <!-- Row 4: blank, flip-flop Q -->
+          <rect class="wf-blank-band" x="132" y="242" width="544" height="44"></rect>
+          <text x="8" y="262" class="waveform__label">Q of</text>
+          <text x="8" y="276" class="waveform__label">D flip-flop</text>
+          <line class="wf-guide" x1="132" y1="250" x2="676" y2="250"></line>
+          <line class="wf-guide" x1="132" y1="276" x2="676" y2="276"></line>
+          <text x="120" y="254" class="wf-level" text-anchor="end">1</text>
+          <text x="120" y="280" class="wf-level" text-anchor="end">0</text>
+          <g class="wf-tick">
+            <line x1="166" y1="246" x2="166" y2="282"></line><line x1="234" y1="246" x2="234" y2="282"></line>
+            <line x1="268" y1="246" x2="268" y2="282"></line><line x1="302" y1="246" x2="302" y2="282"></line>
+            <line x1="370" y1="246" x2="370" y2="282"></line><line x1="404" y1="246" x2="404" y2="282"></line>
+            <line x1="438" y1="246" x2="438" y2="282"></line><line x1="506" y1="246" x2="506" y2="282"></line>
+            <line x1="540" y1="246" x2="540" y2="282"></line><line x1="574" y1="246" x2="574" y2="282"></line>
+            <line x1="642" y1="246" x2="642" y2="282"></line>
+          </g>
+
+          <!-- Moment numbers -->
+          <g class="wf-step-num">
+            <text x="149" y="304">1</text><text x="183" y="304">2</text><text x="217" y="304">3</text><text x="251" y="304">4</text>
+            <text x="285" y="304">5</text><text x="319" y="304">6</text><text x="353" y="304">7</text><text x="387" y="304">8</text>
+            <text x="421" y="304">9</text><text x="455" y="304">10</text><text x="489" y="304">11</text><text x="523" y="304">12</text>
+            <text x="557" y="304">13</text><text x="591" y="304">14</text><text x="625" y="304">15</text><text x="659" y="304">16</text>
+          </g>
+        </svg>
+        <div class="waveform__caption">
+          The <code>In</code> row drives both devices. <code>MEM_1BIT</code> is controlled by <code>Set</code>; the flip-flop is controlled by <code>CLK</code>, whose four rising edges are marked. Both output rows start at 0.
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">4</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Draw <code>MEM_1BIT</code>'s <code>Q</code></div>
+          <p>Work left to right, one moment at a time, and ask the same two questions at each: <em>is <code>Set</code> high?</em> If yes, <code>Q</code> is whatever <code>In</code> is. If no, <code>Q</code> is whatever it already was.</p>
+          <p>Mark every point where <code>Q</code> changes, and be ready to say what caused it. Two moments in this pattern are worth watching for: one where <code>In</code> changes <em>during</em> a <code>Set</code> window, and several where <code>In</code> moves while <code>Set</code> is low and <code>Q</code> should not budge.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">5</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Draw the flip-flop's <code>Q</code></div>
+          <p>Different rule, and only one: <strong>at a rising edge of <code>CLK</code>, <code>Q</code> takes whatever <code>In</code> is at that instant. Everywhere else, <code>Q</code> does not move at all.</strong> The four rising edges are marked with green guides so you can read the correspondence down the page rather than take it on trust.</p>
+          <p>The interesting thing is what happens <em>between</em> edges. Follow <code>In</code> across moments 4, 5 and 6 and ask what the flip-flop does about any of it.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">6</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Verify against your own circuit</div>
+          <p>Before you check with the widget, check against hardware. In Logisim, poke your <code>MEM_1BIT</code> through the first six moments of the pattern by hand &mdash; set <code>In</code>, set <code>Set</code>, read <code>Q</code>, write it down, move to the next moment. Six steps is enough to know whether your drawing and your circuit agree.</p>
+          <p>If they disagree, one of them is wrong and finding out which is the whole exercise. An answer key would tell you that you missed; a circuit shows you what is actually true and lets you find your own error.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Widget
+         ============================================================ -->
+    <section id="sec-widget">
+      <h2>Interactive: Waveform Self-Check Bench</h2>
+
+      <p><strong>Draw first, then check.</strong> Click along the "Your <code>Q</code>" row to enter the waveform you drew on paper, then press Check. The bench does not show you the answer until you have committed to one, and when it does, it tells you the <em>first</em> moment where you diverged &mdash; because in a waveform every later difference usually follows from the first one.</p>
+
+      <div class="widget-card" id="widget-selfcheck">
+        <div class="widget-card__title">Waveform Self-Check Bench</div>
+        <div class="widget-card__subtitle">Same input pattern as the printed figure. Click a cell on the "Your Q" row to toggle it; arrow keys move, Enter or Space toggles.</div>
+
+        <div class="mode-row" role="group" aria-label="Which device you are drawing">
+          <span class="sr-only">Choose the device whose output you drew.</span>
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small" id="mode-mem" aria-pressed="true" data-mode="memcell">MEM_1BIT (controlled by Set)</button>
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small" id="mode-ff" aria-pressed="false" data-mode="dflipflop">D flip-flop (controlled by CLK)</button>
+        </div>
+
+        <div class="waveform">
+          <svg class="waveform__plot" id="sc-plot" viewBox="0 0 700 264" role="img"
+               aria-labelledby="sc-title">
+            <title id="sc-title">Self-check bench: input, control, your drawn output, and the correct output once checked</title>
+          </svg>
+        </div>
+
+        <div class="mode-row">
+          <button type="button" class="widget-btn widget-btn--accent" id="sc-check">Check my drawing</button>
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small" id="sc-clear">Clear my row</button>
+          <span class="cost-readout" id="sc-score" role="status" aria-live="polite">Not checked yet</span>
+        </div>
+
+        <div class="waveform__caption" id="sc-caption" role="status" aria-live="polite">
+          Enter the waveform you drew, then press Check.
+        </div>
+
+        <div class="sr-only" id="sc-table" aria-live="polite"></div>
+      </div>
+
+      <p class="no-print">If your drawing and the bench disagree, do not just correct the picture. Go back to the moment it names and say out loud what the device is doing there &mdash; following its input, or ignoring it, and why. That sentence is what Assignment 4 Part B Q7 asks you to write, and it is the part a correct drawing does not prove you can do.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">What the Two Rows Should Have Shown You</div>
+        <p><code>MEM_1BIT</code>'s output moves whenever <code>Set</code> is high and <code>In</code> changes &mdash; it is a <strong>window</strong>, and anything that happens inside the window gets through. The flip-flop's output moves only at four instants in the whole pattern, and an input that changes and changes back between two edges is never seen at all. That is what <strong>sampling</strong> means, and it is the difference the two rules produce.</p>
+        <p>Your CPU relies on the first behaviour. Its registers are transparent while <code>Set</code> is high, and the control signals are shaped so that the data on the bus is stable for the whole window and a moment either side &mdash; the same move you saw in Part 4, one level up: the hazard is removed by the design, not by care. That is Week 11's material, and this is the picture it will refer back to.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Part 6 — Quiz sweep
+         ============================================================ -->
+    <section id="sec-part-6">
+      <h2>Part 6 — Quiz 1 Concept Sweep <span class="points-badge">~10 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <p>Quiz 1 covers Weeks 1 through 4 &mdash; the whole of Phase 1 &mdash; and it is open all week, one attempt, 60 minutes, open notes. The last ten minutes of this session are a verbal walk back down the ladder we have climbed. Nothing is written down; the point is to notice which rung you cannot explain.</p>
+
+      <p>We go down it in this order, out loud:</p>
+
+      <ol>
+        <li><strong>A memory cell</strong> holds one bit, and changes only when <code>Set</code> says it may.</li>
+        <li><strong>It is four NAND gates</strong> &mdash; two that gate, two that latch &mdash; and the forbidden state is impossible in it by construction.</li>
+        <li><strong>The latch is two NAND gates</strong> whose outputs feed each other. Two stable states under identical inputs; the bit is which one it settled into.</li>
+        <li><strong>A NAND gate</strong> is one of the gates you built in Week 2, and NAND alone can build every logic function &mdash; and, as of today, one thing that is not a function at all.</li>
+        <li><strong>Every gate</strong> is a rule that turns input voltages into an output voltage.</li>
+        <li><strong>Every value</strong> in the whole machine is a pattern of those voltages, read as a number by whatever chooses to read it &mdash; which is where Week 1 started.</li>
+      </ol>
+
+      <p>Six rungs, from a memory cell to a voltage, with nothing skipped and nothing taken on faith. If any of them is a sentence you can recite but not explain, that is the part to re-read before you sit the quiz.</p>
+
+      <div class="callout callout--note">
+        <div class="callout__title">On When to Take It</div>
+        <p>The window is wide so you can choose when you are <strong>ready</strong>, not so you can get it over with. Twenty-five of the hundred points are Week 4 material &mdash; the material you met today. One attempt, so there is no second chance to use what you learn from taking it.</p>
+        <p>No question on the quiz asks you to draw a timing diagram. That skill is assessed on Assignment 4 Part B and practised here, where you have your notes and an instructor.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Assignment
+         ============================================================ -->
+    <section id="sec-assignment">
+      <h2>Assignment: Completion Check 4</h2>
+
+      <div class="lab-meta">
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Points</span>
+          <span class="lab-meta__value">10</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Due</span>
+          <span class="lab-meta__value lab-meta__value--due">Sunday, Sep 13, 2026 &middot; 11:59 PM</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Submit via</span>
+          <span class="lab-meta__value">Canvas &mdash; Lab 4 Completion Check</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Assesses</span>
+          <span class="lab-meta__value">CSLO 1</span>
+        </div>
+      </div>
+
+      <p>This is a lab completion check, and it is a CSC210L grade. It does not substitute for Assignment 4, which is graded in the lecture course and asks for written reasoning this does not. If you finished in the session, you are submitting work you already have.</p>
+
+      <h3>What to Submit</h3>
+
+      <ol>
+        <li><strong><code>CSC210_YourName.circ</code></strong> &mdash; your semester file, now containing <code>SR_LATCH</code> and <code>MEM_1BIT</code> alongside everything from Labs 1&ndash;3.</li>
+        <li><strong>Your hand-drawn timing diagram</strong> from Part 5 &mdash; both output rows filled in. A photo of the paper is fine; neatness is not graded and correctness is.</li>
+      </ol>
+
+      <div class="callout callout--hook">
+        <div class="callout__title">Submission Requirement &mdash; Read Before Uploading</div>
+        <p><strong>All circuits are contained within this single <code>.circ</code> file &mdash; no external file links.</strong> Your file is opened on the instructor's machine, in isolation, with none of your other files present. A circuit that references one stored elsewhere arrives broken.</p>
+        <p>And for this lab specifically: <strong>nothing from the Memory, Plexers or Arithmetic folders.</strong> A <code>MEM_1BIT</code> built around Logisim's own D Flip-Flop is not a partially correct answer; it is the one thing that earns zero for its row.</p>
+      </div>
+
+      <h3>Grading Rubric</h3>
+
+      <table>
+        <thead>
+          <tr><th>Criterion</th><th>Points</th><th>Full credit requires</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>SR_LATCH</code> present and correct</td>
+            <td>3</td>
+            <td>A tab named exactly <code>SR_LATCH</code>, built from exactly two cross-coupled NAND gates, with pins <code>nS</code>, <code>nR</code>, <code>q</code> and <code>nq</code>. Set and reset both work.</td>
+          </tr>
+          <tr>
+            <td><code>MEM_1BIT</code> present and correct</td>
+            <td>4</td>
+            <td>A tab named exactly <code>MEM_1BIT</code> with pins <code>In</code>, <code>Set</code>, <code>Q</code> and <strong>no <code>Q'</code></strong>. Transparent while <code>Set</code> is high, holding while it is low. <strong>Four</strong> NAND gates earns the full 4; a functionally correct five-gate build with a separate NOT earns 3.</td>
+          </tr>
+          <tr>
+            <td>Pin settings and circuit appearance</td>
+            <td>1</td>
+            <td>All input pins 2-state with pull-down behaviour, and <code>MEM_1BIT</code>'s appearance edited to a labelled square.</td>
+          </tr>
+          <tr>
+            <td>Timing diagram attempted and reasoned</td>
+            <td>2</td>
+            <td>Both output rows drawn, with the transitions marked. Errors do not cost points here &mdash; this row is for having done the reasoning, and a wrong waveform you can talk about is worth more to you than a right one you copied.</td>
+          </tr>
+          <tr class="rubric-total">
+            <td>Total</td>
+            <td>10</td>
+            <td>&nbsp;</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p style="font-size:var(--fs-sm);color:var(--color-text-muted);"><strong>CSLO alignment.</strong> This check supports <strong>CSLO&nbsp;1</strong> (describe the organization and architecture of a computer system) by establishing the storage primitive that every later component of the course CPU is built from. The graded SLO evidence for this material is Assignment 4 and Quiz 1 in the lecture course; nothing in CSC210 depends on your attendance here.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">If You Could Not Finish in the Session</div>
+        <p>Everything in Parts 1 through 5 is on this page in the same order we did it. The two circuits are eight gates between them; the whole build is genuinely about forty minutes on your own. If you are stuck on the circuit rather than the concept, the troubleshooting list in Part 4 covers the four failures that account for nearly all of them &mdash; and asking before the deadline is always cheaper than after it.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Checklist
+         ============================================================ -->
+    <section id="sec-checklist">
+      <h2>Interactive: Pre-Submission Checklist</h2>
+
+      <p>Two minutes, immediately before you upload. Check an item only after you have actually verified it.</p>
+
+      <div class="widget-card" id="widget-checklist">
+        <div class="widget-card__title">Pre-Submission Checklist</div>
+        <div class="widget-card__subtitle">Nothing here is saved &mdash; it is a thinking prompt at submission time, not a record.</div>
+
+        <ul class="lab-checklist" id="ck-list">
+          <li>
+            <input type="checkbox" id="ck-1">
+            <label for="ck-1">My file has tabs named exactly <code>SR_LATCH</code> and <code>MEM_1BIT</code> &mdash; spelling and capitals as written.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-2">
+            <label for="ck-2"><code>SR_LATCH</code> is <strong>two</strong> NAND gates, cross-coupled, with pins <code>nS</code>, <code>nR</code>, <code>q</code>, <code>nq</code>.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-3">
+            <label for="ck-3">I set the latch, <strong>released the input</strong>, and confirmed <code>q</code> stayed put &mdash; and did the same for reset.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-4">
+            <label for="ck-4"><code>MEM_1BIT</code> is <strong>four</strong> NAND gates with no separate NOT gate.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-5">
+            <label for="ck-5"><code>MEM_1BIT</code> has exactly three pins &mdash; <code>In</code>, <code>Set</code>, <code>Q</code> &mdash; and <strong>no <code>Q'</code></strong>.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-6">
+            <label for="ck-6">I verified transparency with <code>Set</code> high and hold with <code>Set</code> low, and ran the three-step store.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-7">
+            <label for="ck-7">All input pins are <strong>2-state</strong> with <strong>pull-down</strong> behaviour.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-8">
+            <label for="ck-8"><code>MEM_1BIT</code>'s circuit appearance is edited to a labelled square.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-9">
+            <label for="ck-9">Nothing in my file uses a component from the <strong>Memory</strong>, <strong>Plexers</strong> or <strong>Arithmetic</strong> folders.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-10">
+            <label for="ck-10">Labs 1&ndash;3 circuits are all still present &mdash; nothing was deleted or replaced.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-11">
+            <label for="ck-11"><strong>All circuits are contained within this single .circ file &mdash; no external file links.</strong></label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-12">
+            <label for="ck-12">My timing diagram has both output rows drawn, and I am uploading it with the file.</label>
+          </li>
+        </ul>
+
+        <div class="checklist-status" id="ck-status" role="status" aria-live="polite">0 of 12 verified</div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         What comes next
+         ============================================================ -->
+    <section id="sec-next">
+      <h2>What Comes Next</h2>
+
+      <p>You built memory today, and it turned out not to need a memory ingredient. There is no component in either circuit that stores anything. <strong>There is a loop</strong>, and the bit lives in which way round the loop settled.</p>
+
+      <p>Hold onto the sentence that follows from that, because next week's lab opens with it:</p>
+
+      <blockquote>
+        Eight of these memory cells, wired in parallel with a shared <code>Set</code> line, become a register.
+      </blockquote>
+
+      <p>That is Lab 5, and it is where Phase 2 begins &mdash; the labs go split-format from there, roughly fifty minutes in Logisim and forty in MARS, hardware and assembly on the same concept in the same session. You will build the 8-bit register out of eight copies of the cell you finished today, add an output enable so it can share a bus, and then write your first MIPS program. At the end of that session the two halves meet: <code>$t0</code>, a register name you will be typing for the rest of the semester, is eight of the circuits sitting in your file right now.</p>
+
+      <div class="progression">
+        <div class="progression__item completed">
+          <div class="progression__label">Lab 2 &mdash; Gates from NAND</div>
+          <div class="progression__detail">One gate type builds every logic function</div>
+        </div>
+        <div class="progression__item completed">
+          <div class="progression__label">Lab 3 &mdash; Adders and Decoders</div>
+          <div class="progression__detail">Gates combined into circuits that compute and select</div>
+        </div>
+        <div class="progression__item active">
+          <div class="progression__label">Lab 4 &mdash; Latches, Timing, and the Memory Cell</div>
+          <div class="progression__detail">Logic becomes memory &mdash; <code>SR_LATCH</code>, <code>MEM_1BIT</code></div>
+        </div>
+        <div class="progression__item">
+          <div class="progression__label">Lab 5 &mdash; The 8-Bit Register &amp; First MIPS Program</div>
+          <div class="progression__detail">Eight cells become a register; MARS begins</div>
+        </div>
+      </div>
+
+      <p>Before then: finish Assignment 4 if you have not, and sit Quiz 1 when you are ready rather than when you remember. Bring your file on Tuesday &mdash; Lab 5 opens it and starts placing copies.</p>
+    </section>
+
+  </main>
+
+  <!-- ==================== Footer ==================== -->
+  <footer class="sp-footer">
+    CSC210L — Computer Organization &amp; Architecture Lab &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <!-- ==================== Scripts ==================== -->
+  <script src="../shared/logic.js"></script>
+
+  <script>
+  /* ============================================================
+     Waveform Self-Check Bench
+     ============================================================
+     Draw-first, check-after. The student enters the waveform they
+     drew on paper; the bench compares it against CSCLogic.trace()
+     and reports the FIRST divergence rather than a score, because
+     in a waveform later errors usually descend from earlier ones.
+
+     All device semantics come from shared/logic.js. Per Course
+     Standards Section 8 this widget renders; it does not compute.
+     The Fall 2025 Week 4 page is the argument for that rule -- it
+     rolled its own latch loop and taught a false result for a year.
+     ============================================================ */
+  (function () {
+    'use strict';
+
+    var L = window.CSCLogic;
+
+    /* ---------- Geometry, matching the printed figure above ---------- */
+    var N = 16, X0 = 132, SW = 34, ROW_H = 56, TOP = 16;
+    var SVG_NS = 'http://www.w3.org/2000/svg';
+
+    /* ---------- The pattern. Identical to the printable figure, so a
+       student can enter exactly what they drew. ---------- */
+    var IN  = [0,1,1,0,1,0,1,1,0,0,1,1,0,1,0,0];
+    var SET = [0,1,1,0,0,0,0,1,1,0,0,0,0,1,0,0];
+    var CLK = [0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1];
+
+    var MODES = {
+      memcell: {
+        device: 'memcell',
+        ctl: SET,
+        ctlLabel: 'Set',
+        outLabel: 'Q of MEM_1BIT',
+        rule: 'While Set is high, Q follows In. While Set is low, Q holds.'
+      },
+      dflipflop: {
+        device: 'dflipflop',
+        ctl: CLK,
+        ctlLabel: 'CLK',
+        outLabel: 'Q of D flip-flop',
+        rule: 'Q takes the value of In at each rising edge of CLK, and does not move otherwise.'
+      }
+    };
+
+    var mode = 'memcell';
+    var yours = { memcell: zeros(), dflipflop: zeros() };
+    var checked = { memcell: false, dflipflop: false };
+
+    function zeros() { var a = [], i; for (i = 0; i < N; i++) { a.push(0); } return a; }
+    function el(id) { return document.getElementById(id); }
+    function mk(tag, attrs) {
+      var e = document.createElementNS(SVG_NS, tag), k;
+      for (k in attrs) { if (attrs.hasOwnProperty(k)) { e.setAttribute(k, attrs[k]); } }
+      return e;
+    }
+    function rowTop(i) { return TOP + i * ROW_H; }
+    function yFor(i, v) { return v ? rowTop(i) + 10 : rowTop(i) + 36; }
+
+    function pathFor(i, arr) {
+      var d = 'M' + X0 + ',' + yFor(i, arr[0]), j, x2;
+      for (j = 0; j < N; j++) {
+        x2 = X0 + (j + 1) * SW;
+        d += 'H' + x2;
+        if (j + 1 < N && arr[j + 1] !== arr[j]) { d += 'V' + yFor(i, arr[j + 1]); }
+      }
+      return d;
+    }
+
+    function answer() {
+      return L.trace(MODES[mode].device, IN, MODES[mode].ctl, 0);
+    }
+
+    function risingEdges() {
+      var ctl = MODES[mode].ctl, e = [], j;
+      for (j = 1; j < N; j++) { if (ctl[j - 1] === 0 && ctl[j] === 1) { e.push(j); } }
+      return e;
+    }
+
+    function firstMiss() {
+      var a = answer(), mine = yours[mode], j;
+      for (j = 0; j < N; j++) { if (mine[j] !== a[j]) { return j; } }
+      return -1;
+    }
+
+    /* ---------- Render ---------- */
+    function draw() {
+      var svg = el('sc-plot');
+      var m = MODES[mode];
+      var a = answer();
+      var mine = yours[mode];
+      var showAnswer = checked[mode];
+      var j, x;
+
+      while (svg.firstChild) { svg.removeChild(svg.firstChild); }
+      var ttl = mk('title', { id: 'sc-title' });
+      ttl.textContent =
+        'Timing diagram. Rows: In, ' + m.ctlLabel + ', your drawn output, and the correct output once checked.';
+      svg.appendChild(ttl);
+
+      /* Rising-edge guides carry the edge down through every row, so the
+         correspondence is visible rather than asserted. */
+      risingEdges().forEach(function (idx) {
+        x = X0 + idx * SW;
+        svg.appendChild(mk('line', {
+          x1: x, y1: rowTop(1) + 2, x2: x, y2: rowTop(3) + 44, 'class': 'waveform__edge'
+        }));
+      });
+
+      /* Divergence bands, drawn under the traces so they read as moments
+         rather than as marks on a line. */
+      if (showAnswer) {
+        for (j = 0; j < N; j++) {
+          if (mine[j] !== a[j]) {
+            svg.appendChild(mk('rect', {
+              x: X0 + j * SW, y: rowTop(2) + 2, width: SW,
+              height: ROW_H * 2 - 12, 'class': 'wf-miss'
+            }));
+          }
+        }
+      }
+
+      /* Row 0 — In */
+      label(svg, 0, 'In', false);
+      svg.appendChild(mk('path', { d: pathFor(0, IN), 'class': 'waveform__trace waveform__trace--input' }));
+
+      /* Row 1 — control */
+      label(svg, 1, m.ctlLabel, true);
+      svg.appendChild(mk('path', { d: pathFor(1, m.ctl), 'class': 'waveform__trace waveform__trace--clock' }));
+
+      /* Row 2 — the student's drawing, editable */
+      label(svg, 2, 'Your Q', false);
+      svg.appendChild(mk('rect', {
+        x: X0, y: rowTop(2) + 2, width: N * SW, height: 44, 'class': 'waveform__row-band'
+      }));
+      svg.appendChild(mk('path', { d: pathFor(2, mine), 'class': 'waveform__trace waveform__trace--yours' }));
+
+      for (j = 0; j < N; j++) {
+        (function (idx) {
+          var cell = mk('rect', {
+            x: X0 + idx * SW, y: rowTop(2) + 2, width: SW, height: 44,
+            'class': 'waveform__cell', tabindex: '0', role: 'button',
+            'aria-label': 'Moment ' + (idx + 1) + ', your Q is ' + mine[idx] + '. Activate to toggle.'
+          });
+          function flip() {
+            yours[mode][idx] = yours[mode][idx] ? 0 : 1;
+            checked[mode] = false;
+            render();
+            var again = document.querySelectorAll('#sc-plot .waveform__cell')[idx];
+            if (again) { again.focus(); }
+          }
+          cell.addEventListener('click', flip);
+          cell.addEventListener('keydown', function (ev) {
+            var cells, target;
+            if (ev.key === 'Enter' || ev.key === ' ' || ev.key === 'Spacebar') {
+              ev.preventDefault(); flip(); return;
+            }
+            if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') {
+              ev.preventDefault();
+              cells = document.querySelectorAll('#sc-plot .waveform__cell');
+              target = cells[idx + (ev.key === 'ArrowRight' ? 1 : -1)];
+              if (target) { target.focus(); }
+            }
+          });
+          svg.appendChild(cell);
+        })(j);
+      }
+
+      /* Row 3 — the correct output, only after a check */
+      if (showAnswer) {
+        label(svg, 3, 'Correct Q', true);
+        svg.appendChild(mk('path', { d: pathFor(3, a), 'class': 'waveform__trace waveform__trace--answer' }));
+      } else {
+        label(svg, 3, 'Correct Q', true);
+        svg.appendChild(mk('text', {
+          x: X0 + 8, y: rowTop(3) + 30, 'class': 'waveform__label waveform__label--muted'
+        })).textContent = 'hidden until you press Check';
+      }
+    }
+
+    function label(svg, row, text, muted) {
+      var t = mk('text', {
+        x: 8, y: rowTop(row) + 28,
+        'class': 'waveform__label' + (muted ? ' waveform__label--muted' : '')
+      });
+      t.textContent = text;
+      svg.appendChild(t);
+    }
+
+    /* ---------- Caption, score, and the text alternative ---------- */
+    function report() {
+      var m = MODES[mode];
+      var a = answer(), mine = yours[mode];
+      var miss = firstMiss(), wrong = 0, j;
+      for (j = 0; j < N; j++) { if (mine[j] !== a[j]) { wrong++; } }
+
+      if (!checked[mode]) {
+        el('sc-score').className = 'cost-readout';
+        el('sc-score').textContent = 'Not checked yet';
+        el('sc-caption').innerHTML =
+          '<strong>' + m.outLabel + '.</strong> ' + m.rule +
+          ' Enter the waveform you drew on paper, then press Check.';
+        return;
+      }
+
+      if (miss === -1) {
+        el('sc-score').className = 'cost-readout';
+        el('sc-score').textContent = 'All 16 moments correct';
+        el('sc-caption').innerHTML =
+          '<strong>Correct, all sixteen moments.</strong> ' + m.rule +
+          ' Now say out loud what the device is doing at moment ' +
+          (risingEdges().length ? (risingEdges()[0] + 1) : 2) +
+          ' &mdash; being able to draw it and being able to explain it are different, and the assignment asks for the second.';
+      } else {
+        el('sc-score').className = 'cost-readout cost-readout--warn';
+        el('sc-score').textContent = wrong + ' of 16 moments differ';
+        el('sc-caption').innerHTML =
+          '<strong>First difference: moment ' + (miss + 1) + '.</strong> ' +
+          'At that moment <code>In</code> is ' + IN[miss] + ' and <code>' + m.ctlLabel + '</code> is ' +
+          m.ctl[miss] + ', so <code>Q</code> should be <strong>' + a[miss] + '</strong> &mdash; you drew ' +
+          mine[miss] + '. ' + m.rule +
+          ' Fix that moment first and re-check; later differences often follow from this one.';
+      }
+    }
+
+    function buildTable() {
+      var m = MODES[mode], a = answer(), mine = yours[mode];
+      var h = '<p>Text version of the timing diagram, ' + m.outLabel + ' mode. ' +
+              'Sixteen moments, listed in order.</p><ul>';
+      h += '<li>In: ' + IN.join(', ') + '</li>';
+      h += '<li>' + m.ctlLabel + ': ' + m.ctl.join(', ') + '</li>';
+      h += '<li>Your Q: ' + mine.join(', ') + '</li>';
+      if (checked[mode]) { h += '<li>Correct Q: ' + a.join(', ') + '</li>'; }
+      h += '</ul>';
+      var e = risingEdges();
+      h += '<p>Rising edges of ' + m.ctlLabel + ' occur at ' +
+           (e.length ? 'moment ' + e.map(function (x) { return x + 1; }).join(', moment ') : 'no point in this pattern') +
+           '.</p>';
+      el('sc-table').innerHTML = h;
+    }
+
+    function render() { draw(); report(); buildTable(); }
+
+    /* ---------- Controls ---------- */
+    function setMode(next) {
+      mode = next;
+      el('mode-mem').setAttribute('aria-pressed', next === 'memcell' ? 'true' : 'false');
+      el('mode-ff').setAttribute('aria-pressed', next === 'dflipflop' ? 'true' : 'false');
+      render();
+    }
+
+    el('mode-mem').addEventListener('click', function () { setMode('memcell'); });
+    el('mode-ff').addEventListener('click', function () { setMode('dflipflop'); });
+
+    el('sc-check').addEventListener('click', function () { checked[mode] = true; render(); });
+    el('sc-clear').addEventListener('click', function () {
+      yours[mode] = zeros(); checked[mode] = false; render();
+    });
+
+    render();
+  })();
+  </script>
+
+  <script>
+  /* ============================================================
+     Pre-Submission Checklist
+     ============================================================
+     Counts verified items. No persistence, deliberately -- this is
+     a thinking prompt at submission time, not a saved record.
+     ============================================================ */
+  (function () {
+    'use strict';
+
+    var boxes = document.querySelectorAll('#ck-list input[type="checkbox"]');
+    var total = boxes.length;
+
+    function update() {
+      var count = 0, i;
+      for (i = 0; i < boxes.length; i++) {
+        if (boxes[i].checked) { count++; boxes[i].parentNode.classList.add('checked'); }
+        else { boxes[i].parentNode.classList.remove('checked'); }
+      }
+      var status = document.getElementById('ck-status');
+      if (count === total) {
+        status.className = 'checklist-status checklist-status--ready';
+        status.innerHTML = '&#10004; All ' + total + ' verified &mdash; you are ready to submit.';
+      } else {
+        status.className = 'checklist-status';
+        status.textContent = count + ' of ' + total + ' verified';
+      }
+    }
+
+    Array.prototype.forEach.call(boxes, function (b) {
+      b.addEventListener('change', update);
+    });
+  })();
+  </script>
+
+</body>
+</html>
