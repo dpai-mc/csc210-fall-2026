@@ -16,6 +16,11 @@
        consolidation, and this is the second. Promote both to shared on the
        next pass through either file. */
 
+    /* Learning-page titles. Named, never linked -- Course Standards §5:
+       a link from one embedded page to another loads the target inside
+       this page's Canvas frame. Students navigate by the module list. */
+    cite { font-style: normal; font-weight: 600; color: var(--color-text); }
+
     .live-tag {
       display: inline-block;
       font-family: var(--font-mono);
@@ -58,11 +63,19 @@
        vertical bands rather than as marks on the trace, because the thing
        being pointed at is a moment in time, not a point on one line. */
     .wf-miss { fill: rgba(192, 57, 43, .16); }
-    .waveform__trace--answer {
-      stroke: var(--color-success);
-      stroke-dasharray: 6 4;
-    }
+
+    /* The correct trace is SOLID, not dashed. The rising-edge guides are
+       already green and dashed, and a dashed green answer trace on the row
+       directly below them is unreadable — the two read as one object. */
+    .waveform__trace--answer { stroke: var(--color-success); stroke-width: 3; }
     .waveform__trace--yours { stroke: var(--color-primary); }
+
+    /* Set windows, shaded, in MEM_1BIT mode only. A level-sensitive cell is
+       open for a stretch of time rather than at an instant, so the marker
+       has to be a band — putting edge ticks on Set would teach the exact
+       thing this bench exists to disprove. */
+    .wf-window { fill: rgba(39, 174, 96, .10); }
+    .wf-window-edge { stroke: rgba(39, 174, 96, .55); stroke-width: 1; }
 
     .mode-row {
       display: flex;
@@ -168,7 +181,9 @@
     <section id="sec-before">
       <h2>Before You Arrive</h2>
 
-      <p><strong>Read the week's first page before this session.</strong> Not the whole week &mdash; just the S-R latch page. The lab builds the circuit; the reading is what makes the build mean something, and this is the one week where turning up cold costs you the point of the exercise. Twenty minutes, and it is the highest-value twenty minutes of your week.</p>
+      <p><strong>Read <cite>Feedback: The S-R Latch</cite> before this session.</strong> Not the whole week &mdash; just that one page, the first of the week's learning pages in the Canvas module. The lab builds the circuit; the reading is what makes the build mean something, and this is the one week where turning up cold costs you the point of the exercise. Twenty minutes, and it is the highest-value twenty minutes of your week.</p>
+
+      <p>Two more pages follow it and are worth having read before you finish the assignment, though not before today: <cite>Telling a Circuit When</cite>, which derives <code>MEM_1BIT</code> and explains where your CPU uses level-sensitive storage and where it uses an edge, and <cite>Seeing It in Time</cite>, whose Timing Diagram Explorer drives all three devices from one input. Both are named rather than linked &mdash; each page is embedded in its own Canvas page, so you open them from the module list.</p>
 
       <p>Bring your <code>CSC210_YourName.circ</code> file &mdash; the same one you have been adding to since Lab 1. Today adds two tabs to it. Nothing from Lab 1, 2 or 3 gets deleted or replaced.</p>
 
@@ -191,12 +206,12 @@
           <tr>
             <td><code>SR_LATCH</code></td>
             <td class="scope-lab">Guided in lab</td>
-            <td>Built together, two gates. Also Assignment 4 Part C, worth 10 points.</td>
+            <td>Built together, two gates. Explained in <cite>Feedback: The S-R Latch</cite>, section 4.2. Also Assignment 4 Part C, worth 10 points.</td>
           </tr>
           <tr>
             <td><code>MEM_1BIT</code></td>
             <td class="scope-lab">Guided in lab</td>
-            <td>Built together, four gates. Also Assignment 4 Part C, worth 12 points &mdash; the most of any single circuit this week, because <strong>Week 5 instantiates eight of them</strong>.</td>
+            <td>Built together, four gates. Derived one gate at a time in <cite>Telling a Circuit When</cite>, section 4.4. Also Assignment 4 Part C, worth 12 points &mdash; the most of any single circuit this week, because <strong>Week 5 instantiates eight of them</strong>.</td>
           </tr>
           <tr>
             <td>Circuit appearance for <code>MEM_1BIT</code></td>
@@ -216,7 +231,7 @@
           <tr>
             <td>D flip-flop</td>
             <td class="scope-solo">Neither &mdash; not built anywhere</td>
-            <td>Taught in the reading, reasoned about on the assignment, <strong>never constructed</strong>. See the note at the top of this page.</td>
+            <td>Taught in <cite>Telling a Circuit When</cite> section 4.5 and shown beside your memory cell in <cite>Seeing It in Time</cite>; reasoned about on Assignment 4 Part B; <strong>never constructed</strong>. See the note at the top of this page.</td>
           </tr>
         </tbody>
       </table>
@@ -823,7 +838,7 @@ MEM_1BIT</code></pre>
   </footer>
 
   <!-- ==================== Scripts ==================== -->
-  <script src="../shared/logic.js"></script>
+  <script src="../../shared/logic.js"></script>
 
   <script>
   /* ============================================================
@@ -905,6 +920,27 @@ MEM_1BIT</code></pre>
       return e;
     }
 
+    /* Contiguous runs where the control line is high. This is what a
+       level-sensitive cell responds to, and it is deliberately a different
+       shape of answer from risingEdges(). */
+    function windows() {
+      var ctl = MODES[mode].ctl, out = [], j, start = -1;
+      for (j = 0; j < N; j++) {
+        if (ctl[j] === 1 && start === -1) { start = j; }
+        if ((ctl[j] === 0 || j === N - 1) && start !== -1) {
+          out.push({ from: start, to: (ctl[j] === 1 ? j : j - 1) });
+          start = -1;
+        }
+      }
+      return out;
+    }
+
+    function momentList(arr) {
+      return arr.length
+        ? 'moment ' + arr.map(function (x) { return x + 1; }).join(', moment ')
+        : 'no point in this pattern';
+    }
+
     function firstMiss() {
       var a = answer(), mine = yours[mode], j;
       for (j = 0; j < N; j++) { if (mine[j] !== a[j]) { return j; } }
@@ -926,14 +962,41 @@ MEM_1BIT</code></pre>
         'Timing diagram. Rows: In, ' + m.ctlLabel + ', your drawn output, and the correct output once checked.';
       svg.appendChild(ttl);
 
-      /* Rising-edge guides carry the edge down through every row, so the
-         correspondence is visible rather than asserted. */
-      risingEdges().forEach(function (idx) {
-        x = X0 + idx * SW;
-        svg.appendChild(mk('line', {
-          x1: x, y1: rowTop(1) + 2, x2: x, y2: rowTop(3) + 44, 'class': 'waveform__edge'
-        }));
-      });
+      /* ---- Background pass. Order matters: the band for the editable row
+         goes down first, then the mode marker, then the divergence bands,
+         so nothing later paints over a mark the student needs to see. ---- */
+      svg.appendChild(mk('rect', {
+        x: X0, y: rowTop(2) + 2, width: N * SW, height: 44, 'class': 'waveform__row-band'
+      }));
+
+      if (mode === 'dflipflop') {
+        /* Edge guides carry each rising edge down through every row, so the
+           correspondence between an edge and a transition is visible rather
+           than asserted. */
+        risingEdges().forEach(function (idx) {
+          x = X0 + idx * SW;
+          svg.appendChild(mk('line', {
+            x1: x, y1: rowTop(1) + 2, x2: x, y2: rowTop(3) + 44, 'class': 'waveform__edge'
+          }));
+        });
+      } else {
+        /* Set windows, shaded across the same rows. A window, not a tick —
+           the whole difference between the two devices is that one is open
+           for a stretch of time and the other acts at an instant. */
+        windows().forEach(function (w) {
+          svg.appendChild(mk('rect', {
+            x: X0 + w.from * SW, y: rowTop(1) + 2,
+            width: (w.to - w.from + 1) * SW, height: ROW_H * 2 + 42,
+            'class': 'wf-window'
+          }));
+          [w.from, w.to + 1].forEach(function (b) {
+            svg.appendChild(mk('line', {
+              x1: X0 + b * SW, y1: rowTop(1) + 2,
+              x2: X0 + b * SW, y2: rowTop(3) + 44, 'class': 'wf-window-edge'
+            }));
+          });
+        });
+      }
 
       /* Divergence bands, drawn under the traces so they read as moments
          rather than as marks on a line. */
@@ -958,9 +1021,6 @@ MEM_1BIT</code></pre>
 
       /* Row 2 — the student's drawing, editable */
       label(svg, 2, 'Your Q', false);
-      svg.appendChild(mk('rect', {
-        x: X0, y: rowTop(2) + 2, width: N * SW, height: 44, 'class': 'waveform__row-band'
-      }));
       svg.appendChild(mk('path', { d: pathFor(2, mine), 'class': 'waveform__trace waveform__trace--yours' }));
 
       for (j = 0; j < N; j++) {
@@ -1032,22 +1092,42 @@ MEM_1BIT</code></pre>
       }
 
       if (miss === -1) {
+        var w = windows(), e = risingEdges();
+        var pointAt = (mode === 'dflipflop')
+          ? 'moment ' + (e.length ? e[0] + 1 : 2) + ', where the clock rises'
+          : 'moments ' + (w.length ? (w[0].from + 1) + ' to ' + (w[0].to + 1) : '2 to 3') +
+            ', while the first <code>Set</code> window is open';
         el('sc-score').className = 'cost-readout';
         el('sc-score').textContent = 'All 16 moments correct';
         el('sc-caption').innerHTML =
           '<strong>Correct, all sixteen moments.</strong> ' + m.rule +
-          ' Now say out loud what the device is doing at moment ' +
-          (risingEdges().length ? (risingEdges()[0] + 1) : 2) +
-          ' &mdash; being able to draw it and being able to explain it are different, and the assignment asks for the second.';
+          ' Now say out loud what the device is doing at ' + pointAt +
+          ' &mdash; being able to draw it and being able to explain it are different things, and the assignment asks for the second.';
       } else {
+        /* Why the answer is what it is, explained the way the device works.
+           For a level-sensitive cell the present inputs are the reason. For
+           a flip-flop they usually are not — the reason is the last rising
+           edge, which may be several moments earlier, and saying "In is 0
+           right now" there would teach the wrong causal story. */
+        var why;
+        if (mode === 'memcell') {
+          why = m.ctl[miss] === 1
+            ? 'At that moment <code>Set</code> is 1, so <code>Q</code> follows <code>In</code>, which is ' + IN[miss] + '.'
+            : 'At that moment <code>Set</code> is 0, so <code>Q</code> holds whatever it already had &mdash; and that was ' + a[miss] + '.';
+        } else {
+          var last = -1, k;
+          for (k = 1; k <= miss; k++) { if (CLK[k - 1] === 0 && CLK[k] === 1) { last = k; } }
+          why = last === -1
+            ? 'No rising edge has happened yet, so <code>Q</code> is still its starting value, 0.'
+            : 'The most recent rising edge was moment ' + (last + 1) + ', where <code>In</code> was ' +
+              IN[last] + '. <code>Q</code> has held that ever since &mdash; nothing <code>In</code> has done between then and now reaches it.';
+        }
         el('sc-score').className = 'cost-readout cost-readout--warn';
         el('sc-score').textContent = wrong + ' of 16 moments differ';
         el('sc-caption').innerHTML =
           '<strong>First difference: moment ' + (miss + 1) + '.</strong> ' +
-          'At that moment <code>In</code> is ' + IN[miss] + ' and <code>' + m.ctlLabel + '</code> is ' +
-          m.ctl[miss] + ', so <code>Q</code> should be <strong>' + a[miss] + '</strong> &mdash; you drew ' +
-          mine[miss] + '. ' + m.rule +
-          ' Fix that moment first and re-check; later differences often follow from this one.';
+          '<code>Q</code> should be <strong>' + a[miss] + '</strong>; you drew ' + mine[miss] + '. ' +
+          why + ' Fix that moment first and re-check &mdash; later differences often follow from this one.';
       }
     }
 
@@ -1060,10 +1140,16 @@ MEM_1BIT</code></pre>
       h += '<li>Your Q: ' + mine.join(', ') + '</li>';
       if (checked[mode]) { h += '<li>Correct Q: ' + a.join(', ') + '</li>'; }
       h += '</ul>';
-      var e = risingEdges();
-      h += '<p>Rising edges of ' + m.ctlLabel + ' occur at ' +
-           (e.length ? 'moment ' + e.map(function (x) { return x + 1; }).join(', moment ') : 'no point in this pattern') +
-           '.</p>';
+      if (mode === 'dflipflop') {
+        h += '<p>Rising edges of ' + m.ctlLabel + ' occur at ' +
+             momentList(risingEdges()) + '. The output can only change at those moments.</p>';
+      } else {
+        h += '<p>' + m.ctlLabel + ' is high across ' +
+             windows().map(function (w) {
+               return 'moments ' + (w.from + 1) + ' to ' + (w.to + 1);
+             }).join(', and ') +
+             '. The output can change at any moment inside those windows, and at no moment outside them.</p>';
+      }
       el('sc-table').innerHTML = h;
     }
 
