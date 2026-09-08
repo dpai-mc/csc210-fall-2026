@@ -6,24 +6,6 @@
   <title>CSC210 — Week 4 Orientation: The Week Logic Becomes Memory</title>
   <link rel="stylesheet" href="../../shared/style.css">
   <style>
-    /* ---------- File-specific: the video placeholder ----------
-       Everything else on this page uses shared components. This block
-       exists only until the Week 4 overview video is recorded; see the
-       three-step swap instructions in the script block at the bottom. */
-    .video-pending {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      height: 100%;
-      min-height: 320px;
-      padding: var(--space-xl);
-      background: var(--color-code-bg);
-      color: var(--color-text-muted);
-      font-size: var(--fs-sm);
-      border-radius: var(--radius);
-    }
-
     /* The two-circuit summary on the frame page. Deliberately not a
        .pin-table -- that component is for interface specifications the
        student must match exactly, and this is an at-a-glance list. Using
@@ -246,22 +228,21 @@
         <div class="video-transcript-row">
           <div class="video-col">
             <div class="video-frame" id="video-container">
-              <!-- PLACEHOLDER — see the three-step swap block in the script below.
-                   Replace this div with the standard iframe, set VIDEO_ID, and
-                   paste the cleaned WEBVTT into vttContent. -->
-              <div class="video-pending">
-                <p>The Week 4 overview video will be posted later this week.<br>
-                   The pages in this module are complete and do not depend on it &mdash; start with page 1.</p>
-              </div>
+              <iframe id="youtube-player"
+                      src="https://www.youtube.com/embed/z7SlUt47Eak?enablejsapi=1&amp;cc_load_policy=1&amp;iv_load_policy=3&amp;modestbranding=1&amp;rel=0"
+                      title="CSC210 Week 4 Overview: The Week Logic Becomes Memory"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allowfullscreen loading="lazy"></iframe>
             </div>
-            <div class="video-caption">When posted, closed captions will be available and the transcript panel will jump to any point in the video.</div>
+            <div class="video-caption">Closed captions available. Use the transcript panel to jump to any point in the video.</div>
           </div>
           <div class="transcript-col">
             <h2 class="sr-only">Video transcript</h2>
             <div class="transcript-panel" id="transcript-container" role="region"
                  aria-live="polite"
                  aria-label="Video transcript. Select a line to jump to that point in the video. The line currently being spoken is announced as the video plays.">
-              <p class="transcript-loading">The transcript will appear here with the video.</p>
+              <p class="transcript-loading">Loading transcript&hellip;</p>
             </div>
           </div>
         </div>
@@ -279,28 +260,206 @@
   (function () {
     'use strict';
 
-    /* ============================================================
-       SWAPPING IN THE VIDEO — three steps
-       ============================================================
-       1. Set VIDEO_ID below to the YouTube id.
-       2. Paste the cleaned WEBVTT between the backticks in vttContent.
-          (SRT converts to WEBVTT by replacing the comma in each timestamp
-          with a period and adding a WEBVTT header line.)
-       3. In the markup above, replace the .video-pending div with:
+    /* ------------------------------------------------------------
+       Week 4 overview video. VIDEO_ID is the YouTube id and vttContent
+       holds the WEBVTT captions (source: csc210-wk4.vtt in this folder).
+       The transcript panel below is built from vttContent and is kept in
+       sync with the player; everything no-ops cleanly if either is empty.
+       ------------------------------------------------------------ */
 
-          <iframe id="youtube-player"
-                  src="https://www.youtube.com/embed/VIDEO_ID_HERE?enablejsapi=1&amp;cc_load_policy=1&amp;iv_load_policy=3&amp;modestbranding=1&amp;rel=0"
-                  title="CSC210 Week 4 Overview: The Week Logic Becomes Memory"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  referrerpolicy="strict-origin-when-cross-origin"
-                  allowfullscreen loading="lazy"></iframe>
+    var VIDEO_ID = 'z7SlUt47Eak';
+    var vttContent = `
+WEBVTT
 
-       Everything below no-ops cleanly while VIDEO_ID is empty, so the page
-       is correct and complete as it stands.
-       ============================================================ */
+00:00.040 --> 00:05.880
+aloha and welcome to week four and this week we're gonna start memory and a
 
-    var VIDEO_ID = '';
-    var vttContent = ``;
+00:05.880 --> 00:16.020
+little bit about timing clock sequencing stuff okay so the major thing the really
+
+00:16.020 --> 00:22.200
+the major thing to get out of this is really the one bit memory circuit so
+
+00:22.200 --> 00:28.860
+when we're going through this you're going to when you review this we're
+
+00:28.860 --> 00:34.620
+going to build something called an SR latch which is two NAND gates that are
+
+00:34.620 --> 00:40.740
+cross-coupled meaning the output of one gate is an input to the other gate okay
+
+00:40.740 --> 00:48.100
+and you'll see that when you build them but then there's no way for us to store
+
+00:48.100 --> 00:54.540
+that that's the basic memory circuit and then we add a second pair of NAND gates
+
+00:54.540 --> 00:58.680
+to basically create this one bit memory circuit
+
+00:58.860 --> 01:03.720
+which is where we're going to be able to set a one or zero and store it in
+
+01:03.720 --> 01:09.060
+there until we want to change it okay so those that's the biggest thing so this
+
+01:09.060 --> 01:18.120
+one bit memory you're gonna use that everywhere in your CPU okay so you're
+
+01:18.120 --> 01:22.560
+gonna gang eight of them together to make a byte you're going to use them for
+
+01:22.560 --> 01:28.620
+RAM you're going to use them for registers you're going to use them for
+
+01:28.860 --> 01:35.940
+program counter like which stores a memory address every time in memory
+
+01:35.940 --> 01:40.780
+address kind of thing comes up because you're storing eight bits in our system
+
+01:40.780 --> 01:45.360
+so you're gonna use this thing everywhere so it's really important that
+
+01:45.360 --> 01:51.800
+you understand it build it I mean it's a little different because it is
+
+01:51.800 --> 01:58.380
+cross-coupled it doesn't always act great in our simulation in most
+
+01:58.860 --> 02:05.400
+cases okay so once we have all our circuits and we're done with our logic
+
+02:05.400 --> 02:11.020
+sim simulation there can be times where it will fail and that's just something
+
+02:11.020 --> 02:20.480
+that happens okay and usually you can get around that by resetting all your
+
+02:20.480 --> 02:26.700
+circuits and restarting your simulation sometimes you have to exit and start we
+
+02:26.700 --> 02:28.520
+exit logism and open it again but
+
+02:28.860 --> 02:40.620
+with logic okay so uh we have a quiz that covers weeks one of four which make sure it's posted it
+
+02:40.620 --> 02:50.160
+might not be posted but i'll post it and make sure it's up there sr latch page one is all about the
+
+02:50.160 --> 02:57.800
+sr latch and then you're going to go to the second part which is a creating the one bit memory
+
+02:57.800 --> 03:05.400
+circuit primarily then we'll look at the timing how does a how does timing how does the clock work
+
+03:05.400 --> 03:14.380
+sort of and then you have an assignment to build some of these circuits in logic okay so that's
+
+03:14.380 --> 03:19.460
+what you're going to do you're going to use the same file you've always been using and whatever
+
+03:19.460 --> 03:25.720
+the name is if it's csc210 underscore your name that's great if you're using your name underscore
+
+03:25.720 --> 03:27.060
+csc210
+
+03:27.800 --> 03:33.480
+that's not what i don't think that's what we're using so um just make it consistent for me thanks
+
+03:35.960 --> 03:37.400
+okay so i'm not going to
+
+03:40.520 --> 03:45.800
+go through here other than to make sure i point out that so basically when we're building stuff
+
+03:45.800 --> 03:51.720
+you can use pretty much anything in the wiring folder and anything in the gates folder
+
+03:53.480 --> 03:57.400
+you cannot use anything from the plexers arithmetic or memory folder
+
+03:58.200 --> 04:03.000
+yes there's a memory circuit in there and but we're not going to use it we're building our own
+
+04:03.640 --> 04:11.000
+so that we understand how the system stores a bit and how you can use that
+
+04:11.960 --> 04:17.480
+okay so that's why we're doing everything from gates well almost everything from gates
+
+04:20.600 --> 04:26.760
+okay so we've done kind of mechanic mechanisms one of the gates computation how to do adders
+
+04:26.760 --> 04:27.720
+how to do selectors
+
+04:27.800 --> 04:33.880
+which are decoders and now we're doing memory and then next week is the extension of memory
+
+04:33.880 --> 04:42.760
+for the register okay so that's the registers and we'll start also working in our assembly language
+
+04:43.480 --> 04:49.800
+which uses registers to store things while we're making calculations
+
+04:52.600 --> 04:57.720
+okay so that's this week um go through these different modules go through the
+
+04:57.720 --> 05:01.560
+different pages go through the you know sr latch
+
+05:04.280 --> 05:12.600
+you know read through them the telling the circuit win okay
+
+05:18.200 --> 05:27.640
+see it in time okay and then you do have this assignment which is a sequential circuit assignment
+
+05:28.280 --> 05:34.920
+again to do the to build the sr latch the one bit mem okay you have to build these
+
+05:35.560 --> 05:40.120
+in your system note that they're in sections so they're in these other places
+
+05:42.680 --> 05:45.480
+okay i put the references there so that you can find them if you want to
+
+05:46.680 --> 05:51.000
+and then i forgot to post the quiz so i'll post the quiz so if i can just make sure that i'm
+
+05:51.000 --> 05:53.320
+making the same thing over and over and over and over again
+
+05:53.320 --> 05:57.240
+i'll make sure that i'm making the same thing over and over again
+
+05:57.720 --> 06:07.440
+after I get out this I gotta finish the quiz actually and then I'll post it okay
+
+06:07.440 --> 06:14.820
+so it should be posted by Wednesday at the latest okay but it's four weeks one
+
+06:14.820 --> 06:19.260
+to four so I'll give you a couple extra days on the back end since I didn't post
+
+06:19.260 --> 06:27.060
+it yet okay so that's what we got for this week make sure that as always if
+
+06:27.060 --> 06:31.740
+you have questions or issues reach out through email make an appointment on my
+
+06:31.740 --> 06:38.300
+calendar because I want to make sure that you're understanding everything and
+
+06:38.300 --> 06:44.100
+everything's going okay for you all right so I'm gonna hear from you we'll
+
+06:44.100 --> 06:49.580
+see you next week thanks and have a good week
+`;
 
     var player, timeUpdater, parsedTranscript = [];
 
