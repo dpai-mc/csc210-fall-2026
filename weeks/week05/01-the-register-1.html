@@ -506,15 +506,16 @@
 
       <div class="circuit-canvas">
         <img class="circuit-canvas__img zoomable" src="images/REGISTER_8BIT-details.png" loading="lazy"
-             alt="The inside of REGISTER_8BIT in Logisim. An 8-bit input pin i on the left feeds the MEM 8 BIT block, whose set pin s comes from an input pin below. The memory block's output goes two places: up to an 8-bit output pin labelled REG, and right into the ENBL 8 BIT block, whose enable pin e comes from a second input pin below. The enable block's output passes through a ninth controlled buffer, also driven by e, and then to the 8-bit output pin o on the right, which reads xxxxxxxx. Nothing has been written yet, so the memory cells hold no defined value and the REG pin reads EEEEEEEE.">
+             alt="The inside of REGISTER_8BIT in Logisim. An 8-bit input pin i on the left feeds the MEM 8 BIT block, whose set pin s comes from an input pin below. The memory block's output goes two places: up to an 8-bit output pin labelled REG, and right into the ENBL 8 BIT block, whose enable pin e comes from a second input pin below. The enable block's output passes through a ninth controlled buffer, also driven by e, and then to the 8-bit output pin o on the right, which reads xxxxxxxx. Nothing has been written to the register yet, so the wire from the memory block is drawn in red and the REG pin reads EEEEEEEE.">
         <div class="circuit-canvas__caption">The assembled register. Note the wire going <em>up</em> from the memory block to a second output pin.</div>
       </div>
 
       <div class="callout callout--note">
-        <div class="callout__title">Why <code>reg</code> reads <code>EEEEEEEE</code> in that screenshot</div>
-        <p>The wire from the memory block is red and the <code>reg</code> pin reads eight <code>E</code>s. <code>E</code> is Logisim for <strong>error</strong>, and you will see it on your own circuit the moment you build it.</p>
-        <p>Nothing has been written yet. Each cell inside <code>MEM_8BIT</code> is your <code>MEM_1BIT</code> &mdash; cross-coupled NAND gates &mdash; and a freshly placed one holds <em>no defined value at all</em>. Not zero. Not one. The same thing you met in Week 4 when both latch inputs went low together: the circuit has no state until you give it one.</p>
-        <p><strong>Pulse <code>s</code> once and it goes away permanently.</strong> The cells take a value, the wire turns from red to green, and <code>reg</code> shows the byte. A real register behaves the same way &mdash; power one up and its contents are whatever the transistors happened to settle into, which is why real hardware clears its registers before trusting them.</p>
+        <div class="callout__title"><code>EEEEEEEE</code> on <code>reg</code> before the first write is normal</div>
+        <p>The wire from the memory block is red and the <code>reg</code> pin reads eight <code>E</code>s. <code>E</code> is Logisim's <strong>error</strong> display, and <strong>you will see it on your own circuit the moment you finish wiring it.</strong> Your circuit is not broken. Do not go looking for the fault.</p>
+        <p>It comes from <code>MEM_1BIT</code>, all the way down. A <code>MEM_1BIT</code> output shows one of exactly three things &mdash; <code>0</code>, <code>1</code> or <code>E</code> &mdash; and a cell that has never been written shows <code>E</code>. Eight of them, and <code>reg</code> reads <code>EEEEEEEE</code>.</p>
+        <p><strong>Toggle <code>s</code> from 0 to 1 and it is gone.</strong> The cells immediately take the value on <code>i</code>, the wire turns green, and <code>reg</code> shows the byte from then on. There is nothing to repair and nothing that carries forward.</p>
+        <p>As for <em>why</em> &mdash; and this is worth being careful about, because it is the second time this page has met it. What is known is what can be observed: a freshly placed cross-coupled pair displays <code>E</code> until it is written, and Logisim is visibly uncomfortable with cross-coupled feedback in general. <strong>That is a description, not a diagnosis.</strong> It is the same shape as the ninth buffer earlier on this page: the circuit is right, the tool has its own behaviour, and an engineer's job is to know which is which rather than to assume one of them must be wrong.</p>
       </div>
 
       <h3>The interface</h3>
