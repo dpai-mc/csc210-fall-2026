@@ -276,6 +276,21 @@ pre code {
   background: #eef6fc;
 }
 
+/* Added 2026-08-23 with CSC210L Lab 2. --warn is for rules whose
+   violation costs points or breaks a submission; --note is the
+   neutral aside. Both are used by lab pages and are expected to
+   recur in the lecture SPAs from Week 3 onward. */
+.callout--warn {
+  border-left-color: var(--color-danger);
+  background: #fdf0ef;
+}
+
+.callout--note {
+  border-left-color: var(--color-border);
+  background: var(--color-code-bg);
+  box-shadow: none;
+}
+
 .callout__title {
   font-weight: 700;
   font-size: var(--fs-sm);
@@ -637,6 +652,40 @@ th {
 }
 .widget-btn--outline:hover { background: var(--color-code-bg); }
 .widget-btn--small { font-size: var(--fs-xs); padding: var(--space-xs) var(--space-sm); }
+/* Selected-among-peers state, for button groups where the options are
+   alternatives rather than actions: Week 3's instant/stepped mode toggle
+   (02-ripple-carry) and its 2x4/3x8/4x16 width selector (03-decoders).
+
+   Standards Section 8 diff, done first: `.gate-btn.active` already
+   expressed exactly this idea for the Week 2 gate selector, so the colours
+   and weight are copied from it deliberately rather than invented -- a
+   selected option should look the same everywhere in the course. It is a
+   separate rule rather than a reuse of .gate-btn because .gate-btn also
+   carries that widget's fixed sizing and border treatment, which these
+   groups do not want. The base .widget-btn has no default background, so
+   the inactive peers inherit whatever modifier the file applies. */
+.widget-btn.active {
+  background: var(--color-primary);
+  color: #fff;
+}
+.widget-btn.active:hover { background: var(--color-primary-lt); }
+/* Buttons in a peer group need a visible resting state so the unselected
+   options do not read as disabled. */
+.widget-btn[aria-pressed] {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.widget-btn[aria-pressed]:hover {
+  background: var(--color-code-bg);
+  border-color: var(--color-primary-lt);
+}
+.widget-btn[aria-pressed="true"] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+.widget-btn[aria-pressed="true"]:hover { background: var(--color-primary-lt); }
 
 /* ---------- Widget Input Fields ---------- */
 /* Used by: 03-signed-integers, 04-beyond-integers */
@@ -1335,6 +1384,74 @@ th {
 }
 .cost-readout strong { color: var(--color-text); }
 
+/* ---------- Component interface (pin) tables ---------- */
+/* Used by: 02-ripple-carry, 03-decoders, 04-components-and-synthesis,
+   assignment3 -- and every component week from 3 to 14 after that.
+
+   Standards Section 8 diff, done before writing this: the base `table` rule
+   already supplies width, border-collapse and the th/td borders, and this
+   does NOT duplicate any of it -- .pin-table is a modifier layered on top,
+   not a parallel table implementation. What it adds is the three things a
+   pin specification needs and prose tables do not:
+
+     1. Monospace pin names and widths. `cout` and `cin` differ by one
+        character in the middle of the word; in a proportional font at
+        13px that is genuinely easy to misread, and misreading it costs a
+        student the 3 interface-conformance points in Part C.
+     2. A narrow, non-stretching width and direction column, so the pin
+        name gets the space instead of the word "in".
+     3. A left accent, because these tables are specifications rather than
+        reference material -- Week 6 breaks if a pin is named differently,
+        and the table should not look like a summary the student may skim.
+
+   Deliberately NOT applied to truth tables, which use .tt and want their
+   columns evenly distributed. */
+.pin-table {
+  border-left: 4px solid var(--color-primary);
+}
+.pin-table th,
+.pin-table td { vertical-align: middle; }
+
+/* Pin name and width read as code, because they are. */
+.pin-table td:first-child,
+.pin-table td:nth-child(2) {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  white-space: nowrap;
+}
+/* Width and direction are short and fixed; stop them stretching. */
+.pin-table th:nth-child(2), .pin-table td:nth-child(2),
+.pin-table th:nth-child(3), .pin-table td:nth-child(3) {
+  width: 1%;
+  white-space: nowrap;
+  text-align: center;
+}
+/* Direction reads better as a quiet label than as body text. */
+.pin-table td:nth-child(3) {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--color-text-muted);
+}
+
+/* The circuit's tab name, shown as the table's caption. Students must
+   match it exactly, so it is presented as code and never as a heading. */
+.pin-table__name {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--fs-md);
+  color: var(--color-text);
+  background: var(--color-code-bg);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-primary);
+  border-bottom: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: var(--space-sm) var(--space-md);
+  margin-top: var(--space-md);
+}
+.pin-table__name + .pin-table { margin-top: 0; }
+
 /* ---------- Click-to-enlarge (lightbox) ---------- */
 /* Used by: every Week 3 SPA with static diagrams, and every hardware week
    after. Circuit screenshots carry detail -- gate labels, pin names, wire
@@ -1461,4 +1578,609 @@ th {
 @media (prefers-reduced-motion: reduce) {
   /* Show the completed sum rather than animating toward it. */
   .col-add__cell { transition: none; }
+}
+
+
+/* ============================================================
+   LAB SESSION COMPONENTS  (CSC210L)
+   ============================================================
+   Promoted from weeks/labs/lab-01-toolchain-setup.html on
+   2026-08-23, per Course Standards §8, when Lab 2 became the
+   second real use and the rule bodies could be diffed against
+   it. Used by every CSC210L lab page: .lab-meta, .lab-step,
+   .lab-verify, .lab-troubleshoot, .lab-checklist,
+   .checklist-status, .rubric-total.
+
+   Lab-page-specific widget styling stays inline in that lab's
+   own <style> block. These are the structural components only.
+   ============================================================ */
+
+/* ---------- Points / duration badge ----------
+   Promoted 2026-08-23 from weeks/week02/assignment2.html, whose
+   inline copy is now redundant and can be dropped the next time
+   that file is touched. Second use: CSC210L lab pages. */
+.points-badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  padding: 2px var(--space-sm);
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: #fff;
+  vertical-align: middle;
+  margin-left: var(--space-sm);
+}
+
+/* ---------- Lab metadata bar ---------- */
+.lab-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  margin-bottom: var(--space-lg);
+  font-size: var(--fs-sm);
+}
+.lab-meta__item { display: flex; flex-direction: column; }
+.lab-meta__label {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--color-text-muted);
+}
+.lab-meta__value { font-weight: 600; }
+.lab-meta__value--due { color: var(--color-danger); }
+
+/* ---------- Numbered procedure steps ---------- */
+.lab-step {
+  display: flex;
+  gap: var(--space-md);
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.lab-step:last-child { border-bottom: none; }
+.lab-step__num {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+.lab-step__body { flex: 1; min-width: 0; }
+.lab-step__body p:last-child { margin-bottom: 0; }
+.lab-step__title { font-weight: 700; margin-bottom: var(--space-xs); }
+
+/* ---------- Verification / outcome box ---------- */
+.lab-verify {
+  background: #f0faf4;
+  border: 1px solid var(--color-success);
+  border-left: 4px solid var(--color-success);
+  border-radius: var(--radius);
+  padding: var(--space-md) var(--space-lg);
+  margin: var(--space-md) 0;
+}
+.lab-verify__title {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--color-success);
+  margin-bottom: var(--space-xs);
+}
+.lab-verify p:last-child, .lab-verify ul:last-child { margin-bottom: 0; }
+
+/* ---------- Troubleshooting disclosure ---------- */
+.lab-troubleshoot {
+  background: var(--color-code-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-sm) var(--space-md);
+  margin: var(--space-md) 0;
+}
+.lab-troubleshoot summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  color: var(--color-primary);
+}
+.lab-troubleshoot summary:hover { color: var(--color-primary-lt); }
+.lab-troubleshoot[open] summary { margin-bottom: var(--space-sm); }
+.lab-troubleshoot dl { font-size: var(--fs-sm); }
+.lab-troubleshoot dt { font-weight: 700; margin-top: var(--space-sm); }
+.lab-troubleshoot dd { margin-left: 0; color: var(--color-text-muted); }
+
+/* ---------- Scaffold-boundary table ---------- */
+/* Used by: lab-02-gates-from-nand, lab-03-adders-and-decoders, and every
+   lab after. Promoted out of lab-02's inline block when Lab 3 became the
+   second user (Standards Section 8).
+
+   What it marks matters more than how it looks. The lab is a separate
+   1-credit course and is NOT required for the lecture course, so every lab
+   page has to tell students precisely which circuits get built together in
+   the session and which they are still on the hook for alone. Green means
+   "we do this in the room", red means "this is yours". Guessing wrong in
+   either direction costs a student real points on a lecture assignment they
+   may not realise the lab did not cover.
+
+   Rules copied verbatim from lab-02's inline block -- diffed before the
+   move, no visual change to that page. */
+.scope-table td:first-child {
+  white-space: nowrap;
+  font-family: var(--font-mono, monospace);
+}
+.scope-lab  { color: var(--color-success); font-weight: 700; }
+.scope-solo { color: var(--color-danger);  font-weight: 700; }
+
+/* ---------- Video topic index ---------- */
+/* Used by: week03/00-orientation, and every week whose overview video is
+   long enough that a student needs to find one thing in it rather than
+   watch it through. Shared from the start because Week 3's is 65 minutes
+   and the later hardware weeks will be no shorter.
+
+   The timestamps are buttons, not links: clicking one seeks the embedded
+   player. They must not be <a href> to a YouTube time-link -- that would
+   navigate the Canvas iframe away from the SPA, which is the Section 5
+   failure mode. Rendered as a two-column grid so the times form a scannable
+   left rail rather than being buried in the sentence. */
+.topic-index {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  padding: var(--space-md) var(--space-lg);
+  margin: var(--space-lg) 0;
+}
+.topic-index__group {
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--color-primary);
+  margin: var(--space-lg) 0 var(--space-xs);
+  padding-bottom: var(--space-xs);
+  border-bottom: 1px solid var(--color-border);
+}
+.topic-index__group:first-child { margin-top: 0; }
+.topic-index__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.topic-index__item {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  gap: var(--space-md);
+  align-items: baseline;
+  padding: 3px 0;
+}
+.topic-index__time {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--color-primary);
+  background: none;
+  border: none;
+  border-radius: var(--radius);
+  padding: 2px var(--space-xs);
+  text-align: right;
+  cursor: pointer;
+  transition: background .12s, color .12s;
+}
+.topic-index__time:hover {
+  background: var(--color-primary);
+  color: #fff;
+}
+.topic-index__time:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.topic-index__label {
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+/* Without a player the times are still useful as reference, but they must
+   not look clickable. The script adds this class if the API never loads. */
+.topic-index--static .topic-index__time {
+  cursor: default;
+  color: var(--color-text-muted);
+}
+.topic-index--static .topic-index__time:hover { background: none; color: var(--color-text-muted); }
+
+/* ---------- Optional aside (Standards Section 0.2) ---------- */
+/* Used by: 02-ripple-carry (the OO/subcircuit analogy), and every later
+   week that connects hardware to something students may or may not
+   remember from CSC221.
+
+   Standards Section 8 diff, done first: `.lab-troubleshoot` is the existing
+   details/summary disclosure and its mechanics are copied deliberately
+   rather than reinvented. It is NOT reused, because the two carry opposite
+   signals -- .lab-troubleshoot says "open this if something went wrong",
+   this says "open this only if you have the background; skipping costs you
+   nothing". A student should be able to tell those apart at a glance, so
+   this gets the accent colour and a left rule rather than the code-grey
+   panel treatment.
+
+   Native <details>/<summary> on purpose: keyboard operable, announced
+   correctly by screen readers, and survives with no JavaScript at all --
+   which matters because these asides sit in Canvas iframes and must never
+   depend on a script that might not have loaded. Collapsed by default is
+   the whole point; a student who does not open it must lose nothing. */
+.aside-optional {
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-accent);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  padding: var(--space-sm) var(--space-md);
+  margin: var(--space-lg) 0;
+}
+.aside-optional summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  color: var(--color-accent-hov, var(--color-accent));
+  list-style: none;
+}
+/* Custom marker so the disclosure triangle matches the design system
+   rather than the browser default, which differs across engines. */
+.aside-optional summary::-webkit-details-marker { display: none; }
+.aside-optional summary::before {
+  content: "\25B8";
+  display: inline-block;
+  margin-right: var(--space-sm);
+  transition: transform .15s;
+}
+.aside-optional[open] > summary::before { transform: rotate(90deg); }
+.aside-optional summary:hover { text-decoration: underline; }
+.aside-optional summary:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+.aside-optional[open] > summary { margin-bottom: var(--space-md); }
+
+/* The skip-cost line. Sits directly under the summary and exists to tell a
+   student without the background that they lose nothing -- so it must read
+   as reassurance, not as small print. */
+.aside-optional__skip {
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin: 0 0 var(--space-md);
+}
+
+/* Where the analogy breaks. Section 0.2 requires this in every aside, so
+   it gets its own styling to make its absence obvious during QA. */
+.aside-optional__breaks {
+  border-top: 1px solid var(--color-border);
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+}
+.aside-optional__breaks-title {
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  margin-bottom: var(--space-sm);
+}
+.aside-optional__breaks dt {
+  font-weight: 700;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  margin-top: var(--space-sm);
+}
+.aside-optional__breaks dd {
+  margin-left: 0;
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+}
+
+/* ---------- Interactive checklist ---------- */
+.lab-checklist { list-style: none; padding-left: 0; }
+.lab-checklist li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  border-radius: var(--radius);
+  transition: background .15s;
+}
+.lab-checklist li:hover { background: var(--color-code-bg); }
+.lab-checklist input[type="checkbox"] {
+  margin-top: 4px;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: var(--color-success);
+}
+.lab-checklist label { cursor: pointer; font-size: var(--fs-sm); }
+.lab-checklist li.checked label { color: var(--color-text-muted); text-decoration: line-through; }
+
+.checklist-status {
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  text-align: center;
+  background: var(--color-code-bg);
+  color: var(--color-text-muted);
+}
+.checklist-status--ready {
+  background: #f0faf4;
+  color: var(--color-success);
+  border: 1px solid var(--color-success);
+}
+
+/* ---------- Rubric total row ---------- */
+.rubric-total td { font-weight: 700; background: var(--color-code-bg); }
+
+/* ---------- Disabled widget buttons ---------- */
+.widget-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ---------- Video chapter index (jump-to-timestamp list) ----------
+   Shared rather than inlined per Standards §8: any week whose SPA embeds a
+   long recording can use this to let students jump to a section. Buttons carry
+   data-t (seconds into the video); the SPA's own script wires them to seekTo. */
+.video-chapters { margin: var(--space-md) 0 var(--space-lg); }
+
+.video-chapters__group { margin-bottom: var(--space-md); }
+
+.video-chapters__group-title {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-xs);
+}
+
+.video-chapters__list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 2px;
+}
+
+.chapter-btn {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: var(--fs-sm);
+  color: var(--color-text);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  padding: var(--space-sm) var(--space-md);
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+
+.chapter-btn:hover { background: var(--color-code-bg); border-color: var(--color-border); }
+
+.chapter-btn:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
+
+.chapter-btn__time {
+  flex-shrink: 0;
+  min-width: 4.5em;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--color-primary);
+  background: var(--color-code-bg);
+  border-radius: var(--radius);
+  padding: 2px 6px;
+}
+
+.chapter-btn__label { flex: 1; }
+
+.chapter-btn__tag {
+  flex-shrink: 0;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  white-space: nowrap;
+  color: var(--color-accent-hov);
+}
+
+.chapter-btn--lab .chapter-btn__time { color: var(--color-accent-hov); }
+
+/* ============================================================
+   WEEK 4 — Sequential logic
+   ============================================================
+   Added 2026-09-06. Per Standards Section 8 the existing rules were
+   diffed before anything was written here, and Week 4 turned out to be
+   the smallest delta of any week so far -- three weeks of accumulated
+   components cover almost all of it. Reused unchanged, with no new
+   selectors:
+
+     .gate-svg, .wire--hi/--lo     the latch's gates and signal colouring
+     .node--hi / .node--lo         wire-junction dots
+     .input-switch, .output-light  the nS / nR toggles and q / nq lamps
+     .step-nav, .step-nav__dot     settle-step controls
+     .preset-row, .preset-btn      the four latch presets
+     .circuit-canvas + __img       the four figures
+     .zoomable, .lightbox*         click-to-enlarge on the two detailed ones
+     .aside-optional*              the Section 0.2 analogy block
+     .quiz-*, .tab-*               the unscored self-check
+     .pin-table                    MEM_1BIT's interface, in the assignment
+     .logisim-steps                assignment build steps
+     .callout--*, .widget-*        everything else
+
+   TWO diff-first candidates from the SPA plan, both resolved by reuse:
+
+     - The Hold / Set / Reset / Forbidden state badge. `.cost-readout`
+       (Week 3, Widget 4's live gate count) is structurally the same
+       thing -- a live readout of a computed value in a monospace box --
+       and its rule body fits unchanged. Reused. Only the forbidden and
+       race states need a different colour, which is a modifier below
+       rather than a new component.
+
+     - The settle-step trace. `.stage-chain*` (Week 3, ripple stepping)
+       is "identical stages, each with an active and a settled state,
+       revealed in sequence." A two-gate settle trace is that shape with
+       two stages instead of eight. Reused unchanged; no new selectors.
+
+   What follows is only what genuinely did not exist.
+   ============================================================ */
+
+/* ---------- Readout state modifiers ----------
+   Used by: 01-the-latch (Widget 1).
+   The forbidden state is not an error the student made -- it is a real
+   state of a real circuit, reached deliberately -- so it is warned about
+   rather than alarmed about. The race is different: nothing is being
+   reported because there is nothing to report, and the muted treatment
+   plus the italic in the markup carries that. */
+.cost-readout--warn {
+  border-left: 4px solid var(--color-warning);
+  background: #fdf6e6;
+  color: var(--color-text);
+}
+.cost-readout--race {
+  border-left: 4px solid var(--color-danger);
+  background: #fdf0ef;
+  color: var(--color-danger);
+}
+
+/* ---------- Timing diagrams ----------
+   Used by: 03-timing-and-synthesis (Widget 2) and assignment4's printable
+   Part B figure -- two files this week, which is the Section 8 bar. But
+   the reason this is shared rather than inlined is forward-looking:
+   timing diagrams recur in Week 5 (the register's set pulse), Week 11
+   (control-unit timing, and the four-phase transfer) and Week 13
+   (datapath debugging). Section 8 directs adding a component to the
+   shared sheet when it will plausibly recur, rather than inlining it now
+   and consolidating later.
+
+   The waveform itself is drawn as inline SVG inside .waveform__plot --
+   one <svg> for all rows, so the rows share a coordinate system and
+   vertical alignment is structural rather than maintained by hand. These
+   rules style the frame around it: the row labels, the scroll container,
+   and the per-step cells of the editable input row. */
+.waveform {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-md);
+  margin: var(--space-md) 0;
+  overflow-x: auto;               /* narrow viewports scroll the diagram,
+                                     they do not compress it into
+                                     illegibility */
+}
+.waveform__plot {
+  display: block;
+  min-width: 560px;               /* below this the step cells stop being
+                                     comfortably clickable */
+}
+.waveform__label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  fill: var(--color-text);
+}
+.waveform__label--muted { fill: var(--color-text-muted); }
+
+/* The signal traces. Stroke width is deliberately heavier than .wire --
+   a waveform is read at a glance across its whole length, where a gate
+   diagram is read one connection at a time. */
+.waveform__trace {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 2.5;
+  stroke-linejoin: miter;
+}
+.waveform__trace--input { stroke: var(--color-accent); }
+.waveform__trace--clock { stroke: var(--color-text-muted); }
+
+/* Rising-edge markers on the clock row, and the vertical guides that
+   carry an edge down through every row so the correspondence between a
+   clock edge and a flip-flop transition is visible rather than asserted. */
+.waveform__edge {
+  stroke: var(--color-success);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+}
+.waveform__edge-tick { fill: var(--color-success); }
+
+/* The playhead. Not dashed -- it is the one line that moves, and it
+   should read as an instrument rather than as part of the data. */
+.waveform__playhead {
+  stroke: var(--color-danger);
+  stroke-width: 2;
+}
+
+/* Clickable cells on the editable input row. Rendered as SVG rects over
+   the trace; the visible affordance is the hover/focus fill, since a
+   permanently visible grid would compete with the traces. */
+.waveform__cell {
+  fill: transparent;
+  cursor: pointer;
+  transition: fill .12s;
+}
+.waveform__cell:hover { fill: rgba(230, 126, 34, .14); }
+.waveform__cell:focus-visible {
+  fill: rgba(230, 126, 34, .2);
+  outline: 3px solid var(--color-accent);
+  outline-offset: -2px;
+}
+.waveform__row-band {
+  fill: var(--color-code-bg);
+  opacity: .5;
+}
+
+/* The running caption under the diagram. Fixed min-height so the layout
+   does not jump as the text changes length while scrubbing. */
+.waveform__caption {
+  font-size: var(--fs-sm);
+  color: var(--color-text);
+  background: var(--color-code-bg);
+  border-radius: var(--radius);
+  padding: var(--space-sm) var(--space-md);
+  margin-top: var(--space-sm);
+  min-height: 3.2em;
+}
+.waveform__caption strong { color: var(--color-primary); }
+
+/* ============================================================
+   WEEK 5 ADDITIONS
+   ============================================================ */
+
+/* ---------- Horizontally scrollable table wrapper ---------- */
+/* Used by: 01-the-register, 02-the-isa, 03-instruction-formats,
+   assignment5 -- four files this week, so it belongs here rather than
+   inlined four times (Section 8).
+
+   Why it is needed now and was not before: Week 5 is the first week with
+   a five-column pin table and with the 32-row MIPS register table, and
+   both have a min-content width above 400px. Standards Section 9 allows
+   a table to exceed the prose column PROVIDED it sits in its own
+   overflow container -- the page body must never scroll sideways. This
+   is that container. Wrap the table, not the section. */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: var(--space-md) 0;
+}
+.table-scroll > table { margin: 0; }
+
+/* Keep a scrollable region reachable from the keyboard: a pane that can
+   scroll but cannot be focused is unreachable without a pointer. */
+.table-scroll:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
 }
