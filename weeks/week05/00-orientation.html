@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w5-00">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 5 Orientation: Two Tracks, One Machine</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* The circuit summary. Deliberately not a .pin-table -- that component
+       signals "an interface you must match exactly," which is what gives
+       it weight on the assignment page, and this is an at-a-glance list. */
+    .part-list { list-style: none; padding: 0; margin: var(--space-md) 0; }
+    .part-list li {
+      display: flex; flex-wrap: wrap; align-items: baseline;
+      gap: var(--space-sm); padding: var(--space-sm) 0;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .part-list li:last-child { border-bottom: none; }
+    .part-list code { font-weight: 700; color: var(--color-primary); flex: 0 0 auto; }
+    .part-list span { color: var(--color-text-muted); font-size: var(--fs-sm); }
+
+    /* The two tracks, side by side, because that is the week's shape. */
+    .tracks { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin: var(--space-md) 0; }
+    .tracks > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
+    .tracks h3 { margin-top: 0; }
+    @media (max-width: 640px) { .tracks { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 5 &rsaquo; <span>Orientation</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Week 5 — Two Tracks, One Machine</h1>
+    <p><strong>The Register, and the Language</strong> &nbsp;|&nbsp; <strong>09/14 – 09/20</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~9.25 hours</p>
+
+    <!-- ============================================================
+         A — The gap
+         ============================================================ -->
+    <section id="sec-gap">
+      <div class="callout callout--hook">
+        <div class="callout__title">Where you are, and what is missing</div>
+
+        <p><strong>What you learned last week:</strong> how a circuit remembers. Two NAND gates wired back into each other hold a bit, and four NAND gates hold a bit you can control. <code>MEM_1BIT</code> &mdash; the cell your whole machine is made of. Memory is feedback, and there is no other mechanism.</p>
+
+        <p><strong>What you can't do yet:</strong> anything useful with one bit. Real values are bytes &mdash; a number, a character, an address &mdash; and a byte is eight bits that have to be stored <em>together</em>, captured at the same moment, and read back as one thing.</p>
+
+        <p>And there is a second problem you have not met. Once several of these things exist, they all need to hand values to each other over the same wires. <strong>Eight cells shouting onto one wire at once is not communication.</strong></p>
+
+        <p><strong>What you will be able to do by the end of this week:</strong> store, hold and read back a whole byte, with one line that says <em>store this</em> and a second that says <em>now speak</em>. And &mdash; the other half of the week &mdash; read and write the language those bytes turn out to be.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         B — Phase 2
+         ============================================================ -->
+    <section id="sec-phase2">
+      <h2>Phase 2 opens, and the course changes shape</h2>
+
+      <p>Weeks 1 to 4 were one ladder: representation, then gates, then computation, then memory. Each week stood on the one before it.</p>
+
+      <p>From here there are <strong>two tracks running side by side</strong>, and they stay that way until Week 8.</p>
+
+      <div class="tracks">
+        <div>
+          <h3>Hardware</h3>
+          <p>You keep building the machine. This week: the 8-bit register, which is <strong>Logisim Checkpoint 1</strong>. Then the ALU, then RAM.</p>
+        </div>
+        <div>
+          <h3>Assembly</h3>
+          <p>You start programming the machine. This week: the MIPS instruction set, and your first program running in a simulator. Then arithmetic, control flow, and memory.</p>
+        </div>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">This is not two subjects. It is one subject from both ends.</div>
+        <p>The reason they are interleaved rather than taught one after the other: <strong>every instruction you write in MARS is tied to a circuit that will eventually execute it, and every circuit you build is tied to an instruction it enables.</strong></p>
+        <p>This week you will see that directly. The thing MIPS calls <code>$t0</code> is the circuit you build on Monday &mdash; not something like it, the same device, thirty-two cells wide instead of eight.</p>
+        <p>The two tracks converge for good in <strong>Week 8</strong>, when you build the RAM that the load and store instructions address.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         C — What you build
+         ============================================================ -->
+    <section id="sec-build">
+      <h2>What you build</h2>
+
+      <ul class="part-list">
+        <li><code>MEM_8BIT</code> <span>Eight of last week's cells with one shared write line. The step from a bit to a byte, and it is the easiest thing you will do all semester &mdash; because you built the hard part last week.</span></li>
+        <li><code>ENABLE_8BIT</code> <span>The output stage. It is what lets a register <strong>stop driving</strong> a shared wire, which turns out to need a component that is not a logic gate. <strong>Week 6's ALU reuses this one.</strong></span></li>
+        <li><code>REGISTER_8BIT</code> <span>Both of the above, plus two control pins and a monitor output. <strong>R0, R1, R2, R3, the program counter, the memory address register and the instruction register in your finished CPU are all copies of this circuit.</strong></span></li>
+      </ul>
+
+      <p>Three circuits, and the third one is the most reused component in the machine.</p>
+    </section>
+
+    <!-- ============================================================
+         D — The week's shape
+         ============================================================ -->
+    <section id="sec-shape">
+      <h2>A full week, for the first time since Week 3</h2>
+
+      <div class="callout">
+        <div class="callout__title">No holiday, no quiz</div>
+        <p>Week 4 was short &mdash; Labor Day removed a day and Quiz 1 took the rest. This week is back to the full load: <strong>about 9.25 hours</strong>, split roughly evenly between the two tracks.</p>
+      </div>
+
+      <p><strong>Assignment 5 is 100 points</strong> and covers both tracks in one submission: the three circuits (that is Checkpoint 1, and 50 of the 100 points), three written questions, seven encoding and decoding problems, and a screenshot of your first MARS program.</p>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Lab 5 is the first lab that does not finish in the room</div>
+        <p>Labs 1 through 4 all completed in class. <strong>Lab 5 (Tuesday) starts the register with you and you finish it on your own.</strong></p>
+        <p>That is a change in how the labs work, not a warning about difficulty &mdash; but it does mean starting early enough to ask questions before the week ends.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         E — Learning path
+         ============================================================ -->
+    <section id="sec-path">
+      <h2>This week's learning path</h2>
+
+      <div class="callout">
+        <div class="callout__title">Read these in order &mdash; the hardware pages come first on purpose</div>
+        <p>It is tempting to treat the two tracks as parallel and start with whichever looks more interesting. Don't. <strong>Page 2's central argument depends on your having built the register first</strong>, and it is a much weaker page if you meet <code>$t0</code> before you know what a register physically is.</p>
+      </div>
+
+      <div class="spa-card-grid">
+        <div class="spa-card">
+          <div class="spa-card__number">Page 1</div>
+          <div class="spa-card__title">A Byte That Holds, and Knows When to Speak</div>
+          <div class="spa-card__time">~2.25 hours &nbsp;|&nbsp; Sections 5.1&ndash;5.4</div>
+          <div class="spa-card__desc">Eight cells and one wire. Then the genuinely new idea of the week: a shared bus, and why a register needs to be able to <em>stop talking</em> rather than say zero.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+
+        <div class="spa-card">
+          <div class="spa-card__number">Page 2</div>
+          <div class="spa-card__title">The Language the Bytes Turn Out to Be</div>
+          <div class="spa-card__time">~1.5 hours &nbsp;|&nbsp; Sections 5.5&ndash;5.6</div>
+          <div class="spa-card__desc">What an instruction set architecture is and why one has to exist. The 32 MIPS registers &mdash; and the sentence this whole week is built around.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+
+        <div class="spa-card">
+          <div class="spa-card__number">Page 3</div>
+          <div class="spa-card__title">Thirty-Two Bits, Three Shapes</div>
+          <div class="spa-card__time">~1.25 hours &nbsp;|&nbsp; Section 5.7</div>
+          <div class="spa-card__desc">The R, I and J instruction formats. Encode instructions into binary by hand, decode binary back into instructions, and find out what an assembler actually does.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+
+        <div class="spa-card">
+          <div class="spa-card__number">Page 4</div>
+          <div class="spa-card__title">A Program That Runs</div>
+          <div class="spa-card__time">~1.25 hours &nbsp;|&nbsp; Sections 5.8&ndash;5.9</div>
+          <div class="spa-card__desc">MARS. Write six instructions, assemble them, and single-step through while the registers change on screen. Then the sentence that opens Week 6.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+
+        <div class="spa-card">
+          <div class="spa-card__number">Assignment 5</div>
+          <div class="spa-card__title">The Register and the Instruction</div>
+          <div class="spa-card__time">~2.5 hours &nbsp;|&nbsp; 100 points</div>
+          <div class="spa-card__desc">Logisim Checkpoint 1, three written questions, seven encode/decode problems, and your first MARS program. Submit the same <code>.circ</code> file you have been adding to since Week 2.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         F — Tools
+         ============================================================ -->
+    <section id="sec-tools">
+      <h2>Your tools this week</h2>
+
+      <div class="tool-card">
+        <div class="tool-card__icon" aria-hidden="true">&#128295;</div>
+        <div>
+          <div class="tool-card__name">Logisim — same file, three new tabs</div>
+          <div class="tool-card__desc">Open the same <code>CSC210_YourName.circ</code> you have been building since Week 2. Nothing from earlier weeks is deleted or replaced &mdash; and this week you use one of your own earlier circuits as a component eight times over.</div>
+        </div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-card__icon" aria-hidden="true">&#128187;</div>
+        <div>
+          <div class="tool-card__name">MARS — back after a four-week gap</div>
+          <div class="tool-card__desc">You installed it in Lab 1 and proved it ran. This week you use it properly: write assembly, assemble it, and step through it one instruction at a time. If it has stopped working since August, find out <strong>before</strong> Tuesday's lab.</div>
+        </div>
+      </div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Which components you may use &mdash; and one that catches people out</div>
+        <p>You may freely use anything from Logisim's <strong>Wiring</strong> folder (input and output pins, splitters, tunnels, constants, probes) and anything from <strong>Gates</strong>.</p>
+        <p><strong>That includes the controlled buffer, and you need nine of them this week.</strong> It is in the Gates folder, it is permitted, and page 1 explains what it does and why it cannot be built out of AND, OR and NOT. After three weeks of "build it from gates" it is natural to hesitate over it &mdash; don't.</p>
+        <p><strong>Nothing from Plexers, Arithmetic, or Memory.</strong> The Memory folder contains a Register that would do this week's circuits for you in about ten seconds, and produce a circuit that works and teaches nothing.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         G — Progression
+         ============================================================ -->
+    <section id="sec-progression">
+      <h2>Where Week 5 fits</h2>
+
+      <div class="progression">
+        <div class="progression__item completed">
+          <div class="progression__label">Week 2 &mdash; Mechanism</div>
+          <div class="progression__detail">Gates make decisions from voltage. NAND builds them all.</div>
+        </div>
+        <div class="progression__item completed">
+          <div class="progression__label">Week 3 &mdash; Computation</div>
+          <div class="progression__detail">Adders and decoders. Circuits that do useful work &mdash; and forget it instantly.</div>
+        </div>
+        <div class="progression__item completed">
+          <div class="progression__label">Week 4 &mdash; Memory</div>
+          <div class="progression__detail">A circuit that holds a bit. The last rung of Phase 1.</div>
+        </div>
+        <div class="progression__item active">
+          <div class="progression__label">Week 5 &mdash; The Register, and the Language &nbsp;<em>(Phase 2 begins)</em></div>
+          <div class="progression__detail">A byte that holds and can share a wire. And the instruction set that decides what the byte means.</div>
+        </div>
+        <div class="progression__item">
+          <div class="progression__label">Week 6 &mdash; The ALU</div>
+          <div class="progression__detail">A register holds a value; it cannot change one. Next week you build the circuit that can.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         H — Video
+         ============================================================ -->
+    <section id="sec-video">
+      <h2>Week 5 overview video</h2>
+
+      <div class="video-breakout">
+        <div class="video-transcript-row">
+          <div class="video-col">
+            <div class="video-frame" id="video-container">
+              <p style="padding:var(--space-lg);color:var(--color-text-muted);">The Week 5 overview video will be posted here later this week.</p>
+            </div>
+            <div class="video-caption">Closed captions available. Use the transcript panel to jump to any point in the video.</div>
+          </div>
+          <div class="transcript-col">
+            <h2 class="sr-only">Video transcript</h2>
+            <div class="transcript-panel" id="transcript-container" role="region"
+                 aria-live="polite"
+                 aria-label="Video transcript. Select a line to jump to that point in the video. The line currently being spoken is announced as the video plays.">
+              <p class="transcript-loading">The video and its transcript will be posted later this week.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <script>
+  (function () {
+    'use strict';
+
+    /* ------------------------------------------------------------
+       Week 5 overview video. VIDEO_ID is the YouTube id and vttContent
+       holds the WEBVTT captions. Both are empty until the recording
+       exists; everything below no-ops cleanly in that state and the
+       placeholder copy above stays visible.
+
+       To ship: set VIDEO_ID, paste the VTT into vttContent, and replace
+       the placeholder paragraph inside #video-container with the iframe
+       markup used in weeks/week04/00-orientation.html.
+       ------------------------------------------------------------ */
+
+    var VIDEO_ID = '';
+    var vttContent = ``;
+
+    var player, timeUpdater, parsedTranscript = [];
+
+    function timeToSeconds(timeStr) {
+      if (!timeStr) return 0;
+      var parts = timeStr.trim().split(':');
+      if (parts.length === 2) {
+        return (parseInt(parts[0]) || 0) * 60 + (parseFloat(parts[1]) || 0);
+      } else if (parts.length === 3) {
+        return (parseInt(parts[0]) || 0) * 3600 + (parseInt(parts[1]) || 0) * 60 + (parseFloat(parts[2]) || 0);
+      }
+      return 0;
+    }
+
+    function parseVtt(vttText) {
+      var cues = vttText.trim().split(/\n\n+/);
+      var parsedCues = [];
+      cues.forEach(function (cueBlock) {
+        if (cueBlock.indexOf('WEBVTT') === 0 || cueBlock.trim() === '') return;
+        var lines = cueBlock.trim().split('\n');
+        var timeLine = lines.filter(function (l) { return l.indexOf('-->') !== -1; })[0];
+        if (!timeLine) return;
+        var parts = timeLine.split(' --> ');
+        var textLines = lines.slice(lines.indexOf(timeLine) + 1);
+        parsedCues.push({
+          start: timeToSeconds(parts[0]),
+          end: timeToSeconds(parts[1]),
+          text: textLines.join(' ').trim()
+        });
+      });
+      return parsedCues;
+    }
+
+    function populateTranscript() {
+      var container = document.getElementById('transcript-container');
+      if (!container) return;
+      container.innerHTML = '';
+      parsedTranscript.forEach(function (cue) {
+        var lineEl = document.createElement('div');
+        lineEl.className = 'transcript-line';
+        lineEl.dataset.start = cue.start;
+        lineEl.dataset.end = cue.end;
+        lineEl.textContent = cue.text;
+        lineEl.setAttribute('role', 'button');
+        lineEl.setAttribute('tabindex', '0');
+        var seekTo = function () {
+          if (player && player.seekTo) { player.seekTo(cue.start, true); player.playVideo(); }
+        };
+        lineEl.addEventListener('click', seekTo);
+        lineEl.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); seekTo(); }
+        });
+        container.appendChild(lineEl);
+      });
+    }
+
+    function highlightCurrentLine() {
+      if (!player || !player.getCurrentTime) return;
+      var currentTime = player.getCurrentTime();
+      var lines = document.querySelectorAll('#transcript-container .transcript-line');
+      lines.forEach(function (line) {
+        var start = parseFloat(line.dataset.start);
+        var end = parseFloat(line.dataset.end);
+        if (currentTime >= start && currentTime < end) {
+          if (!line.classList.contains('active-transcript-line')) {
+            var prev = document.querySelector('#transcript-container .active-transcript-line');
+            if (prev) prev.classList.remove('active-transcript-line');
+            line.classList.add('active-transcript-line');
+            line.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else {
+          line.classList.remove('active-transcript-line');
+        }
+      });
+    }
+
+    function syncTranscriptHeight() {
+      var videoContainer = document.getElementById('video-container');
+      var transcriptContainer = document.getElementById('transcript-container');
+      if (!videoContainer || !transcriptContainer) return;
+      var videoCol = videoContainer.closest('.video-col');
+      var transcriptCol = transcriptContainer.closest('.transcript-col');
+      var sideBySide = !!(videoCol && transcriptCol) && Math.abs(
+        transcriptCol.getBoundingClientRect().top - videoCol.getBoundingClientRect().top) < 2;
+      if (sideBySide) {
+        transcriptContainer.style.height = videoContainer.offsetHeight + 'px';
+        transcriptContainer.style.maxHeight = videoContainer.offsetHeight + 'px';
+      } else {
+        transcriptContainer.style.height = '24rem';
+        transcriptContainer.style.maxHeight = '24rem';
+      }
+    }
+
+    window.onYouTubeIframeAPIReady = function () {
+      if (!VIDEO_ID || !document.getElementById('youtube-player')) return;
+      player = new YT.Player('youtube-player', {
+        videoId: VIDEO_ID,
+        events: {
+          onStateChange: function (event) {
+            clearInterval(timeUpdater);
+            if (event.data === YT.PlayerState.PLAYING) {
+              timeUpdater = setInterval(highlightCurrentLine, 300);
+            }
+          }
+        }
+      });
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      if (!VIDEO_ID || !vttContent.trim()) { syncTranscriptHeight(); return; }
+
+      parsedTranscript = parseVtt(vttContent);
+      populateTranscript();
+      setTimeout(syncTranscriptHeight, 100);
+      if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+        var tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      } else {
+        window.onYouTubeIframeAPIReady();
+      }
+    });
+
+    var resizeTimeout;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(syncTranscriptHeight, 250);
+    });
+  })();
+  </script>
+</body>
+</html>

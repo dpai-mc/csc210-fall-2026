@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w5-assign">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Assignment 5: The Register and the Instruction</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific: assignment layout and print ---------- */
+    .q-block { border-left: 3px solid var(--color-border); padding-left: var(--space-md); margin: var(--space-lg) 0; }
+    .q-num { font-weight: 700; color: var(--color-primary); font-family: var(--font-mono); }
+    .q-pts { font-size: var(--fs-xs); color: var(--color-text-muted); font-weight: 400; }
+
+    /* Checklist glyphs are styled spans, not live inputs -- this file is a
+       printable handout, and a checkbox that forgets its state between
+       page loads is worse than an honest box to tick on paper. */
+    .check-list { list-style: none; padding: 0; }
+    .check-list li { display: flex; gap: var(--space-sm); align-items: flex-start; padding: var(--space-xs) 0; }
+    .check-box { flex: 0 0 auto; display: inline-block; width: 15px; height: 15px; border: 2px solid var(--color-text-muted); border-radius: 3px; margin-top: 3px; }
+
+    /* Cross-references to the week's learning pages. Plain text by rule --
+       Course Standards §5 forbids linking one SPA to another, because a
+       link would load the target inside THIS page's Canvas iframe. */
+    .where-taught {
+      font-size: var(--fs-sm); color: var(--color-text-muted);
+      background: var(--color-code-bg);
+      border-left: 3px solid var(--color-primary-lt);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: var(--space-xs) var(--space-md);
+      margin: var(--space-sm) 0 var(--space-md);
+    }
+    .where-taught__label { font-weight: 700; color: var(--color-primary); text-transform: uppercase; font-size: var(--fs-xs); letter-spacing: .04em; margin-right: var(--space-xs); }
+    cite { font-style: normal; font-weight: 600; color: var(--color-text); }
+
+    .rubric-table th { font-size: var(--fs-sm); }
+    .rubric-table td { font-size: var(--fs-sm); vertical-align: top; }
+    .rubric-table td:first-child { width: 20%; }
+
+    /* Part C answer boxes. Ruled lines rather than form inputs: this page
+       is a handout, students submit their own work through Canvas, and a
+       text field that loses what you typed is a trap. */
+    .fields { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: var(--space-sm) 0 var(--space-md); }
+    .field-slot { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-xs) var(--space-sm); min-width: 74px; background: var(--color-surface); }
+    .field-slot b { display: block; font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--color-text-muted); }
+    .field-slot span { display: block; border-bottom: 1px solid var(--color-text-muted); height: 1.5em; }
+    .given-bits { font-family: var(--font-mono); font-size: var(--fs-md); letter-spacing: .06em; word-break: break-all; }
+    .answer-rule { display: block; border-bottom: 1px solid var(--color-text-muted); height: 1.7em; margin: var(--space-xs) 0 0; }
+
+    .reftable { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+    .reftable th, .reftable td { text-align: left; padding: var(--space-xs) var(--space-sm); border-bottom: 1px solid var(--color-border); }
+    .reftable th { background: var(--color-primary-lt); font-weight: 700; }
+    .reftable td:nth-child(-n+3) { font-family: var(--font-mono); white-space: nowrap; }
+    .reftable tr.later td { opacity: .62; }
+    .reftable .wk { font-family: var(--font-sans); font-size: var(--fs-xs); color: var(--color-warning); font-weight: 700; }
+    /* .table-scroll now lives in shared/style.css — four files use it. */
+
+    @media print {
+      .sp-header, .sp-footer { display: none; }
+      .q-block { break-inside: avoid; }
+      body { background: #fff; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 5 &rsaquo; <span>Assignment 5</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Assignment 5: The Register and the Instruction</h1>
+    <p>
+      <span class="points-badge">100 points</span>
+      &nbsp; <strong>Assesses:</strong> SLO1, SLO2 and SLO3
+      &nbsp;|&nbsp; <strong>Estimated time:</strong> ~2.5 hours
+    </p>
+
+    <p>Four parts, covering both halves of the week. Part A is <strong>Logisim Checkpoint 1</strong>. Parts C and D are your first graded MIPS work.</p>
+
+    <div class="callout callout--aha">
+      <div class="callout__title">Same file, three new tabs</div>
+      <p>Open the same <code>CSC210_YourName.circ</code> you have been building since Week 2. This week's circuits are <strong>new tabs in that file</strong>, and <code>MEM_8BIT</code> is built from <em>instances of your own</em> <code>MEM_1BIT</code> from Week 4 &mdash; not from re-drawn gates.</p>
+      <p><strong>Every circuit must be inside this one <code>.circ</code> file.</strong> In your instructor's words, from the final-project requirements: <em>"You MUST include ALL of the circuits necessary for the CPU simulation in your final submission file. Do not link any libraries in your project other than those included by default."</em></p>
+      <p>This is the first week where a "master file that links to the others" would look like a reasonable way to organise things. It is not, and a submission built that way opens as a broken circuit on the grading machine.</p>
+    </div>
+
+    <div class="callout callout--warn">
+      <div class="callout__title">Which components you may use &mdash; including one that surprises people</div>
+      <p>Anything from Logisim's <strong>Wiring</strong> folder (pins, splitters, tunnels, constants, probes) and anything from <strong>Gates</strong>.</p>
+      <p><strong>The controlled buffer is in the Gates folder, and it is permitted.</strong> You need nine of them this week. After three weeks of "build it from gates" it is natural to hesitate over anything that looks like a finished component &mdash; do not. It is a primitive, like a NAND gate, and page 1 explains why it cannot be built from the others.</p>
+      <p><strong>Nothing from Plexers, Arithmetic, or Memory.</strong> The Memory folder contains a Register that would do Part A for you. Using it scores zero for that circuit, however well it works.</p>
+    </div>
+
+    <div class="callout">
+      <div class="callout__title"><code>xxxxxxxx</code> is a correct result, not a fault</div>
+      <p>When <code>e</code> = 0, your enable circuit and your register should show <strong><code>xxxxxxxx</code></strong> on the output pin &mdash; not <code>00000000</code>.</p>
+      <p>That means the controlled buffers are doing their job: the register has stopped driving the wire entirely. Every year, students see the <code>x</code>s, assume something is broken, and delete the buffers. Do not.</p>
+    </div>
+
+    <div class="callout callout--note">
+      <div class="callout__title">Lab 5 does not finish in the room</div>
+      <p>Labs 1 through 4 all completed in class. <strong>Lab 5 is the first that does not</strong> &mdash; Tuesday's session starts Part A with you and you finish and test it on your own.</p>
+      <p>Plan accordingly: start early enough that you can ask about it before the week ends.</p>
+    </div>
+
+    <!-- ============================================================
+         Interfaces
+         ============================================================ -->
+    <section id="interfaces">
+      <h2>Component interfaces</h2>
+
+      <p>These tables are the <strong>specification</strong>, not reference material. Part A awards points for matching them exactly, and later weeks instantiate these components as written here &mdash; a different pin name or a missing pin means the Week 13 datapath does not wire up.</p>
+
+      <div class="where-taught"><span class="where-taught__label">Taught in</span> <cite>A Byte That Holds, and Knows When to Speak</cite>, sections 5.1&ndash;5.4.</div>
+
+      <h3><code>MEM_8BIT</code></h3>
+      <div class="table-scroll"><table class="pin-table">
+        <thead><tr><th scope="col">Pin</th><th scope="col">Width</th><th scope="col">Direction</th><th scope="col">Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="pin-table__name">i</td><td>8</td><td>in</td><td>the byte to store</td></tr>
+          <tr><td class="pin-table__name">s</td><td>1</td><td>in</td><td><strong>Active HIGH</strong> — while <code>s</code> = 1 the stored byte follows <code>i</code>; at 0 it holds</td></tr>
+          <tr><td class="pin-table__name">o</td><td>8</td><td>out</td><td>the stored byte, always driven</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3><code>ENABLE_8BIT</code></h3>
+      <div class="table-scroll"><table class="pin-table">
+        <thead><tr><th scope="col">Pin</th><th scope="col">Width</th><th scope="col">Direction</th><th scope="col">Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="pin-table__name">i</td><td>8</td><td>in</td><td></td></tr>
+          <tr><td class="pin-table__name">e</td><td>1</td><td>in</td><td><strong>Active HIGH</strong></td></tr>
+          <tr><td class="pin-table__name">o</td><td>8</td><td>out</td><td>equals <code>i</code> when <code>e</code> = 1; <strong>floating</strong> (<code>xxxxxxxx</code>) when <code>e</code> = 0</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3><code>REGISTER_8BIT</code> — five pins</h3>
+      <div class="table-scroll"><table class="pin-table">
+        <thead><tr><th scope="col">Pin</th><th scope="col">Width</th><th scope="col">Direction</th><th scope="col">Position</th><th scope="col">Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="pin-table__name">i</td><td>8</td><td>in</td><td>left</td><td>the byte to store</td></tr>
+          <tr><td class="pin-table__name">s</td><td>1</td><td>in</td><td>bottom</td><td>write control</td></tr>
+          <tr><td class="pin-table__name">e</td><td>1</td><td>in</td><td>bottom</td><td>read / bus-drive control</td></tr>
+          <tr><td class="pin-table__name">o</td><td>8</td><td>out</td><td>right</td><td>the bus port — driven <strong>only</strong> when <code>e</code> = 1</td></tr>
+          <tr><td class="pin-table__name">reg</td><td>8</td><td>out</td><td>top left</td><td>the stored byte, <strong>always visible, regardless of <code>e</code></strong></td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Do not leave out <code>reg</code></div>
+        <p>It is easy to miss, because nothing downstream in the CPU consumes it. It is graded, and it is what lets you see inside a register in Weeks 13 and 14 without putting it on the bus &mdash; which would change the thing you are trying to observe.</p>
+        <p>Also: <strong>label <code>s</code> and <code>e</code> on the circuit appearance.</strong> They are two identical-looking 1-bit pins side by side on the same edge, you will place this block a dozen times, and getting them the wrong way round produces a register that writes when it should read, with no error message anywhere.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART A
+         ============================================================ -->
+    <section id="part-a">
+      <h2>Part A — Logisim Checkpoint 1: The 8-Bit Register <span class="q-pts">(50 points)</span></h2>
+
+      <p><strong>Assesses SLO1.</strong> Build all three circuits as separate tabs.</p>
+
+      <div class="q-block">
+        <h3>Circuit 1 — <code>MEM_8BIT</code> <span class="q-pts">(14 points)</span></h3>
+        <ol class="logisim-steps">
+          <li>Place an 8-bit input pin named <code>i</code>. Run it into a <strong>splitter</strong> to get eight 1-bit wires.</li>
+          <li>Place <strong>eight instances of your own <code>MEM_1BIT</code></strong> from Week 4. Wire one bit of <code>i</code> into each cell's <code>In</code>.</li>
+          <li>Place <strong>one</strong> 1-bit input pin named <code>s</code> and branch it to <em>all eight</em> <code>Set</code> inputs.</li>
+          <li>Recombine the eight <code>Q</code> outputs through a splitter into an 8-bit output pin named <code>o</code>.</li>
+          <li>Edit the circuit appearance to a labelled rectangle, taller than wide: <code>i</code> left, <code>o</code> right, <code>s</code> bottom.</li>
+        </ol>
+        <div class="lab-verify">
+          <div class="lab-verify__title">Verify</div>
+          <ul>
+            <li><code>s</code> = 1, <code>i</code> = <code>10101010</code> &rarr; <code>o</code> = <code>10101010</code>.</li>
+            <li>Drop <code>s</code> to 0, then <strong>change <code>i</code> to something else</strong> &rarr; <code>o</code> does not move. <em>This is the test that matters.</em></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <h3>Circuit 2 — <code>ENABLE_8BIT</code> <span class="q-pts">(14 points)</span></h3>
+        <ol class="logisim-steps">
+          <li>8-bit input pin <code>i</code>, through a splitter into eight wires.</li>
+          <li>Eight <strong>AND gates</strong>. One input of each is a bit of <code>i</code>; the other input of <em>all eight</em> is a 1-bit pin named <code>e</code>.</li>
+          <li>Put a <strong>controlled buffer</strong> on each AND gate's output — eight of them — with every buffer's control input also driven by <code>e</code>.</li>
+          <li>Recombine through a splitter into an 8-bit output pin <code>o</code>.</li>
+          <li>Edit the appearance to a labelled rectangle: <code>i</code> left, <code>o</code> right, <code>e</code> bottom.</li>
+        </ol>
+        <div class="lab-verify">
+          <div class="lab-verify__title">Verify</div>
+          <ul>
+            <li><code>e</code> = 1 &rarr; <code>o</code> equals <code>i</code>.</li>
+            <li><code>e</code> = 0 &rarr; <code>o</code> reads <strong><code>xxxxxxxx</code></strong>. If it reads <code>00000000</code>, your buffers are missing or their control input is not wired to <code>e</code>.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <h3>Circuit 3 — <code>REGISTER_8BIT</code> <span class="q-pts">(18 points)</span></h3>
+        <ol class="logisim-steps">
+          <li>Place one <code>MEM_8BIT</code> and one <code>ENABLE_8BIT</code>.</li>
+          <li>8-bit input pin <code>i</code> &rarr; <code>MEM_8BIT</code>'s <code>i</code>. A 1-bit pin <code>s</code> &rarr; its <code>s</code>.</li>
+          <li><code>MEM_8BIT</code>'s <code>o</code> goes <strong>two places</strong>: into <code>ENABLE_8BIT</code>'s <code>i</code>, <em>and</em> to an 8-bit output pin named <code>reg</code>.</li>
+          <li>A 1-bit pin <code>e</code> &rarr; <code>ENABLE_8BIT</code>'s <code>e</code>.</li>
+          <li><code>ENABLE_8BIT</code>'s <code>o</code> &rarr; through <strong>one more controlled buffer, 8 bits wide</strong>, also controlled by <code>e</code> &rarr; the 8-bit output pin <code>o</code>.</li>
+          <li>Edit the appearance to a labelled rectangle with all five pins, <code>s</code> and <code>e</code> clearly distinguished.</li>
+        </ol>
+
+        <div class="callout callout--note">
+          <div class="callout__title">Yes, that is nine buffers, and the ninth looks redundant</div>
+          <p>It is, on paper &mdash; the eight inside <code>ENABLE_8BIT</code> have already floated every bit. <strong>Build it anyway.</strong> Without it, the simulation in Logisim Classic 2.7.1 becomes unstable: not wrong answers, unreliable ones. Page 1, section 5.3b, explains what that is about and why it is worth knowing.</p>
+        </div>
+
+        <div class="lab-verify">
+          <div class="lab-verify__title">Verify — all five steps, in order</div>
+          <ol>
+            <li><code>s</code> = 0, <code>e</code> = 0 &rarr; <code>o</code> reads <code>xxxxxxxx</code>.</li>
+            <li>Set <code>i</code> = <code>11001100</code>, raise <code>s</code> to 1 &rarr; <code>reg</code> shows <code>11001100</code>. <code>o</code> is <em>still</em> <code>xxxxxxxx</code>.</li>
+            <li>Drop <code>s</code> to 0, change <code>i</code> to <code>00000000</code> &rarr; <code>reg</code> <strong>stays</strong> <code>11001100</code>.</li>
+            <li>Raise <code>e</code> to 1 &rarr; <code>o</code> becomes <code>11001100</code>.</li>
+            <li>Drop <code>e</code> to 0 &rarr; <code>o</code> returns to <code>xxxxxxxx</code>; <code>reg</code> unchanged throughout.</li>
+          </ol>
+          <p>Step 2 is where <code>reg</code> earns its place: without it you could not confirm the write happened without also asserting <code>e</code>.</p>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <h3>Naming, appearance and file <span class="q-pts">(4 points)</span></h3>
+        <ul>
+          <li>All three tab names exactly as specified, including capitalisation.</li>
+          <li>All pin names exactly as specified, lowercase.</li>
+          <li>All three circuit appearances edited to labelled rectangles.</li>
+          <li>One <code>.circ</code> file; only Wiring and Gates components.</li>
+        </ul>
+      </div>
+
+      <h3>Points</h3>
+      <table>
+        <thead><tr><th>Item</th><th>Points</th></tr></thead>
+        <tbody>
+          <tr><td><code>MEM_8BIT</code></td><td>14</td></tr>
+          <tr><td><code>ENABLE_8BIT</code></td><td>14</td></tr>
+          <tr><td><code>REGISTER_8BIT</code></td><td>18</td></tr>
+          <tr><td>Naming, appearance and file</td><td>4</td></tr>
+          <tr><td><strong>Total</strong></td><td><strong>50</strong></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============================================================
+         PART B
+         ============================================================ -->
+    <section id="part-b">
+      <h2>Part B — Written: Storing and Speaking <span class="q-pts">(15 points)</span></h2>
+
+      <p><strong>Assesses SLO1.</strong> Two or three sentences each. Answer in your own words.</p>
+
+      <div class="q-block">
+        <p><span class="q-num">1.</span> <span class="q-pts">(5 points)</span> <code>MEM_8BIT</code> is eight <code>MEM_1BIT</code> cells. Explain what the <strong>single shared <code>s</code> line</strong> does that eight separate <code>Set</code> lines would not &mdash; and why that difference is what makes the circuit store a <em>byte</em> rather than eight bits.</p>
+        <span class="answer-rule"></span><span class="answer-rule"></span><span class="answer-rule"></span>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">2.</span> <span class="q-pts">(5 points)</span> A register whose "silent" state is to drive <code>00000000</code> cannot share a bus. Explain why, <strong>in terms of what is physically on the wire</strong> &mdash; not in terms of a rule that the control unit has to follow.</p>
+        <span class="answer-rule"></span><span class="answer-rule"></span><span class="answer-rule"></span>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">3.</span> <span class="q-pts">(5 points)</span> Your <code>REGISTER_8BIT</code> has two outputs. Describe the difference between <code>o</code> and <code>reg</code>, and give <strong>one specific situation</strong> in which you would need <code>reg</code> and <code>o</code> would not do.</p>
+        <span class="answer-rule"></span><span class="answer-rule"></span><span class="answer-rule"></span>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART C
+         ============================================================ -->
+    <section id="part-c">
+      <h2>Part C — Instruction Encoding and Decoding <span class="q-pts">(28 points)</span></h2>
+
+      <p><strong>Assesses SLO2.</strong> Seven problems, 4 points each. Full marks require every field correct. <strong>The reference tables are at the bottom of this page</strong> &mdash; you do not need to leave it.</p>
+
+      <div class="where-taught"><span class="where-taught__label">Taught in</span> <cite>Thirty-Two Bits, Three Shapes</cite>, section 5.7.</div>
+
+      <h3>Encoding — assembly to machine code</h3>
+      <p>Give the binary contents of every field, then the assembled 32 bits.</p>
+
+      <div class="q-block">
+        <p><span class="q-num">1.</span> <span class="q-pts">(4 points)</span> <code>sub $s0, $t8, $t9</code></p>
+        <div class="fields">
+          <div class="field-slot"><b>opcode</b><span></span></div>
+          <div class="field-slot"><b>rs</b><span></span></div>
+          <div class="field-slot"><b>rt</b><span></span></div>
+          <div class="field-slot"><b>rd</b><span></span></div>
+          <div class="field-slot"><b>shamt</b><span></span></div>
+          <div class="field-slot"><b>funct</b><span></span></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">2.</span> <span class="q-pts">(4 points)</span> <code>lw $t1, 64($sp)</code></p>
+        <div class="fields">
+          <div class="field-slot"><b>opcode</b><span></span></div>
+          <div class="field-slot"><b>rs</b><span></span></div>
+          <div class="field-slot"><b>rt</b><span></span></div>
+          <div class="field-slot" style="min-width:190px;"><b>immediate</b><span></span></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">3.</span> <span class="q-pts">(4 points)</span> <code>addi $v0, $a1, -50</code></p>
+        <div class="fields">
+          <div class="field-slot"><b>opcode</b><span></span></div>
+          <div class="field-slot"><b>rs</b><span></span></div>
+          <div class="field-slot"><b>rt</b><span></span></div>
+          <div class="field-slot" style="min-width:190px;"><b>immediate</b><span></span></div>
+        </div>
+        <p class="q-pts">The immediate is negative. Sixteen bits, two&rsquo;s complement &mdash; Week 1, in a new place.</p>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">4.</span> <span class="q-pts">(4 points)</span> <code>j 8192</code></p>
+        <div class="fields">
+          <div class="field-slot"><b>opcode</b><span></span></div>
+          <div class="field-slot" style="min-width:280px;"><b>address</b><span></span></div>
+        </div>
+      </div>
+
+      <h3>Decoding — machine code to assembly</h3>
+      <p>Identify the format first, then split the fields, then write the instruction.</p>
+
+      <div class="q-block">
+        <p><span class="q-num">5.</span> <span class="q-pts">(4 points)</span></p>
+        <p class="given-bits">000000 01001 01010 11000 00000 100101</p>
+        <span class="answer-rule"></span>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">6.</span> <span class="q-pts">(4 points)</span></p>
+        <p class="given-bits">101011 11101 01000 0000000000010000</p>
+        <span class="answer-rule"></span>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">7.</span> <span class="q-pts">(4 points)</span></p>
+        <p class="given-bits">000011 00000001000000000000000100</p>
+        <span class="answer-rule"></span>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Count the digits before you start on problem 7</div>
+        <p>Every instruction is 32 bits, and the quickest way to go wrong on a J-type is to mis-split a 26-bit address. Count first.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART D
+         ============================================================ -->
+    <section id="part-d">
+      <h2>Part D — First MARS Program <span class="q-pts">(7 points)</span></h2>
+
+      <p><strong>Assesses SLO3.</strong></p>
+
+      <div class="where-taught"><span class="where-taught__label">Taught in</span> <cite>A Program That Runs</cite>, section 5.8.</div>
+
+      <div class="q-block">
+        <p><span class="q-num">8.</span> <span class="q-pts">(7 points)</span> Type the sample program from section 5.8 into MARS, assemble it, and <strong>single-step</strong> it to the end.</p>
+        <p>Submit:</p>
+        <ul>
+          <li>A <strong>screenshot of the Registers pane</strong> after the final step, with <code>$t2</code>, <code>$t3</code>, <code>$t4</code> and <code>$t5</code> visible.</li>
+          <li><strong>One sentence</strong> naming what <code>$t4</code> holds and why.</li>
+        </ul>
+        <p class="q-pts">Type it rather than pasting it, and comment every executable line &mdash; the comments are part of the work.</p>
+        <span class="answer-rule"></span><span class="answer-rule"></span>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Rubric
+         ============================================================ -->
+    <section id="rubric">
+      <h2>Grading rubric</h2>
+
+      <div class="table-scroll">
+      <table class="rubric-table"><caption class="sr-only">Grading rubric for Assignment 5, by criterion and performance level.</caption>
+        <thead>
+          <tr><th>Criterion</th><th>Excellent (90–100%)</th><th>Proficient (75–89%)</th><th>Developing (60–74%)</th><th>Inadequate (&lt;60%)</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Circuit construction</strong><br>Part A, 50 &mdash; SLO1</td>
+            <td>All three circuits correct. <code>MEM_8BIT</code> instantiates <code>MEM_1BIT</code>. Output floats at <code>e</code> = 0. All five register pins present and correct. Appearances edited and labelled.</td>
+            <td>Circuits functional; a missing <code>reg</code> pin, an unedited appearance, or minor naming issues.</td>
+            <td>A circuit missing or incorrect; or the enable stage drives <code>00000000</code> instead of floating; or <code>MEM_8BIT</code> built from re-drawn gates rather than instances.</td>
+            <td>Submission incomplete, or uses anything from Plexers, Arithmetic or Memory.</td>
+          </tr>
+          <tr>
+            <td><strong>Reasoning about control</strong><br>Part B, 15 &mdash; SLO1</td>
+            <td>Locates byte-ness in the shared control line. Explains contention physically, as two output stages asserting on one wire. Distinguishes <code>o</code> from <code>reg</code> with a real use case.</td>
+            <td>Mostly correct; may describe contention as a rule violation rather than a physical conflict.</td>
+            <td>Describes behaviour without explaining it; treats "silent" and "outputs zero" as the same thing.</td>
+            <td>Cannot explain why two separate controls are needed.</td>
+          </tr>
+          <tr>
+            <td><strong>Encoding and decoding</strong><br>Part C, 28 &mdash; SLO2</td>
+            <td>All seven correct, including the negative immediate. Format identified before splitting on every decode problem.</td>
+            <td>Five or six correct; errors confined to lookup rather than to method.</td>
+            <td>Three or four correct; field boundaries or format identification unreliable.</td>
+            <td>Fewer than three correct; cannot locate the opcode field.</td>
+          </tr>
+          <tr>
+            <td><strong>Toolchain and observation</strong><br>Part D, 7 &mdash; SLO3</td>
+            <td>Program assembled and stepped; screenshot shows the correct final values; the sentence correctly identifies <code>$t4</code> as 37 and says why. Every line commented.</td>
+            <td>Program ran; the sentence is vague, or comments are sparse.</td>
+            <td>Screenshot present but values wrong, or the program was run rather than stepped.</td>
+            <td>Not attempted, or the program did not assemble.</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+
+      <p class="rubric-total"><strong>Total: 100 points</strong> &nbsp;&mdash;&nbsp; Part A 50 + Part B 15 + Part C 28 + Part D 7</p>
+      <p class="q-pts"><strong>SLO coverage:</strong> SLO1 &mdash; 65 points &middot; SLO2 &mdash; 28 points &middot; SLO3 &mdash; 7 points.</p>
+    </section>
+
+    <!-- ============================================================
+         Checklist
+         ============================================================ -->
+    <section id="checklist">
+      <h2>Submission checklist</h2>
+
+      <ul class="check-list">
+        <li><span class="check-box" aria-hidden="true"></span> All three circuits (<code>MEM_8BIT</code>, <code>ENABLE_8BIT</code>, <code>REGISTER_8BIT</code>) are present as separate tabs</li>
+        <li><span class="check-box" aria-hidden="true"></span> <code>MEM_8BIT</code> is <strong>eight instances of your own <code>MEM_1BIT</code></strong>, not re-drawn gates</li>
+        <li><span class="check-box" aria-hidden="true"></span> One <code>s</code> line reaches all eight cells</li>
+        <li><span class="check-box" aria-hidden="true"></span> <code>ENABLE_8BIT</code> floats its output when <code>e</code> = 0 — the pin reads <code>xxxxxxxx</code>, not <code>00000000</code></li>
+        <li><span class="check-box" aria-hidden="true"></span> <code>REGISTER_8BIT</code> has <strong>five</strong> pins: <code>i</code>, <code>s</code>, <code>e</code>, <code>o</code>, <code>reg</code></li>
+        <li><span class="check-box" aria-hidden="true"></span> <code>reg</code> shows the stored byte with <code>e</code> = 0</li>
+        <li><span class="check-box" aria-hidden="true"></span> Nine controlled buffers in total — eight in the enable circuit, one in the register</li>
+        <li><span class="check-box" aria-hidden="true"></span> Pin names match the specification exactly, including lowercase</li>
+        <li><span class="check-box" aria-hidden="true"></span> All three circuit appearances edited to labelled rectangles, with <code>s</code> and <code>e</code> distinguishable</li>
+        <li><span class="check-box" aria-hidden="true"></span> Hold verified: store a byte, release <code>s</code>, change the input, confirm the stored byte does not move</li>
+        <li><span class="check-box" aria-hidden="true"></span> <strong>All circuits are contained within this single .circ file — no external file links</strong></li>
+        <li><span class="check-box" aria-hidden="true"></span> Only <strong>Wiring</strong> and <strong>Gates</strong> components are used — nothing from Plexers, Arithmetic or Memory</li>
+        <li><span class="check-box" aria-hidden="true"></span> Part B and Part C answers submitted alongside the <code>.circ</code> file</li>
+        <li><span class="check-box" aria-hidden="true"></span> Part D screenshot shows the <strong>Registers</strong> pane, not the editor</li>
+        <li><span class="check-box" aria-hidden="true"></span> Every executable line of the MARS program carries a comment</li>
+      </ul>
+    </section>
+
+    <!-- ============================================================
+         Reference
+         ============================================================ -->
+    <section id="reference">
+      <h2>MIPS reference</h2>
+
+      <p>The same tables as on the instruction-formats page. Everything Part C needs is here.</p>
+
+      <div class="tab-navigation" role="tablist" aria-label="MIPS reference tables">
+        <button type="button" class="tab-button active" role="tab" id="tab-regs" aria-controls="panel-regs" aria-selected="true">Registers</button>
+        <button type="button" class="tab-button" role="tab" id="tab-r" aria-controls="panel-r" aria-selected="false">R-type</button>
+        <button type="button" class="tab-button" role="tab" id="tab-i" aria-controls="panel-i" aria-selected="false">I-type</button>
+        <button type="button" class="tab-button" role="tab" id="tab-j" aria-controls="panel-j" aria-selected="false">J-type</button>
+      </div>
+
+      <div class="tab-panel active" role="tabpanel" id="panel-regs" aria-labelledby="tab-regs">
+        <div class="table-scroll"><table class="reftable"><caption class="sr-only">The 32 MIPS registers, their numbers and their conventional uses.</caption><thead><tr><th>Name</th><th>Number</th><th>Convention</th></tr></thead><tbody id="t-regs"></tbody></table></div>
+      </div>
+      <div class="tab-panel" role="tabpanel" id="panel-r" aria-labelledby="tab-r">
+        <div class="table-scroll"><table class="reftable"><caption class="sr-only">R-type instructions. All share the opcode 000000; the funct field selects the operation.</caption><thead><tr><th>Mnemonic</th><th>Syntax</th><th>funct</th><th>Description</th></tr></thead><tbody id="t-r"></tbody></table></div>
+        <p class="q-pts">All R-type instructions have <code>opcode</code> = <code>000000</code>.</p>
+      </div>
+      <div class="tab-panel" role="tabpanel" id="panel-i" aria-labelledby="tab-i">
+        <div class="table-scroll"><table class="reftable"><caption class="sr-only">I-type instructions and their opcodes.</caption><thead><tr><th>Mnemonic</th><th>Syntax</th><th>opcode</th><th>Description</th></tr></thead><tbody id="t-i"></tbody></table></div>
+      </div>
+      <div class="tab-panel" role="tabpanel" id="panel-j" aria-labelledby="tab-j">
+        <div class="table-scroll"><table class="reftable"><caption class="sr-only">J-type instructions and their opcodes.</caption><thead><tr><th>Mnemonic</th><th>Syntax</th><th>opcode</th><th>Description</th></tr></thead><tbody id="t-j"></tbody></table></div>
+      </div>
+
+      <p style="margin-top:var(--space-md);">
+        <button type="button" class="widget-btn widget-btn--small widget-btn--outline" id="print-page">Print this assignment</button>
+      </p>
+
+      <div class="callout">
+        <div class="callout__title">Resources</div>
+        <p><a href="https://cburch.com/logisim/docs.html" target="_blank" rel="noopener">Logisim documentation</a> — in particular the pages on the controlled buffer and on editing a circuit's appearance.</p>
+        <p><a href="https://github.com/dpetersanderson/MARS" target="_blank" rel="noopener">The MARS repository</a> — downloads and documentation for the simulator.</p>
+        <p>Log into your Saylor <strong>CS301</strong> account and open <strong>Unit 2: Instructions — Hardware Language</strong> for background on the ISA and the MIPS instruction set: <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">learn.saylor.org — CS301</a></p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    /* The reference tables are rendered from CSCLogic.mips -- the same
+       source the instruction-formats page uses. Two pages showing the
+       same opcode data is not the duplication Standards Section 8 is
+       about (that rule governs CSS and JS), and a reference a student
+       needs *while working* has to be on the page they are working on.
+       What matters is that there is one copy of the DATA. */
+
+    var L = window.CSCLogic;
+    if (!L || !L.mips) { return; }
+    var M = L.mips;
+    function el(id) { return document.getElementById(id); }
+    function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+
+    function instrRows(list, codeKey) {
+      return list.map(function (o) {
+        var later = o.week > 5;
+        return '<tr' + (later ? ' class="later"' : '') + '>' +
+          '<td>' + o.m + (later ? ' <span class="wk">Week ' + o.week + '</span>' : '') + '</td>' +
+          '<td>' + esc(o.syntax) + '</td>' +
+          '<td>' + o[codeKey] + '</td>' +
+          '<td>' + esc(o.desc) + '</td></tr>';
+      }).join('');
+    }
+
+    el('t-regs').innerHTML = M.regs.map(function (r) {
+      return '<tr><td>' + r.name + '</td><td>' + r.n + '</td><td>' + esc(r.usage) + '</td></tr>';
+    }).join('');
+    el('t-r').innerHTML = instrRows(M.r, 'funct');
+    el('t-i').innerHTML = instrRows(M.i, 'opcode');
+    el('t-j').innerHTML = instrRows(M.j, 'opcode');
+
+    Array.prototype.forEach.call(document.querySelectorAll('[role="tab"]'), function (tab) {
+      tab.addEventListener('click', function () {
+        Array.prototype.forEach.call(document.querySelectorAll('[role="tab"]'), function (t) {
+          t.setAttribute('aria-selected', 'false'); t.classList.remove('active');
+        });
+        Array.prototype.forEach.call(document.querySelectorAll('[role="tabpanel"]'), function (p) {
+          p.classList.remove('active');
+        });
+        tab.setAttribute('aria-selected', 'true');
+        tab.classList.add('active');
+        el(tab.getAttribute('aria-controls')).classList.add('active');
+      });
+    });
+
+    /* Printing is not navigation, so Standards Section 5 is not engaged.
+       This is a handout; students submit their work through Canvas. */
+    el('print-page').addEventListener('click', function () { window.print(); });
+  })();
+  </script>
+</body>
+</html>

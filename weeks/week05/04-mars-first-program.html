@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w5-04">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 5: A Program That Runs</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ----------
+       The program listing is the spine of 5.8: it appears once in full,
+       and each subsection afterwards re-shows only the lines it is
+       discussing. `.prog` is the full listing; `.snip` is an excerpt. */
+    .prog, .snip {
+      background: var(--color-code-bg);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: var(--space-md);
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: var(--fs-sm);
+      line-height: 1.75;
+      margin: var(--space-md) 0;
+      white-space: pre;
+    }
+    .snip { font-size: var(--fs-xs); padding: var(--space-sm) var(--space-md); }
+    .prog .cm { color: var(--color-text-muted); }
+    .prog .dir { color: var(--color-primary); font-weight: 700; }
+    .prog .lbl { color: var(--color-accent); font-weight: 700; }
+
+    .regwatch { width: 100%; border-collapse: collapse; margin: var(--space-md) 0; font-size: var(--fs-sm); }
+    .regwatch th, .regwatch td { text-align: left; padding: var(--space-xs) var(--space-sm); border-bottom: 1px solid var(--color-border); }
+    .regwatch th { background: var(--color-primary-lt); }
+    .regwatch td:first-child, .regwatch td:nth-child(2) { font-family: var(--font-mono); }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 5 &rsaquo; <span>Page 4: A Program That Runs</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>A Program That Runs</h1>
+    <p><strong>Sections 5.8 &ndash; 5.9</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1.25 hours</p>
+
+    <!-- ============================================================
+         5.8
+         ============================================================ -->
+    <section id="sec-5-8">
+      <h2>5.8 &nbsp; MARS: A Program That Runs</h2>
+
+      <p>Everything so far this week has been on paper or on a canvas. This page is where it executes.</p>
+
+      <h3>The tool</h3>
+
+      <p><strong>MARS</strong> &mdash; the MIPS Assembler and Runtime Simulator. You installed it in Lab 1 and have not touched it since. It does four things:</p>
+
+      <ul>
+        <li>An <strong>editor</strong> for writing assembly.</li>
+        <li>An <strong>assembler</strong> that turns your assembly into the 32-bit instructions you spent the last page encoding by hand.</li>
+        <li>A <strong>simulator</strong> that executes them, all at once or one at a time.</li>
+        <li>Live <strong>panes</strong> showing every register and every byte of memory as it changes.</li>
+      </ul>
+
+      <p>That last one is why this page exists. You have built a register and you have argued that <code>$t0</code> is one. Now you get to watch thirty-two of them.</p>
+
+      <h3>The program</h3>
+
+      <p>Six instructions and one variable. Type it rather than pasting it &mdash; the typing is where the syntax sticks.</p>
+
+<div class="prog"><span class="dir">      .globl</span> main          <span class="cm"># make main visible as the entry point</span>
+<span class="dir">      .text</span>                <span class="cm"># everything below here is code</span>
+<span class="lbl">main:</span>
+      li   $t2, 25         <span class="cm"># load the constant 25 into $t2</span>
+      lw   $t3, value      <span class="cm"># load the word stored at 'value' into $t3</span>
+      add  $t4, $t2, $t3   <span class="cm"># $t4 = $t2 + $t3</span>
+      sub  $t5, $t2, $t3   <span class="cm"># $t5 = $t2 - $t3</span>
+      li   $v0, 10         <span class="cm"># syscall code 10 means "exit"</span>
+      syscall              <span class="cm"># hand control back to the system</span>
+
+<span class="dir">      .data</span>                <span class="cm"># everything below here is data</span>
+<span class="lbl">value:</span> .word 12            <span class="cm"># a 32-bit integer, initialised to 12</span></div>
+
+      <h3>The three directives</h3>
+
+      <p>Lines beginning with a dot are not instructions. They are <strong>directives</strong> &mdash; messages to the assembler about how to lay the program out, rather than things the processor executes.</p>
+
+      <table>
+        <thead><tr><th>Directive</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>.text</code></td>
+            <td>Everything after this is <strong>code</strong>. The assembler puts it in the part of memory where instructions live.</td>
+          </tr>
+          <tr>
+            <td><code>.data</code></td>
+            <td>Everything after this is <strong>data</strong>. Variables, constants, strings.</td>
+          </tr>
+          <tr>
+            <td><code>.globl main</code></td>
+            <td>Makes the label <code>main</code> visible outside this file, so the system knows where to start.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Leave out <code>.globl main</code> and things get strange</div>
+        <p>Some simulators start at the first instruction regardless and it appears to work. Others refuse to run at all. Neither is a bug &mdash; without <code>.globl</code> you have not said where the program starts, so the behaviour is whatever that particular tool does about it.</p>
+        <p>Write it. It is one line, it is what every real MIPS program has, and the failures it prevents are the confusing sort.</p>
+      </div>
+
+      <h3>Comment every executable line</h3>
+
+      <p>Not a style suggestion &mdash; a course expectation, and it is graded. A comment starts with <code>#</code> and runs to the end of the line.</p>
+
+      <p>The reason is specific to assembly rather than general good practice. A line of C says what it is doing. A line of MIPS says what the processor is doing, which is often three steps removed from what <em>you</em> are doing. <code>add $t4, $t2, $t3</code> is perfectly clear about adding two registers, and tells you nothing about why. Six months from now &mdash; or on Wednesday &mdash; the comment is the only record of the intent.</p>
+
+      <h3>What each instruction does</h3>
+
+      <div class="snip">li   $t2, 25         # load the constant 25 into $t2</div>
+
+      <p><strong>Load immediate.</strong> Puts a constant straight into a register. After this line, <code>$t2</code> holds 25.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title"><code>li</code> is not a real instruction</div>
+        <p>Go back to the three formats on the previous page and try to find <code>li</code> in them. It is not there, and it is not in the reference tables either.</p>
+        <p><strong>It is a pseudo-instruction</strong> &mdash; something the assembler accepts for your convenience and then translates. <code>li $t2, 25</code> usually becomes:</p>
+        <div class="snip">addi $t2, $zero, 25</div>
+        <p>Which is a real I-type instruction, and it works for a specific reason you learned two pages ago: <strong><code>$zero</code> always reads as 0</strong>, so adding a constant to it yields the constant. A hardwired zero plus an existing instruction format, and no new hardware needed.</p>
+        <p><strong>Go and look.</strong> MARS shows you the substitution. Assemble the program and look at the listing &mdash; the source column shows what you typed and the code column shows what the processor actually gets. It is the clearest demonstration in the course that assembly language and machine code are not the same thing.</p>
+      </div>
+
+      <div class="snip">lw   $t3, value      # load the word stored at 'value' into $t3</div>
+
+      <p><strong>Load word.</strong> Goes to memory, reads 32 bits from the address labelled <code>value</code>, and puts them in <code>$t3</code>. After this line <code>$t3</code> holds 12.</p>
+
+      <p>This is the load half of <em>load/store</em> &mdash; the RISC property from two pages back. The value has to come into a register before anything can compute with it. How the address is worked out, and what your own RAM circuit will do about it, is Week 8.</p>
+
+      <div class="snip">add  $t4, $t2, $t3   # $t4 = $t2 + $t3
+sub  $t5, $t2, $t3   # $t5 = $t2 - $t3</div>
+
+      <p><strong>The arithmetic.</strong> Both R-type, both taking two registers and writing a third. 25 + 12 = 37 into <code>$t4</code>; 25 &minus; 12 = 13 into <code>$t5</code>.</p>
+
+      <p>You can encode both of these by hand now. It is worth doing for one of them, then checking against what MARS produces.</p>
+
+      <div class="snip">li   $v0, 10         # syscall code 10 means "exit"
+syscall              # hand control back to the system</div>
+
+      <p><strong>The system call.</strong> <code>syscall</code> is a request to the system for something the program cannot do itself. Which service you want goes in <code>$v0</code> first &mdash; 10 is "exit."</p>
+
+      <p>A program without this does not end; it runs off the bottom of your code into whatever happens to be in memory next. Always finish with it.</p>
+
+      <p>Other useful codes, for when you want output: <strong>1</strong> prints the integer in <code>$a0</code>, <strong>4</strong> prints the string at the address in <code>$a0</code>, <strong>5</strong> reads an integer into <code>$v0</code>. <em>How</em> a syscall actually works &mdash; what the hardware does when it sees one &mdash; is Week 12.</p>
+
+      <h3>Run it, and then run it slowly</h3>
+
+      <ol class="logisim-steps">
+        <li>Open MARS and type the program into a new file. Save it as <code>week5.asm</code>.</li>
+        <li><strong>Assemble</strong> it (Run &rarr; Assemble, or F3). Errors appear at the bottom with line numbers; fix them before continuing.</li>
+        <li>Look at the <strong>Text Segment</strong> pane. Every line of your program is there with its 32-bit encoding beside it. <strong>Find the line that came from <code>li</code></strong> and see what it turned into.</li>
+        <li><strong>Run</strong> it (F5). It finishes immediately and says the program exited.</li>
+        <li>Now <strong>reset</strong> (F12) and use <strong>single step</strong> (F7) instead. One instruction per press.</li>
+        <li>Watch the <strong>Registers</strong> pane on the right as you step. Changed values are highlighted.</li>
+      </ol>
+
+      <p>Step through the whole thing and you should see this:</p>
+
+      <table class="regwatch">
+        <caption class="sr-only">The register values after each instruction of the sample program.</caption>
+        <thead><tr><th>After this line</th><th>Register</th><th>Holds</th></tr></thead>
+        <tbody>
+          <tr><td><code>li $t2, 25</code></td><td>$t2</td><td>25</td></tr>
+          <tr><td><code>lw $t3, value</code></td><td>$t3</td><td>12</td></tr>
+          <tr><td><code>add $t4, $t2, $t3</code></td><td>$t4</td><td>37</td></tr>
+          <tr><td><code>sub $t5, $t2, $t3</code></td><td>$t5</td><td>13</td></tr>
+          <tr><td><code>li $v0, 10</code></td><td>$v0</td><td>10</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Look at that pane again</div>
+        <p>Thirty-two rows. Each one a value that persists until something deliberately changes it, updated when an instruction says to write there and left alone otherwise.</p>
+        <p><strong>Each row is the circuit sitting in your <code>.circ</code> file.</strong> Thirty-two cells wide instead of eight, and otherwise the same device &mdash; a shared write line, an output stage that can let go, a byte captured at one moment.</p>
+        <p>When <code>add $t4, $t2, $t3</code> executes, two registers put their contents on internal wires and a third one has its write line raised. That is <code>e</code>, <code>e</code>, and <code>s</code>. You built all three this week.</p>
+      </div>
+
+      <h3>Going further</h3>
+
+      <p>Two outside resources, both worth having:</p>
+
+      <ul>
+        <li><a href="https://github.com/dpetersanderson/MARS" target="_blank" rel="noopener">The MARS repository</a> &mdash; the current source and downloads, from the simulator's maintainer.</li>
+        <li><a href="https://www.youtube.com/playlist?list=PL5b07qlmA3P6zUdDf-o97ddfpvPFuNa5A" target="_blank" rel="noopener">MIPS Assembly using MARS</a> &mdash; a video playlist by Amell Peralta. Short, practical, and it covers the tool as well as the language.</li>
+      </ul>
+    </section>
+
+    <!-- ============================================================
+         5.9
+         ============================================================ -->
+    <section id="sec-5-9">
+      <h2>5.9 &nbsp; Synthesis: Two Halves of One Machine</h2>
+
+      <p>Three new tabs in your <code>.circ</code> file:</p>
+
+      <ul>
+        <li><code>MEM_8BIT</code> &mdash; eight of last week's cells, one write line.</li>
+        <li><code>ENABLE_8BIT</code> &mdash; the output stage that can be silent.</li>
+        <li><code>REGISTER_8BIT</code> &mdash; <strong>the component four other things in your finished CPU are copies of.</strong></li>
+      </ul>
+
+      <p>And a program that assembled, ran, and moved numbers between registers you can name.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">The idea worth keeping</div>
+        <p><strong>Storing a value and putting it where others can see it are two different acts, needing two different controls &mdash; and the second one requires a device that can be silent.</strong></p>
+        <p>Almost everything about how a CPU moves data follows from that. The bus exists because dedicated wires do not scale. Tri-state exists because a bus needs devices that can be absent. The four-step transfer exists because a level-sensitive register is transparent while it is being written. The clock exists because something has to produce those four steps in that order, forever.</p>
+        <p>Pull any one of those threads and the others come with it.</p>
+      </div>
+
+      <h3>What happens next</h3>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Week 6</div>
+        <p><strong>A register holds a value. It cannot change one. Next week you build the circuit that can &mdash; and every arithmetic instruction you just learned to encode is a request to that circuit.</strong></p>
+      </div>
+
+      <p>The ALU. It is built around the 8-bit adder you finished in Week 3, with a decoder from the same week selecting which of seven operations reaches the output &mdash; and <strong>each of those seven operation paths drives the output through an <code>ENABLE_8BIT</code>, the circuit you built this week.</strong> Three weeks of components, wired together into the part of the machine that actually computes.</p>
+
+      <p>On the software side, Week 6 is the arithmetic and logic instructions in earnest: what <code>add</code>, <code>sub</code>, <code>and</code>, <code>or</code> and <code>slt</code> do, and writing programs that use them rather than encoding them by hand.</p>
+
+      <p>The two tracks stay side by side through Week 8, and then they meet.</p>
+
+      <h3>Before you go</h3>
+
+      <p><strong>Assignment 5</strong> is 100 points and about two and a half hours. Four parts: the three circuits (Logisim Checkpoint 1), three written questions on storing and speaking, seven encoding and decoding problems, and a screenshot of this program running.</p>
+
+      <p><strong>Lab 5 is Tuesday, and it is the first lab that does not finish in the room.</strong> Expect to complete and test the register on your own afterwards. Start the Logisim half early enough that you can ask about it before the week ends.</p>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+</body>
+</html>

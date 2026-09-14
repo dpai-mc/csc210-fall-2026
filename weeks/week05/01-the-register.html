@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w5-01">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 5: A Byte That Holds, and Knows When to Speak</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ----------
+       Everything here is specific to this page's three widgets or to the
+       two-up figure block. The multi-bit displays reuse the existing
+       .bit-row / .bus-bit components rather than redefining them. */
+
+    /* The 5.3 evidence pair. These two screenshots ARE the argument of
+       the section -- same circuit, one component different, and the
+       difference is legible in the output pin -- so they must stay side
+       by side wherever there is room for them. */
+    .figure-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin: var(--space-md) 0; }
+    .figure-pair > figure { margin: 0; min-width: 0; border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm); background: var(--color-surface); }
+    .figure-pair img { display: block; width: 100%; height: auto; border-radius: var(--radius); }
+    .figure-pair figcaption { font-size: var(--fs-sm); color: var(--color-text-muted); margin-top: var(--space-sm); }
+    .figure-pair .verdict { display: block; font-family: var(--font-mono); font-weight: 700; font-size: var(--fs-md); margin-bottom: var(--space-xs); }
+    .figure-pair .verdict--driving { color: var(--color-danger); }
+    .figure-pair .verdict--float { color: var(--color-success); }
+    @media (max-width: 700px) { .figure-pair { grid-template-columns: 1fr; } }
+
+    /* Widget layout */
+    .bench-row { display: flex; flex-wrap: wrap; gap: var(--space-lg); align-items: flex-start; margin: var(--space-md) 0; }
+    .bench-col { flex: 1 1 240px; min-width: 0; }
+    .bench-col h4 { margin: 0 0 var(--space-xs); font-size: var(--fs-sm); color: var(--color-text-muted); font-weight: 700; }
+    .ctl-stack { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; }
+
+    .pin-out { display: flex; align-items: center; gap: var(--space-sm); margin: var(--space-sm) 0; flex-wrap: wrap; }
+    .pin-out__name { font-family: var(--font-mono); font-weight: 700; min-width: 3.2em; }
+    .pin-out__note { font-size: var(--fs-xs); color: var(--color-text-muted); }
+    .bus-bit--float { border-style: dashed; color: var(--color-text-muted); background: transparent; }
+    .bus-bit--err { border-color: var(--color-danger); color: var(--color-danger); background: #fdf2f2; }
+
+    /* The shared-wire drawing for widgets 2 and 3. Deliberately schematic
+       and tiny: 2Registers.png is the real figure, and this is the same
+       picture made pokeable. */
+    .bus-diagram { width: 100%; height: auto; display: block; margin: var(--space-sm) 0; }
+    .bus-diagram .bus-line { stroke: var(--color-text); stroke-width: 6; }
+    .bus-diagram .bus-line--driven { stroke: var(--color-success); }
+    .bus-diagram .bus-line--float { stroke: var(--color-border); stroke-dasharray: 8 6; }
+    .bus-diagram .bus-line--err { stroke: var(--color-danger); }
+    .bus-diagram .reg-box { fill: var(--color-surface); stroke: var(--color-text); stroke-width: 2; }
+    .bus-diagram .reg-box--on { stroke: var(--color-success); stroke-width: 3; }
+    .bus-diagram .reg-label { font-family: var(--font-mono); font-size: 15px; fill: var(--color-text); }
+    .bus-diagram .stub { stroke: var(--color-text-muted); stroke-width: 2; }
+    .bus-diagram .stub--on { stroke: var(--color-success); stroke-width: 3; }
+
+    .verdict-line { font-size: var(--fs-sm); padding: var(--space-sm) var(--space-md); border-radius: var(--radius); border-left: 4px solid var(--color-border); background: var(--color-surface); margin: var(--space-sm) 0; }
+    .verdict-line--ok   { border-left-color: var(--color-success); }
+    .verdict-line--warn { border-left-color: var(--color-warning); }
+    .verdict-line--err  { border-left-color: var(--color-danger); }
+
+    .step-list { list-style: none; padding: 0; margin: var(--space-sm) 0; display: grid; gap: var(--space-xs); }
+    .step-list li { display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap; }
+    .step-list__n { font-family: var(--font-mono); font-weight: 700; color: var(--color-text-muted); }
+    .step-list__done { color: var(--color-success); font-weight: 700; }
+
+    /* The waveform SVG has a 640-unit viewBox. Without this it keeps its
+       intrinsic width and pushes the page sideways on a narrow screen. */
+    #w3-wf { width: 100%; height: auto; max-width: 100%; display: block; }
+
+    .nest-ok   { color: var(--color-success); font-weight: 700; }
+    .nest-bad  { color: var(--color-danger);  font-weight: 700; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 5 &rsaquo; <span>Page 1: A Byte That Holds, and Knows When to Speak</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>A Byte That Holds, and Knows When to Speak</h1>
+    <p><strong>Sections 5.1 &ndash; 5.4</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~2.25 hours</p>
+
+    <!-- ============================================================
+         5.1
+         ============================================================ -->
+    <section id="sec-5-1">
+      <h2>5.1 &nbsp; From One Bit to Eight</h2>
+
+      <p>Last week closed on a sentence, and it is worth repeating exactly:</p>
+
+      <blockquote>Eight of these memory cells, wired in parallel with a shared <code>Set</code> line, become a register.</blockquote>
+
+      <p>That is the whole step. Not a simplification of it &mdash; the whole thing. You are about to spend twenty minutes on what is arguably the most important component in your CPU, and the reason it takes twenty minutes is that you spent last week building the hard part.</p>
+
+      <h3>What a byte needs that eight bits do not</h3>
+
+      <p>Eight <code>MEM_1BIT</code> cells sitting near each other are eight bits. They become a <em>byte</em> when one decision writes all eight at the same instant.</p>
+
+      <p>That is what the shared line does. <strong>One</strong> <code>s</code> input, fanned out to all eight <code>Set</code> pins, so there is no arrangement of controls in which three cells have been updated and five have not. Either the byte was written or it was not.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">This is replication, not invention</div>
+        <p>There is no new gate on this page. No new idea. Eight instances of a component that already exists in your file, and one wire reaching all of them.</p>
+        <p>That is exactly what <em>"circuits are components for the final project, not disposable exercises"</em> was for. Week 4 built a component. Week 5 spends it. Every week from here does more of this and less gate-wiring, which is what building up an abstraction feels like from the inside.</p>
+      </div>
+
+      <div class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/CPU_MEM_8.png" loading="lazy"
+             alt="The 8-bit memory circuit in Logisim. An 8-bit input pin labelled i on the upper left feeds a splitter, which fans out into eight separate wires. Each wire goes to the In input of one of eight subcircuit blocks labelled CPU MEM 1, stacked vertically. A single input pin labelled s at the bottom runs upward and branches to the Set input of all eight blocks. The eight block outputs run right into a second splitter that recombines them into an 8-bit output pin labelled o at the upper right.">
+        <div class="circuit-canvas__caption">The 8-bit memory circuit. Click to enlarge. Note the single <code>s</code> wire at the bottom branching to all eight cells &mdash; that one wire is what makes this a byte.</div>
+      </div>
+
+      <h3>The splitter, and why an 8-bit wire is not a different kind of wire</h3>
+
+      <p>You met splitters in Lab 2 as a tidiness tool. This is their first structural use, and the idea behind them is worth stating plainly: <strong>an 8-bit wire and eight 1-bit wires are the same eight wires, drawn differently.</strong> A splitter is not a component that does anything; it is a notation for bundling and unbundling.</p>
+
+      <p>Which is why the input pin is a single 8-bit pin rather than eight separate ones. The byte enters as one object because that is what it is.</p>
+
+      <div class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/mem-8-bit.png" loading="lazy"
+             alt="The edited circuit appearance for the 8-bit memory block: a tall rectangle labelled CPU MEM 8, with the input pin i on the left edge, the output pin o on the right edge, and the set pin s on the bottom edge.">
+        <div class="circuit-canvas__caption">Its edited appearance. Two minutes of work here is what makes the next circuit readable.</div>
+      </div>
+
+      <p>One thing this circuit cannot do, and it is the subject of the rest of the page: <strong>its output is always driven.</strong> Whatever is stored is on the output pin, continuously, with no way to say <em>not now</em>. That is fine while it is the only thing in the room.</p>
+    </section>
+
+    <!-- ============================================================
+         5.2
+         ============================================================ -->
+    <section id="sec-5-2">
+      <h2>5.2 &nbsp; Getting the Byte Back Out</h2>
+
+      <p>There is an asymmetry between writing and reading that is easy to miss, and everything on the rest of this page comes out of it.</p>
+
+      <ul>
+        <li><strong>Writing is addressed.</strong> A <code>s</code> line runs to exactly one register and nowhere else. Raising it affects that register and nothing in the machine notices.</li>
+        <li><strong>Reading is not.</strong> A value read out of a register has to <em>go</em> somewhere &mdash; and in this machine, everything goes to the same place.</li>
+      </ul>
+
+      <p>So reading needs a control of its own. Week 4 named this pair already: <strong>storing and speaking are two different controls, and you have built the first one.</strong> This is the second.</p>
+
+      <h3>Deriving the enable stage</h3>
+
+      <p>We want a stage between the stored byte and the outside world that either passes the byte through or does not, under one control. Take each bit and AND it with a control line <code>e</code>:</p>
+
+      <ul>
+        <li><code>e</code> = 1 &mdash; the AND gate's output is whatever the bit is. The byte passes.</li>
+        <li><code>e</code> = 0 &mdash; every AND gate outputs 0. The output is <code>00000000</code>.</li>
+      </ul>
+
+      <p>Eight AND gates, one shared control. Same shape as the memory circuit: splitter, eight identical things, one line reaching all of them, splitter.</p>
+
+      <div class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/CPU_ENABLE_8.png" loading="lazy"
+             alt="The 8-bit enable circuit in Logisim, first version. An 8-bit input pin i on the left feeds a splitter into eight wires. Each wire is one input to an AND gate; the other input of every AND gate comes from a single 1-bit input pin labelled e at the bottom, whose wire branches upward to all eight gates. The eight AND outputs recombine through a splitter into an 8-bit output pin o on the right.">
+        <div class="circuit-canvas__caption">The enable stage, first version: eight AND gates on a shared control. Click to enlarge.</div>
+      </div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">This works perfectly, right up until a second register is connected to the same wire</div>
+        <p>Do not fix it yet. Section 5.3 is about what goes wrong, and the answer is more interesting than the problem.</p>
+      </div>
+
+      <h3>Two controls, two names</h3>
+
+      <p>Your register now has two 1-bit inputs and it is worth being pedantic about which is which, because conflating them is the predictable mistake:</p>
+
+      <table>
+        <thead><tr><th>Pin</th><th>Does</th><th>Direction</th></tr></thead>
+        <tbody>
+          <tr><td><code>s</code> &mdash; <strong>set</strong></td><td>writes what is on the input <em>into</em> the memory</td><td>in</td></tr>
+          <tr><td><code>e</code> &mdash; <strong>enable</strong></td><td>reads what is stored <em>out</em> of the memory</td><td>out</td></tr>
+        </tbody>
+      </table>
+
+      <p>Dave's own note from when this was first built: <em>"we renamed what was 'enable' to 'set' &mdash; it allows us to 'Set' what is stored and then we can 'Enable' our output circuit to get what is stored."</em> Two different jobs, two different names, and the rename happened precisely because one word doing both jobs was causing errors.</p>
+    </section>
+
+    <!-- ============================================================
+         WIDGET 1
+         ============================================================ -->
+    <section id="widget-1">
+      <div class="widget-card">
+        <div class="widget-card__title">The Register Bench</div>
+        <div class="widget-card__subtitle">Build it up a stage at a time. Set a byte, let go, and watch it stay.</div>
+
+        <div class="preset-row" role="group" aria-label="Which stage of the circuit to show">
+          <button type="button" class="widget-btn widget-btn--small" data-stage="1" aria-pressed="true">1 &middot; MEM_8BIT only</button>
+          <button type="button" class="widget-btn widget-btn--small" data-stage="2" aria-pressed="false">2 &middot; add the enable stage</button>
+          <button type="button" class="widget-btn widget-btn--small" data-stage="3" aria-pressed="false">3 &middot; the assembled register</button>
+        </div>
+
+        <div class="bench-row">
+          <div class="bench-col">
+            <h4><span class="sr-only">Input byte </span><code>i</code> &mdash; click a bit to flip it</h4>
+            <div class="bit-row" id="w1-input" role="group" aria-label="Input byte, most significant bit first"><!-- eight <button role="button"> bit cells are built here by script --></div>
+
+            <h4 style="margin-top:var(--space-md);">Controls</h4>
+            <div class="ctl-stack">
+              <button type="button" class="input-switch" id="w1-s" aria-pressed="false">s = 0</button>
+              <button type="button" class="input-switch" id="w1-e" aria-pressed="false" hidden>e = 0</button>
+            </div>
+          </div>
+
+          <div class="bench-col">
+            <h4>Outputs</h4>
+            <div class="pin-out" id="w1-reg-row" hidden>
+              <span class="pin-out__name">reg</span>
+              <div class="bit-row" id="w1-reg" role="group" aria-label="The reg monitor output"></div>
+            </div>
+            <div class="pin-out__note" id="w1-reg-note" hidden>always shows what is stored, whatever <code>e</code> is doing</div>
+
+            <div class="pin-out">
+              <span class="pin-out__name" id="w1-o-name">o</span>
+              <div class="bit-row" id="w1-o" role="group" aria-label="The output"></div>
+            </div>
+            <div class="pin-out__note" id="w1-o-note"></div>
+          </div>
+        </div>
+
+        <div class="preset-row" role="group" aria-label="Demonstrations">
+          <button type="button" class="preset-btn" data-preset="store">Store 10101010</button>
+          <button type="button" class="preset-btn" data-preset="release">Release s, then change the input</button>
+          <button type="button" class="preset-btn" data-preset="read" hidden id="w1-preset-read">Read it out</button>
+          <button type="button" class="preset-btn" data-preset="stop" hidden id="w1-preset-stop">Stop driving</button>
+        </div>
+
+        <div class="verdict-line" id="w1-status" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         5.3
+         ============================================================ -->
+    <section id="sec-5-3">
+      <h2>5.3 &nbsp; The Bus, and Knowing When to Let Go</h2>
+
+      <p>A CPU has many registers, and they spend their whole lives handing values to each other. The obvious way to arrange that is a dedicated path from every register to every other register &mdash; which needs <em>n</em>&nbsp;&times;&nbsp;(<em>n</em>&nbsp;&minus;&nbsp;1) sets of eight wires and stops being buildable somewhere around three registers.</p>
+
+      <p>So machines do the other thing. <strong>One set of wires that everybody shares.</strong> It is called a <em>bus</em>.</p>
+
+      <div class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/2Registers.png" loading="lazy"
+             alt="A simple block diagram: a thick horizontal line across the top labelled BUS. Two square blocks hang below it, labelled R1 and R2, each connected upward to the bus line. Each block has two short wires leading down from it, labelled s and e.">
+        <div class="circuit-canvas__caption">Two registers, one shared set of wires. Each has an <code>s</code> and an <code>e</code>. This is the whole picture, and the next several paragraphs are about one question it raises.</div>
+      </div>
+
+      <p>Which raises the question. If both registers are permanently wired to the same lines, <strong>what does the wire carry?</strong></p>
+    </section>
+
+    <!-- ============================================================
+         WIDGET 2
+         ============================================================ -->
+    <section id="widget-2">
+      <div class="widget-card">
+        <div class="widget-card__title">Drive Zero, or Let Go</div>
+        <div class="widget-card__subtitle">Two registers, one bus, and three different ideas of what "silent" means.</div>
+
+        <div class="preset-row" role="group" aria-label="What the output stage is built from">
+          <button type="button" class="widget-btn widget-btn--small" data-mode="and" aria-pressed="false">AND gates only</button>
+          <button type="button" class="widget-btn widget-btn--small" data-mode="buffer" aria-pressed="true">Controlled buffers</button>
+          <button type="button" class="widget-btn widget-btn--small" data-mode="both" aria-pressed="false">As built &mdash; AND <em>and</em> buffers</button>
+        </div>
+
+        <svg class="bus-diagram" id="w2-svg" viewBox="0 0 480 210" role="img"
+             aria-labelledby="w2-svg-title w2-svg-desc">
+          <title id="w2-svg-title">Two registers on a shared bus</title>
+          <desc id="w2-svg-desc">A horizontal bus line with one or two register blocks connected to it. The line's appearance changes with the state of the bus, which is also stated in words below the diagram.</desc>
+        </svg>
+
+        <div class="pin-out">
+          <span class="pin-out__name">bus</span>
+          <div class="bit-row" id="w2-bus" role="group" aria-label="What the bus is carrying"></div>
+        </div>
+
+        <div class="bench-row">
+          <div class="bench-col">
+            <h4>R1 &mdash; holds <code>10101010</code></h4>
+            <button type="button" class="input-switch" id="w2-e1" aria-pressed="false">e = 0</button>
+          </div>
+          <div class="bench-col">
+            <h4>R2 &mdash; holds <code>01010101</code></h4>
+            <button type="button" class="input-switch" id="w2-e2" aria-pressed="false">e = 0</button>
+            <div style="margin-top:var(--space-sm);">
+              <button type="button" class="widget-btn widget-btn--small widget-btn--outline" id="w2-connect" aria-pressed="true">R2 is connected to the bus</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="verdict-line" id="w2-status" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section id="sec-5-3-tristate">
+      <h3>The third state</h3>
+
+      <p>Every wire in this course so far has carried a 0 or a 1. A <strong>controlled buffer</strong> has a third option, and it is not a third value: <em>not driving at all.</em> No voltage asserted, the wire left to whatever else is connected to it. Logisim draws it as <code>x</code>.</p>
+
+      <p>That is a strange thing the first time you meet it, so be precise about it: <code>x</code> is not a value the register is outputting. It is the <strong>absence</strong> of the register outputting anything.</p>
+
+      <h3>Why "drive 0" is not good enough</h3>
+
+      <p>Here is the argument, and it is worth following rather than accepting. Put two registers on one wire.</p>
+
+      <p><strong>Suppose "silent" means driving <code>00000000</code>.</strong> R1 wants to put <code>10101010</code> on the bus. R2 is silent &mdash; which is to say, R2 is driving eight zeros. Look at the top bit: R1 is asserting 1 and R2 is asserting 0, on the same wire, at the same time.</p>
+
+      <p>There is no rule of logic that resolves that. It is not an OR, it is not an AND, and nothing arbitrates. In Logisim it shows as an error. In real hardware it is a short circuit between two output stages, one pulling the wire high and one pulling it low, and the current goes somewhere. <strong>Neither register wins. Both are wrong, and one of them may not survive it.</strong></p>
+
+      <p><strong>Now suppose "silent" means not driving.</strong> R2 lets go. Exactly one device is asserting anything, and the wire carries what R1 put there. R1 finishes, lets go, and R2 can have a turn.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">A shared wire needs devices that can be absent from it</div>
+        <p>AND gates cannot be absent. An AND gate always drives its output; that is what a gate is.</p>
+        <p>So a bus needs something in the output stage that is <em>not a logic gate</em> &mdash; a device whose job is to be able to disconnect. That is the entire reason the controlled buffer exists, and the entire reason Logisim's <strong>Gates</strong> folder contains something that does not compute a logic function.</p>
+      </div>
+
+      <h3>The same circuit, twice, with one component different</h3>
+
+      <p>These are two screenshots of the same register, built by your instructor, a few minutes apart. Look at the output pin on the right of each one.</p>
+
+      <div class="figure-pair">
+        <figure>
+          <img class="zoomable" src="images/8_BIT_REG.png" loading="lazy"
+               alt="An 8-bit register in Logisim built from two subcircuit blocks, CPU MEM 8 and CPU ENABLE 8, wired in series with an 8-bit input pin on the left and control pins s and e below. There is no buffer in the output path. The output pin on the right reads 00000000.">
+          <figcaption>
+            <span class="verdict verdict--driving">o = 00000000</span>
+            No buffer. The enable stage is eight AND gates, so with <code>e</code> = 0 the register is <strong>driving eight zeros</strong> onto the bus. It is asserting. It will fight.
+          </figcaption>
+        </figure>
+        <figure>
+          <img class="zoomable" src="images/register-8-bit-circuit.png" loading="lazy"
+               alt="The same 8-bit register in Logisim, with a controlled buffer added between the CPU ENABLE 8 block's output and the 8-bit output pin. A separate output pin labelled REG taps the memory block's output directly. The main output pin on the right reads xxxxxxxx.">
+          <figcaption>
+            <span class="verdict verdict--float">o = xxxxxxxx</span>
+            With the buffer. With <code>e</code> = 0 the register is <strong>not driving at all</strong>. It has let go, and someone else may speak.
+          </figcaption>
+        </figure>
+      </div>
+
+      <p>One component different, and the difference is readable straight off the output pin without a word of explanation. <strong>The second one is the register this course builds.</strong></p>
+
+      <div class="callout callout--warn">
+        <div class="callout__title"><code>xxxxxxxx</code> is the correct answer</div>
+        <p>When you build this and the output shows <code>x</code>s with <code>e</code> at 0, that is the circuit working. It is not an error, it is not a missing wire, and it does not need fixing.</p>
+        <p>Students delete the buffers over this every year. Do not be one of them.</p>
+      </div>
+
+      <h3>Could you build one from gates?</h3>
+
+      <p>Standards for this course say you build your components from primitives rather than dropping in finished ones, so it is fair to ask why this is an exception. The honest answer is more interesting than a circuit diagram would be:</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">You cannot build a tri-state output from AND, OR and NOT</div>
+        <p>Every one of those gates always drives its output. There is no combination of them that produces "not driving," because not-driving is not a logic value they can compute.</p>
+        <p>The third state is a <strong>physical</strong> property of an output stage, not a logic level: two transistors, one pulling the wire toward high and one pulling it toward low, and a control input that switches <em>both of them off</em> so the wire is connected to neither. On a real chip, that is what an output-enable pin does.</p>
+        <p><strong>This is the second time this course has met the edge of what gates alone can do.</strong> The first was last week: no combinational arrangement of gates can remember, so memory needed feedback rather than more gates. Here: no arrangement of gates can be silent, so a bus needs a different kind of output stage rather than more gates.</p>
+        <p>Both are places where the abstraction runs out and the physics shows through. They are worth noticing as such &mdash; a lot of engineering is knowing where your building blocks stop.</p>
+      </div>
+
+      <p>Which is why the controlled buffer is <strong>permitted</strong>. It is a primitive, like a NAND gate, and it lives in the Gates folder for that reason. You may place it freely.</p>
+    </section>
+
+    <!-- ============================================================
+         5.3b — nine buffers
+         ============================================================ -->
+    <section id="sec-5-3b">
+      <h3>Nine buffers, and why</h3>
+
+      <p>Here is the enable stage as you will actually build it: the eight AND gates from section 5.2, each one now feeding a controlled buffer, and every buffer's control tied to the same <code>e</code>.</p>
+
+      <div class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/2021-05-11_RegWithEnable.png" loading="lazy"
+             alt="The 8-bit enable circuit with buffers added. An 8-bit input pin on the left splits into eight wires, each going to one AND gate. The e input at the bottom branches to the second input of all eight AND gates and also to the control input of eight small triangular controlled buffers, one on each AND gate's output. The buffer outputs recombine through a splitter into the 8-bit output pin.">
+        <div class="circuit-canvas__caption"><code>ENABLE_8BIT</code> as built: eight AND gates and eight controlled buffers, all on one <code>e</code>. Click to enlarge.</div>
+      </div>
+
+      <p>And the assembled register adds <strong>one more</strong> &mdash; a ninth buffer, eight bits wide, on the way out, also controlled by <code>e</code>. You can see it in the right-hand screenshot above.</p>
+
+      <p>Now do the analysis, because it is worth doing before you are told the answer.</p>
+
+      <div class="callout callout--note">
+        <div class="callout__title">On paper, most of this does nothing</div>
+        <p><strong>The AND stage.</strong> With <code>e</code> = 0 the buffers are off, so nothing downstream can see what the AND gates produced. With <code>e</code> = 1 the AND gates pass their inputs through unchanged. In neither case does the AND stage determine the output. It never does.</p>
+        <p><strong>The ninth buffer.</strong> The eight inside the enable circuit have already floated every bit. A buffer after them, on the same control line, has nothing left to do.</p>
+        <p>By that reasoning, the whole output stage could be eight buffers and nothing else.</p>
+      </div>
+
+      <p>It cannot.</p>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Built with eight, the simulation misbehaves</div>
+        <p>Not a wrong answer &mdash; an unreliable one. Your instructor built it both ways, and the ninth buffer is what makes it behave. That is a property of <strong>Logisim Classic 2.7.1</strong>, not of the design.</p>
+        <p>This is worth stopping on, because it is a real thing and it will happen to you again.</p>
+        <p>A simulator is a <em>model</em> of a circuit, and every model is approximate somewhere. Logisim works out what a shared wire carries by examining what every connected component is driving, and the details of how it does that &mdash; particularly with several buffers meeting at a splitter &mdash; are not physics. They are one program's implementation of physics. Most of the time you will never notice the difference. Here you would.</p>
+        <p><strong>The rule this leaves you with is not a course rule, it is an engineering one:</strong> when your analysis and your tool disagree, do not assume either one is simply wrong. Find out which. Here the analysis is right about the electronics and the tool is right about what will actually run &mdash; and the design that ships has to satisfy both.</p>
+      </div>
+
+      <p>So: build all nine. And know why each part is there, which is more than "because the instructions said so."</p>
+    </section>
+
+    <!-- ============================================================
+         5.3 step 4 — the four-step transfer
+         ============================================================ -->
+    <section id="sec-5-3-transfer">
+      <h3>What decides when each line goes up</h3>
+
+      <p>You now have two controls per register and several registers on a bus. Something has to raise and drop those lines in a sensible order. Here is the order, for moving a byte from R1 to R2:</p>
+
+      <ol>
+        <li><strong>R1 <code>e</code> high</strong> &mdash; R1's byte is now on the bus.</li>
+        <li><strong>R2 <code>s</code> high</strong> &mdash; R2 takes it.</li>
+        <li><strong>R2 <code>s</code> low</strong> &mdash; R2 holds it.</li>
+        <li><strong>R1 <code>e</code> low</strong> &mdash; R1 stops driving.</li>
+      </ol>
+
+      <p>Four steps, and the order is not a matter of taste. Look at what the two signals do relative to each other:</p>
+
+      <div class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/RegisterTimingSetup.png" loading="lazy"
+             alt="A timing diagram with two rows. The top row, labelled R1 enable, is a wide pulse that goes high and stays high. The bottom row, labelled R2 set, is a narrower pulse that goes high after the enable pulse has already risen and goes low again before the enable pulse falls. The set pulse sits entirely inside the enable pulse, and the pattern repeats three times.">
+        <div class="circuit-canvas__caption">The whole content of this picture is the nesting: <strong>the <code>s</code> pulse sits strictly inside the <code>e</code> pulse.</strong></div>
+      </div>
+
+      <p>Why it has to be that way, in terms you already have: <code>MEM_1BIT</code> is <strong>transparent</strong> while its <code>Set</code> is high &mdash; last week, section 4.4. So whatever is on the bus <em>during</em> R2's <code>s</code> pulse is what R2 ends up holding. Nesting that pulse inside R1's <code>e</code> guarantees the bus is stable for the whole window and a moment either side.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">The same move as last week, one level up</div>
+        <p>Transparency is a genuine hazard. It is not fixed by a rule that says "be careful about when you raise <code>s</code>" &mdash; it is fixed by <strong>shaping the control signals so the bad case cannot arise</strong>.</p>
+        <p>That is exactly what last week did with the forbidden state: not a warning, a construction that makes it unreachable. Twice now, the engineering answer has been to design the problem out rather than to ask anyone to be careful. Watch for it happening again; it is most of what control design is.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         WIDGET 3
+         ============================================================ -->
+    <section id="widget-3">
+      <div class="widget-card">
+        <div class="widget-card__title">The Four-Step Transfer</div>
+        <div class="widget-card__subtitle">Move a byte from R1 to R2. Then try it in the wrong order and see what breaks.</div>
+
+        <div class="preset-row" role="group" aria-label="Mode">
+          <button type="button" class="widget-btn widget-btn--small" data-w3mode="guided" aria-pressed="true">Guided &mdash; correct order only</button>
+          <button type="button" class="widget-btn widget-btn--small" data-w3mode="free" aria-pressed="false">Free &mdash; any order you like</button>
+        </div>
+
+        <div class="bench-row">
+          <div class="bench-col">
+            <h4>R1 <span class="pin-out__note">(source)</span></h4>
+            <div class="pin-out"><span class="pin-out__name">holds</span>
+              <div class="bit-row" id="w3-r1" role="group" aria-label="The byte stored in R1"></div></div>
+          </div>
+          <div class="bench-col">
+            <h4>bus</h4>
+            <div class="pin-out"><span class="pin-out__name">&nbsp;</span>
+              <div class="bit-row" id="w3-bus" role="group" aria-label="What the bus is carrying"></div></div>
+          </div>
+          <div class="bench-col">
+            <h4>R2 <span class="pin-out__note">(destination)</span></h4>
+            <div class="pin-out"><span class="pin-out__name">holds</span>
+              <div class="bit-row" id="w3-r2" role="group" aria-label="The byte stored in R2"></div></div>
+          </div>
+        </div>
+
+        <ul class="step-list" id="w3-steps">
+          <li><span class="step-list__n">1</span><button type="button" class="widget-btn widget-btn--small widget-btn--outline" data-step="0">R1 <code>e</code> &rarr; high</button><span class="step-list__done" data-done="0" hidden>&check;</span></li>
+          <li><span class="step-list__n">2</span><button type="button" class="widget-btn widget-btn--small widget-btn--outline" data-step="1">R2 <code>s</code> &rarr; high</button><span class="step-list__done" data-done="1" hidden>&check;</span></li>
+          <li><span class="step-list__n">3</span><button type="button" class="widget-btn widget-btn--small widget-btn--outline" data-step="2">R2 <code>s</code> &rarr; low</button><span class="step-list__done" data-done="2" hidden>&check;</span></li>
+          <li><span class="step-list__n">4</span><button type="button" class="widget-btn widget-btn--small widget-btn--outline" data-step="3">R1 <code>e</code> &rarr; low</button><span class="step-list__done" data-done="3" hidden>&check;</span></li>
+        </ul>
+
+        <div class="ctl-stack" style="margin:var(--space-sm) 0;">
+          <button type="button" class="widget-btn widget-btn--small widget-btn--accent" id="w3-reset">Reset</button>
+          <span class="pin-out__note">R1 holds <code>10101010</code>; R2 starts holding <code>00001111</code>.</span>
+        </div>
+
+        <h4 style="margin-top:var(--space-md);">What you have driven, over time</h4>
+        <div class="waveform">
+          <svg class="waveform__plot" id="w3-wf" viewBox="0 0 640 150" role="img"
+               aria-label="A two-row timing diagram of the R1 enable and R2 set lines as you drive them. A text version follows.">
+          </svg>
+        </div>
+        <div class="sr-only" id="w3-wf-text" aria-live="polite"></div>
+
+        <div class="verdict-line" id="w3-status" role="status" aria-live="polite"></div>
+
+        <p class="pin-out__note" style="margin-top:var(--space-md);">Right now <em>you</em> are the clock. Something has to do this the same way every time, several million times a second &mdash; and in Week 11 you build the circuit that does.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         5.4
+         ============================================================ -->
+    <section id="sec-5-4">
+      <h2>5.4 &nbsp; Assembling <code>REGISTER_8BIT</code></h2>
+
+      <p>Memory circuit, enable circuit, one buffer, two control pins. That is the register.</p>
+
+      <div class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/register-8-bit-circuit.png" loading="lazy"
+             alt="The complete 8-bit register in Logisim. An 8-bit input pin i on the left feeds the CPU MEM 8 block, whose set pin s comes from an input pin below. The memory block's output goes two places: up to an 8-bit output pin labelled REG, and right into the CPU EN 8 block, whose enable pin e comes from a second input pin below. The enable block's output passes through an 8-bit controlled buffer, also driven by e, and then to the 8-bit output pin o on the right, which reads xxxxxxxx.">
+        <div class="circuit-canvas__caption">The assembled register. Note the wire going <em>up</em> from the memory block to a second output pin.</div>
+      </div>
+
+      <h3>The interface</h3>
+
+      <p>These pin names are the interface, and later weeks depend on them being exactly these. Week 13 wires a dozen of these blocks together, and a register whose pins are named differently from everyone else's is a register that does not fit.</p>
+
+      <div class="table-scroll">
+      <table class="pin-table">
+        <caption class="sr-only">The five pins of REGISTER_8BIT.</caption>
+        <thead>
+          <tr><th scope="col">Pin</th><th scope="col">Width</th><th scope="col">Direction</th><th scope="col">Position</th><th scope="col">What it does</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="pin-table__name">i</td><td>8</td><td>in</td><td>left</td><td>the byte to store</td></tr>
+          <tr><td class="pin-table__name">s</td><td>1</td><td>in</td><td>bottom</td><td>write control &mdash; while high, the stored byte follows <code>i</code></td></tr>
+          <tr><td class="pin-table__name">e</td><td>1</td><td>in</td><td>bottom</td><td>read control &mdash; while high, the register drives the bus</td></tr>
+          <tr><td class="pin-table__name">o</td><td>8</td><td>out</td><td>right</td><td>the bus port &mdash; driven only when <code>e</code> = 1</td></tr>
+          <tr><td class="pin-table__name">reg</td><td>8</td><td>out</td><td>top left</td><td>the stored byte, always visible, regardless of <code>e</code></td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h3>Two outputs, and why that is not redundant</h3>
+
+      <div class="callout callout--aha">
+        <div class="callout__title"><code>o</code> is polite. <code>reg</code> is honest.</div>
+        <p><code>o</code> is the <strong>bus port</strong>. It says nothing unless <code>e</code> says to, because it shares a wire with a dozen other things.</p>
+        <p><code>reg</code> is the <strong>test point</strong>. It is always live, it reaches no bus, and nothing downstream in the CPU consumes it. It exists so you can see what a register is holding without making it speak.</p>
+        <p>That distinction is this whole page in two pins: <strong>holding a value and putting it where others can see it are different acts.</strong></p>
+      </div>
+
+      <p>It is also the difference between a debuggable machine and an undebuggable one. In Weeks 13 and 14 you will be staring at a CPU that is doing almost the right thing and trying to find out where the value goes wrong. Without <code>reg</code>, the only way to look inside a register is to put it on the bus &mdash; which changes what the bus is carrying, which is the thing you were trying to observe.</p>
+
+      <p><strong>Every register in your finished CPU has one.</strong> Build it now.</p>
+
+      <h3>Circuit appearance &mdash; and one specific warning</h3>
+
+      <div class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/register-8-bit.png" loading="lazy"
+             alt="The edited circuit appearance for the 8-bit register: a tall rectangle labelled CPU REG 8, with the reg output pin at the top left, the i input pin on the left edge, the o output pin on the right edge, and two input pins labelled s and e side by side along the bottom edge.">
+        <div class="circuit-canvas__caption">The edited appearance. <code>s</code> and <code>e</code> sit next to each other along the bottom.</div>
+      </div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Label <code>s</code> and <code>e</code> on the block, and check them when you wire it</div>
+        <p>A circuit-appearance block's pin positions do not have to match the internal layout &mdash; you can put them wherever you like. That is convenient and it is a real source of miswiring.</p>
+        <p>You are going to place this block a dozen times over the next eight weeks, and <code>s</code> and <code>e</code> are two identical-looking 1-bit pins side by side on the same edge. Get them the wrong way round and your register will read out when it should write and write when it should read &mdash; with no error message anywhere.</p>
+      </div>
+
+      <h3>Where this component ends up</h3>
+
+      <p>Not a preview &mdash; a list of things in your finished CPU that <em>are</em> this circuit:</p>
+
+      <ul>
+        <li><strong>R0, R1, R2 and R3</strong>, the four working registers.</li>
+        <li><strong>The program counter</strong>, which holds the address of the instruction being fetched.</li>
+        <li><strong>The memory address register</strong>, which holds the address the CPU wants to read or write.</li>
+        <li><strong>The instruction register</strong>, which holds the instruction currently being executed.</li>
+      </ul>
+
+      <p>And every populated byte of your RAM, in Week 8, is made of the <code>MEM_1BIT</code> cells inside it.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Logisim Checkpoint 1</div>
+        <p>The three circuits on this page &mdash; <code>MEM_8BIT</code>, <code>ENABLE_8BIT</code> and <code>REGISTER_8BIT</code> &mdash; are <strong>Part A of Assignment 5</strong>, worth 50 of its 100 points. New tabs in the same <code>.circ</code> file you have been adding to since Week 2.</p>
+        <p>Lab 5 on Tuesday builds them with you. <strong>It is the first lab that does not finish in the room</strong> &mdash; expect to complete and test on your own afterwards.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         BUILD-ALONG VIDEO
+         ============================================================
+         PLACEHOLDER, DELIBERATELY. The recording exists -- jHjmNPDRk30,
+         Dave building this register -- and it is a good asset. It is NOT
+         embedded yet because Standards Section 10 requires an inlined,
+         click-to-seek VTT transcript on every embedded video, and the two
+         transcripts that exist for it are Google speech-to-text .txt
+         files (English and Spanish) that have not been converted.
+
+         To ship it: convert the transcripts, set VIDEO_ID below, paste
+         the English VTT into vttContent, and delete the notice block.
+         The Spanish transcript is the only bilingual asset in this
+         course and is worth the conversion on its own merits.
+         ============================================================ -->
+    <section id="sec-video">
+      <h2>Build-along video</h2>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Coming later this week</div>
+        <p>A screen recording of this register being built, start to finish, will be posted here later this week.</p>
+        <p><strong>Two things to know before you watch it.</strong> The circuit tabs are named <code>CPU MEM 8</code>, <code>CPU EN 8</code> and <code>CPU REG 8</code> in the recording; in your file they are <code>MEM_8BIT</code>, <code>ENABLE_8BIT</code> and <code>REGISTER_8BIT</code>. Same circuits, current names. And the enable stage is built in two passes &mdash; AND gates first, buffers added afterwards &mdash; so do not worry when the buffers are not there yet.</p>
+      </div>
+
+      <div class="video-breakout">
+        <div class="video-transcript-row">
+          <div class="video-col">
+            <div class="video-frame" id="video-container"></div>
+            <div class="video-caption">Closed captions available. Use the transcript panel to jump to any point in the video.</div>
+          </div>
+          <div class="transcript-col">
+            <h2 class="sr-only">Video transcript</h2>
+            <div class="transcript-panel" id="transcript-container" role="region" aria-live="polite"
+                 aria-label="Video transcript. Select a line to jump to that point in the video.">
+              <p class="transcript-loading">The video and its transcript will be posted later this week.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Forward
+         ============================================================ -->
+    <section id="sec-forward">
+      <h2>Where this goes next</h2>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Next: the week turns ninety degrees</div>
+        <p>You have a circuit that holds a byte. The next page is about the fact that the byte does not <em>mean</em> anything until something decides what it means &mdash; and about the agreement that decides it.</p>
+        <p>Then, on the page after, you will encode real instructions into real binary by hand. And somewhere in the middle, the two halves of this week meet: the thing MIPS calls <code>$t0</code> is the circuit you just built.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <!-- Click-to-enlarge overlay -->
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-labelledby="lightbox-caption">
+    <button type="button" class="lightbox__close" id="lightbox-close" aria-label="Close enlarged view">&times;</button>
+    <img class="lightbox__img" id="lightbox-img" src="" alt="">
+    <p class="lightbox__caption" id="lightbox-caption"></p>
+    <p class="lightbox__hint">Click anywhere or press Escape to close</p>
+  </div>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    var L = window.CSCLogic;
+    var SVG_NS = 'http://www.w3.org/2000/svg';
+
+    function el(id) { return document.getElementById(id); }
+    function W(s) { return s.split('').map(Number); }
+    function mk(tag, attrs) {
+      var e = document.createElementNS(SVG_NS, tag), k;
+      for (k in attrs) { if (attrs.hasOwnProperty(k)) { e.setAttribute(k, attrs[k]); } }
+      return e;
+    }
+
+    /* Render a byte into a .bit-row. `bits` may be an array, or null to
+       mean "nothing is being driven here", or the string 'conflict'.
+       Those three are visually and textually distinct on purpose: a
+       floating bus and a bus carrying zeros look nothing alike, and that
+       distinction is the point of section 5.3. */
+    function renderBits(node, bits, opts) {
+      opts = opts || {};
+      var html = '', i, cls, label;
+      if (bits === 'conflict') {
+        for (i = 0; i < 8; i++) { html += '<span class="bus-bit bus-bit--err" aria-hidden="true">E</span>'; }
+        label = 'Bus conflict: more than one device is driving. There is no value.';
+      } else if (bits === null) {
+        for (i = 0; i < 8; i++) { html += '<span class="bus-bit bus-bit--float" aria-hidden="true">x</span>'; }
+        label = 'Floating: nothing is driving these wires. This is not a value of zero.';
+      } else {
+        for (i = 0; i < 8; i++) {
+          cls = 'bus-bit bus-bit--readonly' + (bits[i] ? ' bus-bit--hi' : '');
+          html += '<span class="' + cls + '" aria-hidden="true">' + bits[i] + '</span>';
+        }
+        label = (opts.name ? opts.name + ' is ' : '') + bits.join('');
+      }
+      node.innerHTML = html + '<span class="sr-only">' + label + '</span>';
+      node.setAttribute('aria-label', label);
+    }
+
+    function setSwitch(btn, on, name) {
+      btn.textContent = name + ' = ' + (on ? 1 : 0);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      btn.classList.toggle('on', !!on);
+    }
+
+    function setPressed(group, attr, value) {
+      Array.prototype.forEach.call(group, function (b) {
+        b.setAttribute('aria-pressed', b.getAttribute(attr) === value ? 'true' : 'false');
+      });
+    }
+
+    /* ============================================================
+       WIDGET 1 — The Register Bench
+       ============================================================
+       Three stages so the widget grows with sections 5.1, 5.2 and 5.4
+       rather than presenting the finished thing before the sections that
+       derive it. All three compute through CSCLogic; this widget decides
+       nothing about what a register does. */
+    (function () {
+      var stage = 1;
+      var iBits = W('00000000');
+      var s = 0, e = 0;
+      var q = W('00000000');
+
+      var inputNode = el('w1-input');
+
+      function buildInput() {
+        var html = '', i;
+        for (i = 0; i < 8; i++) {
+          html += '<button type="button" class="bus-bit" data-bit="' + i + '" ' +
+                  'aria-label="Input bit ' + i + ', currently ' + iBits[i] + '. Activate to flip it.">' +
+                  iBits[i] + '</button>';
+        }
+        inputNode.innerHTML = html;
+        Array.prototype.forEach.call(inputNode.querySelectorAll('button'), function (b) {
+          b.addEventListener('click', function () {
+            var k = parseInt(b.getAttribute('data-bit'), 10);
+            iBits[k] = iBits[k] ? 0 : 1;
+            recompute('You changed bit ' + k + ' of the input.');
+          });
+        });
+      }
+
+      function paintInput() {
+        Array.prototype.forEach.call(inputNode.querySelectorAll('button'), function (b) {
+          var k = parseInt(b.getAttribute('data-bit'), 10);
+          b.textContent = iBits[k];
+          b.classList.toggle('bus-bit--hi', !!iBits[k]);
+          b.setAttribute('aria-label', 'Input bit ' + k + ', currently ' + iBits[k] + '. Activate to flip it.');
+        });
+      }
+
+      function recompute(note) {
+        /* Stage 1 has no enable at all, so it is modelled as an output
+           that is always driven -- which is exactly the limitation 5.1
+           ends on and 5.2 fixes. */
+        var m = L.memWord(iBits, s, q);
+        q = m.q;
+
+        var out, driving;
+        if (stage === 1) { out = q.slice(); driving = true; }
+        else {
+          var r = L.enableWord(q, e, 'both');
+          out = r.bits; driving = r.driving;
+        }
+
+        paintInput();
+        setSwitch(el('w1-s'), s, 's');
+        setSwitch(el('w1-e'), e, 'e');
+
+        el('w1-reg-row').hidden = (stage !== 3);
+        el('w1-reg-note').hidden = (stage !== 3);
+        el('w1-e').hidden = (stage === 1);
+        el('w1-preset-read').hidden = (stage === 1);
+        el('w1-preset-stop').hidden = (stage === 1);
+        el('w1-o-name').textContent = 'o';
+
+        if (stage === 3) { renderBits(el('w1-reg'), q, { name: 'reg' }); }
+        renderBits(el('w1-o'), driving ? out : null, { name: 'o' });
+
+        el('w1-o-note').innerHTML = stage === 1
+          ? 'always driven &mdash; this circuit has no way to be quiet'
+          : (driving ? 'driving the bus' : 'not driving &mdash; <code>xxxxxxxx</code> is the absence of a value, not a value');
+
+        var parts = [];
+        if (note) { parts.push(note); }
+        if (s === 1) {
+          parts.push('<strong>s is high, so the stored byte is following the input.</strong> Change a bit and the stored value changes with it &mdash; that is transparency, from last week.');
+        } else {
+          parts.push('<strong>s is low, so the stored byte is held.</strong> Nothing you do to the input can move it.');
+        }
+        if (stage === 3) {
+          parts.push(e === 1
+            ? 'e is high, so <code>o</code> carries the stored byte. <code>reg</code> shows the same thing, as it always does.'
+            : 'e is low, so <code>o</code> is floating. <code>reg</code> still shows what is stored &mdash; that is what it is for.');
+        } else if (stage === 2) {
+          parts.push(e === 1 ? 'e is high, so the byte passes.' : 'e is low, so nothing is driven.');
+        }
+        el('w1-status').innerHTML = parts.join(' ');
+      }
+
+      el('w1-s').addEventListener('click', function () {
+        s = s ? 0 : 1;
+        recompute(s ? 'You raised <code>s</code>.' : 'You dropped <code>s</code>. Whatever was there is now held.');
+      });
+      el('w1-e').addEventListener('click', function () {
+        e = e ? 0 : 1;
+        recompute(e ? 'You raised <code>e</code>.' : 'You dropped <code>e</code>.');
+      });
+
+      var stageBtns = document.querySelectorAll('[data-stage]');
+      Array.prototype.forEach.call(stageBtns, function (b) {
+        b.addEventListener('click', function () {
+          stage = parseInt(b.getAttribute('data-stage'), 10);
+          setPressed(stageBtns, 'data-stage', String(stage));
+          if (stage === 1) { e = 0; }
+          recompute('Showing stage ' + stage + '.');
+        });
+      });
+
+      Array.prototype.forEach.call(document.querySelectorAll('#widget-1 .preset-btn'), function (b) {
+        b.addEventListener('click', function () {
+          var p = b.getAttribute('data-preset');
+          if (p === 'store') {
+            iBits = W('10101010'); s = 1;
+            recompute('Input set to <code>10101010</code> and <code>s</code> raised: the byte is being written.');
+          } else if (p === 'release') {
+            s = 0; iBits = W('00000000');
+            recompute('<strong>This is the demonstration that matters.</strong> <code>s</code> released, then the input changed to all zeros &mdash; and the stored byte did not move.');
+          } else if (p === 'read') {
+            e = 1;
+            recompute('<code>e</code> raised: the stored byte is now on the output.');
+          } else {
+            e = 0;
+            recompute('<code>e</code> dropped: the register has let go of the wire.');
+          }
+        });
+      });
+
+      buildInput();
+      recompute('Nothing stored yet. Try the presets in order, left to right.');
+    })();
+
+    /* ============================================================
+       WIDGET 2 — Drive Zero, or Let Go
+       ============================================================
+       The Standards 4.1 aside, made pokeable. The bus state comes from
+       CSCLogic.busResolve(), which reports a contested bus as 'conflict'
+       and never as a byte -- including when the two drivers agree. */
+    (function () {
+      var mode = 'buffer';
+      var e1 = 0, e2 = 0;
+      var connected2 = true;
+      var R1 = W('10101010'), R2 = W('01010101');
+
+      function drawBus(state) {
+        var svg = el('w2-svg');
+        while (svg.firstChild) { svg.removeChild(svg.firstChild); }
+
+        var cls = state === 'conflict' ? 'bus-line bus-line--err'
+                : state === 'float' ? 'bus-line bus-line--float'
+                : 'bus-line bus-line--driven';
+        svg.appendChild(mk('line', { x1: 40, y1: 34, x2: 440, y2: 34, 'class': cls }));
+        var t = mk('text', { x: 240, y: 22, 'class': 'reg-label', 'text-anchor': 'middle' });
+        t.textContent = 'BUS'; svg.appendChild(t);
+
+        function block(x, label, on, show) {
+          if (!show) { return; }
+          svg.appendChild(mk('line', { x1: x + 40, y1: 34, x2: x + 40, y2: 76, 'class': on ? 'stub stub--on' : 'stub' }));
+          svg.appendChild(mk('rect', { x: x, y: 76, width: 80, height: 72, rx: 4, 'class': on ? 'reg-box reg-box--on' : 'reg-box' }));
+          var lb = mk('text', { x: x + 40, y: 118, 'class': 'reg-label', 'text-anchor': 'middle' });
+          lb.textContent = label; svg.appendChild(lb);
+          var pins = mk('text', { x: x + 40, y: 172, 'class': 'reg-label', 'text-anchor': 'middle' });
+          pins.textContent = 'e = ' + (on ? 1 : 0); svg.appendChild(pins);
+          svg.appendChild(mk('line', { x1: x + 40, y1: 148, x2: x + 40, y2: 158, 'class': on ? 'stub stub--on' : 'stub' }));
+        }
+        block(100, 'R1', e1 === 1, true);
+        block(300, 'R2', e2 === 1, connected2);
+      }
+
+      function recompute() {
+        var d1 = L.enableWord(R1, e1, mode);
+        var drivers = [d1];
+        if (connected2) { drivers.push(L.enableWord(R2, e2, mode)); }
+        var bus = L.busResolve(drivers);
+
+        setSwitch(el('w2-e1'), e1, 'e');
+        setSwitch(el('w2-e2'), e2, 'e');
+        el('w2-connect').textContent = connected2 ? 'R2 is connected to the bus' : 'R2 is disconnected';
+        el('w2-connect').setAttribute('aria-pressed', connected2 ? 'true' : 'false');
+        el('w2-e2').disabled = !connected2;
+
+        var st = el('w2-status'), msg;
+        st.className = 'verdict-line';
+
+        if (bus.state === 'conflict') {
+          renderBits(el('w2-bus'), 'conflict');
+          drawBus('conflict');
+          st.classList.add('verdict-line--err');
+          if (mode === 'and') {
+            msg = '<strong>Conflict &mdash; and notice you did not have to do anything to cause it.</strong> ' +
+                  'With AND-gate output stages, <em>both</em> registers are driving all the time. ' +
+                  'The one with <code>e</code> = 0 is asserting <code>00000000</code>, which is a value, not a silence. ' +
+                  'Two devices are pulling the same wires in opposite directions. Neither wins, and on real hardware ' +
+                  'this is a short between two output stages. <strong>This is the argument of section 5.3 in one picture:</strong> ' +
+                  'an AND-gate output stage cannot share a wire, no matter how carefully you drive it.';
+          } else {
+            msg = '<strong>Conflict.</strong> Both registers have <code>e</code> = 1, so both are driving. ' +
+                  'Neither one wins &mdash; there is no value on the bus at all. ' +
+                  'Bus discipline is about exactly one device speaking, not about the drivers happening to agree: ' +
+                  'set both registers to hold the same byte and it is <em>still</em> two output stages wired together.';
+          }
+        } else if (bus.state === 'float') {
+          renderBits(el('w2-bus'), null);
+          drawBus('float');
+          st.classList.add('verdict-line--warn');
+          msg = '<strong>Floating.</strong> Nothing is driving the bus, so it carries no value &mdash; that is what the <code>x</code>s mean. ' +
+                'This is a perfectly normal state for a bus to be in between transfers.';
+        } else {
+          renderBits(el('w2-bus'), bus.bits, { name: 'The bus' });
+          drawBus('driven');
+          st.classList.add('verdict-line--ok');
+          msg = '<strong>Clean.</strong> Exactly one register is driving, and the bus carries its byte. ' +
+                (mode === 'and'
+                  ? 'AND-gate output stages work fine like this &mdash; with only one device on the wire. Reconnect R2 and watch what happens.'
+                  : 'The other register has let go, so there is nothing to fight over.');
+        }
+        st.innerHTML = msg;
+      }
+
+      var modeBtns = document.querySelectorAll('[data-mode]');
+      Array.prototype.forEach.call(modeBtns, function (b) {
+        b.addEventListener('click', function () {
+          mode = b.getAttribute('data-mode');
+          setPressed(modeBtns, 'data-mode', mode);
+          recompute();
+        });
+      });
+      el('w2-e1').addEventListener('click', function () { e1 = e1 ? 0 : 1; recompute(); });
+      el('w2-e2').addEventListener('click', function () { e2 = e2 ? 0 : 1; recompute(); });
+      el('w2-connect').addEventListener('click', function () {
+        connected2 = !connected2;
+        if (!connected2) { e2 = 0; }
+        recompute();
+      });
+
+      recompute();
+    })();
+
+    /* ============================================================
+       WIDGET 3 — The Four-Step Transfer
+       ============================================================
+       Free mode is where the learning is: the two wrong orderings both
+       fail visibly, and the captions name why in terms of last week's
+       transparency. R2's stored value can become UNKNOWN -- if it is
+       transparent while the bus is floating it captures nothing usable,
+       which is exactly what Logisim would show. */
+    (function () {
+      var mode = 'guided';
+      var e1 = 0, s2 = 0;
+      var R1 = W('10101010');
+      var R2 = { known: true, bits: W('00001111') };
+      var done = [false, false, false, false];
+      var hist = [];            // {e1, s2} once per student action
+      var MAXH = 20;
+
+      function busNow() {
+        return L.busResolve([L.enableWord(R1, e1, 'both')]);
+      }
+
+      /* R2 is a level-sensitive register: while s2 is high it follows
+         whatever the bus is carrying, moment to moment. */
+      function settleR2() {
+        if (s2 !== 1) { return null; }
+        var bus = busNow();
+        if (bus.state === 'driven') { R2 = { known: true, bits: bus.bits.slice() }; return 'took'; }
+        R2 = { known: false };
+        return 'lost';
+      }
+
+      function record() {
+        hist.push({ e1: e1, s2: s2 });
+        if (hist.length > MAXH) { hist.shift(); }
+      }
+
+      /* The nesting test: every moment s2 is high, e1 must also be high,
+         and s2 must have risen after e1 and fallen before it. */
+      function nesting() {
+        var sHigh = [], i;
+        for (i = 0; i < hist.length; i++) { if (hist[i].s2) { sHigh.push(i); } }
+        if (!sHigh.length) { return 'none'; }
+        for (i = 0; i < sHigh.length; i++) { if (!hist[sHigh[i]].e1) { return 'broken'; } }
+        var first = sHigh[0], last = sHigh[sHigh.length - 1];
+        if (first === 0 || !hist[first - 1].e1) { return 'partial'; }
+        if (last === hist.length - 1 || !hist[last + 1].e1) { return 'partial'; }
+        return 'ok';
+      }
+
+      function drawWave() {
+        var svg = el('w3-wf');
+        while (svg.firstChild) { svg.removeChild(svg.firstChild); }
+        var n = Math.max(hist.length, 1), SW = Math.min(48, 560 / Math.max(n, 4)), X0 = 74;
+        var rows = [{ k: 'e1', label: 'R1 e', y: 20 }, { k: 's2', label: 'R2 s', y: 90 }];
+
+        rows.forEach(function (r) {
+          var t = mk('text', { x: 6, y: r.y + 30, 'class': 'waveform__label' });
+          t.textContent = r.label; svg.appendChild(t);
+          if (!hist.length) { return; }
+          var d = 'M' + X0 + ',' + (hist[0][r.k] ? r.y + 6 : r.y + 40), j;
+          for (j = 0; j < hist.length; j++) {
+            d += ' H' + (X0 + (j + 1) * SW);
+            if (j + 1 < hist.length && hist[j + 1][r.k] !== hist[j][r.k]) {
+              d += ' V' + (hist[j + 1][r.k] ? r.y + 6 : r.y + 40);
+            }
+          }
+          svg.appendChild(mk('path', { d: d, 'class': 'waveform__trace' + (r.k === 'e1' ? ' waveform__trace--clock' : ' waveform__trace--input') }));
+        });
+
+        var txt = hist.length
+          ? 'R1 enable over time: ' + hist.map(function (h) { return h.e1; }).join(', ') +
+            '. R2 set over time: ' + hist.map(function (h) { return h.s2; }).join(', ') + '.'
+          : 'No steps taken yet.';
+        el('w3-wf-text').textContent = txt;
+      }
+
+      function paint(note) {
+        renderBits(el('w3-r1'), R1, { name: 'R1' });
+        var bus = busNow();
+        renderBits(el('w3-bus'), bus.state === 'driven' ? bus.bits : (bus.state === 'float' ? null : 'conflict'), { name: 'The bus' });
+        renderBits(el('w3-r2'), R2.known ? R2.bits : null, { name: 'R2' });
+
+        Array.prototype.forEach.call(document.querySelectorAll('#w3-steps [data-step]'), function (b) {
+          var k = parseInt(b.getAttribute('data-step'), 10);
+          b.disabled = (mode === 'guided') && (done[k] || (k > 0 && !done[k - 1]));
+          el('w3-steps').querySelector('[data-done="' + k + '"]').hidden = !done[k];
+        });
+
+        drawWave();
+
+        var st = el('w3-status');
+        st.className = 'verdict-line';
+        var parts = [];
+        if (note) { parts.push(note); }
+
+        var nest = nesting();
+        if (nest === 'ok') {
+          parts.push('<span class="nest-ok">The set pulse sat entirely inside the enable pulse.</span> That is the invariant, and it is why the transfer worked.');
+          st.classList.add('verdict-line--ok');
+        } else if (nest === 'broken') {
+          parts.push('<span class="nest-bad">R2 was transparent while R1 was not driving.</span> Whatever was on the bus at that moment &mdash; nothing &mdash; is what R2 took.');
+          st.classList.add('verdict-line--err');
+        } else if (nest === 'partial') {
+          parts.push('The set pulse is not fully enclosed by the enable pulse yet.');
+          st.classList.add('verdict-line--warn');
+        }
+
+        if (!R2.known) {
+          parts.push('<strong>R2 now holds nothing usable.</strong> It was transparent while the bus was floating, so it captured the absence of a value. In Logisim this is what <code>x</code>s in a register look like, and it is a real failure mode &mdash; not a simulator complaint.');
+        }
+        st.innerHTML = parts.join(' ') || 'Drive the two control lines and watch what R2 ends up holding.';
+      }
+
+      function step(k) {
+        if (k === 0) { e1 = 1; }
+        if (k === 1) { s2 = 1; }
+        if (k === 2) { s2 = 0; }
+        if (k === 3) { e1 = 0; }
+        done[k] = true;
+        record();
+        var r = settleR2();
+        var note;
+        if (k === 0) { note = 'R1 is driving; its byte is on the bus.'; }
+        else if (k === 1) { note = r === 'took' ? 'R2 is transparent and has taken the bus value.' : 'R2 is transparent &mdash; but there is nothing on the bus to take.'; }
+        else if (k === 2) { note = R2.known ? 'R2 has stopped following the bus. The byte is held.' : 'R2 has stopped following the bus, holding what it captured &mdash; which was nothing.'; }
+        else { note = 'R1 has let go of the wire. The transfer is finished.'; }
+        paint(note);
+      }
+
+      Array.prototype.forEach.call(document.querySelectorAll('#w3-steps [data-step]'), function (b) {
+        b.addEventListener('click', function () { step(parseInt(b.getAttribute('data-step'), 10)); });
+      });
+
+      var w3modes = document.querySelectorAll('[data-w3mode]');
+      Array.prototype.forEach.call(w3modes, function (b) {
+        b.addEventListener('click', function () {
+          mode = b.getAttribute('data-w3mode');
+          setPressed(w3modes, 'data-w3mode', mode);
+          paint(mode === 'free'
+            ? '<strong>Free mode.</strong> The four steps are now available in any order. Two orderings in particular are worth trying: raise R2 <code>s</code> <em>before</em> R1 <code>e</code>, and drop R1 <code>e</code> <em>before</em> R2 <code>s</code>.'
+            : '<strong>Guided mode.</strong> The steps unlock in order.');
+        });
+      });
+
+      el('w3-reset').addEventListener('click', function () {
+        e1 = 0; s2 = 0; R2 = { known: true, bits: W('00001111') };
+        done = [false, false, false, false]; hist = [];
+        paint('Reset. R1 holds <code>10101010</code>, R2 holds <code>00001111</code>.');
+      });
+
+      paint(null);
+    })();
+
+    /* ---------- Click-to-enlarge ---------- */
+    (function () {
+      var box = el('lightbox'), img = el('lightbox-img'),
+          cap = el('lightbox-caption'), closeBtn = el('lightbox-close');
+      function open(src, alt) {
+        img.src = src; img.alt = alt; cap.textContent = alt;
+        box.classList.add('open'); closeBtn.focus();
+      }
+      function close() { box.classList.remove('open'); img.src = ''; }
+      Array.prototype.forEach.call(document.querySelectorAll('.zoomable'), function (n) {
+        n.setAttribute('tabindex', '0');
+        n.setAttribute('role', 'button');
+        n.setAttribute('aria-label', 'Enlarge: ' + (n.getAttribute('alt') || 'figure'));
+        n.addEventListener('click', function () { open(n.src, n.getAttribute('alt') || ''); });
+        n.addEventListener('keydown', function (ev) {
+          if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); open(n.src, n.getAttribute('alt') || ''); }
+        });
+      });
+      box.addEventListener('click', close);
+      closeBtn.addEventListener('click', function (ev) { ev.stopPropagation(); close(); });
+      document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') { close(); } });
+    })();
+  })();
+  </script>
+</body>
+</html>

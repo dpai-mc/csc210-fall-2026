@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w5-02">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 5: The Language the Bytes Turn Out to Be</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ----------
+       The register-file table groups 32 rows by convention. `.pin-table`
+       is deliberately NOT used: that component signals "an interface you
+       must match exactly," which is what makes it carry weight in the
+       assignment, and these are naming conventions rather than pins. */
+    .regfile { width: 100%; border-collapse: collapse; margin: var(--space-md) 0; }
+    .regfile th, .regfile td {
+      text-align: left;
+      padding: var(--space-xs) var(--space-sm);
+      border-bottom: 1px solid var(--color-border);
+      font-size: var(--fs-sm);
+    }
+    .regfile th { font-weight: 700; background: var(--color-primary-lt); }
+    .regfile td:first-child, .regfile td:nth-child(2) { font-family: var(--font-mono); white-space: nowrap; }
+    .regfile tbody tr.regfile__group td {
+      background: var(--color-surface);
+      font-weight: 700;
+      font-family: var(--font-sans);
+      padding-top: var(--space-sm);
+    }
+    .regfile tr.regfile__hw td { background: rgba(255, 193, 7, .14); }
+
+    /* Side-by-side code for the optional x86 aside. Stacks below 640px
+       so the two columns never force a horizontal scroll. */
+    .asm-compare { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin: var(--space-md) 0; }
+    .asm-compare > div { min-width: 0; }
+    .asm-compare h4 { margin: 0 0 var(--space-xs); font-size: var(--fs-sm); }
+    .asm-compare pre {
+      margin: 0; overflow-x: auto;
+      background: var(--color-code-bg);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: var(--space-sm);
+      font-size: var(--fs-xs);
+      line-height: 1.6;
+    }
+    @media (max-width: 640px) { .asm-compare { grid-template-columns: 1fr; } }
+
+    .width-compare { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin: var(--space-sm) 0 var(--space-md); }
+    .width-compare > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-surface); }
+    .width-compare strong { display: block; font-family: var(--font-mono); color: var(--color-primary); }
+    @media (max-width: 640px) { .width-compare { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 5 &rsaquo; <span>Page 2: The Language the Bytes Turn Out to Be</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>The Language the Bytes Turn Out to Be</h1>
+    <p><strong>Sections 5.5 &ndash; 5.6</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1.5 hours</p>
+
+    <!-- ============================================================
+         5.5
+         ============================================================ -->
+    <section id="sec-5-5">
+      <h2>5.5 &nbsp; Why a Processor Needs a Language</h2>
+
+      <p>You now have a circuit that holds a byte and hands it over when asked. Eight bits, stored, retrievable, and connectable to other circuits that do the same.</p>
+
+      <p>Here is the thing that circuit cannot tell you: <strong>what the byte means.</strong></p>
+
+      <div class="callout callout--hook">
+        <div class="callout__title">Week 1, collected on</div>
+        <p>In the first week of this course you met an idea and were probably not sure yet what to do with it: <em>a single byte can be an integer, a character, a colour channel, or part of an instruction &mdash; and context decides which, not the bits themselves.</em></p>
+        <p>Three of those four have come up since. This is the week the fourth one stops being hypothetical.</p>
+        <p>Your register holds <code>01000001</code>. Is that the number 65? The letter <code>A</code>? A shade of dark red? A piece of an instruction telling the processor to add two things together? <strong>Nothing in the circuit knows.</strong> The wires carry voltages and the cells hold whatever they were told to hold.</p>
+      </div>
+
+      <p>So something outside the circuit has to supply the meaning &mdash; an agreement about which bit patterns stand for which operations, which registers, which addresses. That agreement has a name.</p>
+
+      <h3>The ISA is a contract</h3>
+
+      <p>An <strong>Instruction Set Architecture</strong> is the abstract interface between hardware and software. It defines everything a programmer needs in order to write correct machine code &mdash; the instructions that exist, the registers available, how memory is addressed, what the data types are &mdash; <em>without</em> saying anything about how the hardware implements any of it.</p>
+
+      <p>It is worth dwelling on the word <em>contract</em>, because the analogy is not decorative. A contract has two sides, both sides depend on it, and neither side gets to change it alone.</p>
+
+      <ul>
+        <li><strong>The software side promises</strong> to produce only bit patterns the contract defines, in the shapes the contract specifies.</li>
+        <li><strong>The hardware side promises</strong> that any such pattern will do what the contract says it does.</li>
+        <li><strong>Neither side promises anything else.</strong> The compiler does not know how many gates are in the adder. The processor does not know what language your program was written in.</li>
+      </ul>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">What the contract buys, concretely</div>
+        <ul>
+          <li><strong>A program compiled in 1999 still runs.</strong> The hardware underneath has been redesigned a dozen times; the contract has not.</li>
+          <li><strong>Two processors from different companies run the same binary.</strong> They share no circuitry at all. They share a contract.</li>
+          <li><strong>Your CPU will need one.</strong> Before the final project, you will define a small instruction set of your own &mdash; which bit patterns your machine recognises and what each one makes it do. You are reading about MIPS partly to have seen a real one first.</li>
+        </ul>
+      </div>
+
+      <h3>Two philosophies</h3>
+
+      <p>Designing an ISA means deciding how much work a single instruction should do. There are two long-standing answers, and the argument between them shaped every processor you have ever used.</p>
+
+      <table>
+        <thead>
+          <tr><th>RISC &mdash; Reduced Instruction Set Computer</th><th>CISC &mdash; Complex Instruction Set Computer</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Goal: make the hardware simple and fast.</strong></td>
+            <td><strong>Goal: make programming easier with powerful instructions.</strong></td>
+          </tr>
+          <tr>
+            <td>Simple, <strong>fixed-length</strong> instructions.</td>
+            <td>Variable-length, complex instructions.</td>
+          </tr>
+          <tr>
+            <td>Most instructions execute in a single clock cycle.</td>
+            <td>An instruction may take many cycles to complete.</td>
+          </tr>
+          <tr>
+            <td>A strict <strong>load/store</strong> architecture &mdash; only two instructions touch memory.</td>
+            <td>Many different instruction types can reach memory directly.</td>
+          </tr>
+          <tr>
+            <td>Complexity moves to the compiler, which combines simple instructions.</td>
+            <td>Complexity stays in the hardware, which decodes multi-step instructions.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>Neither is a mistake. They are different bets about where complexity is cheapest to put, made at different times under different manufacturing constraints.</p>
+
+      <p><strong>MIPS is RISC</strong>, and one consequence matters more than any other this week:</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Every MIPS instruction is exactly 32 bits</div>
+        <p>Not "usually 32." Not "between 1 and 15 bytes depending on what it is." <strong>Every single one, always, exactly 32 bits.</strong></p>
+        <p>That is not an arbitrary fact to memorise &mdash; it falls directly out of the RISC bet. Fixed width means the processor knows where the next instruction starts before it has finished reading this one, which is what makes the decoding hardware simple enough to be fast.</p>
+        <p>It is also what makes the next page possible at all. You are about to encode instructions into binary by hand, and that is a tractable exercise precisely because there are exactly 32 slots to fill, every time.</p>
+      </div>
+
+      <details class="aside-optional">
+        <summary>Optional: what the other bet looks like &mdash; MIPS and x86 side by side</summary>
+        <div class="aside-optional__skip">
+          <p><strong>This aside assumes only that you are willing to read four lines of unfamiliar assembly.</strong> No prior assembly experience, nothing from another course. It is here because seeing the contrast makes the RISC/CISC distinction concrete rather than abstract. <strong>Skipping it costs you nothing</strong> &mdash; nothing in Assignment 5, the Midterm, or any later week depends on having read it.</p>
+        </div>
+
+        <p>Intel's <strong>x86</strong> is the classic CISC architecture. Here is the same small task in both: load two numbers from memory, add them, store the result back.</p>
+
+        <div class="asm-compare">
+          <div>
+            <h4>MIPS (RISC)</h4>
+<pre># $s0 holds the base address
+lw   $t0, 0($s0)     # load varA
+lw   $t1, 4($s0)     # load varB
+add  $t2, $t0, $t1   # add them
+sw   $t2, 8($s0)     # store the sum</pre>
+            <p>Four steps. Two loads, one operation, one store. <strong>All arithmetic happens on registers</strong> &mdash; nothing else can touch memory.</p>
+          </div>
+          <div>
+            <h4>x86 (CISC)</h4>
+<pre>; EBX holds the base address
+mov eax, [ebx]       ; load varA
+add eax, [ebx+4]     ; add varB FROM MEMORY
+mov [ebx+8], eax     ; store the sum</pre>
+            <p>Three steps. The <code>add</code> reads an operand straight out of memory, folding a load and an operation into one instruction.</p>
+          </div>
+        </div>
+
+        <p>Three structural differences follow from that one example:</p>
+
+        <ul>
+          <li><strong>Instruction length.</strong> MIPS: fixed at 32 bits, three formats, consistent field positions. x86: variable, from 1 to 15 bytes, which makes decoding a multi-step process the hardware has to do before it can even find the next instruction.</li>
+          <li><strong>Memory access.</strong> MIPS is load/store &mdash; data must be in a register before you can compute with it. x86 allows memory operands in many instruction types.</li>
+          <li><strong>Registers.</strong> MIPS has 32, largely interchangeable. Classic 32-bit x86 has 8, several with specialised historical roles (<code>EAX</code> the accumulator, <code>ECX</code> the counter), which makes a compiler's job of allocating them harder.</li>
+        </ul>
+
+        <div class="aside-optional__breaks">
+          <p><strong>Where this comparison breaks &mdash; and these matter:</strong></p>
+          <ul>
+            <li><strong>This is 32-bit x86, and the course's recommended text is x86-64.</strong> Plantz's <em>Introduction to Computer Organization</em> covers x86-64, where the registers are named <code>RAX</code> rather than <code>EAX</code>, there are sixteen of them rather than eight, and the calling convention is different. If you read Plantz alongside this aside, expect the names not to match.</li>
+            <li><strong>"CISC is simpler for the programmer" is a design intention, not a measured result.</strong> It was the goal. Whether it was achieved is a genuinely contested question, and almost nobody writes x86 by hand any more &mdash; compilers do, and compilers do not find powerful instructions easier.</li>
+            <li><strong>The clean dichotomy above is partly historical.</strong> Modern x86 processors decode those complex instructions internally into simpler, RISC-like micro-operations and execute <em>those</em>. So the contract is CISC and the machine underneath is closer to RISC &mdash; which is, if you think about it, the ISA-as-contract idea working exactly as advertised: the hardware changed completely and the contract did not.</li>
+          </ul>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============================================================
+         5.6 — THE JOIN
+         ============================================================ -->
+    <section id="sec-5-6">
+      <h2>5.6 &nbsp; The MIPS Register File</h2>
+
+      <p>A MIPS processor contains <strong>32 registers</strong>.</p>
+
+      <p>Before any of them get names, be clear about what one of them <em>is</em>: it is the circuit you built this week. Not something analogous to it, not something that plays a similar role. Storage cells in parallel under a shared write control, read out through an output stage that can stop driving so the value can be put on a shared wire. <strong>The same device.</strong></p>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">One difference, and it is only the count</div>
+
+        <div class="width-compare">
+          <div>
+            <strong>What you built: 8 bits</strong>
+            <p>Eight <code>MEM_1BIT</code> cells on one <code>s</code> line. This is what your CPU uses, what Checkpoint 1 grades, and what every circuit from here to Week 17 assumes.</p>
+          </div>
+          <div>
+            <strong>A MIPS register: 32 bits</strong>
+            <p>Thirty-two cells on one write line. This is what <code>$t0</code> is, and what every instruction format on the next page assumes.</p>
+          </div>
+        </div>
+
+        <p><strong>What changes when you widen it: the number of cells, and nothing else.</strong> Same construction. Same two controls &mdash; one to write, one to drive the bus. Same reason the output stage needs to be able to let go. The splitter fans out to thirty-two wires instead of eight; the write line reaches thirty-two cells instead of eight.</p>
+
+        <p><strong>A 32-bit register is a wider 8-bit register. It is not a different device.</strong></p>
+
+        <p>And the reason this course is 8-bit: Logisim Classic 2.7.1 becomes unusably slow with a 32-bit datapath wired up, and everything interesting about a register is already visible at 8. The width is a practical limit on the simulator, not a simplification of the idea.</p>
+      </div>
+
+      <h3>The names, and what they are for</h3>
+
+      <p>All 32 registers are, at the hardware level, identical. The names below are <strong>conventions</strong> &mdash; agreements about who uses what for what &mdash; and they exist because assembly code written without them is unreadable and uncombinable.</p>
+
+      <div class="table-scroll">
+      <table class="regfile">
+        <caption class="sr-only">The 32 MIPS registers, their numbers and their conventional uses.</caption>
+        <thead>
+          <tr><th scope="col">Name</th><th scope="col">Number</th><th scope="col">Convention</th></tr>
+        </thead>
+        <tbody id="regfile-body">
+          <tr><td colspan="3">Loading&hellip;</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">The hardware does not enforce any of this</div>
+        <p><code>$t0</code> and <code>$s0</code> are registers 8 and 16, and the processor treats them <em>identically</em>. There is no circuit anywhere that makes a "temporary" register behave differently from a "saved" one.</p>
+        <p>The difference between them is an <strong>agreement between programs</strong>: if you call a procedure, it may freely overwrite the <code>$t</code> registers and must put back anything it changes in the <code>$s</code> registers. Break the agreement and nothing catches you &mdash; your program simply produces wrong answers in a way that is very hard to find.</p>
+        <p>Which makes this the same kind of object as the ISA itself. <strong>A convention held up by everyone obeying it.</strong> You will use this one seriously in Week 7, when procedures arrive and the stack has to be managed.</p>
+      </div>
+
+      <h3><code>$zero</code> is the exception, and it is real hardware</h3>
+
+      <p>Register 0 reads as <strong>0</strong>, always. Writes to it are discarded &mdash; not an error, just silently dropped. That is wired in, not agreed.</p>
+
+      <p>Spending one of your 32 registers on a constant sounds wasteful until you count how often you need it. Comparing something against zero; clearing a register; copying a value from one register to another, which is just <code>add $t1, $t0, $zero</code> &mdash; a processor that has a hardwired zero does not need separate instructions for any of those. One register pays for several.</p>
+
+      <!-- ============================================================
+           THE JOIN
+           ============================================================ -->
+      <div class="callout callout--aha">
+        <div class="callout__title">The two halves of this week, in one instruction</div>
+
+        <p>Take the instruction <code>add $t0, $t1, $t2</code>.</p>
+
+        <p>Three registers are named. Two of them are <strong>read</strong> &mdash; their stored bytes are driven onto internal wires. One is <strong>written</strong> &mdash; the result is put on its input and its write line is raised. The others sit there holding what they hold, driving nothing.</p>
+
+        <p>Every one of those actions is something you built a circuit for this week. Reading a register is raising its <code>e</code>. Writing one is raising its <code>s</code>. And the reason exactly one register drives at a time is the reason its output stage can stop driving at all.</p>
+
+        <p><strong>And the choosing?</strong> Picking one of 32 registers from a 5-bit number is a <strong>decoder</strong> &mdash; the circuit you built in Week 3, when you were told it would matter later. This is later. In Week 10 you will wire the decoders that select between R0, R1, R2 and R3, and they are the same component at a smaller width.</p>
+
+        <p>There is no second mechanism. <code>$t0</code> is a register, a register is eight cells and two control lines, and a cell is four NAND gates. It is turtles most of the way down, and then it is gates.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SELF-CHECK A
+         ============================================================ -->
+    <section id="self-check-a">
+      <div class="widget-card">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Three questions, not graded, no record kept. The third one is the one worth getting right.</div>
+
+        <div class="quiz-question" id="q1-text">1. You need a value to survive a call to another procedure. Which group of registers should it be in?</div>
+        <div class="quiz-options" role="group" aria-labelledby="q1-text">
+          <button type="button" class="quiz-option" data-q="1" data-correct="false"><code>$t0</code>&ndash;<code>$t9</code>, the temporaries</button>
+          <button type="button" class="quiz-option" data-q="1" data-correct="true"><code>$s0</code>&ndash;<code>$s7</code>, the saved registers</button>
+          <button type="button" class="quiz-option" data-q="1" data-correct="false"><code>$a0</code>&ndash;<code>$a3</code>, the argument registers</button>
+        </div>
+        <div class="quiz-feedback" id="q1-fb" role="status" aria-live="polite"></div>
+
+        <div class="quiz-question" id="q2-text" style="margin-top:var(--space-lg);">2. What happens if a program executes <code>addi $zero, $zero, 5</code>?</div>
+        <div class="quiz-options" role="group" aria-labelledby="q2-text">
+          <button type="button" class="quiz-option" data-q="2" data-correct="false"><code>$zero</code> now holds 5</button>
+          <button type="button" class="quiz-option" data-q="2" data-correct="true">Nothing &mdash; the write is discarded and <code>$zero</code> still reads 0</button>
+          <button type="button" class="quiz-option" data-q="2" data-correct="false">The assembler rejects it as an error</button>
+        </div>
+        <div class="quiz-feedback" id="q2-fb" role="status" aria-live="polite"></div>
+
+        <div class="quiz-question" id="q3-text" style="margin-top:var(--space-lg);">3. A MIPS register is 32 bits and the register you built is 8. What is different about how the wider one is <strong>constructed</strong>?</div>
+        <div class="quiz-options" role="group" aria-labelledby="q3-text">
+          <button type="button" class="quiz-option" data-q="3" data-correct="false">It uses flip-flops instead of latches, because 32 bits need a clock</button>
+          <button type="button" class="quiz-option" data-q="3" data-correct="true">Nothing &mdash; there are more cells on the same two control lines</button>
+          <button type="button" class="quiz-option" data-q="3" data-correct="false">It needs four separate write lines, one per byte</button>
+        </div>
+        <div class="quiz-feedback" id="q3-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Forward
+         ============================================================ -->
+    <section id="sec-forward">
+      <h2>Where this goes next</h2>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Next: thirty-two bits, three shapes</div>
+        <p>You know what the registers are and what an instruction set is <em>for</em>. The next page is what an instruction actually looks like &mdash; how <code>add $t0, $t1, $t2</code> becomes thirty-two specific ones and zeros, and how to read thirty-two ones and zeros back into an instruction.</p>
+        <p>By the end of it you will be able to do by hand what the assembler does, which is the most direct evidence there is that you understand the contract.</p>
+      </div>
+
+      <p>Then the week finishes with a program that actually runs, in a simulator, with the registers visible on screen changing one instruction at a time.</p>
+
+      <p>If you want to read around this material: log into your Saylor CS301 account and open <strong>Unit 2: Instructions &mdash; Hardware Language</strong>, which covers the ISA and the MIPS instruction set from a different angle. <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">The CS301 course home page is here</a> &mdash; navigate to Unit 2 once you are logged in.</p>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    var L = window.CSCLogic;
+
+    /* ---------- The register table ----------
+       Rendered from CSCLogic.mips.regs rather than written out in this
+       file. Three pages this week show these 32 rows -- this one, the
+       instruction-formats page, and assignment5.html -- and the Fall 2025
+       course had two copies that were free to drift apart. One table, one
+       place to correct it (Standards Section 8).
+
+       Rows are grouped by convention because that is how the conventions
+       are learned; the numbers are contiguous within each group anyway. */
+
+    var GROUPS = [
+      { key: 'constant',  label: 'Hardwired constant' },
+      { key: 'assembler', label: 'Reserved for the assembler' },
+      { key: 'return',    label: 'Return values' },
+      { key: 'argument',  label: 'Procedure arguments' },
+      { key: 'temporary', label: 'Temporaries — a called procedure may overwrite these' },
+      { key: 'saved',     label: 'Saved — a called procedure must put these back' },
+      { key: 'kernel',    label: 'Reserved for the operating system' },
+      { key: 'pointer',   label: 'Pointers and return address' }
+    ];
+
+    function renderRegfile() {
+      var body = document.getElementById('regfile-body');
+      if (!body || !L || !L.mips) { return; }
+      var html = '';
+      GROUPS.forEach(function (g) {
+        var rows = L.mips.regs.filter(function (r) { return r.group === g.key; });
+        if (!rows.length) { return; }
+        html += '<tr class="regfile__group"><td colspan="3">' + g.label + '</td></tr>';
+        rows.forEach(function (r) {
+          /* $zero is the one row that is hardware rather than agreement,
+             so it is marked rather than left to the prose alone. */
+          var cls = (r.n === 0) ? ' class="regfile__hw"' : '';
+          html += '<tr' + cls + '><td>' + r.name + '</td><td>' + r.n + '</td><td>' + r.usage + '</td></tr>';
+        });
+      });
+      body.innerHTML = html;
+    }
+
+    /* ---------- Self-check ----------
+       Real <button> elements throughout, so Enter and Space fire them
+       natively and no keydown handler is needed. Feedback goes into a
+       polite live region, and says WHY rather than just right/wrong --
+       question 3 especially, which is the week's most likely
+       misconception and is worth answering even when it is answered
+       correctly. */
+    Array.prototype.forEach.call(document.querySelectorAll('.quiz-option'), function (opt) {
+      opt.addEventListener('click', function () {
+        var qn = opt.getAttribute('data-q');
+        var correct = opt.getAttribute('data-correct') === 'true';
+        var fb = document.getElementById('q' + qn + '-fb');
+        Array.prototype.forEach.call(
+          document.querySelectorAll('.quiz-option[data-q="' + qn + '"]'),
+          function (o) { o.classList.remove('correct', 'incorrect'); }
+        );
+        opt.classList.add(correct ? 'correct' : 'incorrect');
+        fb.className = 'quiz-feedback ' + (correct ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+
+        if (qn === '1') {
+          fb.innerHTML = correct
+            ? '<strong>Correct.</strong> The <code>$s</code> registers are the ones a called procedure promises to restore before it returns. Nothing enforces that — it is the agreement, and Week 7 is where you have to hold up your end of it.'
+            : '<strong>Not quite.</strong> The <code>$t</code> registers are explicitly the ones a procedure may clobber, and the <code>$a</code> registers carry arguments <em>into</em> a call rather than surviving it. The group that is promised back to you is <code>$s0</code>–<code>$s7</code>.';
+        } else if (qn === '2') {
+          fb.innerHTML = correct
+            ? '<strong>Correct.</strong> Register 0 is wired to read as zero, so the write goes nowhere and no error is raised. It is legal, useless, and silent.'
+            : '<strong>Not quite.</strong> This is the one register whose behaviour is <em>hardware</em> rather than convention: register 0 always reads 0 and writes to it are discarded. The instruction assembles, executes, and does nothing.';
+        } else {
+          fb.innerHTML = correct
+            ? '<strong>Correct, and this is the one to hold on to.</strong> More cells, same two control lines, same construction. A 32-bit register is a wider 8-bit register — not a different kind of device. The 8-bit width in this course is a limit of the simulator, not a simplification of the idea.'
+            : '<strong>Not quite — and this is the most common misconception in Week 5, so it is worth being precise.</strong> Widening a register changes <em>the number of cells</em> and nothing else. It does not need flip-flops (your machine’s registers are level-sensitive and have no clock at all), and it does not need extra write lines — one shared line reaching 32 cells is what makes it capture 32 bits at one moment, exactly as one line reaching 8 does.';
+        }
+      });
+    });
+
+    renderRegfile();
+  })();
+  </script>
+</body>
+</html>

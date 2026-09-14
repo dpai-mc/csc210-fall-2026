@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w5-03">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 5: Thirty-Two Bits, Three Shapes</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ---------- */
+
+    /* The format diagrams. Field widths are the content of this section,
+       so the boxes are sized in PROPORTION to their bit counts rather
+       than listed in a table, which would flatten exactly the thing
+       being taught. */
+    .fmt { margin: var(--space-md) 0; }
+    .fmt__name { font-weight: 700; margin-bottom: var(--space-xs); }
+    .fmt__bar { display: flex; width: 100%; border: 2px solid var(--color-text); border-radius: var(--radius); overflow: hidden; }
+    .fmt__f {
+      padding: var(--space-xs) 2px;
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: var(--fs-xs);
+      border-right: 1px solid var(--color-text);
+      background: var(--color-surface);
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .fmt__f:last-child { border-right: none; }
+    .fmt__f b { display: block; font-size: var(--fs-xs); font-weight: 700; }
+    .fmt__f span { color: var(--color-text-muted); font-size: 10px; }
+    .fmt__f--op { background: var(--color-primary-lt); }
+    .fmt__f--imm { background: #fdf6e3; }
+    .fmt__f--unused { background: var(--color-code-bg); color: var(--color-text-muted); }
+
+    /* Widget 4 */
+    /* minmax(0, 1fr) rather than 1fr: a grid track sized 1fr still takes
+       its MIN-CONTENT width as a floor, so one wide child pushes the whole
+       page sideways. This lets the track shrink and the children wrap. */
+    .bench-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-md); }
+    .bits32 { display: flex; flex-wrap: wrap; gap: 0; margin: var(--space-sm) 0; font-family: var(--font-mono); }
+    .bits32__grp { display: flex; border-bottom: 3px solid transparent; padding-bottom: 3px; margin-right: 6px; }
+    .bits32__grp--hot { border-bottom-color: var(--color-accent); }
+    .bits32__b {
+      width: 17px; height: 26px; line-height: 26px; text-align: center;
+      font-size: var(--fs-sm); background: var(--color-code-bg);
+      border: 1px solid var(--color-border); border-right: none;
+    }
+    .bits32__grp .bits32__b:last-child { border-right: 1px solid var(--color-border); }
+    .bits32__grp--hot .bits32__b { background: #fff6d9; border-color: var(--color-accent); }
+
+    .fieldchips { display: flex; flex-wrap: wrap; gap: var(--space-xs); margin: var(--space-sm) 0; }
+    .fieldchip {
+      border: 1px solid var(--color-border); border-radius: var(--radius);
+      background: var(--color-surface); padding: var(--space-xs) var(--space-sm);
+      font-size: var(--fs-xs); text-align: left; cursor: default; min-width: 0;
+    }
+    .fieldchip--hot { border-color: var(--color-accent); background: #fff6d9; }
+    .fieldchip b { display: block; font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .fieldchip em { font-style: normal; color: var(--color-text-muted); }
+
+    .budget { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--color-text-muted); margin: var(--space-xs) 0 var(--space-sm); }
+    .budget b { color: var(--color-text); }
+
+    .io-row { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; }
+    .io-row input[type="text"] { flex: 1 1 160px; min-width: 0; max-width: 100%; }
+    .bench-err { color: var(--color-danger); font-size: var(--fs-sm); }
+    .bench-out { font-family: var(--font-mono); font-size: var(--fs-lg); font-weight: 700; color: var(--color-primary); }
+
+    .reftable { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+    .reftable th, .reftable td { text-align: left; padding: var(--space-xs) var(--space-sm); border-bottom: 1px solid var(--color-border); }
+    .reftable th { background: var(--color-primary-lt); font-weight: 700; }
+    .reftable td:nth-child(-n+3) { font-family: var(--font-mono); white-space: nowrap; }
+    .reftable tr.later td { opacity: .62; }
+    .reftable .wk { font-family: var(--font-sans); font-size: var(--fs-xs); color: var(--color-warning); font-weight: 700; }
+    /* .table-scroll now lives in shared/style.css — four files use it. */
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 5 &rsaquo; <span>Page 3: Thirty-Two Bits, Three Shapes</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Thirty-Two Bits, Three Shapes</h1>
+    <p><strong>Section 5.7</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1.25 hours</p>
+
+    <!-- ============================================================
+         5.7
+         ============================================================ -->
+    <section id="sec-5-7">
+      <h2>5.7 &nbsp; Instruction Formats: R, I and J</h2>
+
+      <p>An instruction is 32 bits. Look at what three different instructions need to say:</p>
+
+      <ul>
+        <li><code>add $t0, $t1, $t2</code> &mdash; an operation and <strong>three registers</strong>.</li>
+        <li><code>lw $t0, 64($sp)</code> &mdash; an operation, <strong>two registers and a number</strong>.</li>
+        <li><code>j 8192</code> &mdash; an operation and <strong>one large address</strong>.</li>
+      </ul>
+
+      <p>Three different shapes of information, one fixed budget of 32 bits. You cannot give every instruction room for the largest of them, because then <code>add</code> would waste most of its width on a field it does not use.</p>
+
+      <p>So MIPS defines <strong>three ways of dividing up the same 32 bits</strong>, and the processor has to be able to tell which division it is looking at before it can read any of the other fields.</p>
+
+      <h3>The three formats</h3>
+
+      <div class="fmt">
+        <div class="fmt__name">R-type &mdash; register operations</div>
+        <div class="fmt__bar" role="img" aria-label="R-type format: opcode 6 bits, rs 5 bits, rt 5 bits, rd 5 bits, shamt 5 bits, funct 6 bits.">
+          <div class="fmt__f fmt__f--op" style="flex:6"><b>opcode</b><span>6</span></div>
+          <div class="fmt__f" style="flex:5"><b>rs</b><span>5</span></div>
+          <div class="fmt__f" style="flex:5"><b>rt</b><span>5</span></div>
+          <div class="fmt__f" style="flex:5"><b>rd</b><span>5</span></div>
+          <div class="fmt__f fmt__f--unused" style="flex:5"><b>shamt</b><span>5</span></div>
+          <div class="fmt__f fmt__f--op" style="flex:6"><b>funct</b><span>6</span></div>
+        </div>
+      </div>
+
+      <div class="fmt">
+        <div class="fmt__name">I-type &mdash; anything with a constant in it</div>
+        <div class="fmt__bar" role="img" aria-label="I-type format: opcode 6 bits, rs 5 bits, rt 5 bits, immediate 16 bits.">
+          <div class="fmt__f fmt__f--op" style="flex:6"><b>opcode</b><span>6</span></div>
+          <div class="fmt__f" style="flex:5"><b>rs</b><span>5</span></div>
+          <div class="fmt__f" style="flex:5"><b>rt</b><span>5</span></div>
+          <div class="fmt__f fmt__f--imm" style="flex:16"><b>immediate</b><span>16</span></div>
+        </div>
+      </div>
+
+      <div class="fmt">
+        <div class="fmt__name">J-type &mdash; jumps</div>
+        <div class="fmt__bar" role="img" aria-label="J-type format: opcode 6 bits, address 26 bits.">
+          <div class="fmt__f fmt__f--op" style="flex:6"><b>opcode</b><span>6</span></div>
+          <div class="fmt__f fmt__f--imm" style="flex:26"><b>address</b><span>26</span></div>
+        </div>
+      </div>
+
+      <h3>What each field is</h3>
+
+      <table>
+        <thead><tr><th>Field</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>opcode</code></td><td>The operation code. Tells the processor what category of instruction this is &mdash; and therefore which of the three divisions to apply.</td></tr>
+          <tr><td><code>rs</code></td><td>A source register.</td></tr>
+          <tr><td><code>rt</code></td><td>A second source register in R-type; the <em>target</em> (destination) in most I-type instructions.</td></tr>
+          <tr><td><code>rd</code></td><td>The destination register. R-type only.</td></tr>
+          <tr><td><code>shamt</code></td><td>Shift amount. Used only by shift instructions, which arrive in Week 6 &mdash; in every instruction you encode this week it is <code>00000</code>.</td></tr>
+          <tr><td><code>funct</code></td><td>The function code. Picks the exact operation among R-type instructions, which all share one opcode.</td></tr>
+          <tr><td><code>immediate</code> / <code>address</code></td><td>A 16-bit constant (I-type) or a 26-bit target (J-type).</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Why a register field is exactly 5 bits</div>
+        <p>2<sup>5</sup> = 32, and there are 32 registers. <strong>The field width is the logarithm of the register count</strong>, and it could not be anything else.</p>
+        <p>That is not a coincidence and it is not free. Had MIPS chosen 64 registers, every register field would need 6 bits, R-type would need three of them plus an opcode plus a funct code, and the format would no longer fit in 32 bits. <strong>The number of registers a processor has is constrained by the shape of its instructions</strong>, and the two were designed against each other.</p>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Why every R-type shares the opcode <code>000000</code></div>
+        <p>It looks wasteful: nine instructions all identified the same way, with the real distinction pushed to a field at the far end. It is the opposite.</p>
+        <p>Every R-type does the same <em>shape</em> of thing &mdash; take two registers, compute something, put the answer in a third. So they can all share one decode path in the hardware, and only the ALU's operation select differs between them. Meanwhile the 6-bit opcode space, which is only 64 values wide, stays free for the I- and J-type instructions that genuinely need to be told apart early.</p>
+        <p><strong>One opcode, one decode path, many operations.</strong> You will build the circuit this pays for in Week 11.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         WIDGET 4
+         ============================================================ -->
+    <section id="widget-4">
+      <div class="widget-card">
+        <div class="widget-card__title">The Instruction Bench</div>
+        <div class="widget-card__subtitle">Both directions. Hover or focus a field to see which bits it owns.</div>
+
+        <div class="preset-row" role="group" aria-label="Direction">
+          <button type="button" class="widget-btn widget-btn--small" data-dir="encode" aria-pressed="true">Encode &mdash; assembly to bits</button>
+          <button type="button" class="widget-btn widget-btn--small" data-dir="decode" aria-pressed="false">Decode &mdash; bits to assembly</button>
+        </div>
+
+        <div class="bench-grid">
+          <div id="enc-panel">
+            <div class="widget-input-group">
+              <label for="enc-in">MIPS instruction</label>
+              <div class="io-row">
+                <input type="text" id="enc-in" value="add $t0, $t1, $t2" spellcheck="false" autocomplete="off">
+                <button type="button" class="widget-btn widget-btn--small widget-btn--primary" id="enc-go">Encode</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="dec-panel" hidden>
+            <div class="widget-input-group">
+              <label for="dec-in">32 bits (spaces are ignored)</label>
+              <div class="io-row">
+                <input type="text" id="dec-in" value="000000 01001 01010 01000 00000 100000" spellcheck="false" autocomplete="off">
+                <button type="button" class="widget-btn widget-btn--small widget-btn--primary" id="dec-go">Decode</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="preset-row" role="group" aria-label="Examples">
+            <button type="button" class="preset-btn" data-ex="add $t0, $t1, $t2">add (R-type)</button>
+            <button type="button" class="preset-btn" data-ex="sub $s0, $t8, $t9">sub (R-type)</button>
+            <button type="button" class="preset-btn" data-ex="lw $t1, 64($sp)">lw (I-type, memory)</button>
+            <button type="button" class="preset-btn" data-ex="addi $v0, $a1, -50">addi with a <em>negative</em> immediate</button>
+            <button type="button" class="preset-btn" data-ex="j 8192">j (J-type)</button>
+          </div>
+
+          <div>
+            <div class="budget" id="budget"></div>
+            <div class="bits32" id="bits32" role="img" aria-label="The assembled 32-bit instruction"></div>
+            <div class="sr-only" id="bits32-text" aria-live="polite"></div>
+          </div>
+
+          <div class="fieldchips" id="chips"></div>
+
+          <div>
+            <div class="widget-card__subtitle" style="margin:0 0 var(--space-xs);">Result</div>
+            <div class="bench-out" id="result" role="status" aria-live="polite"></div>
+            <div class="bench-err" id="err" role="alert"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Worked examples
+         ============================================================ -->
+    <section id="sec-worked">
+      <h3>Encoding, all the way through</h3>
+
+      <p>Take <code>sub $s0, $t8, $t9</code>. Its syntax is <code>sub $rd, $rs, $rt</code>, so <code>$s0</code> is the destination and <code>$t8</code>, <code>$t9</code> are the sources.</p>
+
+      <div class="derivation-panel">
+        <div class="derivation-panel__title">sub $s0, $t8, $t9</div>
+        <div class="derivation-step"><strong>It is R-type</strong>, so the fields are opcode, rs, rt, rd, shamt, funct.</div>
+        <div class="derivation-step"><code>opcode</code> = <code>000000</code> &mdash; every R-type.</div>
+        <div class="derivation-step"><code>rs</code> = <code>$t8</code> = register 24 = <code>11000</code> in 5 bits.</div>
+        <div class="derivation-step"><code>rt</code> = <code>$t9</code> = register 25 = <code>11001</code>.</div>
+        <div class="derivation-step"><code>rd</code> = <code>$s0</code> = register 16 = <code>10000</code>.</div>
+        <div class="derivation-step"><code>shamt</code> = <code>00000</code> &mdash; not a shift instruction.</div>
+        <div class="derivation-step"><code>funct</code> = <code>100010</code> &mdash; the code for <code>sub</code>, from the table below.</div>
+        <div class="derivation-step"><strong>Assembled:</strong> <code>000000 11000 11001 10000 00000 100010</code></div>
+      </div>
+
+      <p>Two things to notice. <code>$t8</code> is register <strong>24</strong>, not 18 &mdash; the <code>$t</code> registers are not contiguous, and that is the single most common lookup error in this material. And the operands in the assembly are written <em>destination first</em> while the fields are laid out <em>sources first</em>, so you cannot copy them across in order.</p>
+
+      <h3>Decoding, and the order it has to happen in</h3>
+
+      <p>Going the other way is not symmetric, and the asymmetry is the whole method.</p>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">You cannot split the bits until you know the format</div>
+        <p>Given 32 bits, you do not know where the boundaries are. Bits 6&ndash;10 might be <code>rs</code>, or they might be the first five bits of a 26-bit address. <strong>The only field whose position is the same in all three formats is the opcode.</strong></p>
+        <p>So: read the first six bits. <em>Then</em> decide where everything else is.</p>
+        <ul>
+          <li><code>000000</code> &rarr; R-type. Read the last six bits (<code>funct</code>) to find out which operation.</li>
+          <li><code>000010</code> or <code>000011</code> &rarr; J-type. Everything after the opcode is one 26-bit address.</li>
+          <li>anything else &rarr; I-type. Two 5-bit registers, then a 16-bit immediate.</li>
+        </ul>
+      </div>
+
+      <div class="derivation-panel">
+        <div class="derivation-panel__title">101011 11101 01000 0000000000010000</div>
+        <div class="derivation-step"><strong>Opcode first:</strong> <code>101011</code>. Not <code>000000</code>, not a jump &mdash; so <strong>I-type</strong>, and the table says <code>sw</code>.</div>
+        <div class="derivation-step"><strong>Now</strong> the boundaries are known: 6, then 5, then 5, then 16.</div>
+        <div class="derivation-step"><code>rs</code> = <code>11101</code> = 29 = <code>$sp</code>.</div>
+        <div class="derivation-step"><code>rt</code> = <code>01000</code> = 8 = <code>$t0</code>.</div>
+        <div class="derivation-step"><code>immediate</code> = <code>0000000000010000</code> = 16.</div>
+        <div class="derivation-step"><code>sw</code>'s syntax is <code>sw $rt, imm($rs)</code>, so the answer is <strong><code>sw $t0, 16($sp)</code></strong>.</div>
+      </div>
+
+      <h3>Negative immediates</h3>
+
+      <p>The immediate field is 16 bits, and for <code>addi</code>, <code>lw</code>, <code>sw</code>, <code>beq</code> and <code>bne</code> it is a <strong>signed</strong> value in two's complement &mdash; the representation you built in Week 1, showing up somewhere new.</p>
+
+      <p><code>addi $v0, $a1, -50</code>: the immediate is <code>1111111111001110</code>. Read as unsigned, those same bits are 65486. Read as 16-bit two's complement, they are &minus;50. <strong>Nothing in the instruction says which reading is right</strong> &mdash; the opcode does, because <code>addi</code> is defined to sign-extend.</p>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Sign-extended or zero-extended &mdash; same field, different rule</div>
+        <p>These two instructions have <em>identical shapes</em>. Same format, same field positions, same 16-bit immediate:</p>
+        <ul>
+          <li><code>addi $rt, $rs, imm</code> &mdash; the immediate is <strong>sign-extended</strong> to 32 bits. Negative values work.</li>
+          <li><code>andi $rt, $rs, imm</code> and <code>ori $rt, $rs, imm</code> &mdash; the immediate is <strong>zero-extended</strong>. The top 16 bits are filled with zeros regardless.</li>
+        </ul>
+        <p>Why the difference: arithmetic with a negative constant is ordinary and useful, but a bit mask with its top half set to ones by sign extension would mask the wrong bits. The rule follows what the instruction is <em>for</em>.</p>
+        <p>Encoding is unaffected &mdash; you write the same 16 bits either way. But when you read an instruction and work out what it does, <strong>which of these two it is changes the answer</strong>, and they are easy to confuse precisely because they look the same.</p>
+      </div>
+
+      <h3>This week's instruction set</h3>
+
+      <p>Fifteen instructions. Everything in Assignment 5 comes from this list:</p>
+
+      <p><code>add</code> &middot; <code>sub</code> &middot; <code>and</code> &middot; <code>or</code> &middot; <code>xor</code> &middot; <code>slt</code> &middot; <code>addi</code> &middot; <code>andi</code> &middot; <code>ori</code> &middot; <code>lw</code> &middot; <code>sw</code> &middot; <code>beq</code> &middot; <code>bne</code> &middot; <code>j</code> &middot; <code>jal</code></p>
+
+      <p>The reference tables below carry three more &mdash; <code>sll</code>, <code>srl</code> and <code>jr</code> &mdash; greyed and marked with the week they arrive. That is deliberate: they are real MIPS instructions and you will meet them, so their absence here should be a signpost rather than a gap. <strong>The two shifts are the only instructions that use <code>shamt</code></strong>, and they arrive in Week 6 with the ALU's own shift operations, where the connection between the instruction and the circuit is the point.</p>
+
+      <div class="callout callout--note">
+        <div class="callout__title">You can encode a branch this week without knowing what a branch does</div>
+        <p><code>beq</code> and <code>bne</code> are in the list, and you will encode and decode them. What actually <em>happens</em> when a branch is taken &mdash; how the program counter gets a new value, how the offset is measured &mdash; is Week 7.</p>
+        <p>That separation is deliberate rather than an oversight. Encoding is a mechanical skill about the shape of an instruction, and it is genuinely independent of what the instruction means. Being clear about which one you are doing is worth something on its own.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         REFERENCE TABLES
+         ============================================================ -->
+    <section id="sec-reference">
+      <h2>Reference</h2>
+
+      <p>These tables are what you look things up in. The same tables appear on the Assignment 5 page, so you will not need to come back here while you work.</p>
+
+      <div class="tab-navigation" role="tablist" aria-label="MIPS reference tables">
+        <button type="button" class="tab-button active" role="tab" id="tab-regs" aria-controls="panel-regs" aria-selected="true">Registers</button>
+        <button type="button" class="tab-button" role="tab" id="tab-r" aria-controls="panel-r" aria-selected="false">R-type</button>
+        <button type="button" class="tab-button" role="tab" id="tab-i" aria-controls="panel-i" aria-selected="false">I-type</button>
+        <button type="button" class="tab-button" role="tab" id="tab-j" aria-controls="panel-j" aria-selected="false">J-type</button>
+        <button type="button" class="tab-button" role="tab" id="tab-sys" aria-controls="panel-sys" aria-selected="false">Syscalls</button>
+      </div>
+
+      <div class="tab-panel active" role="tabpanel" id="panel-regs" aria-labelledby="tab-regs">
+        <div class="table-scroll"><table class="reftable"><thead><tr><th>Name</th><th>Number</th><th>Convention</th></tr></thead><tbody id="t-regs"></tbody></table></div>
+      </div>
+      <div class="tab-panel" role="tabpanel" id="panel-r" aria-labelledby="tab-r">
+        <div class="table-scroll"><table class="reftable"><thead><tr><th>Mnemonic</th><th>Syntax</th><th>funct</th><th>Description</th></tr></thead><tbody id="t-r"></tbody></table></div>
+        <p class="budget">All R-type instructions have <code>opcode</code> = <code>000000</code>.</p>
+      </div>
+      <div class="tab-panel" role="tabpanel" id="panel-i" aria-labelledby="tab-i">
+        <div class="table-scroll"><table class="reftable"><thead><tr><th>Mnemonic</th><th>Syntax</th><th>opcode</th><th>Description</th></tr></thead><tbody id="t-i"></tbody></table></div>
+      </div>
+      <div class="tab-panel" role="tabpanel" id="panel-j" aria-labelledby="tab-j">
+        <div class="table-scroll"><table class="reftable"><thead><tr><th>Mnemonic</th><th>Syntax</th><th>opcode</th><th>Description</th></tr></thead><tbody id="t-j"></tbody></table></div>
+      </div>
+      <div class="tab-panel" role="tabpanel" id="panel-sys" aria-labelledby="tab-sys">
+        <div class="table-scroll"><table class="reftable"><thead><tr><th>Service</th><th>Code in <code>$v0</code></th><th>Arguments</th></tr></thead><tbody id="t-sys"></tbody></table></div>
+        <p class="budget">You will use <code>10</code> (exit) on the next page. The rest arrive as you need them.</p>
+      </div>
+
+      <p style="margin-top:var(--space-md);">
+        <button type="button" class="widget-btn widget-btn--small widget-btn--outline" id="print-ref">Print these tables</button>
+      </p>
+    </section>
+
+    <!-- ============================================================
+         SELF-CHECK B
+         ============================================================ -->
+    <section id="self-check-b">
+      <div class="widget-card">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Three problems, not graded, no record kept. Work them on paper first, then check.</div>
+
+        <div class="quiz-question">1. Encode <code>add $s1, $t2, $t3</code>.</div>
+        <div class="widget-input-row">
+          <label for="sc1" class="sr-only">Your 32-bit answer for problem 1</label>
+          <input type="text" id="sc1" placeholder="32 bits, spaces allowed" spellcheck="false" autocomplete="off">
+          <button type="button" class="widget-btn widget-btn--small" data-check="1">Check</button>
+        </div>
+        <div class="quiz-feedback" id="sc1-fb" role="status" aria-live="polite"></div>
+
+        <div class="quiz-question" style="margin-top:var(--space-lg);">2. Encode <code>addi $t0, $s3, 256</code>.</div>
+        <div class="widget-input-row">
+          <label for="sc2" class="sr-only">Your 32-bit answer for problem 2</label>
+          <input type="text" id="sc2" placeholder="32 bits, spaces allowed" spellcheck="false" autocomplete="off">
+          <button type="button" class="widget-btn widget-btn--small" data-check="2">Check</button>
+        </div>
+        <div class="quiz-feedback" id="sc2-fb" role="status" aria-live="polite"></div>
+
+        <div class="quiz-question" style="margin-top:var(--space-lg);">3. Decode <code>000000 10001 10010 01000 00000 100010</code>.</div>
+        <div class="widget-input-row">
+          <label for="sc3" class="sr-only">Your assembly answer for problem 3</label>
+          <input type="text" id="sc3" placeholder="e.g. add $t0, $t1, $t2" spellcheck="false" autocomplete="off">
+          <button type="button" class="widget-btn widget-btn--small" data-check="3">Check</button>
+        </div>
+        <div class="quiz-feedback" id="sc3-fb" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Forward
+         ============================================================ -->
+    <section id="sec-forward">
+      <h2>Where this goes next</h2>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Next: a program that actually runs</div>
+        <p>You can now do by hand what an assembler does. The last page of the week is where you let a real assembler do it instead &mdash; write a short program in MARS, watch it turn into machine code, and single-step it while the registers change on screen.</p>
+      </div>
+
+      <p><strong>Assignment 5 Part C</strong> is seven problems of exactly this kind: four to encode, three to decode. The reference tables are reproduced on the assignment page.</p>
+
+      <p>For a second treatment of this material: log into your Saylor CS301 account and open <strong>Unit 2: Instructions &mdash; Hardware Language</strong>. <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">The CS301 course home page is here</a>.</p>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    var L = window.CSCLogic, M = L.mips;
+    function el(id) { return document.getElementById(id); }
+    function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+
+    /* ============================================================
+       WIDGET 4 — The Instruction Bench
+       ============================================================
+       Both directions, because the legacy version of this widget only
+       encoded and half of the assignment is decoding.
+
+       The field highlighting is the other addition, and it is the one
+       that earns its place: a run of 32 undifferentiated digits does not
+       teach the bit-to-field mapping, which is the thing students
+       actually get wrong. Hovering or focusing either a field chip or a
+       bit group lights up both. */
+
+    var dir = 'encode';
+    var current = null;
+
+    function setPressed(group, attr, value) {
+      Array.prototype.forEach.call(group, function (b) {
+        b.setAttribute('aria-pressed', b.getAttribute(attr) === value ? 'true' : 'false');
+      });
+    }
+
+    function hot(idx) {
+      Array.prototype.forEach.call(document.querySelectorAll('#bits32 .bits32__grp'), function (g, k) {
+        g.classList.toggle('bits32__grp--hot', k === idx);
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('#chips .fieldchip'), function (c, k) {
+        c.classList.toggle('fieldchip--hot', k === idx);
+      });
+    }
+
+    function render(res) {
+      current = res;
+      var bitsNode = el('bits32'), chipsNode = el('chips');
+
+      if (!res || !res.ok) {
+        bitsNode.innerHTML = ''; chipsNode.innerHTML = '';
+        el('budget').textContent = '';
+        el('result').textContent = '';
+        el('bits32-text').textContent = '';
+        el('err').textContent = res ? res.error : '';
+        return;
+      }
+      el('err').textContent = '';
+
+      var bh = '', ch = '', widths = [];
+      res.fields.forEach(function (f, k) {
+        bh += '<span class="bits32__grp" data-f="' + k + '">';
+        f.bits.split('').forEach(function (b) { bh += '<span class="bits32__b">' + b + '</span>'; });
+        bh += '</span>';
+        ch += '<div class="fieldchip" data-f="' + k + '" tabindex="0" role="button" ' +
+              'aria-label="Field ' + f.name + ', ' + f.width + ' bits, value ' + f.bits + '. ' + esc(f.label) + '">' +
+              '<b>' + f.name + '</b>' + f.bits + '<br><em>' + esc(f.label) + '</em></div>';
+        widths.push(f.width);
+      });
+      bitsNode.innerHTML = bh;
+      chipsNode.innerHTML = ch;
+
+      /* The bit budget, live. Fixed width is the RISC consequence this
+         whole section rests on, so it should be visible rather than
+         asserted. */
+      el('budget').innerHTML = widths.join(' + ') + ' = <b>' + widths.reduce(function (a, b) { return a + b; }, 0) + ' bits</b>';
+
+      el('result').textContent = (dir === 'encode')
+        ? res.bits
+        : res.text;
+      el('bits32-text').textContent = res.format + '-type. ' +
+        res.fields.map(function (f) { return f.name + ' is ' + f.bits; }).join('; ') + '.';
+
+      Array.prototype.forEach.call(document.querySelectorAll('#chips .fieldchip'), function (c) {
+        var k = parseInt(c.getAttribute('data-f'), 10);
+        c.addEventListener('mouseenter', function () { hot(k); });
+        c.addEventListener('mouseleave', function () { hot(-1); });
+        c.addEventListener('focus', function () { hot(k); });
+        c.addEventListener('blur', function () { hot(-1); });
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('#bits32 .bits32__grp'), function (g) {
+        var k = parseInt(g.getAttribute('data-f'), 10);
+        g.addEventListener('mouseenter', function () { hot(k); });
+        g.addEventListener('mouseleave', function () { hot(-1); });
+      });
+    }
+
+    function doEncode() { render(M.encode(el('enc-in').value)); }
+    function doDecode() { render(M.decode(el('dec-in').value)); }
+    function run() { if (dir === 'encode') { doEncode(); } else { doDecode(); } }
+
+    var dirBtns = document.querySelectorAll('[data-dir]');
+    Array.prototype.forEach.call(dirBtns, function (b) {
+      b.addEventListener('click', function () {
+        dir = b.getAttribute('data-dir');
+        setPressed(dirBtns, 'data-dir', dir);
+        el('enc-panel').hidden = (dir !== 'encode');
+        el('dec-panel').hidden = (dir !== 'decode');
+        run();
+      });
+    });
+
+    el('enc-go').addEventListener('click', doEncode);
+    el('dec-go').addEventListener('click', doDecode);
+    el('enc-in').addEventListener('input', doEncode);
+    el('dec-in').addEventListener('input', doDecode);
+
+    /* An example loads into whichever direction is showing: in encode
+       mode the assembly goes in, in decode mode its bits do. Same
+       instruction seen from either end, which is the point. */
+    Array.prototype.forEach.call(document.querySelectorAll('[data-ex]'), function (b) {
+      b.addEventListener('click', function () {
+        var src = b.getAttribute('data-ex');
+        if (dir === 'encode') { el('enc-in').value = src; doEncode(); }
+        else {
+          var r = M.encode(src);
+          if (r.ok) { el('dec-in').value = r.bits; doDecode(); }
+        }
+      });
+    });
+
+    /* ============================================================
+       Reference tables, rendered from the shared kernel
+       ============================================================
+       Not written out in this file. assignment5.html renders the same
+       five tables from the same source, so the two cannot drift -- which
+       is exactly what happened in Fall 2025, where the reference sheet
+       and the instruction formatter each carried their own copy of the
+       opcode data. */
+
+    function instrRows(list, codeKey) {
+      return list.map(function (o) {
+        var later = o.week > 5;
+        return '<tr' + (later ? ' class="later"' : '') + '>' +
+          '<td>' + o.m + (later ? ' <span class="wk">Week ' + o.week + '</span>' : '') + '</td>' +
+          '<td>' + esc(o.syntax) + '</td>' +
+          '<td>' + o[codeKey] + '</td>' +
+          '<td>' + esc(o.desc) + '</td></tr>';
+      }).join('');
+    }
+
+    el('t-regs').innerHTML = M.regs.map(function (r) {
+      return '<tr><td>' + r.name + '</td><td>' + r.n + '</td><td>' + esc(r.usage) + '</td></tr>';
+    }).join('');
+    el('t-r').innerHTML = instrRows(M.r, 'funct');
+    el('t-i').innerHTML = instrRows(M.i, 'opcode');
+    el('t-j').innerHTML = instrRows(M.j, 'opcode');
+    el('t-sys').innerHTML = M.syscalls.map(function (s) {
+      return '<tr><td>' + esc(s.service) + '</td><td>' + s.code + '</td><td>' + esc(s.args) + '</td></tr>';
+    }).join('');
+
+    /* Tabs. Fragment-free: these switch panels in place and navigate
+       nowhere, so Standards Section 5 is not engaged. */
+    Array.prototype.forEach.call(document.querySelectorAll('[role="tab"]'), function (tab) {
+      tab.addEventListener('click', function () {
+        Array.prototype.forEach.call(document.querySelectorAll('[role="tab"]'), function (t) {
+          t.setAttribute('aria-selected', 'false'); t.classList.remove('active');
+        });
+        Array.prototype.forEach.call(document.querySelectorAll('[role="tabpanel"]'), function (p) {
+          p.classList.remove('active');
+        });
+        tab.setAttribute('aria-selected', 'true');
+        tab.classList.add('active');
+        el(tab.getAttribute('aria-controls')).classList.add('active');
+      });
+    });
+
+    /* window.print() is not navigation and does not violate Section 5. */
+    el('print-ref').addEventListener('click', function () { window.print(); });
+
+    /* ============================================================
+       Self-check B
+       ============================================================
+       Answers are computed by the same codec the widget uses, so there
+       is no separate answer key to fall out of step with the tables. */
+
+    var ANSWERS = {
+      '1': { kind: 'bits', src: 'add $s1, $t2, $t3' },
+      '2': { kind: 'bits', src: 'addi $t0, $s3, 256' },
+      '3': { kind: 'text', src: '000000 10001 10010 01000 00000 100010' }
+    };
+
+    function checkOne(n) {
+      var a = ANSWERS[n], given = el('sc' + n).value, fb = el('sc' + n + '-fb'), okFlag, msg;
+
+      if (a.kind === 'bits') {
+        var want = M.encode(a.src).bits;
+        var got = given.replace(/[^01]/g, '');
+        okFlag = (got === want);
+        if (okFlag) {
+          msg = '<strong>Correct.</strong> <code>' + want + '</code>';
+        } else if (got.length !== 32) {
+          msg = '<strong>Not yet &mdash; you have ' + got.length + ' bits, and an instruction is 32.</strong> ' +
+                'Check that each field is as wide as the format says: 6, 5, 5, 5, 5, 6 for R-type, or 6, 5, 5, 16 for I-type.';
+        } else {
+          /* Naming the first field that differs is worth far more than
+             "wrong" -- it turns a dead end into a lookup. */
+          var mine = M.decode(got), theirs = M.encode(a.src), diff = null, k;
+          for (k = 0; k < theirs.fields.length; k++) {
+            var lo = theirs.fields.slice(0, k).reduce(function (s2, f) { return s2 + f.width; }, 0);
+            if (got.substr(lo, theirs.fields[k].width) !== theirs.fields[k].bits) { diff = theirs.fields[k]; break; }
+          }
+          msg = '<strong>Not quite.</strong> ' + (diff
+            ? 'The first field that differs is <code>' + diff.name + '</code> &mdash; it should be <code>' + diff.bits + '</code> (' + esc(diff.label) + ').'
+            : 'Check the field order against the format diagram.') +
+            (mine.ok ? ' What you wrote decodes as <code>' + esc(mine.text) + '</code>.' : '');
+        }
+      } else {
+        var wantText = M.decode(a.src).text;
+        var norm = function (s) { return s.toLowerCase().replace(/\s+/g, ' ').replace(/\s*,\s*/g, ', ').trim(); };
+        okFlag = (norm(given) === norm(wantText));
+        msg = okFlag
+          ? '<strong>Correct.</strong> <code>' + esc(wantText) + '</code>'
+          : '<strong>Not quite.</strong> The opcode is <code>000000</code>, so it is R-type and the <code>funct</code> field decides which one. ' +
+            'Remember that R-type syntax puts the <em>destination</em> first, while the fields run <code>rs</code>, <code>rt</code>, <code>rd</code>.';
+      }
+
+      fb.className = 'quiz-feedback ' + (okFlag ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+      fb.innerHTML = msg;
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-check]'), function (b) {
+      b.addEventListener('click', function () { checkOne(b.getAttribute('data-check')); });
+    });
+    ['1', '2', '3'].forEach(function (n) {
+      el('sc' + n).addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); checkOne(n); }
+      });
+    });
+
+    run();
+  })();
+  </script>
+</body>
+</html>
