@@ -57,7 +57,7 @@
 
       <h3>The tool</h3>
 
-      <p><strong>MARS</strong> &mdash; the MIPS Assembler and Runtime Simulator. You installed it in Lab 1 and have not touched it since. It does four things:</p>
+      <p><strong>MARS</strong> &mdash; the MIPS Assembler and Runtime Simulator. You installed it back in Week 1 and have not touched it since. It does four things:</p>
 
       <ul>
         <li>An <strong>editor</strong> for writing assembly.</li>
@@ -72,20 +72,18 @@
 
       <p>Six instructions and one variable. Type it rather than pasting it &mdash; the typing is where the syntax sticks.</p>
 
-<div class="prog"><span class="dir">      .globl</span> main          <span class="cm"># make main visible as the entry point</span>
+<div class="prog"><span class="dir">      .data</span>                <span class="cm"># everything below here is data</span>
+<span class="lbl">value:</span> .word 12            <span class="cm"># a 32-bit integer, initialised to 12</span>
+
 <span class="dir">      .text</span>                <span class="cm"># everything below here is code</span>
-<span class="lbl">main:</span>
       li   $t2, 25         <span class="cm"># load the constant 25 into $t2</span>
       lw   $t3, value      <span class="cm"># load the word stored at 'value' into $t3</span>
       add  $t4, $t2, $t3   <span class="cm"># $t4 = $t2 + $t3</span>
       sub  $t5, $t2, $t3   <span class="cm"># $t5 = $t2 - $t3</span>
       li   $v0, 10         <span class="cm"># syscall code 10 means "exit"</span>
-      syscall              <span class="cm"># hand control back to the system</span>
+      syscall              <span class="cm"># hand control back to the system</span></div>
 
-<span class="dir">      .data</span>                <span class="cm"># everything below here is data</span>
-<span class="lbl">value:</span> .word 12            <span class="cm"># a 32-bit integer, initialised to 12</span></div>
-
-      <h3>The three directives</h3>
+      <h3>The two directives</h3>
 
       <p>Lines beginning with a dot are not instructions. They are <strong>directives</strong> &mdash; messages to the assembler about how to lay the program out, rather than things the processor executes.</p>
 
@@ -93,24 +91,20 @@
         <thead><tr><th>Directive</th><th>What it does</th></tr></thead>
         <tbody>
           <tr>
-            <td><code>.text</code></td>
-            <td>Everything after this is <strong>code</strong>. The assembler puts it in the part of memory where instructions live.</td>
-          </tr>
-          <tr>
             <td><code>.data</code></td>
-            <td>Everything after this is <strong>data</strong>. Variables, constants, strings.</td>
+            <td>Everything after this is <strong>data</strong>. Variables, constants, strings. Declare them first so the labels exist when the code refers to them.</td>
           </tr>
           <tr>
-            <td><code>.globl main</code></td>
-            <td>Makes the label <code>main</code> visible outside this file, so the system knows where to start.</td>
+            <td><code>.text</code></td>
+            <td>Everything after this is <strong>code</strong>. The assembler puts it in the part of memory where instructions live, and MARS begins executing at the first instruction it finds here.</td>
           </tr>
         </tbody>
       </table>
 
       <div class="callout callout--note">
-        <div class="callout__title">Leave out <code>.globl main</code> and things get strange</div>
-        <p>Some simulators start at the first instruction regardless and it appears to work. Others refuse to run at all. Neither is a bug &mdash; without <code>.globl</code> you have not said where the program starts, so the behaviour is whatever that particular tool does about it.</p>
-        <p>Write it. It is one line, it is what every real MIPS program has, and the failures it prevents are the confusing sort.</p>
+        <div class="callout__title">No <code>main</code>, and no entry-point declaration</div>
+        <p>If you have written C or C++, you are used to a program having a <code>main</code> function that the system is told to call. Assembly does not work that way and does not need to. <strong>Execution starts at the first instruction in <code>.text</code> and runs downward</strong> until something sends it elsewhere.</p>
+        <p>You will see MIPS written the other way &mdash; a <code>.globl main</code> line and a <code>main:</code> label &mdash; and it is not wrong; it is what you need when several assembled files are linked together and one of them has to be named as the starting point. For a single file in MARS it buys you nothing. <strong>This course writes <code>.data</code>, then <code>.text</code>, and lets execution begin at the top.</strong></p>
       </div>
 
       <h3>Comment every executable line</h3>
@@ -238,7 +232,7 @@ syscall              # hand control back to the system</div>
 
       <p><strong>Assignment 5</strong> is 100 points and about two and a half hours. Four parts: the three circuits (Logisim Checkpoint 1), three written questions on storing and speaking, seven encoding and decoding problems, and a screenshot of this program running.</p>
 
-      <p><strong>Lab 5 is Tuesday, and it is the first lab that does not finish in the room.</strong> Expect to complete and test the register on your own afterwards. Start the Logisim half early enough that you can ask about it before the week ends.</p>
+      <p><strong>Start the Logisim half early.</strong> A wiring problem found mid-week is a quick question; the same problem found an hour before the deadline is not.</p>
     </section>
 
   </main>

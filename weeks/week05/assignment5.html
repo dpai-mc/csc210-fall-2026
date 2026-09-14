@@ -36,15 +36,64 @@
     .rubric-table td { font-size: var(--fs-sm); vertical-align: top; }
     .rubric-table td:first-child { width: 20%; }
 
-    /* Part C answer boxes. Ruled lines rather than form inputs: this page
-       is a handout, students submit their own work through Canvas, and a
-       text field that loses what you typed is a trap. */
+    /* Parts B and C are filled in on the page and printed to PDF for
+       submission, so the answer slots are real form controls rather than
+       ruled lines. Nothing is stored anywhere -- see the notice above
+       Part B -- so the whole flow is: fill in, print, upload. */
     .fields { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: var(--space-sm) 0 var(--space-md); }
     .field-slot { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-xs) var(--space-sm); min-width: 74px; background: var(--color-surface); }
     .field-slot b { display: block; font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--color-text-muted); }
-    .field-slot span { display: block; border-bottom: 1px solid var(--color-text-muted); height: 1.5em; }
+    .field-slot input {
+      display: block; width: 100%; box-sizing: border-box;
+      border: 0; border-bottom: 1px solid var(--color-text-muted);
+      border-radius: 0; background: transparent; color: var(--color-text);
+      font-family: var(--font-mono); font-size: var(--fs-sm);
+      letter-spacing: .08em; height: 1.7em; padding: 0;
+    }
+    .field-slot input:focus { outline: 2px solid var(--color-primary); outline-offset: 2px; }
     .given-bits { font-family: var(--font-mono); font-size: var(--fs-md); letter-spacing: .06em; word-break: break-all; }
+    /* Part D is submitted as a screenshot plus a sentence, so its answer
+       space stays a ruled line rather than a form field. */
     .answer-rule { display: block; border-bottom: 1px solid var(--color-text-muted); height: 1.7em; margin: var(--space-xs) 0 0; }
+
+    /* Shown only when shared/logic.js is older than this page expects.
+       The reference tables render from CSCLogic.mips; if the kernel is
+       stale they come up empty and nothing says why. */
+    .kernel-warn {
+      display: none; border: 2px solid var(--color-warning);
+      background: var(--color-code-bg); border-radius: var(--radius);
+      padding: var(--space-md); margin: var(--space-md) 0;
+    }
+    .kernel-warn--on { display: block; }
+
+    /* Written / free-text answers. The textarea is what the student types
+       into; .ans__print is a mirror that only exists on paper, because a
+       textarea prints only the scrolled-into-view portion of its content
+       and would silently truncate a long answer in the PDF. */
+    .ans { margin-top: var(--space-sm); }
+    .ans__input {
+      display: block; width: 100%; box-sizing: border-box;
+      min-height: 5.2em; resize: vertical;
+      font-family: var(--font-sans); font-size: var(--fs-sm); line-height: 1.55;
+      color: var(--color-text); background: var(--color-surface);
+      border: 1px solid var(--color-border); border-radius: var(--radius);
+      padding: var(--space-sm);
+    }
+    .ans__input:focus { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+    .ans--short .ans__input { min-height: 2.6em; font-family: var(--font-mono); letter-spacing: .04em; }
+    .ans__print { display: none; }
+
+    /* Who this belongs to. Not graded -- it is here so the PDF that lands
+       in the gradebook can be told apart from thirty others. */
+    .submit-id { display: flex; flex-wrap: wrap; gap: var(--space-md); margin: var(--space-md) 0; }
+    .submit-id label { flex: 1 1 200px; font-size: var(--fs-sm); font-weight: 600; }
+    .submit-id input {
+      display: block; width: 100%; box-sizing: border-box; margin-top: var(--space-xs);
+      font: inherit; font-weight: 400; color: var(--color-text);
+      background: var(--color-surface); border: 1px solid var(--color-border);
+      border-radius: var(--radius); padding: var(--space-xs) var(--space-sm);
+    }
+    .print-row { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; margin: var(--space-md) 0; }
 
     .reftable { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
     .reftable th, .reftable td { text-align: left; padding: var(--space-xs) var(--space-sm); border-bottom: 1px solid var(--color-border); }
@@ -58,6 +107,24 @@
       .sp-header, .sp-footer { display: none; }
       .q-block { break-inside: avoid; }
       body { background: #fff; }
+
+      /* Typed answers, on paper. Inputs print their own value; textareas
+         do not print what has scrolled out of view, so the mirror div
+         takes over and the textarea steps aside. */
+      .ans__input { display: none; }
+      .ans__print {
+        display: block; white-space: pre-wrap; word-break: break-word;
+        border: 1px solid #999; border-radius: 3px;
+        padding: 6px 8px; min-height: 4em; font-size: 10.5pt; line-height: 1.5;
+      }
+      .ans--short .ans__print { min-height: 1.8em; font-family: var(--font-mono); }
+      .field-slot input { border-bottom: 1px solid #999; }
+      .no-print { display: none !important; }
+
+      /* The submit button sets .print-bc on <body>, which trims the page
+         down to the cover block and Parts B and C -- the only things
+         Canvas wants. An unaided Ctrl+P still prints the whole handout. */
+      body.print-bc main > *:not(#submit-cover):not(#part-b):not(#part-c) { display: none !important; }
     }
   </style>
 </head>
@@ -102,8 +169,8 @@
     </div>
 
     <div class="callout callout--note">
-      <div class="callout__title">Lab 5 does not finish in the room</div>
-      <p>Labs 1 through 4 all completed in class. <strong>Lab 5 is the first that does not</strong> &mdash; Tuesday's session starts Part A with you and you finish and test it on your own.</p>
+      <div class="callout__title">Start Part A early</div>
+      <p>Part A is the largest single piece of this assignment and it is a build, which means it can fail in ways reading about it will not predict.</p>
       <p>Plan accordingly: start early enough that you can ask about it before the week ends.</p>
     </div>
 
@@ -255,6 +322,36 @@
     <!-- ============================================================
          PART B
          ============================================================ -->
+    <!-- ============================================================
+         SUBMISSION COVER — Parts B and C
+         ============================================================
+         Visible on screen (this is where the student types their name)
+         and the first page of the printed PDF. -->
+    <section id="submit-cover">
+      <h2>Parts B and C — fill in and submit</h2>
+
+      <p>Parts B and C are answered <strong>on this page</strong>. Type into the boxes, then use the button below to produce a PDF of just those two parts and upload it to Canvas alongside your <code>.circ</code> file and your Part D screenshot.</p>
+
+      <div class="submit-id">
+        <label>Your name
+          <input type="text" id="sid-name" autocomplete="name" placeholder="First and last name">
+        </label>
+        <label>Date
+          <input type="text" id="sid-date" autocomplete="off" placeholder="Today's date">
+        </label>
+      </div>
+
+      <div class="callout callout--warn no-print">
+        <div class="callout__title">Nothing you type here is saved</div>
+        <p>These boxes live in the page and nowhere else. <strong>Close the tab or reload and your answers are gone.</strong> Fill Parts B and C in one sitting and print before you leave &mdash; or draft your answers somewhere else and paste them in.</p>
+      </div>
+
+      <div class="print-row no-print">
+        <button type="button" class="widget-btn widget-btn--primary" id="print-bc">Print Parts B and C &rarr; Save as PDF</button>
+        <span class="q-pts">In the print dialog, choose <strong>Save as PDF</strong> as the destination.</span>
+      </div>
+    </section>
+
     <section id="part-b">
       <h2>Part B — Written: Storing and Speaking <span class="q-pts">(15 points)</span></h2>
 
@@ -262,17 +359,29 @@
 
       <div class="q-block">
         <p><span class="q-num">1.</span> <span class="q-pts">(5 points)</span> <code>MEM_8BIT</code> is eight <code>MEM_1BIT</code> cells. Explain what the <strong>single shared <code>s</code> line</strong> does that eight separate <code>Set</code> lines would not &mdash; and why that difference is what makes the circuit store a <em>byte</em> rather than eight bits.</p>
-        <span class="answer-rule"></span><span class="answer-rule"></span><span class="answer-rule"></span>
+        <div class="ans">
+          <label class="sr-only" for="b1">Your answer to Part B question 1</label>
+          <textarea class="ans__input" id="b1" rows="4"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
+        </div>
       </div>
 
       <div class="q-block">
         <p><span class="q-num">2.</span> <span class="q-pts">(5 points)</span> A register whose "silent" state is to drive <code>00000000</code> cannot share a bus. Explain why, <strong>in terms of what is physically on the wire</strong> &mdash; not in terms of a rule that the control unit has to follow.</p>
-        <span class="answer-rule"></span><span class="answer-rule"></span><span class="answer-rule"></span>
+        <div class="ans">
+          <label class="sr-only" for="b2">Your answer to Part B question 2</label>
+          <textarea class="ans__input" id="b2" rows="4"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
+        </div>
       </div>
 
       <div class="q-block">
         <p><span class="q-num">3.</span> <span class="q-pts">(5 points)</span> Your <code>REGISTER_8BIT</code> has two outputs. Describe the difference between <code>o</code> and <code>reg</code>, and give <strong>one specific situation</strong> in which you would need <code>reg</code> and <code>o</code> would not do.</p>
-        <span class="answer-rule"></span><span class="answer-rule"></span><span class="answer-rule"></span>
+        <div class="ans">
+          <label class="sr-only" for="b3">Your answer to Part B question 3</label>
+          <textarea class="ans__input" id="b3" rows="4"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
+        </div>
       </div>
     </section>
 
@@ -292,32 +401,47 @@
       <div class="q-block">
         <p><span class="q-num">1.</span> <span class="q-pts">(4 points)</span> <code>sub $s0, $t8, $t9</code></p>
         <div class="fields">
-          <div class="field-slot"><b>opcode</b><span></span></div>
-          <div class="field-slot"><b>rs</b><span></span></div>
-          <div class="field-slot"><b>rt</b><span></span></div>
-          <div class="field-slot"><b>rd</b><span></span></div>
-          <div class="field-slot"><b>shamt</b><span></span></div>
-          <div class="field-slot"><b>funct</b><span></span></div>
+          <div class="field-slot"><b><label for="c1-opcode">opcode</label></b><input type="text" id="c1-opcode" inputmode="numeric" autocomplete="off" aria-label="Question 1, opcode field"></div>
+          <div class="field-slot"><b><label for="c1-rs">rs</label></b><input type="text" id="c1-rs" inputmode="numeric" autocomplete="off" aria-label="Question 1, rs field"></div>
+          <div class="field-slot"><b><label for="c1-rt">rt</label></b><input type="text" id="c1-rt" inputmode="numeric" autocomplete="off" aria-label="Question 1, rt field"></div>
+          <div class="field-slot"><b><label for="c1-rd">rd</label></b><input type="text" id="c1-rd" inputmode="numeric" autocomplete="off" aria-label="Question 1, rd field"></div>
+          <div class="field-slot"><b><label for="c1-shamt">shamt</label></b><input type="text" id="c1-shamt" inputmode="numeric" autocomplete="off" aria-label="Question 1, shamt field"></div>
+          <div class="field-slot"><b><label for="c1-funct">funct</label></b><input type="text" id="c1-funct" inputmode="numeric" autocomplete="off" aria-label="Question 1, funct field"></div>
+        </div>
+        <div class="ans ans--short">
+          <label class="sr-only" for="c1-all">Question 1, the assembled 32 bits</label>
+          <textarea class="ans__input" id="c1-all" rows="1" placeholder="The assembled 32 bits"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
         </div>
       </div>
 
       <div class="q-block">
         <p><span class="q-num">2.</span> <span class="q-pts">(4 points)</span> <code>lw $t1, 64($sp)</code></p>
         <div class="fields">
-          <div class="field-slot"><b>opcode</b><span></span></div>
-          <div class="field-slot"><b>rs</b><span></span></div>
-          <div class="field-slot"><b>rt</b><span></span></div>
-          <div class="field-slot" style="min-width:190px;"><b>immediate</b><span></span></div>
+          <div class="field-slot"><b><label for="c2-opcode">opcode</label></b><input type="text" id="c2-opcode" inputmode="numeric" autocomplete="off" aria-label="Question 2, opcode field"></div>
+          <div class="field-slot"><b><label for="c2-rs">rs</label></b><input type="text" id="c2-rs" inputmode="numeric" autocomplete="off" aria-label="Question 2, rs field"></div>
+          <div class="field-slot"><b><label for="c2-rt">rt</label></b><input type="text" id="c2-rt" inputmode="numeric" autocomplete="off" aria-label="Question 2, rt field"></div>
+          <div class="field-slot" style="min-width:190px;"><b><label for="c2-imm">immediate</label></b><input type="text" id="c2-imm" inputmode="numeric" autocomplete="off" aria-label="Question 2, immediate field"></div>
+        </div>
+        <div class="ans ans--short">
+          <label class="sr-only" for="c2-all">Question 2, the assembled 32 bits</label>
+          <textarea class="ans__input" id="c2-all" rows="1" placeholder="The assembled 32 bits"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
         </div>
       </div>
 
       <div class="q-block">
         <p><span class="q-num">3.</span> <span class="q-pts">(4 points)</span> <code>addi $v0, $a1, -50</code></p>
         <div class="fields">
-          <div class="field-slot"><b>opcode</b><span></span></div>
-          <div class="field-slot"><b>rs</b><span></span></div>
-          <div class="field-slot"><b>rt</b><span></span></div>
-          <div class="field-slot" style="min-width:190px;"><b>immediate</b><span></span></div>
+          <div class="field-slot"><b><label for="c3-opcode">opcode</label></b><input type="text" id="c3-opcode" inputmode="numeric" autocomplete="off" aria-label="Question 3, opcode field"></div>
+          <div class="field-slot"><b><label for="c3-rs">rs</label></b><input type="text" id="c3-rs" inputmode="numeric" autocomplete="off" aria-label="Question 3, rs field"></div>
+          <div class="field-slot"><b><label for="c3-rt">rt</label></b><input type="text" id="c3-rt" inputmode="numeric" autocomplete="off" aria-label="Question 3, rt field"></div>
+          <div class="field-slot" style="min-width:190px;"><b><label for="c3-imm">immediate</label></b><input type="text" id="c3-imm" inputmode="numeric" autocomplete="off" aria-label="Question 3, immediate field"></div>
+        </div>
+        <div class="ans ans--short">
+          <label class="sr-only" for="c3-all">Question 3, the assembled 32 bits</label>
+          <textarea class="ans__input" id="c3-all" rows="1" placeholder="The assembled 32 bits"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
         </div>
         <p class="q-pts">The immediate is negative. Sixteen bits, two&rsquo;s complement &mdash; Week 1, in a new place.</p>
       </div>
@@ -325,8 +449,13 @@
       <div class="q-block">
         <p><span class="q-num">4.</span> <span class="q-pts">(4 points)</span> <code>j 8192</code></p>
         <div class="fields">
-          <div class="field-slot"><b>opcode</b><span></span></div>
-          <div class="field-slot" style="min-width:280px;"><b>address</b><span></span></div>
+          <div class="field-slot"><b><label for="c4-opcode">opcode</label></b><input type="text" id="c4-opcode" inputmode="numeric" autocomplete="off" aria-label="Question 4, opcode field"></div>
+          <div class="field-slot" style="min-width:280px;"><b><label for="c4-addr">address</label></b><input type="text" id="c4-addr" inputmode="numeric" autocomplete="off" aria-label="Question 4, address field"></div>
+        </div>
+        <div class="ans ans--short">
+          <label class="sr-only" for="c4-all">Question 4, the assembled 32 bits</label>
+          <textarea class="ans__input" id="c4-all" rows="1" placeholder="The assembled 32 bits"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
         </div>
       </div>
 
@@ -336,19 +465,31 @@
       <div class="q-block">
         <p><span class="q-num">5.</span> <span class="q-pts">(4 points)</span></p>
         <p class="given-bits">000000 01001 01010 11000 00000 100101</p>
-        <span class="answer-rule"></span>
+        <div class="ans ans--short">
+          <label class="sr-only" for="c5">Question 5, the instruction in assembly</label>
+          <textarea class="ans__input" id="c5" rows="1" placeholder="The instruction in assembly"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
+        </div>
       </div>
 
       <div class="q-block">
         <p><span class="q-num">6.</span> <span class="q-pts">(4 points)</span></p>
         <p class="given-bits">101011 11101 01000 0000000000010000</p>
-        <span class="answer-rule"></span>
+        <div class="ans ans--short">
+          <label class="sr-only" for="c6">Question 6, the instruction in assembly</label>
+          <textarea class="ans__input" id="c6" rows="1" placeholder="The instruction in assembly"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
+        </div>
       </div>
 
       <div class="q-block">
         <p><span class="q-num">7.</span> <span class="q-pts">(4 points)</span></p>
         <p class="given-bits">000011 00000001000000000000000100</p>
-        <span class="answer-rule"></span>
+        <div class="ans ans--short">
+          <label class="sr-only" for="c7">Question 7, the instruction in assembly</label>
+          <textarea class="ans__input" id="c7" rows="1" placeholder="The instruction in assembly"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
+        </div>
       </div>
 
       <div class="callout callout--note">
@@ -460,6 +601,11 @@
 
       <p>The same tables as on the instruction-formats page. Everything Part C needs is here.</p>
 
+      <div class="kernel-warn" id="kernel-warn" role="alert">
+        <strong>These tables could not be loaded.</strong>
+        <p>The page's shared script (<code>shared/logic.js</code>) is older than this page expects, so the register and instruction tables have nothing to render from. The tables on the <cite>Thirty-Two Bits, Three Shapes</cite> page are the same data &mdash; use those, and let your instructor know you saw this message.</p>
+      </div>
+
       <div class="tab-navigation" role="tablist" aria-label="MIPS reference tables">
         <button type="button" class="tab-button active" role="tab" id="tab-regs" aria-controls="panel-regs" aria-selected="true">Registers</button>
         <button type="button" class="tab-button" role="tab" id="tab-r" aria-controls="panel-r" aria-selected="false">R-type</button>
@@ -501,6 +647,34 @@
   </footer>
 
   <script src="../../shared/logic.js"></script>
+  <!-- ============================================================
+       Kernel capability guard
+       ============================================================
+       Deliberately inline and dependency-free: it has to work on exactly
+       the occasion when shared/logic.js and shared/style.css are the
+       stale ones. A page whose widgets and tables are silently dead
+       looks like bad content rather than a bad deploy, and that
+       misdiagnosis costs a review cycle. This one says which file is
+       behind. ============================================================ -->
+  <script>
+  (function () {
+    var NEED = ['mips'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive parts of this page are not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs, so the ' +
+      'widgets and generated tables below have nothing to run on. The written content is unaffected and ' +
+      'still correct. <em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
   <script>
   (function () {
     'use strict';
@@ -513,7 +687,14 @@
        What matters is that there is one copy of the DATA. */
 
     var L = window.CSCLogic;
-    if (!L || !L.mips) { return; }
+    if (!L || !L.mips) {
+      /* Fail loudly. A silently empty reference table costs a student the
+         table they need most while doing Part C, and costs whoever is
+         reviewing the page a guess at why. */
+      var w = document.getElementById('kernel-warn');
+      if (w) { w.className = 'kernel-warn kernel-warn--on'; }
+      return;
+    }
     var M = L.mips;
     function el(id) { return document.getElementById(id); }
     function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
@@ -553,6 +734,66 @@
     /* Printing is not navigation, so Standards Section 5 is not engaged.
        This is a handout; students submit their work through Canvas. */
     el('print-page').addEventListener('click', function () { window.print(); });
+  })();
+  </script>
+
+  <script>
+  /* ============================================================
+     Parts B and C — fill in, then print to PDF
+     ============================================================
+     Deliberately a second, independent IIFE. The block above returns
+     early when shared/logic.js is stale, and the submission flow must
+     not be collateral damage when that happens: a student with an empty
+     reference table can still type and print their answers.
+
+     No storage of any kind, per Course Standards. The page says so
+     plainly above Part B rather than pretending otherwise. */
+  (function () {
+    'use strict';
+
+    var textareas = document.querySelectorAll('.ans__input');
+
+    /* A textarea prints only what is scrolled into view, so a long answer
+       would be silently cut off in the PDF. Every one of them carries a
+       mirror div that is invisible on screen and takes over on paper. */
+    function mirror() {
+      Array.prototype.forEach.call(textareas, function (t) {
+        var out = t.parentNode.querySelector('.ans__print');
+        if (out) { out.textContent = t.value; }
+      });
+    }
+
+    /* Grow to fit while typing, so nothing the student writes is hidden
+       behind a scrollbar on screen either. */
+    function grow(t) {
+      t.style.height = 'auto';
+      t.style.height = (t.scrollHeight + 2) + 'px';
+    }
+
+    Array.prototype.forEach.call(textareas, function (t) {
+      t.addEventListener('input', function () { grow(t); });
+    });
+
+    var btn = document.getElementById('print-bc');
+    if (btn) {
+      btn.addEventListener('click', function () {
+        mirror();
+        document.body.classList.add('print-bc');
+        window.print();
+      });
+    }
+
+    /* Catch Ctrl+P too, and restore afterwards so the screen view is
+       never left in the trimmed state. Safari fires neither event, so
+       the mirror is also refreshed on every print click above. */
+    if (window.matchMedia) {
+      var mq = window.matchMedia('print');
+      var onChange = function (e) { if (e.matches) { mirror(); } else { document.body.classList.remove('print-bc'); } };
+      if (mq.addEventListener) { mq.addEventListener('change', onChange); }
+      else if (mq.addListener) { mq.addListener(onChange); }
+    }
+    window.addEventListener('beforeprint', mirror);
+    window.addEventListener('afterprint', function () { document.body.classList.remove('print-bc'); });
   })();
   </script>
 </body>

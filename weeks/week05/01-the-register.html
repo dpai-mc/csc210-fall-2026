@@ -112,9 +112,14 @@
         <div class="circuit-canvas__caption">The 8-bit memory circuit. Click to enlarge. Note the single <code>s</code> wire at the bottom branching to all eight cells &mdash; that one wire is what makes this a byte.</div>
       </div>
 
+      <div class="callout callout--note">
+        <div class="callout__title">A note on the names in the screenshots</div>
+        <p>Some screenshots on this page carry older tab names &mdash; <code>CPU MEM 8</code>, <code>CPU EN 8</code>, <code>CPU REG 8</code>. Same circuits, previous names. In your own file use <code>MEM_8BIT</code>, <code>ENABLE_8BIT</code> and <code>REGISTER_8BIT</code>.</p>
+      </div>
+
       <h3>The splitter, and why an 8-bit wire is not a different kind of wire</h3>
 
-      <p>You met splitters in Lab 2 as a tidiness tool. This is their first structural use, and the idea behind them is worth stating plainly: <strong>an 8-bit wire and eight 1-bit wires are the same eight wires, drawn differently.</strong> A splitter is not a component that does anything; it is a notation for bundling and unbundling.</p>
+      <p>A <strong>splitter</strong> lives in Logisim's Wiring folder, and this is the first time you need one structurally rather than for tidiness. The idea behind it is worth stating plainly: <strong>an 8-bit wire and eight 1-bit wires are the same eight wires, drawn differently.</strong> A splitter is not a component that does anything; it is a notation for bundling and unbundling.</p>
 
       <p>Which is why the input pin is a single 8-bit pin rather than eight separate ones. The byte enters as one object because that is what it is.</p>
 
@@ -567,32 +572,29 @@
       <div class="callout callout--forward">
         <div class="callout__title">Logisim Checkpoint 1</div>
         <p>The three circuits on this page &mdash; <code>MEM_8BIT</code>, <code>ENABLE_8BIT</code> and <code>REGISTER_8BIT</code> &mdash; are <strong>Part A of Assignment 5</strong>, worth 50 of its 100 points. New tabs in the same <code>.circ</code> file you have been adding to since Week 2.</p>
-        <p>Lab 5 on Tuesday builds them with you. <strong>It is the first lab that does not finish in the room</strong> &mdash; expect to complete and test on your own afterwards.</p>
+        <p>Build them, then <strong>run the verification sequences</strong> on this page before you submit. A register that looks right and has never been tested is the most common way to lose points on Part A.</p>
       </div>
     </section>
 
     <!-- ============================================================
          BUILD-ALONG VIDEO
          ============================================================
-         PLACEHOLDER, DELIBERATELY. The recording exists -- jHjmNPDRk30,
-         Dave building this register -- and it is a good asset. It is NOT
-         embedded yet because Standards Section 10 requires an inlined,
-         click-to-seek VTT transcript on every embedded video, and the two
-         transcripts that exist for it are Google speech-to-text .txt
-         files (English and Spanish) that have not been converted.
+         PLACEHOLDER, DELIBERATELY. Dave is recording a new register
+         build for Fall 2026 using the current circuit names
+         (MEM_8BIT / ENABLE_8BIT / REGISTER_8BIT), which replaces the
+         Fall 2025 recording jHjmNPDRk30 and removes the need for the
+         name-reconciliation note this block used to carry.
 
-         To ship it: convert the transcripts, set VIDEO_ID below, paste
-         the English VTT into vttContent, and delete the notice block.
-         The Spanish transcript is the only bilingual asset in this
-         course and is worth the conversion on its own merits.
+         To ship it: set VIDEO_ID below, paste the VTT into vttContent,
+         and delete the notice block. Standards Section 10 still requires
+         an inlined, click-to-seek transcript, so the VTT is not optional.
          ============================================================ -->
     <section id="sec-video">
       <h2>Build-along video</h2>
 
       <div class="callout callout--note">
         <div class="callout__title">Coming later this week</div>
-        <p>A screen recording of this register being built, start to finish, will be posted here later this week.</p>
-        <p><strong>Two things to know before you watch it.</strong> The circuit tabs are named <code>CPU MEM 8</code>, <code>CPU EN 8</code> and <code>CPU REG 8</code> in the recording; in your file they are <code>MEM_8BIT</code>, <code>ENABLE_8BIT</code> and <code>REGISTER_8BIT</code>. Same circuits, current names. And the enable stage is built in two passes &mdash; AND gates first, buffers added afterwards &mdash; so do not worry when the buffers are not there yet.</p>
+        <p>A screen recording of all three circuits being built, start to finish, will be posted here later this week. It follows the same names and the same order as this page.</p>
       </div>
 
       <div class="video-breakout">
@@ -641,6 +643,34 @@
   </div>
 
   <script src="../../shared/logic.js"></script>
+  <!-- ============================================================
+       Kernel capability guard
+       ============================================================
+       Deliberately inline and dependency-free: it has to work on exactly
+       the occasion when shared/logic.js and shared/style.css are the
+       stale ones. A page whose widgets and tables are silently dead
+       looks like bad content rather than a bad deploy, and that
+       misdiagnosis costs a review cycle. This one says which file is
+       behind. ============================================================ -->
+  <script>
+  (function () {
+    var NEED = ['memWord', 'enableWord', 'busResolve', 'register8'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive parts of this page are not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs, so the ' +
+      'widgets and generated tables below have nothing to run on. The written content is unaffected and ' +
+      'still correct. <em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
   <script>
   (function () {
     'use strict';

@@ -404,6 +404,34 @@
   </footer>
 
   <script src="../../shared/logic.js"></script>
+  <!-- ============================================================
+       Kernel capability guard
+       ============================================================
+       Deliberately inline and dependency-free: it has to work on exactly
+       the occasion when shared/logic.js and shared/style.css are the
+       stale ones. A page whose widgets and tables are silently dead
+       looks like bad content rather than a bad deploy, and that
+       misdiagnosis costs a review cycle. This one says which file is
+       behind. ============================================================ -->
+  <script>
+  (function () {
+    var NEED = ['mips'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive parts of this page are not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs, so the ' +
+      'widgets and generated tables below have nothing to run on. The written content is unaffected and ' +
+      'still correct. <em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
   <script>
   (function () {
     'use strict';
