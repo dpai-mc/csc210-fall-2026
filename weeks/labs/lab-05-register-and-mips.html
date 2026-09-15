@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="lab-05">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210L — Lab 5: The 8-Bit Register &amp; First MIPS Program</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ----------
+       .lab-*, .scope-table, .logisim-steps, .callout--*, .points-badge,
+       .widget-*, .preset-*, .bus-bit*, .live-tag*, .tt, .pin-table,
+       .table-scroll, .cost-readout and the checklist components all live
+       in shared/style.css.
+
+       .live-tag was promoted to shared/style.css during this build --
+       lab-03 and lab-04 both carried an identical inline copy, which is
+       two past the threshold Course Standards §8 sets. The Lab 4 build
+       record asked for it on the next pass through either file; this is
+       that pass. .bus-bit--float and .bus-bit--err were promoted in the
+       same edit, for the same reason.
+
+       .widget-btn[aria-pressed] is already styled in shared (line ~674),
+       so nothing here redefines it.
+
+       What follows is only what this page alone needs. */
+
+    /* Learning-page titles. Named, never linked -- Course Standards §5:
+       a link from one embedded page to another loads the target inside
+       this page's Canvas frame. Students navigate by the module list. */
+    cite { font-style: normal; font-weight: 600; color: var(--color-text); }
+
+    /* ---------- The five-step verification walker ----------
+       One block per step. The two questions in each block are the two
+       pins, because the whole point of the exercise is that they answer
+       differently -- and a layout that put them in one row would invite
+       reading them as one answer. */
+    .walk { display: grid; gap: var(--space-md); margin: var(--space-md) 0; }
+
+    .walk-step {
+      border: 1px solid var(--color-border);
+      border-left: 4px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: var(--space-md);
+      background: var(--color-surface);
+    }
+    .walk-step--hit  { border-left-color: var(--color-success); }
+    .walk-step--miss { border-left-color: var(--color-danger); background: #fdf6f5; }
+
+    .walk-step__head {
+      display: flex;
+      gap: var(--space-sm);
+      align-items: baseline;
+      flex-wrap: wrap;
+      margin-bottom: var(--space-sm);
+    }
+    .walk-step__n {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--color-text-muted);
+    }
+    .walk-step__do { font-weight: 600; }
+    .walk-step__do code { font-weight: 700; }
+
+    .walk-q {
+      display: flex;
+      gap: var(--space-sm);
+      align-items: center;
+      flex-wrap: wrap;
+      margin: var(--space-sm) 0 0;
+    }
+    .walk-q__label {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      min-width: 9.5em;
+    }
+    .walk-note {
+      font-size: var(--fs-sm);
+      color: var(--color-text-muted);
+      margin: var(--space-sm) 0 0;
+    }
+    .walk-note--miss { color: var(--color-danger); }
+
+    /* ---------- The two-registers-one-wire sketch ----------
+       The whiteboard drawing from Part 5, kept on the page so a student
+       who was not in the room still has the picture. Schematic on
+       purpose: the real screenshot is on the learning page. */
+    .bus-sketch { width: 100%; max-width: 560px; height: auto; display: block; margin: var(--space-md) auto; }
+    .bus-sketch .wire { stroke: var(--color-text); stroke-width: 5; fill: none; }
+    .bus-sketch .box  { fill: var(--color-surface); stroke: var(--color-text); stroke-width: 2; }
+    .bus-sketch .stub { stroke: var(--color-text-muted); stroke-width: 2; fill: none; }
+    .bus-sketch .lbl  { font-family: var(--font-mono); font-size: 14px; fill: var(--color-text); }
+    .bus-sketch .lbl--sm { font-size: 11px; fill: var(--color-text-muted); }
+
+    @media print {
+      .sp-header, .sp-footer, .no-print { display: none; }
+      .lab-step { break-inside: avoid; }
+      .walk-step { break-inside: avoid; }
+      .aside-optional { display: none; }
+      a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== Header ==================== -->
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210L — Computer Organization &amp; Architecture Lab</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Lab 5 &rsaquo; <span>The 8-Bit Register &amp; First MIPS Program</span>
+    </nav>
+  </header>
+
+  <!-- ==================== Main ==================== -->
+  <main class="sp-main sp-main--full">
+
+    <h1>Lab 5 — The 8-Bit Register &amp; First MIPS Program</h1>
+
+    <div class="lab-meta">
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Lab Session</span>
+        <span class="lab-meta__value">Tuesday, Sep 15, 2026</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">In-Class Time</span>
+        <span class="lab-meta__value">90 minutes &mdash; 50 Logisim, 40 MARS</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Format</span>
+        <span class="lab-meta__value">Live on Zoom &mdash; finish on your own</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Assignment</span>
+        <span class="lab-meta__value">Completion Check 5 &mdash; 10 pts</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Due</span>
+        <span class="lab-meta__value lab-meta__value--due">Sun, Sep 20 &middot; 11:59 PM</span>
+      </div>
+    </div>
+
+    <div class="callout callout--hook">
+      <div class="callout__title">Why This Lab Exists</div>
+      <p><strong>What we have:</strong> A circuit that remembers one bit. <code>MEM_1BIT</code> &mdash; four NAND gates, pins <code>In</code>, <code>Set</code> and <code>Q</code> &mdash; holds a value until a <code>Set</code> pulse tells it otherwise. That is memory, and you built it last week.</p>
+      <p><strong>What we can't do yet:</strong> Anything useful with one bit. Real values are bytes, and a byte is eight bits captured <em>at the same moment</em> and read back as one thing &mdash; eight cells with eight separate controls is not a byte, it is eight bits sitting near each other. And there is a second problem you have not met: once several of these things exist, they have to hand values to each other over the same wires, and a circuit whose output is always driven cannot share a wire with anything.</p>
+      <p><strong>What we can do after today:</strong> Store, hold and read back a whole byte, with one line that says <em>store this</em> and a second that says <em>now speak</em>. And &mdash; the other half of the session &mdash; write, assemble and single-step a MIPS program, and see the register you just built appear on screen under a name.</p>
+    </div>
+
+    <div class="callout callout--warn">
+      <div class="callout__title">Read This First — This Lab Does Not Finish in This Room</div>
+      <p>Labs 1 through 4 were all sized to finish in ninety minutes, and they did. <strong>This one is not.</strong> Three circuits and a MARS program do not fit in one session, and pretending otherwise would just mean rushing the part that matters.</p>
+      <p>So the plan is explicit: we build all three circuits together, we get a program running together, and you leave with <strong>working parts and a short, clear remaining task</strong> &mdash; typically forty-five minutes to an hour of your own time to finish testing and tidying. That remaining work is also Assignment 5 Part A in the lecture course, so it is not extra; it is the same work, and starting it here with an instructor in the room is the whole advantage of being here.</p>
+      <p>The practical consequence: <strong>do not leave without the three tabs existing in your file</strong>, even if they are not yet verified. A half-built circuit you can finish is a much better thing to walk out with than a plan to start one.</p>
+    </div>
+
+    <!-- ============================================================
+         Outcomes
+         ============================================================ -->
+    <section id="sec-outcomes">
+      <h2>What You Will Be Able to Do</h2>
+
+      <p>By the end of this session you will be able to:</p>
+
+      <ol>
+        <li><strong>Build <code>MEM_8BIT</code></strong> from <strong>eight instances of your own <code>MEM_1BIT</code></strong>, with splitters on the input and output and one <code>s</code> line reaching all eight cells.</li>
+        <li><strong>Demonstrate that it holds a byte</strong> &mdash; store a value, release <code>s</code>, change the input, and show that the stored byte does not move.</li>
+        <li><strong>Build <code>ENABLE_8BIT</code></strong> from eight AND gates and eight controlled buffers on a shared <code>e</code>, and explain why its output reads <code>xxxxxxxx</code> rather than <code>00000000</code> when <code>e</code> is 0.</li>
+        <li><strong>Compose <code>REGISTER_8BIT</code></strong> with all <strong>five</strong> pins &mdash; <code>i</code>, <code>s</code>, <code>e</code>, <code>o</code> and <code>reg</code> &mdash; and run the five-step verification sequence on it.</li>
+        <li><strong>Say what a shared wire needs</strong> that an AND gate cannot give it, in terms of what is physically asserted on the wire.</li>
+        <li><strong>Write, assemble and single-step a MIPS program</strong> in MARS, and read the Registers pane while it runs.</li>
+      </ol>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">CS301 Reference</div>
+        <p>The instruction set architecture, the MIPS register conventions and the instruction formats are covered in Saylor CS301 <strong>Unit 2: Instructions &mdash; Hardware Language</strong>. Log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> and open Unit 2 as supporting reading for the MARS half of this session.</p>
+        <p>The Logisim half is covered here and nowhere else. CS301 does not build a register out of gate-level memory cells, and it does not build a bus at all &mdash; so the three circuits, the controlled buffer, and the reason <code>reg</code> exists are this course's own material.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Before you arrive
+         ============================================================ -->
+    <section id="sec-before">
+      <h2>Before You Arrive</h2>
+
+      <p><strong>Read <cite>A Byte That Holds, and Knows When to Speak</cite> before this session</strong> &mdash; the first of the week's learning pages in the Canvas module. It carries the screenshots of all three circuits and the argument for why a shared wire needs a device that can stop driving. Forty minutes, and it is what makes the build mean something rather than being a wiring exercise. The page is named rather than linked, because each one is embedded in its own Canvas page; you open it from the module list.</p>
+
+      <p>Bring your <code>CSC210_YourName.circ</code> file &mdash; the same one you have been adding to since Lab 1. Today adds <strong>three</strong> tabs to it, and it is the first session that opens a circuit you built in a previous week and starts placing copies of it. Nothing gets deleted or replaced.</p>
+
+      <p><strong>Confirm MARS still runs</strong> before Tuesday. You installed it in Lab 1 and have not opened it since, and a Java problem discovered at minute fifty of this session costs you the whole MARS half. Launch it, see the editor, close it again. Two minutes now.</p>
+
+      <p><strong>One scheduling note.</strong> This is the first full week since Week 3 &mdash; no holiday, no quiz &mdash; and the lecture course's Assignment 5 is 100 points, the largest so far. Its Part A is the three circuits you build today. Getting them finished this week rather than next is the single most useful thing you can do with the time.</p>
+    </section>
+
+    <!-- ============================================================
+         Scope table
+         ============================================================ -->
+    <section id="sec-scope">
+      <h2>How This Lab Relates to Assignment 5</h2>
+
+      <p>Assignment 5 is 100 points and carries <strong>Logisim Checkpoint 1</strong>. Its Part A &mdash; 50 of those points &mdash; is the three circuits below, and they are started here, together. What the assignment adds is the written reasoning, the instruction encoding, and its own MARS program. Nothing in Assignment 5 requires you to have been in this room.</p>
+
+      <table class="scope-table">
+        <thead>
+          <tr><th>Circuit or task</th><th>Where it happens</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>MEM_8BIT</code></td>
+            <td class="scope-lab">Started in lab</td>
+            <td>Built together. Eight instances of your own <code>MEM_1BIT</code>. Assignment 5 Part A, worth 14 points.</td>
+          </tr>
+          <tr>
+            <td><code>ENABLE_8BIT</code></td>
+            <td class="scope-lab">Started in lab</td>
+            <td>Built together. Eight AND gates and eight controlled buffers. Assignment 5 Part A, worth 14 points.</td>
+          </tr>
+          <tr>
+            <td><code>REGISTER_8BIT</code></td>
+            <td class="scope-lab">Started in lab</td>
+            <td>Composed together, including the ninth buffer and the <code>reg</code> pin. Assignment 5 Part A, worth 18 points &mdash; the most of any single circuit this week, because <strong>four registers, the program counter, the memory address register and the instruction register are all this component</strong>.</td>
+          </tr>
+          <tr>
+            <td>Circuit appearances, with <code>s</code> and <code>e</code> labelled</td>
+            <td class="scope-lab">Guided in lab</td>
+            <td>Two minutes per block. Part of Part A's 4 points for pin names, appearances and permitted components.</td>
+          </tr>
+          <tr>
+            <td>The five-step verification sequence</td>
+            <td class="scope-lab">Practised in lab</td>
+            <td>Run it here on the circuit you just built; the walker further down this page lets you predict each step before you poke it. Part A grades the circuit that passes it.</td>
+          </tr>
+          <tr>
+            <td>Why &ldquo;silent&rdquo; cannot mean &ldquo;drive zero&rdquo;</td>
+            <td class="scope-lab">Three minutes in lab</td>
+            <td>Argued in full on <cite>A Byte That Holds, and Knows When to Speak</cite>; seen here with both registers wired to one line. Assignment 5 Part B question 2, worth 5 points.</td>
+          </tr>
+          <tr>
+            <td>Instruction encoding and decoding</td>
+            <td class="scope-solo">On your own</td>
+            <td>Seven problems, 28 points, Assignment 5 Part C. Not touched in this session &mdash; the MARS half here is about running a program, not encoding one.</td>
+          </tr>
+          <tr>
+            <td>MARS program</td>
+            <td class="scope-lab">Both</td>
+            <td>The program we write together prints a sum. Assignment 5 Part D uses a <em>different</em> program, supplied on <cite>A Program That Runs</cite>. Same skill, so today is genuine practice rather than a preview of the answer.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============================================================
+         Part 1 — File check
+         ============================================================ -->
+    <section id="sec-part-1">
+      <h2>Part 1 — File Check, and the One Component You Are Allowed to Place <span class="points-badge">~5 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <p>The standing 30-second check first. Open <code>CSC210_YourName.circ</code> and confirm your Lab 1, 2, 3 and 4 circuits are all still there as tabs in this one file &mdash; <code>SR_LATCH</code> and <code>MEM_1BIT</code> included. If any of them live in a separate file, fix it now, today, with help, rather than in Week 9 when the audit finds it.</p>
+
+      <div class="lab-step">
+        <div class="lab-step__num">1</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Create today's three tabs</div>
+          <p><strong>Project &rarr; Add Circuit&hellip;</strong> three times, naming them exactly:</p>
+          <pre><code>MEM_8BIT
+ENABLE_8BIT
+REGISTER_8BIT</code></pre>
+          <p>These names are the interface, not labels. <code>REGISTER_8BIT</code> becomes R0 through R3, the program counter, the memory address register and the instruction register in Weeks 10 through 13, and <code>ENABLE_8BIT</code> is instantiated again inside next week's ALU. A tab named <code>Register8</code> or <code>reg_8bit</code> is a tab that later work cannot find. Spelling and capitalization exactly as written, underscores included.</p>
+        </div>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">The Controlled Buffer Is in the Gates Folder, and It Is Permitted</div>
+        <p>For three weeks the answer to &ldquo;can I use this?&rdquo; has been no, and you have got good at building things yourself. Today there is one component you are <strong>expected</strong> to place rather than build: the <strong>controlled buffer</strong>. It lives in Logisim's <strong>Gates</strong> folder, alongside the NAND gate you have been using all along.</p>
+        <p>The rule for the whole course, unchanged and stated the way you should read it: <strong>anything from Wiring or Gates; nothing from Plexers, Arithmetic or Memory.</strong> Wiring and Gates are permitted in full &mdash; splitters, tunnels, constants, probes, and the buffer and controlled buffer. What is prohibited is prohibited because the course is asking you to build that thing yourself.</p>
+        <p>And the controlled buffer is the one component in this machine you <em>cannot</em> build yourself. Not because it is hard &mdash; because it is not made of logic. <cite>A Byte That Holds, and Knows When to Speak</cite> makes that argument properly; for today, take it as permission and place it.</p>
+      </div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Still Off Limits — and the Temptation Is Sharper This Week</div>
+        <p>Logisim Classic's <strong>Memory</strong> folder contains a Register. It is eight bits wide, it has a load line, and it would take about fifteen seconds to place. It is the one thing that fails Part A outright, and it would leave you with none of the components Weeks 10 through 13 instantiate.</p>
+        <p><strong>Plexers is off limits too</strong>, and worth naming because it also looks tempting now: nothing today needs a multiplexer or a decoder, and neither is a substitute for a buffer.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Part 2 — MEM_8BIT
+         ============================================================ -->
+    <section id="sec-part-2">
+      <h2>Part 2 — <code>MEM_8BIT</code>: Eight Cells, One Decision <span class="points-badge">~15 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <p>Last week ended on a sentence, and it is the whole of this circuit:</p>
+
+      <blockquote>
+        Eight of these memory cells, wired in parallel with a shared <code>Set</code> line, become a register.
+      </blockquote>
+
+      <p>There is no new gate here and no new idea. <strong>This is replication, not invention</strong> &mdash; and if Part 2 feels anticlimactic after Part 4 of last week, you have understood it correctly. What makes eight cells into a <em>byte</em> rather than eight bits is the single <code>s</code> line: one control, one instant, eight cells captured together.</p>
+
+      <div class="logisim-steps">
+        <ol>
+          <li>Open the <code>MEM_8BIT</code> tab. Add an <strong>8-bit input pin</strong> named <code>i</code> on the left. Set its data bits to 8 in the attribute table.</li>
+          <li>Place a <strong>splitter</strong> (Wiring folder) with <strong>fan out 8</strong> and <strong>bit width in 8</strong>. Wire <code>i</code> into its combined end. You now have eight 1-bit wires.</li>
+          <li>Place <strong>eight instances of <code>MEM_1BIT</code></strong> &mdash; from the project pane on the left, not from any folder. Drag your own circuit onto the canvas eight times, in a column.</li>
+          <li>Wire splitter output 0 to the first cell's <code>In</code>, output 1 to the second, and so on down. Keep the order straight; a crossed pair here is a byte that scrambles and is miserable to find later.</li>
+          <li>Add a <strong>1-bit input pin</strong> named <code>s</code> at the bottom. Set it to <strong>2-state</strong> with <strong>pull-down</strong> behaviour. <strong>Branch one wire from it to all eight <code>Set</code> pins.</strong> One pin, eight destinations &mdash; this is the wire that makes it a byte.</li>
+          <li>Place a second splitter, same settings, and wire the eight <code>Q</code> outputs into its eight separate ends.</li>
+          <li>Add an <strong>8-bit output pin</strong> named <code>o</code> on the right, wired to the second splitter's combined end.</li>
+        </ol>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Splitters Are Not a Shortcut</div>
+        <p>You met splitters in Lab 2 as a tidiness tool. This is their first <strong>structural</strong> use, and it is worth being clear that an 8-bit wire and eight 1-bit wires are <em>the same eight wires drawn differently</em>. A splitter is not a component that does anything; it is a change of notation. A student hand-wiring eight separate 1-bit input pins has not broken a rule, but has made the next five weeks harder than they need to be.</p>
+      </div>
+
+      <div class="lab-verify">
+        <div class="lab-verify__title">Verify — transparency</div>
+        <table class="tt">
+          <thead>
+            <tr><th><code>s</code></th><th><code>i</code></th><th><code>o</code></th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td><code>10101010</code></td><td><code>10101010</code></td></tr>
+            <tr><td>1</td><td><code>11110000</code></td><td><code>11110000</code></td></tr>
+            <tr><td>0</td><td>anything</td><td><em>holds</em></td></tr>
+          </tbody>
+        </table>
+        <p>With <code>s</code> high the stored byte <strong>follows</strong> <code>i</code> &mdash; change the input and the output changes with it, exactly as <code>MEM_1BIT</code> did with <code>Set</code> high. That is transparency, and it is the same behaviour eight times over.</p>
+      </div>
+
+      <div class="lab-verify">
+        <div class="lab-verify__title">Now the test that actually matters</div>
+        <p>The rows above do not prove this circuit stores anything. Do this instead, slowly:</p>
+        <ol>
+          <li>Set <code>i</code> to <code>10101010</code>. Raise <code>s</code> to <strong>1</strong>. <code>o</code> reads <code>10101010</code>.</li>
+          <li><strong>Drop <code>s</code> back to 0.</strong> Let go of it entirely.</li>
+          <li>Now change <code>i</code> to <code>00000000</code>. Change it again, to <code>11111111</code>. Poke it several times.</li>
+          <li><code>o</code> is <strong>still <code>10101010</code></strong>, the whole time.</li>
+        </ol>
+        <p>This is the row students skip, and it is the only one that distinguishes a memory from a wire. <strong>The input is moving and the output is not.</strong> Eight times at once, from one decision you made in step 1.</p>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">2</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Edit the circuit appearance &mdash; two minutes, and it is graded</div>
+          <p><strong>Project &rarr; Edit Circuit Appearance.</strong> Draw a rectangle taller than it is wide, put the label <code>MEM_8BIT</code> in it, and arrange the ports: <code>i</code> on the left, <code>o</code> on the right, <code>s</code> on the bottom.</p>
+          <p>Two minutes here is what makes the next circuit readable. You are about to place this block inside another one, and a featureless default shape with three anonymous stubs is how a five-minute wiring job becomes a twenty-minute one.</p>
+        </div>
+      </div>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Where This Goes</div>
+        <p><code>MEM_8BIT</code> is not an exercise. It goes straight inside <code>REGISTER_8BIT</code> in Part 4, and <strong>every populated byte of your machine's RAM is these cells</strong>, addressed by two decoders, in Week 8. The <code>MEM_1BIT</code> you built last week is now doing work in three places at once.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Part 3 — ENABLE_8BIT
+         ============================================================ -->
+    <section id="sec-part-3">
+      <h2>Part 3 — <code>ENABLE_8BIT</code>, and an Output That Reads <code>xxxxxxxx</code> <span class="points-badge">~12 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <p><code>MEM_8BIT</code> has a problem, and it is not a bug: its output is <strong>always driven</strong>. There is no way to make it quiet. That is fine while it is the only thing on the wire, and it stops being fine the moment a second register is connected to the same line &mdash; which is the machine you are building.</p>
+
+      <p>So we add a stage between the stored byte and the outside world, with its own control. Last week's vocabulary holds: <code>s</code> is <strong>storing</strong>, and this new one, <code>e</code>, is <strong>speaking</strong>.</p>
+
+      <div class="logisim-steps">
+        <ol>
+          <li>Open the <code>ENABLE_8BIT</code> tab. Add an <strong>8-bit input pin</strong> <code>i</code> on the left and split it into eight 1-bit wires, same as Part 2.</li>
+          <li>Add a <strong>1-bit input pin</strong> <code>e</code> at the bottom, 2-state, pull-down.</li>
+          <li>Place <strong>eight AND gates</strong>. Each takes one bit of <code>i</code> and, as its second input, <code>e</code>. Branch <code>e</code> to all eight.</li>
+          <li>Place <strong>eight controlled buffers</strong> (Gates folder), one after each AND gate. Wire <strong>every buffer's control input to the same <code>e</code></strong>.</li>
+          <li>Splitter the eight buffer outputs back into an <strong>8-bit output pin</strong> <code>o</code> on the right.</li>
+          <li><strong>Project &rarr; Edit Circuit Appearance:</strong> a labelled rectangle, <code>i</code> left, <code>o</code> right, <code>e</code> bottom.</li>
+        </ol>
+      </div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title"><code>xxxxxxxx</code> at <code>e</code> = 0 Is the Right Answer — Do Not &ldquo;Fix&rdquo; It</div>
+        <p>Set <code>e</code> to 0 and look at <code>o</code>. It reads <strong><code>xxxxxxxx</code></strong>, not <code>00000000</code>. Every year somebody reads those <code>x</code>s as a wiring fault, deletes the buffers to make them go away, and in doing so removes the only thing this circuit exists to do.</p>
+        <p><strong>An <code>x</code> is not a value.</strong> It is Logisim saying <em>nothing is driving this wire</em>. That is different from a 0 in exactly the way that matters: a 0 is asserted, and two devices asserting different things on one wire is a conflict with no defined outcome. The buffers are what let this register be <em>absent</em> from a shared wire rather than present and quiet.</p>
+        <p>If you want the argument rather than the assertion, it is on <cite>A Byte That Holds, and Knows When to Speak</cite>, and Assignment 5 Part B question 2 asks you to make it in your own words.</p>
+      </div>
+
+      <div class="lab-verify">
+        <div class="lab-verify__title">Verify</div>
+        <table class="tt">
+          <thead>
+            <tr><th><code>e</code></th><th><code>i</code></th><th><code>o</code></th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td><code>11001100</code></td><td><code>11001100</code></td></tr>
+            <tr><td>1</td><td><code>00000000</code></td><td><code>00000000</code></td></tr>
+            <tr><td>0</td><td>anything</td><td><code>xxxxxxxx</code> &mdash; <strong>floating, not zero</strong></td></tr>
+          </tbody>
+        </table>
+        <p>Note the middle row: with <code>e</code> high and an input of all zeros, <code>o</code> genuinely reads <code>00000000</code> &mdash; the register is asserting eight zeros, which is a value. Compare it against the bottom row and the difference is the point of the circuit.</p>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Sixteen Components for Eight Bits, and Eight of Them Look Redundant</div>
+        <p>If you work through what <code>e</code> controls, you will notice something. With <code>e</code> = 0 the buffers are off, so nothing downstream can see what the AND gates produced. With <code>e</code> = 1 the AND gates pass their inputs through unchanged. <strong>Either way the AND stage never determines the output.</strong> On paper, the buffers alone would do.</p>
+        <p>They are built anyway, and Part 4 has the reason. Hold the question for ten minutes rather than deleting anything.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Part 4 — REGISTER_8BIT
+         ============================================================ -->
+    <section id="sec-part-4">
+      <h2>Part 4 — <code>REGISTER_8BIT</code>: Five Pins <span class="points-badge">~15 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <p>Two blocks and three wires. This is assembly, not design &mdash; Parts 2 and 3 did the work.</p>
+
+      <div class="logisim-steps">
+        <ol>
+          <li>Open the <code>REGISTER_8BIT</code> tab. Place one <code>MEM_8BIT</code> and one <code>ENABLE_8BIT</code> from the project pane, left to right.</li>
+          <li>Add an <strong>8-bit input pin</strong> <code>i</code> on the left, into <code>MEM_8BIT</code>'s <code>i</code>.</li>
+          <li>Add <strong>1-bit input pins</strong> <code>s</code> and <code>e</code> along the bottom, 2-state, pull-down. <code>s</code> goes to <code>MEM_8BIT</code>'s <code>s</code>; <code>e</code> goes to <code>ENABLE_8BIT</code>'s <code>e</code>.</li>
+          <li>Wire <code>MEM_8BIT</code>'s <code>o</code> into <code>ENABLE_8BIT</code>'s <code>i</code> &mdash; <strong>and branch that same wire</strong> up to a new <strong>8-bit output pin</strong> named <code>reg</code>, at the top left.</li>
+          <li>Place <strong>one more controlled buffer, 8 bits wide</strong>, on <code>ENABLE_8BIT</code>'s output. Wire its control to <code>e</code> as well. This is the <strong>ninth</strong> buffer.</li>
+          <li>Wire that buffer to an <strong>8-bit output pin</strong> <code>o</code> on the right.</li>
+          <li><strong>Edit Circuit Appearance:</strong> a labelled rectangle with <code>reg</code> at the top left, <code>i</code> left, <code>o</code> right, and <code>s</code> and <code>e</code> along the bottom.</li>
+        </ol>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">The Ninth Buffer Is Redundant on Paper and Required in Practice</div>
+        <p>Part 3 left you with a question: the AND stage never determines the output, so why build it? The same reasoning applies to this ninth buffer &mdash; the eight inside <code>ENABLE_8BIT</code> have already floated every bit, and another buffer on the same control line has nothing left to do.</p>
+        <p><strong>Build it anyway, because without it the simulation does not behave.</strong> Not a wrong answer &mdash; an unreliable one. That is Dave's own finding from building this circuit both ways, and it is a property of <strong>Logisim Classic 2.7.1</strong>, not of the design.</p>
+        <p>This is worth thirty seconds out loud, because it is a real engineering lesson and not a course quirk. A simulator is a <em>model</em> of a circuit, and every model is approximate somewhere. Logisim decides what a shared wire carries by examining what everything connected to it is driving, and the details of how it does that &mdash; particularly with several buffers meeting at a splitter &mdash; are not the physics; they are one program's implementation of the physics. Most of the time you will never notice. Here you would.</p>
+        <p><strong>The rule it leaves you with: when your analysis and your tool disagree, do not assume either one is simply wrong. Find out which.</strong> Here the analysis is right about the electronics and the tool is right about what will actually run, and the circuit that ships has to satisfy both. All nine buffers are graded.</p>
+      </div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title"><code>EEEEEEEE</code> on <code>reg</code> Before the First Write Is Normal</div>
+        <p>Finish the wiring and look at it. The wire out of the memory block is <strong>red</strong> and <code>reg</code> reads eight <code>E</code>s. <code>E</code> is Logisim's <strong>error</strong> display, and <strong>you will see it the moment you finish wiring.</strong> Your circuit is not broken. Do not go looking for the fault.</p>
+        <p>It comes from <code>MEM_1BIT</code>, all the way down. A <code>MEM_1BIT</code> output shows one of exactly three things &mdash; <code>0</code>, <code>1</code> or <code>E</code> &mdash; and a cell that has never been written shows <code>E</code>. Eight of them, and <code>reg</code> reads <code>EEEEEEEE</code>.</p>
+        <p><strong>Toggle <code>s</code> from 0 to 1 and it is gone.</strong> The cells take the value on <code>i</code>, the wire turns green, and <code>reg</code> shows the byte from then on. There is nothing to repair and nothing that carries forward.</p>
+        <p>As for <em>why</em> &mdash; what is known is what can be observed: a freshly placed cross-coupled pair displays <code>E</code> until it is written. <strong>That is a description, not a diagnosis.</strong> Same shape as the ninth buffer: the circuit is right, the tool has its own behaviour, and knowing which is which is the job.</p>
+      </div>
+
+      <h3>The five-pin interface</h3>
+
+      <p>This table is the contract. Every later week wires to these names.</p>
+
+      <div class="table-scroll">
+      <table class="pin-table">
+        <thead>
+          <tr><th>Pin</th><th>Width</th><th>Direction</th><th>Position</th><th>What it is</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="pin-table__name">i</td><td>8</td><td>in</td><td>left</td><td>the byte to store</td></tr>
+          <tr><td class="pin-table__name">s</td><td>1</td><td>in</td><td>bottom</td><td>write control &mdash; while high, the stored byte follows <code>i</code></td></tr>
+          <tr><td class="pin-table__name">e</td><td>1</td><td>in</td><td>bottom</td><td>read control &mdash; while high, the register drives the bus</td></tr>
+          <tr><td class="pin-table__name">o</td><td>8</td><td>out</td><td>right</td><td>the bus port &mdash; driven only when <code>e</code> = 1</td></tr>
+          <tr><td class="pin-table__name">reg</td><td>8</td><td>out</td><td>top left</td><td>the stored byte, always visible, regardless of <code>e</code></td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Why <code>reg</code> Exists, and Why It Is 18 Points Rather Than a Nice Touch</div>
+        <p>Two outputs, and the difference between them is what this whole week is about.</p>
+        <p><strong><code>o</code> is the bus port.</strong> It says nothing unless <code>e</code> says to. It reaches the shared wire, so it has to be able to be absent from it.</p>
+        <p><strong><code>reg</code> is the test point.</strong> It is always live, it reaches no bus, and nothing downstream in the CPU consumes it.</p>
+        <p>Here is why you want it. In Weeks 13 and 14 you will be trying to work out why a value is not arriving where you expect. Without <code>reg</code>, the only way to see what a register holds is to put it on the bus &mdash; which changes the thing you are trying to observe. Every register in the finished machine has one. <strong>Storing a value and putting it where others can see it are two different acts, and this component has a pin for each.</strong></p>
+      </div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Label <code>s</code> and <code>e</code> on the Appearance</div>
+        <p>They are two identical 1-bit pins, side by side on the bottom edge of a block you are going to place a dozen times over the next eight weeks. Getting them the wrong way round is silent &mdash; the circuit wires up fine and does something else &mdash; and expensive to find.</p>
+        <p>Worth knowing: a circuit appearance's port positions do <strong>not</strong> have to match the internal layout, so the appearance is the only thing telling you which stub is which. Put the letters on it.</p>
+      </div>
+
+      <div class="lab-verify">
+        <div class="lab-verify__title">Verify — the five-step sequence, and each step is a separate check</div>
+        <ol>
+          <li><code>s</code> = 0, <code>e</code> = 0 &rarr; <code>o</code> reads <code>xxxxxxxx</code>. <strong><code>reg</code> reads <code>EEEEEEEE</code> and that is correct</strong> &mdash; nothing has been written yet.</li>
+          <li>Set <code>i</code> = <code>11001100</code>, raise <code>s</code> to 1 &rarr; <code>reg</code> shows <code>11001100</code> and the red wire turns green. <code>o</code> is <em>still</em> <code>xxxxxxxx</code>.</li>
+          <li>Drop <code>s</code> to 0, then change <code>i</code> to <code>00000000</code> &rarr; <code>reg</code> <strong>stays</strong> <code>11001100</code>.</li>
+          <li>Raise <code>e</code> to 1 &rarr; <code>o</code> becomes <code>11001100</code>. <code>reg</code> unchanged.</li>
+          <li>Drop <code>e</code> to 0 &rarr; <code>o</code> returns to <code>xxxxxxxx</code>. <code>reg</code> unchanged.</li>
+        </ol>
+        <p><strong>Step 2 is where <code>reg</code> earns its place.</strong> Without it you cannot confirm the write happened without also asserting <code>e</code> &mdash; and then you cannot tell whether you are looking at storage or at pass-through.</p>
+      </div>
+
+      <details class="lab-troubleshoot">
+        <summary>If it is not behaving &mdash; the four failures that account for nearly all of them</summary>
+        <ul>
+          <li><strong><code>reg</code> reads <code>EEEEEEEE</code> and will not clear.</strong> Your <code>s</code> is not reaching all eight cells inside <code>MEM_8BIT</code>. Open that tab and check the branch &mdash; a wire that looks connected at this zoom level often is not. One unwritten cell is one <code>E</code>, and one <code>E</code> in a splitter makes the whole byte read <code>E</code>.</li>
+          <li><strong><code>o</code> reads <code>00000000</code> instead of <code>xxxxxxxx</code> at <code>e</code> = 0.</strong> One or more buffers are missing, or their control inputs are wired to a constant rather than to <code>e</code>. Count them: eight inside <code>ENABLE_8BIT</code>, one here, nine total.</li>
+          <li><strong>The stored byte changes when you change <code>i</code> with <code>s</code> at 0.</strong> Your <code>s</code> line is picking up a 1 somewhere &mdash; check that the pin is 2-state with pull-down and that nothing else is driving that wire.</li>
+          <li><strong>The byte comes back scrambled.</strong> A crossed pair on one of the splitters in <code>MEM_8BIT</code>. Store <code>10000000</code> and see which bit position lights up; that tells you which two wires swapped.</li>
+        </ul>
+      </details>
+
+      <div class="callout callout--note">
+        <div class="callout__title">One Thing This Register Does Not Have</div>
+        <p>There is no clear, no reset and no clock. <code>MEM_1BIT</code> has no asynchronous clear, deliberately &mdash; so <strong>to zero a register in this machine, you write zeros into it.</strong> Worth saying because the Fall 2025 version of this material had a Clear button, and a student who finds that page will ask.</p>
+        <p>There is no clock either. Something has to raise and drop <code>s</code> and <code>e</code> in the right order, every time, and that circuit is Week 11. Today, you are the clock.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Part 5 — the bus
+         ============================================================ -->
+    <section id="sec-part-5">
+      <h2>Part 5 — Two Registers, One Wire <span class="points-badge">~3 min</span><span class="live-tag live-tag--together">At the whiteboard</span></h2>
+
+      <p>Three minutes, no building. You have just spent twelve minutes adding sixteen components whose only job is to let a register <em>stop driving</em>, and the reason should be concrete before you leave.</p>
+
+      <svg class="bus-sketch" viewBox="0 0 560 210" role="img" aria-labelledby="bus-sketch-title bus-sketch-desc">
+        <title id="bus-sketch-title">Two registers connected to one shared wire</title>
+        <desc id="bus-sketch-desc">Two identical register blocks, R1 on the left and R2 on the right, each with an s input and an e input on its underside. The o output of each block connects upward to the same single horizontal wire running across the top of the drawing. Only one of the two may drive that wire at a time.</desc>
+        <!-- the shared wire -->
+        <line class="wire" x1="40" y1="34" x2="520" y2="34"></line>
+        <text class="lbl" x="40" y="22">the bus &mdash; one set of wires, shared</text>
+        <!-- stubs up to the bus -->
+        <line class="wire" x1="160" y1="34" x2="160" y2="86"></line>
+        <line class="wire" x1="400" y1="34" x2="400" y2="86"></line>
+        <!-- register blocks -->
+        <rect class="box" x="80" y="86" width="160" height="62" rx="4"></rect>
+        <rect class="box" x="320" y="86" width="160" height="62" rx="4"></rect>
+        <text class="lbl" x="150" y="122" text-anchor="middle">R1</text>
+        <text class="lbl" x="390" y="122" text-anchor="middle">R2</text>
+        <text class="lbl lbl--sm" x="150" y="140" text-anchor="middle">REGISTER_8BIT</text>
+        <text class="lbl lbl--sm" x="390" y="140" text-anchor="middle">REGISTER_8BIT</text>
+        <text class="lbl lbl--sm" x="166" y="80">o</text>
+        <text class="lbl lbl--sm" x="406" y="80">o</text>
+        <!-- control stubs -->
+        <line class="stub" x1="120" y1="148" x2="120" y2="180"></line>
+        <line class="stub" x1="200" y1="148" x2="200" y2="180"></line>
+        <line class="stub" x1="360" y1="148" x2="360" y2="180"></line>
+        <line class="stub" x1="440" y1="148" x2="440" y2="180"></line>
+        <text class="lbl lbl--sm" x="120" y="196" text-anchor="middle">s</text>
+        <text class="lbl lbl--sm" x="200" y="196" text-anchor="middle">e</text>
+        <text class="lbl lbl--sm" x="360" y="196" text-anchor="middle">s</text>
+        <text class="lbl lbl--sm" x="440" y="196" text-anchor="middle">e</text>
+      </svg>
+
+      <p>Two registers, one wire. Now put a byte in R1 and ask what happens when both <code>e</code> lines go high.</p>
+
+      <p><strong>If &ldquo;silent&rdquo; meant driving zero:</strong> R1 asserts <code>11001100</code> and R2 asserts <code>00000000</code>. Both are driving. On any bit where they differ, the wire has a 1 and a 0 asserted on it at the same moment, and there is no rule of logic that resolves that &mdash; in Logisim it is an error, and in real hardware it is a short between two output stages. <strong>Neither register wins. Both are wrong, and one of them may be damaged.</strong></p>
+
+      <p><strong>If &ldquo;silent&rdquo; means not driving:</strong> R2 lets go. Exactly one device is asserting, and the wire carries what R1 put there.</p>
+
+      <p>A shared wire needs devices that can be <em>absent</em> from it. An AND gate cannot be absent &mdash; it always drives its output. <strong>That is the whole argument, and it is why the Gates folder contains something that is not a logic gate.</strong></p>
+
+      <p>Why a bus at all, rather than a dedicated path from every register to every other one: that is <em>n</em>&sup2; wires, and it stops being buildable at about three registers. One shared set of wires and a rule about who may drive it is what scales &mdash; and the rule is enforced by hardware that can let go, not by anyone being careful.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">The Order Matters Too</div>
+        <p>Moving a byte from R1 to R2 across that wire is four steps, and the order is not arbitrary: R1's <code>e</code> high, R2's <code>s</code> high, R2's <code>s</code> low, R1's <code>e</code> low. <strong>The <code>s</code> pulse sits strictly inside the <code>e</code> pulse</strong>, because <code>MEM_8BIT</code> is transparent for the whole time <code>s</code> is high and the bus has to be stable across that entire window.</p>
+        <p><cite>A Byte That Holds, and Knows When to Speak</cite> has a widget that lets you drive those four signals in the wrong order and watch what breaks. Worth ten minutes when you finish the circuits.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Widget — the verification walker
+         ============================================================ -->
+    <section id="sec-widget">
+      <h2>Interactive: Five-Step Verification Walker</h2>
+
+      <p><strong>Predict first, then poke.</strong> This is the same five-step sequence as Part 4, with the answers hidden. Choose what you think each pin reads at each step, then press Check &mdash; and it tells you the <em>first</em> step where you diverged, because in a sequence like this a later mistake usually descends from an earlier one.</p>
+
+      <p>Use it when your circuit is wired, before you start poking it. A prediction you have committed to is worth several times a prediction you make while watching the answer appear &mdash; and a disagreement between you and your circuit is the most useful thing that can happen here, because one of you is wrong and finding out which is the exercise.</p>
+
+      <div class="widget-card" id="widget-walker">
+        <div class="widget-card__title">Five-Step Verification Walker</div>
+        <div class="widget-card__subtitle">A freshly built <code>REGISTER_8BIT</code>, never written to, with <code>i</code> = <code>00000000</code>, <code>s</code> = 0 and <code>e</code> = 0. Each step applies one change and keeps it. Choose a reading for both pins at every step.</div>
+
+        <div class="walk" id="wk-steps"><!-- five .walk-step blocks are built here by script --></div>
+
+        <div class="preset-row">
+          <button type="button" class="widget-btn widget-btn--accent" id="wk-check">Check my predictions</button>
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small" id="wk-clear">Clear my answers</button>
+          <span class="cost-readout" id="wk-score" role="status" aria-live="polite">Not checked yet</span>
+        </div>
+
+        <div class="callout callout--note" id="wk-explain" role="status" aria-live="polite">
+          <div class="callout__title">Nothing checked yet</div>
+          <p>Answer all ten and press Check. Partial answers are fine &mdash; the first gap is reported the same way a wrong answer is.</p>
+        </div>
+
+        <div class="sr-only" id="wk-summary" aria-live="polite"></div>
+      </div>
+
+      <p class="no-print">When the walker and your circuit disagree, do not just correct the prediction. Go back to the step it names and say out loud what the register is doing there &mdash; following its input, holding it, driving the wire, or letting go of it &mdash; and why. That sentence is what Assignment 5 Part B asks you to write, and a correct prediction does not prove you can write it.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">What the Two Columns Should Have Shown You</div>
+        <p><code>reg</code> changed <strong>once</strong> in the whole sequence &mdash; at step 2, when <code>s</code> went high &mdash; and then never again, including when <code>i</code> changed underneath it at step 3. <code>o</code> changed <strong>twice</strong>, at steps 4 and 5, and never carried anything at all the rest of the time.</p>
+        <p>Two pins on one component, moving on two different controls, and neither one is a copy of the other. That is the sentence this whole session has been building toward, and the MARS half is about to give it a name.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Part 6 — MARS
+         ============================================================ -->
+    <section id="sec-part-6">
+      <h2>Part 6 — MARS: The Register File, and a Program That Runs <span class="points-badge">~40 min</span><span class="live-tag live-tag--solo">Together, then your own</span></h2>
+
+      <p>Now the session turns ninety degrees. A byte in a register is eight bits with no inherent meaning; something has to decide what it means. That something is an <strong>instruction set architecture</strong>, and the one we use is MIPS.</p>
+
+      <p>Open MARS. You installed it in Lab 1 and have not touched it since.</p>
+
+      <h3>The register file, in about eight minutes</h3>
+
+      <p>A MIPS processor has <strong>32 registers</strong>. Find the <strong>Registers</strong> pane on the right of the MARS window &mdash; that is all 32 of them, with their numbers, names and current contents. Every row is a register.</p>
+
+      <div class="table-scroll">
+      <table class="pin-table">
+        <thead>
+          <tr><th>Name</th><th>Number</th><th>What it is for</th><th>May you clobber it?</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="pin-table__name">$zero</td><td>0</td><td>Always reads 0. Writes to it are discarded.</td><td>There is nothing to clobber</td></tr>
+          <tr><td class="pin-table__name">$v0&ndash;$v1</td><td>2&ndash;3</td><td>Return values &mdash; and the syscall service number goes in <code>$v0</code></td><td>Yes</td></tr>
+          <tr><td class="pin-table__name">$a0&ndash;$a3</td><td>4&ndash;7</td><td>Arguments into a procedure</td><td>Yes</td></tr>
+          <tr><td class="pin-table__name">$t0&ndash;$t9</td><td>8&ndash;15, 24&ndash;25</td><td>Temporaries &mdash; scratch space</td><td>Yes, freely. This is where your working values live.</td></tr>
+          <tr><td class="pin-table__name">$s0&ndash;$s7</td><td>16&ndash;23</td><td>Saved values &mdash; expected to survive a procedure call</td><td>Only if you put them back</td></tr>
+          <tr><td class="pin-table__name">$sp</td><td>29</td><td>Stack pointer</td><td>No &mdash; not until you know what you are doing to the stack</td></tr>
+          <tr><td class="pin-table__name">$ra</td><td>31</td><td>Return address &mdash; where a procedure call came from</td><td>No, not while you intend to return</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">The Hardware Does Not Enforce Any of That</div>
+        <p><code>$t0</code> and <code>$s0</code> are registers 8 and 16, and the processor treats them <strong>identically</strong>. The difference between &ldquo;temporary&rdquo; and &ldquo;saved&rdquo; is an <em>agreement between programs</em> about who is responsible for preserving what &mdash; the same kind of object as the instruction set itself. A contract, held up by everyone obeying it.</p>
+        <p><strong><code>$zero</code> is the exception, and it is hardware.</strong> Register 0 reads as 0 always, and writing to it does nothing. That earns a whole register because comparing against zero, clearing a register, and copying a value are all common enough that hardwiring one constant pays for itself.</p>
+      </div>
+
+      <h3>Write a program</h3>
+
+      <p>File &rarr; New, and type this. <strong>Comment every executable line</strong> &mdash; that is the expectation for the rest of the course, and it is in Assignment 5's rubric.</p>
+
+      <pre><code>      .text                    # the code goes here
+      li    $t0, 25            # put the constant 25 in $t0
+      li    $t1, 17            # put the constant 17 in $t1
+      add   $t2, $t0, $t1      # $t2 = $t0 + $t1
+      move  $a0, $t2           # the value to print goes in $a0
+      li    $v0, 1             # service 1 = print integer
+      syscall                  # print it
+      li    $v0, 10            # service 10 = exit
+      syscall                  # hand control back to the system</code></pre>
+
+      <p>There is no <code>.data</code> section because this program has no variables. When you do have one &mdash; and Assignment 5 Part D's program does &mdash; <code>.data</code> comes first and <code>.text</code> second.</p>
+
+      <p>There is also no <code>main</code>, and it does not need one. Assembly has no entry-point function: <strong>execution starts at the first instruction in <code>.text</code> and runs downward.</strong> You will see a <code>.globl main</code> form elsewhere and it is not wrong &mdash; it is what linking several files together needs, and it buys nothing for a single file in MARS.</p>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Two of Those Lines Are Not MIPS Instructions</div>
+        <p><code>li</code> and <code>move</code> are <strong>pseudo-instructions</strong>. They are not in any of the three MIPS instruction formats, because they are not real instructions &mdash; the assembler expands each one into something that is.</p>
+        <p>You can see exactly what it substituted. Assemble the program, then look at the <strong>Text Segment</strong> pane: MARS shows the real instruction alongside the line you wrote. Do look, because <code>li</code>'s expansion is this week's two halves cashing out at once &mdash; it works because <code>$zero</code> is hardwired, and the result is one of the three formats.</p>
+      </div>
+
+      <div class="logisim-steps">
+        <ol>
+          <li><strong>Assemble it</strong> &mdash; Run &rarr; Assemble, or F3. Fix anything the Messages pane complains about. A typo here is an ordinary experience, not a sign of trouble.</li>
+          <li><strong>Run it</strong> &mdash; Run &rarr; Go, or F5. <code>42</code> appears in the Run I/O pane. That is your first MIPS program.</li>
+          <li><strong>Reset</strong> &mdash; Run &rarr; Reset, or F12. Everything goes back to where it started.</li>
+          <li><strong>Now single-step it</strong> &mdash; Run &rarr; Step, or F7, one press per instruction. Watch the Registers pane after each press. <code>$t0</code> becomes 25. Then <code>$t1</code> becomes 17. Then <code>$t2</code> becomes 42.</li>
+          <li><strong>Before each press, predict which row will change and what to.</strong> Then press. This is the same discipline as the walker above, and it is how you read a machine rather than watch one.</li>
+        </ol>
+      </div>
+
+      <h3>The two halves meet</h3>
+
+      <p>You have spent fifty minutes building a circuit that stores a byte and can be asked to speak, and forty watching named registers change one instruction at a time. They are the same thing.</p>
+
+      <p><strong>The Registers pane is 32 rows, and each row is the circuit sitting in your <code>.circ</code> file.</strong> Not something like it &mdash; that construction, built from that kind of cell, with those two controls. When you typed <code>add $t2, $t0, $t1</code>, three registers were selected, two were read onto internal wires, one was written &mdash; and the selecting is done by <strong>decoders</strong>, which you built in Lab 3.</p>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">One Difference, and It Is Only One</div>
+        <p><strong>What you built is 8 bits.</strong> That is what this course's CPU uses, what Checkpoint 1 grades, and what every circuit from here to the final project assumes.</p>
+        <p><strong>A MIPS register is 32 bits.</strong> That is what <code>$t0</code> is, and what every instruction format assumes.</p>
+        <p><strong>What changes when it is widened: the count, and nothing else.</strong> Thirty-two <code>MEM_1BIT</code> cells instead of eight. Still one <code>s</code> line. Still one <code>e</code>. Same construction, same two controls, same reason for the tri-state output. <strong>A 32-bit register is a wider 8-bit register. It is not a different device.</strong></p>
+        <p>And the reason this course is 8-bit: Logisim Classic 2.7.1 becomes unusably slow at 32, and everything interesting about a register is already visible at 8.</p>
+      </div>
+
+      <h3>On your own</h3>
+
+      <p>Two external resources, both worth bookmarking:</p>
+
+      <ul>
+        <li><a href="https://github.com/dpetersanderson/MARS" target="_blank" rel="noopener">The MARS repository</a> &mdash; the maintained source and releases, if you need to reinstall.</li>
+        <li><a href="https://www.youtube.com/playlist?list=PLZ9NgFYEMxp5cLlPZ25zOD6zjnKKPv06p" target="_blank" rel="noopener">Amell Peralta's MIPS assembly playlist</a> &mdash; short, clear, and the convention this course's programs follow.</li>
+      </ul>
+
+      <p>Then: finish the three circuits, run the five-step sequence on the real thing, and do the short MIPS drill set posted with this session.</p>
+    </section>
+
+    <!-- ============================================================
+         Assignment
+         ============================================================ -->
+    <section id="sec-assignment">
+      <h2>Assignment: Completion Check 5</h2>
+
+      <div class="lab-meta">
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Points</span>
+          <span class="lab-meta__value">10</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Due</span>
+          <span class="lab-meta__value lab-meta__value--due">Sunday, Sep 20, 2026 &middot; 11:59 PM</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Submit via</span>
+          <span class="lab-meta__value">Canvas &mdash; Lab 5 Completion Check</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Assesses</span>
+          <span class="lab-meta__value">CSLO 1, CSLO 3</span>
+        </div>
+      </div>
+
+      <p>This is a lab completion check, and it is a CSC210L grade. It does not substitute for Assignment 5, which is graded in the lecture course and asks for written reasoning, instruction encoding and a different MARS program. If you finished the session's work, you are submitting things you already have.</p>
+
+      <h3>What to Submit</h3>
+
+      <ol>
+        <li><strong><code>CSC210_YourName.circ</code></strong> &mdash; your semester file, now containing <code>MEM_8BIT</code>, <code>ENABLE_8BIT</code> and <code>REGISTER_8BIT</code> alongside everything from Labs 1 through 4.</li>
+        <li><strong>A screenshot of MARS</strong> after single-stepping the program from Part 6 to completion, with the <strong>Registers</strong> pane visible and <code>$t0</code>, <code>$t1</code> and <code>$t2</code> readable. The Registers pane, not the editor.</li>
+      </ol>
+
+      <div class="callout callout--hook">
+        <div class="callout__title">Submission Requirement &mdash; Read Before Uploading</div>
+        <p><strong>All circuits are contained within this single .circ file &mdash; no external file links.</strong> Your file is opened on the instructor's machine, in isolation, with none of your other files present. A circuit that references one stored elsewhere arrives broken.</p>
+        <p>This is the first week where a &ldquo;master file that links to the others&rdquo; starts to look like a reasonable idea, so it is worth being blunt: <strong>you must include all of the circuits necessary for the CPU simulation in your submission file, and you must not link any libraries other than those included by default.</strong></p>
+        <p>And: <strong>nothing from the Memory, Plexers or Arithmetic folders.</strong> A register built around Logisim's own Register component is not a partially correct answer.</p>
+      </div>
+
+      <h3>Grading Rubric</h3>
+
+      <table>
+        <thead>
+          <tr><th>Criterion</th><th>Points</th><th>Full credit requires</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Three tabs present and named exactly</td>
+            <td>2</td>
+            <td>Tabs named <code>MEM_8BIT</code>, <code>ENABLE_8BIT</code> and <code>REGISTER_8BIT</code>, spelling and capitals as written, in the same file as Labs 1&ndash;4.</td>
+          </tr>
+          <tr>
+            <td><code>MEM_8BIT</code> stores a byte</td>
+            <td>2</td>
+            <td>Eight instances of <strong>your own</strong> <code>MEM_1BIT</code>, one <code>s</code> line reaching all eight, splitters on <code>i</code> and <code>o</code>. Store a byte, release <code>s</code>, change the input, and the stored byte does not move.</td>
+          </tr>
+          <tr>
+            <td><code>ENABLE_8BIT</code> floats at <code>e</code> = 0</td>
+            <td>2</td>
+            <td>Eight AND gates and eight controlled buffers on a common <code>e</code>. The output pin reads <code>xxxxxxxx</code> at <code>e</code> = 0, not <code>00000000</code>.</td>
+          </tr>
+          <tr>
+            <td><code>REGISTER_8BIT</code> has five pins</td>
+            <td>2</td>
+            <td><code>i</code>, <code>s</code>, <code>e</code>, <code>o</code> and <code>reg</code>, named exactly, with <code>reg</code> showing the stored byte while <code>e</code> = 0. The ninth buffer present. All three appearances edited to labelled rectangles with <code>s</code> and <code>e</code> distinguishable.</td>
+          </tr>
+          <tr>
+            <td>MARS program assembled and stepped</td>
+            <td>2</td>
+            <td>The screenshot shows the Registers pane after the last step, with <code>$t2</code> holding 42. Points are for having run and stepped it, not for typing it without a typo.</td>
+          </tr>
+          <tr class="rubric-total">
+            <td>Total</td>
+            <td>10</td>
+            <td>&nbsp;</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p style="font-size:var(--fs-sm);color:var(--color-text-muted);"><strong>CSLO alignment.</strong> This check supports <strong>CSLO&nbsp;1</strong> (describe the organization and architecture of a computer system) by establishing the byte-wide storage component every later part of the course CPU instantiates, and <strong>CSLO&nbsp;3</strong> (use appropriate tools) through the MARS toolchain. The graded SLO evidence for this material is Assignment 5 in the lecture course; nothing in CSC210 depends on your attendance here.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">If You Could Not Finish in the Session</div>
+        <p>Expected &mdash; this lab is written on the assumption that most people will not. Everything in Parts 1 through 6 is on this page in the same order we did it, the build steps included. The remaining work is typically forty-five minutes to an hour: finish the wiring, run the five-step sequence, edit the three appearances.</p>
+        <p>If you are stuck on the circuit rather than the concept, the troubleshooting list in Part 4 covers the four failures that account for nearly all of them. And asking before the deadline is always cheaper than asking after it.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Checklist
+         ============================================================ -->
+    <section id="sec-checklist">
+      <h2>Interactive: Pre-Submission Checklist</h2>
+
+      <p>Two minutes, immediately before you upload. Check an item only after you have actually verified it.</p>
+
+      <div class="widget-card" id="widget-checklist">
+        <div class="widget-card__title">Pre-Submission Checklist</div>
+        <div class="widget-card__subtitle">Nothing here is saved &mdash; it is a thinking prompt at submission time, not a record.</div>
+
+        <ul class="lab-checklist" id="ck-list">
+          <li>
+            <input type="checkbox" id="ck-1">
+            <label for="ck-1">My file has tabs named exactly <code>MEM_8BIT</code>, <code>ENABLE_8BIT</code> and <code>REGISTER_8BIT</code> &mdash; spelling and capitals as written.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-2">
+            <label for="ck-2"><code>MEM_8BIT</code> is <strong>eight instances of my own <code>MEM_1BIT</code></strong>, not re-drawn gates and not eight copies of the four NANDs.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-3">
+            <label for="ck-3">One <code>s</code> line reaches all eight cells &mdash; I traced the branch rather than assuming it.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-4">
+            <label for="ck-4">I stored a byte, <strong>released <code>s</code></strong>, changed the input, and confirmed the stored byte did not move.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-5">
+            <label for="ck-5"><code>ENABLE_8BIT</code>'s output reads <code>xxxxxxxx</code> at <code>e</code> = 0 &mdash; <strong>not <code>00000000</code></strong>.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-6">
+            <label for="ck-6">I counted <strong>nine</strong> controlled buffers: eight inside <code>ENABLE_8BIT</code>, one on <code>REGISTER_8BIT</code>'s output.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-7">
+            <label for="ck-7"><code>REGISTER_8BIT</code> has exactly <strong>five</strong> pins &mdash; <code>i</code>, <code>s</code>, <code>e</code>, <code>o</code>, <code>reg</code>.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-8">
+            <label for="ck-8"><code>reg</code> shows the stored byte with <code>e</code> = 0, and the whole five-step sequence passes.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-9">
+            <label for="ck-9">All three circuit appearances are edited to labelled rectangles, with <code>s</code> and <code>e</code> distinguishable on the register's block.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-10">
+            <label for="ck-10">All input pins are <strong>2-state</strong> with <strong>pull-down</strong> behaviour.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-11">
+            <label for="ck-11">Nothing in my file uses a component from the <strong>Memory</strong>, <strong>Plexers</strong> or <strong>Arithmetic</strong> folders. Labs 1&ndash;4 circuits are all still present.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-12">
+            <label for="ck-12"><strong>All circuits are contained within this single .circ file &mdash; no external file links.</strong> And my MARS screenshot shows the Registers pane.</label>
+          </li>
+        </ul>
+
+        <div class="checklist-status" id="ck-status" role="status" aria-live="polite">0 of 12 verified</div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         What comes next
+         ============================================================ -->
+    <section id="sec-next">
+      <h2>What Comes Next</h2>
+
+      <p>You built a byte today, and the interesting half was not the byte. Eight cells and one wire was twenty minutes. The other thirty went on sixteen components whose only job is to let this register <strong>stop driving</strong> &mdash; and that turned out to need something that is not a logic gate, because a combinational arrangement of gates cannot be silent.</p>
+
+      <p>That is the second time this course has hit the edge of what gates alone can do. The first was last week: gates cannot remember, so memory needed feedback. Both are places where the abstraction stops and the physics shows through, and both are worth noticing as such.</p>
+
+      <p>Hold onto the sentence that follows, because next week's lab opens with it:</p>
+
+      <blockquote>
+        A register holds a value. It cannot change one. Next week you build the circuit that can.
+      </blockquote>
+
+      <p>That is Lab 6, and it is the ALU. You start from the 8-bit adder you finished in Lab 3, get subtraction out of it by inverting one operand and forcing the carry in &mdash; which is where two's complement stops being a formula and becomes a wire &mdash; add the logic operations, and use a <strong>decoder</strong> to select which one reaches the output. And <code>ENABLE_8BIT</code>, the circuit you built today, is what each of the ALU's operation legs drives through. Then the MARS half: <code>add</code>, <code>sub</code>, <code>and</code>, <code>or</code>, <code>slt</code>, one step at a time, predicting each result before you press.</p>
+
+      <div class="progression">
+        <div class="progression__item completed">
+          <div class="progression__label">Lab 3 &mdash; Adders and Decoders</div>
+          <div class="progression__detail">Gates combined into circuits that compute and select</div>
+        </div>
+        <div class="progression__item completed">
+          <div class="progression__label">Lab 4 &mdash; Latches, Timing, and the Memory Cell</div>
+          <div class="progression__detail">Logic becomes memory &mdash; <code>SR_LATCH</code>, <code>MEM_1BIT</code></div>
+        </div>
+        <div class="progression__item active">
+          <div class="progression__label">Lab 5 &mdash; The 8-Bit Register &amp; First MIPS Program</div>
+          <div class="progression__detail">One cell becomes a byte that can share a wire; MARS begins</div>
+        </div>
+        <div class="progression__item">
+          <div class="progression__label">Lab 6 &mdash; Building the ALU / MIPS Arithmetic</div>
+          <div class="progression__detail">A circuit that changes a value rather than holding one</div>
+        </div>
+      </div>
+
+      <p>Before then: finish the three circuits and get Assignment 5 Part A done. Bring your file on Tuesday &mdash; Lab 6 opens it and starts wiring the adder into something new.</p>
+    </section>
+
+  </main>
+
+  <!-- ==================== Footer ==================== -->
+  <footer class="sp-footer">
+    CSC210L — Computer Organization &amp; Architecture Lab &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <!-- ==================== Scripts ==================== -->
+  <script src="../../shared/logic.js"></script>
+  <!-- ============================================================
+       Kernel capability guard
+       ============================================================
+       Deliberately inline and dependency-free: it has to work on exactly
+       the occasion when shared/logic.js and shared/style.css are the
+       stale ones. A page whose widget is silently dead looks like bad
+       content rather than a bad deploy, and that misdiagnosis cost a
+       full review cycle on the Week 5 learning pages. This one says
+       which file is behind. ============================================================ -->
+  <script>
+  (function () {
+    var NEED = ['memWord', 'enableWord', 'register8'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs, so the ' +
+      'verification walker below has nothing to run on. The written content is unaffected and still ' +
+      'correct &mdash; the five-step sequence in Part 4 is the same sequence. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+
+  <script>
+  /* ============================================================
+     Five-Step Verification Walker
+     ============================================================
+     Predict-first, check-after. The student chooses a reading for
+     reg and for o at each of the five steps; the walker compares
+     against CSCLogic.register8() and reports the FIRST divergence
+     rather than a score, because in a sequence like this a later
+     error usually descends from an earlier one.
+
+     WHERE THE ANSWERS COME FROM, and the one exception.
+
+     Steps 2 through 5 are computed by the kernel. Nothing about
+     what a register does is decided in this file -- per Course
+     Standards Section 8 this widget renders, it does not compute.
+
+     Step 1's reg reading is the exception and it is declared, not
+     computed: a MEM_1BIT that has never been written displays E in
+     Logisim, and the kernel deliberately does not model that. It
+     is a property of the simulator rather than of the circuit, and
+     shared/logic.js takes the same posture about the ninth buffer
+     for the same reason -- a kernel that reproduced a simulator's
+     behaviour would be teaching the quirk as if it were the
+     electronics. So the E is stated here, once, next to the reason,
+     and tests/lab05-spa.test.js asserts that every OTHER answer on
+     the page agrees with the kernel.
+     ============================================================ */
+  (function () {
+    'use strict';
+
+    var L = window.CSCLogic;
+    if (!L || !L.register8) { return; }   /* the guard above has already said so */
+
+    function el(id) { return document.getElementById(id); }
+    function W(s) { return s.split('').map(Number); }
+    function S(bits) { return bits.join(''); }
+
+    var ZERO = '00000000';
+    var BYTE = '11001100';
+    var FLOAT = 'xxxxxxxx';
+    var ERR = 'EEEEEEEE';
+
+    /* The four readings a student can choose between. The two wrong ones
+       are the two misconceptions this week exists to remove: that "not
+       driving" is the same as "driving zero", and that an unwritten cell
+       holds zero. */
+    var OPTIONS = [ERR, BYTE, ZERO, FLOAT];
+
+    /* Each step: the control change it applies, and the inputs after it. */
+    var STEPS = [
+      { did: '<code>s</code> = 0, <code>e</code> = 0 &mdash; nothing done yet, and nothing ever written',
+        i: ZERO, s: 0, e: 0, first: true },
+      { did: 'Set <code>i</code> = <code>11001100</code>, then raise <code>s</code> to 1',
+        i: BYTE, s: 1, e: 0 },
+      { did: 'Drop <code>s</code> to 0, then change <code>i</code> to <code>00000000</code>',
+        i: ZERO, s: 0, e: 0 },
+      { did: 'Raise <code>e</code> to 1',
+        i: ZERO, s: 0, e: 1 },
+      { did: 'Drop <code>e</code> to 0',
+        i: ZERO, s: 0, e: 0 }
+    ];
+
+    /* ---------- Truth, from the kernel ---------- */
+    var truth = (function () {
+      var q = W(ZERO);          /* the stored byte the kernel carries forward */
+      return STEPS.map(function (st) {
+        var r = L.register8(q, { i: W(st.i), s: st.s, e: st.e, mode: 'both' });
+        q = r.q;
+        return {
+          /* Step 1 only: the cells have never been written, which Logisim
+             displays as E. Every other step's reg is the kernel's. */
+          reg: st.first ? ERR : S(r.reg),
+          o: r.driving ? S(r.o) : FLOAT
+        };
+      });
+    })();
+
+    /* ---------- Why each answer is what it is ---------- */
+    var WHY = [
+      { reg: 'Nothing has written to these cells, so there is no defined value in them. <code>E</code> is Logisim saying exactly that.',
+        o: '<code>e</code> is 0, so the buffers are off and nothing is driving <code>o</code>.' },
+      { reg: '<code>s</code> is high, so the cells are transparent and follow <code>i</code> — and the first <code>s</code> pulse is what clears the <code>E</code>.',
+        o: '<code>e</code> is still 0. Storing and speaking are two different controls, and you have only used the first.' },
+      { reg: 'You released <code>s</code>, so the cells stopped following <code>i</code>. Changing the input after that does nothing — this is the step that proves it is memory.',
+        o: '<code>e</code> is still 0.' },
+      { reg: '<code>e</code> does not touch what is stored. It only decides whether anyone outside can see it.',
+        o: '<code>e</code> is 1, so the buffers conduct and <code>o</code> carries the stored byte.' },
+      { reg: 'Still untouched. <code>reg</code> has not moved since step 2.',
+        o: 'Dropping <code>e</code> makes the register stop driving — so the wire goes back to carrying nothing.' }
+    ];
+
+    /* Targeted lines for the specific wrong pick, where the wrong pick
+       names a misconception worth correcting by name. */
+    var TRAPS = {
+      '0-reg-00000000': 'Zero is a value, and nothing has put a value in these cells yet. <code>E</code> is not a zero — it is the absence of any reading at all.',
+      '0-reg-xxxxxxxx': '<code>xxxxxxxx</code> is what a wire reads when nothing is <em>driving</em> it. <code>reg</code> is always driven, straight off the memory block; what it is driven with is what is undefined here.',
+      '0-o-00000000': 'This is the misconception the buffers exist to remove. Driving eight zeros is <em>asserting</em> something. Not driving is asserting nothing, and only the second one can share a wire.',
+      '0-o-EEEEEEEE': 'The <code>E</code> is on <code>reg</code>, not on <code>o</code>. The buffers have disconnected <code>o</code> entirely, and a disconnected wire reads <code>x</code>.',
+      '1-reg-EEEEEEEE': 'The first <code>s</code> pulse is exactly what clears the <code>E</code>. After this step you never see it again.',
+      '1-o-11001100': 'You stored the byte; you have not asked the register to speak. <code>s</code> went high, <code>e</code> did not.',
+      '2-reg-00000000': 'This is the row students skip, and it is the only one that distinguishes a memory from a wire. <code>s</code> is back at 0, so the cells are no longer following <code>i</code>. The input moved; the stored byte did not.',
+      '3-o-xxxxxxxx': '<code>e</code> is 1 now. That is what the buffers were waiting for.',
+      '4-o-00000000': 'Dropping <code>e</code> makes the register <em>stop driving</em>, not drive zero. If it drove zero it could never share a wire with anything.',
+      '4-reg-xxxxxxxx': '<code>reg</code> never floats. It is not on the bus, and nothing about <code>e</code> reaches it.'
+    };
+
+    /* ---------- Build the UI ---------- */
+    var answers = [];   /* answers[step] = { reg: str|null, o: str|null } */
+    var container = el('wk-steps');
+
+    function optionLabel(v) {
+      return v === FLOAT ? 'xxxxxxxx' : v;
+    }
+
+    function buildStep(idx) {
+      var st = STEPS[idx];
+      var wrap = document.createElement('div');
+      wrap.className = 'walk-step';
+      wrap.id = 'wk-step-' + idx;
+
+      var head = '<div class="walk-step__head">' +
+        '<span class="walk-step__n">Step ' + (idx + 1) + '</span>' +
+        '<span class="walk-step__do">' + st.did + '</span>' +
+        '</div>';
+
+      var qs = ['reg', 'o'].map(function (pin) {
+        var opts = OPTIONS.map(function (v) {
+          return '<button type="button" class="widget-btn widget-btn--outline widget-btn--small" ' +
+                 'data-step="' + idx + '" data-pin="' + pin + '" data-val="' + v + '" ' +
+                 'aria-pressed="false">' + optionLabel(v) + '</button>';
+        }).join('');
+        return '<div class="walk-q" role="group" aria-label="Step ' + (idx + 1) +
+               ': what does the ' + pin + ' pin read?">' +
+               '<span class="walk-q__label">' + pin + ' reads</span>' + opts + '</div>';
+      }).join('');
+
+      wrap.innerHTML = head + qs + '<p class="walk-note" id="wk-note-' + idx + '"></p>';
+      container.appendChild(wrap);
+    }
+
+    function paint() {
+      Array.prototype.forEach.call(container.querySelectorAll('button[data-step]'), function (b) {
+        var i = +b.getAttribute('data-step');
+        var pin = b.getAttribute('data-pin');
+        var on = answers[i][pin] === b.getAttribute('data-val');
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+    }
+
+    function reset(note) {
+      answers = STEPS.map(function () { return { reg: null, o: null }; });
+      Array.prototype.forEach.call(container.querySelectorAll('.walk-step'), function (w) {
+        w.classList.remove('walk-step--hit', 'walk-step--miss');
+      });
+      STEPS.forEach(function (_, i) {
+        var n = el('wk-note-' + i);
+        n.textContent = '';
+        n.classList.remove('walk-note--miss');
+      });
+      el('wk-score').textContent = note || 'Not checked yet';
+      setExplain('Nothing checked yet',
+        '<p>Answer all ten and press Check. Partial answers are fine &mdash; the first gap is reported the same way a wrong answer is.</p>');
+      el('wk-summary').textContent = '';
+      paint();
+    }
+
+    function setExplain(title, html) {
+      var box = el('wk-explain');
+      box.innerHTML = '<div class="callout__title">' + title + '</div>' + html;
+    }
+
+    function check() {
+      var firstBad = -1, firstPin = null, chosen = null;
+
+      for (var i = 0; i < STEPS.length && firstBad === -1; i++) {
+        var pins = ['reg', 'o'];
+        for (var k = 0; k < pins.length; k++) {
+          var pin = pins[k];
+          var got = answers[i][pin];
+          if (got === truth[i][pin]) { continue; }
+          firstBad = i; firstPin = pin; chosen = got;
+          break;
+        }
+      }
+
+      /* Count the rest so the score line is honest about how much is right
+         beyond the first divergence -- but the divergence is what is
+         explained, because everything after it may be a consequence. */
+      var total = 0;
+      STEPS.forEach(function (_, i) {
+        ['reg', 'o'].forEach(function (pin) {
+          if (answers[i][pin] === truth[i][pin]) { total++; }
+        });
+      });
+
+      Array.prototype.forEach.call(container.querySelectorAll('.walk-step'), function (w) {
+        w.classList.remove('walk-step--hit', 'walk-step--miss');
+      });
+      STEPS.forEach(function (_, i) {
+        var n = el('wk-note-' + i);
+        n.textContent = '';
+        n.classList.remove('walk-note--miss');
+      });
+
+      if (firstBad === -1) {
+        el('wk-score').textContent = 'All ten correct';
+        STEPS.forEach(function (_, i) {
+          el('wk-step-' + i).classList.add('walk-step--hit');
+          el('wk-note-' + i).innerHTML =
+            '<code>reg</code> = ' + truth[i].reg + ' &middot; <code>o</code> = ' + truth[i].o;
+        });
+        setExplain('All ten correct',
+          '<p>Now run the same five steps on your own circuit and confirm it agrees with you. ' +
+          'A prediction that matches this page and a circuit that matches the prediction are two ' +
+          'different pieces of evidence, and Part A grades the second one.</p>');
+        el('wk-summary').textContent = 'All ten predictions correct.';
+        return;
+      }
+
+      var stepEl = el('wk-step-' + firstBad);
+      stepEl.classList.add('walk-step--miss');
+      for (var j = 0; j < firstBad; j++) { el('wk-step-' + j).classList.add('walk-step--hit'); }
+
+      var noteEl = el('wk-note-' + firstBad);
+      noteEl.classList.add('walk-note--miss');
+      noteEl.innerHTML = firstPin === 'reg'
+        ? '<code>reg</code> reads <strong>' + truth[firstBad].reg + '</strong> here.'
+        : '<code>o</code> reads <strong>' + truth[firstBad].o + '</strong> here.';
+
+      var trapKey = firstBad + '-' + firstPin + '-' + chosen;
+      var body = '<p>You have ' + total + ' of the ten right, but the first one that diverges is the one worth reading about, ' +
+        'because in a sequence like this the later ones often follow from it.</p>' +
+        '<p><strong>Step ' + (firstBad + 1) + ', <code>' + firstPin + '</code>:</strong> ' +
+        (chosen === null
+          ? 'you left this one blank. It reads <strong>' + truth[firstBad][firstPin] + '</strong>.'
+          : 'you chose <strong>' + chosen + '</strong>; it reads <strong>' + truth[firstBad][firstPin] + '</strong>.') +
+        '</p><p>' + WHY[firstBad][firstPin] + '</p>';
+      if (TRAPS[trapKey]) { body += '<p>' + TRAPS[trapKey] + '</p>'; }
+
+      el('wk-score').textContent = total + ' of 10 — first divergence at step ' + (firstBad + 1);
+      setExplain('First divergence: step ' + (firstBad + 1) + ', the <code>' + firstPin + '</code> pin', body);
+      el('wk-summary').textContent = 'First divergence at step ' + (firstBad + 1) + ', pin ' + firstPin +
+        '. It reads ' + truth[firstBad][firstPin] + '. ' + total + ' of ten correct overall.';
+    }
+
+    STEPS.forEach(function (_, i) { buildStep(i); });
+
+    container.addEventListener('click', function (ev) {
+      var b = ev.target.closest ? ev.target.closest('button[data-step]') : null;
+      if (!b) { return; }
+      var i = +b.getAttribute('data-step');
+      var pin = b.getAttribute('data-pin');
+      var v = b.getAttribute('data-val');
+      answers[i][pin] = (answers[i][pin] === v) ? null : v;
+      paint();
+    });
+
+    el('wk-check').addEventListener('click', check);
+    el('wk-clear').addEventListener('click', function () { reset('Cleared'); });
+
+    reset();
+  })();
+  </script>
+
+  <script>
+  /* ============================================================
+     Pre-Submission Checklist
+     ============================================================
+     A count, and nothing more. Nothing is stored -- Course
+     Standards forbid browser storage in these pages, and a
+     checklist that remembered itself would be a record rather
+     than a prompt.
+     ============================================================ */
+  (function () {
+    'use strict';
+    var boxes = document.querySelectorAll('#ck-list input[type="checkbox"]');
+    var total = boxes.length;
+
+    function update() {
+      var count = 0, i;
+      for (i = 0; i < boxes.length; i++) {
+        if (boxes[i].checked) { count++; boxes[i].parentNode.classList.add('checked'); }
+        else { boxes[i].parentNode.classList.remove('checked'); }
+      }
+      var status = document.getElementById('ck-status');
+      if (count === total) {
+        status.className = 'checklist-status checklist-status--ready';
+        status.innerHTML = '&#10004; All ' + total + ' verified &mdash; you are ready to submit.';
+      } else {
+        status.className = 'checklist-status';
+        status.textContent = count + ' of ' + total + ' verified';
+      }
+    }
+
+    Array.prototype.forEach.call(boxes, function (b) {
+      b.addEventListener('change', update);
+    });
+  })();
+  </script>
+
+</body>
+</html>
