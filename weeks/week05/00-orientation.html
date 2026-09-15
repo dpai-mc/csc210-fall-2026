@@ -253,7 +253,12 @@
         <div class="video-transcript-row">
           <div class="video-col">
             <div class="video-frame" id="video-container">
-              <p style="padding:var(--space-lg);color:var(--color-text-muted);">The Week 5 overview video will be posted here later this week.</p>
+              <iframe id="youtube-player"
+                      src="https://www.youtube.com/embed/ZauxtGVYy7A?enablejsapi=1&amp;cc_load_policy=1&amp;iv_load_policy=3&amp;modestbranding=1&amp;rel=0"
+                      title="CSC210 Week 5 Orientation: Two Tracks, One Machine"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allowfullscreen loading="lazy"></iframe>
             </div>
             <div class="video-caption">Closed captions available. Use the transcript panel to jump to any point in the video.</div>
           </div>
@@ -262,7 +267,7 @@
             <div class="transcript-panel" id="transcript-container" role="region"
                  aria-live="polite"
                  aria-label="Video transcript. Select a line to jump to that point in the video. The line currently being spoken is announced as the video plays.">
-              <p class="transcript-loading">The video and its transcript will be posted later this week.</p>
+              <p class="transcript-loading">Loading transcript&hellip;</p>
             </div>
           </div>
         </div>
@@ -281,18 +286,294 @@
     'use strict';
 
     /* ------------------------------------------------------------
-       Week 5 overview video. VIDEO_ID is the YouTube id and vttContent
-       holds the WEBVTT captions. Both are empty until the recording
-       exists; everything below no-ops cleanly in that state and the
-       placeholder copy above stays visible.
+       Week 5 overview video. Procedure A -- one video on this page, so
+       no TranscriptManager. VIDEO_ID is the YouTube id; vttContent holds
+       the WEBVTT captions inline so the panel needs no second request
+       and works from the Canvas iframe without a CORS fetch.
 
-       To ship: set VIDEO_ID, paste the VTT into vttContent, and replace
-       the placeholder paragraph inside #video-container with the iframe
-       markup used in weeks/week04/00-orientation.html.
+       The source VTT (csc210-wk5.vtt, Whisper) carried the streaming
+       rolling-window artefact: six zero-length duplicate cues and nine
+       cues restating the previous cue's text, plus one 0.28s cue holding
+       240 characters of repeat. Those are repaired here and the repaired
+       file is csc210-wk5.vtt in this folder. If the transcript is ever
+       regenerated, re-run the repair -- the duplicates survive a skim.
        ------------------------------------------------------------ */
 
-    var VIDEO_ID = '';
-    var vttContent = ``;
+    var VIDEO_ID = 'ZauxtGVYy7A';
+    var vttContent = `WEBVTT
+
+00:00.040 --> 00:09.840
+Aloha so this is week five and this week the big thing is really gonna do two
+
+00:09.840 --> 00:16.600
+things one is the register which is going to be a key component of our CPU
+
+00:16.600 --> 00:22.960
+it's where we store every piece of data that we want to use it are in registers
+
+00:22.960 --> 00:28.560
+we use them in RAM we use them for registers we use them in a lot of places
+
+00:28.560 --> 00:36.040
+within the CPU and then the second part starts with this instruction set
+
+00:36.040 --> 00:40.460
+architecture and instruction formats and this is our assembly language
+
+00:40.460 --> 00:45.720
+programming so from for the next few weeks we're going to be doing kind of a
+
+00:45.720 --> 00:51.800
+dual track two tracks one machine we're gonna work a little bit on our digital
+
+00:51.800 --> 00:54.780
+circuits and then we're gonna work on our assembly language and try to tie
+
+00:54.780 --> 00:57.540
+them together in terms of how they work
+
+00:58.560 --> 01:07.320
+to make our CPU or a computer do stuff okay so that's kind of what we're doing
+
+01:07.320 --> 01:13.520
+and that's why two tracks one machine it's the digital circuit track and the
+
+01:13.520 --> 01:23.060
+assembly language track but all to make a single machine work okay so hardware
+
+01:23.060 --> 01:28.400
+and assembly just one subject from both ends
+
+01:28.560 --> 01:34.680
+we're gonna build an 8-bit memory circuit an 8-bit enable circuit which
+
+01:34.680 --> 01:43.140
+basically allows us to store this 8-bit memory so 8-bit is one byte and so we're
+
+01:43.140 --> 01:49.860
+gonna start working in bytes instead of bits and then 8-bit register okay and we
+
+01:49.860 --> 01:55.840
+need and register is fabricated using these previous two we will use these
+
+01:55.840 --> 01:58.440
+individually but also we'll use them to build our CPUs and then we're going to
+
+01:58.560 --> 02:05.880
+build a register okay so that's kind of what we're doing this week so we'll
+
+02:05.880 --> 02:17.280
+start with creating a byte and work on a taking that byte in creating a register
+
+02:18.480 --> 02:26.160
+then we'll look at our instruction set architecture for MIPS which is a 32-bit
+
+02:26.160 --> 02:27.720
+with 32 registers
+
+02:28.560 --> 02:33.520
+and we have three types of instructions we'll talk about those three types and
+
+02:33.520 --> 02:36.560
+how you can tell what type of instruction is based on the ones and
+
+02:36.560 --> 02:44.180
+zeros and then a simple run this program... it's all pre-built it's just
+
+02:44.180 --> 02:49.300
+really again to get you to work with MARS but it explains it has an
+
+02:49.300 --> 02:53.000
+explanation for every line of code so that you know when you're writing your
+
+02:53.000 --> 02:58.040
+next program you need to include a comment for every
+
+02:58.040 --> 02:58.320
+line of
+
+02:58.560 --> 03:05.820
+executable code so that I'm aware that you know what you're doing okay and
+
+03:05.820 --> 03:12.360
+that's assignment five has both a MARS program in a .circ file for you to
+
+03:12.360 --> 03:27.000
+turn in all right let's take a quick look at the register primarily and what
+
+03:27.000 --> 03:32.120
+I want to say about the register is that the instructions are here of how to
+
+03:32.120 --> 03:41.880
+build a register how this is my how do I build a 8-bit memory circuit okay and
+
+03:41.880 --> 03:55.080
+then how I made it look sorry my I have this a little bit
+
+03:57.000 --> 04:03.420
+a little bit too big but anyway 8-bit memory circuit how do I get a byte back
+
+04:03.420 --> 04:16.140
+out so this is my enable circuit this is the bus thing so you can and base only
+
+04:16.140 --> 04:26.980
+what happens when I use a control buffer so I use and with buffers and so I up
+
+04:26.980 --> 04:30.700
+dated the not to
+
+04:35.260 --> 04:43.640
+be and this is the wrong diagram because
+
+04:53.740 --> 04:56.960
+anyway I will update that to be the right
+
+04:56.960 --> 05:07.000
+diagram and then oh here's the right diagram sorry here's our actual enable
+
+05:07.000 --> 05:10.680
+circuit so we have a bunch of these with control buffers and this is all
+
+05:10.680 --> 05:15.860
+discussed in the video that's below and why we need these and why we use them
+
+05:15.860 --> 05:24.620
+and how we use them this is our clock cycle we have an enable so enable goes
+
+05:24.620 --> 05:26.840
+high
+
+05:26.840 --> 05:36.360
+we start at zero at one enable goes high at two our set goes high at three set goes low
+
+05:37.080 --> 05:45.400
+at four enable goes low at five we repeat the cycle okay so our set is always embedded inside
+
+05:45.400 --> 05:55.160
+our enable and our enable lets something out and our set lets something in okay so um if i have
+
+05:55.160 --> 06:05.320
+something in r1 that i want to put into r2 i have to enable r1 which will put whatever stored in r1
+
+06:05.320 --> 06:15.320
+on the bus okay and then i enable r2 set i enable set so that will for r2 and that will say hey grab
+
+06:15.320 --> 06:23.800
+what's on the bus and put it and store it i turn off set it's stored i turn off enable now i can do
+
+06:23.800 --> 06:24.840
+something else
+
+06:25.480 --> 06:34.760
+okay so this goes walk through the four step process and you can go through it this is our
+
+06:34.760 --> 06:41.720
+register our final register will look like this we have a memory 8-bit memory followed by an 8-bit
+
+06:41.720 --> 06:51.000
+enable followed by a control buffer an 8-bit control buffer okay to get our output and we have
+
+06:51.000 --> 06:55.000
+our input and then we have these control bits a set enable and we have our output and then we have
+
+06:55.160 --> 07:00.980
+enable a set to put something in memory and enable is to get it out and then we
+
+07:00.980 --> 07:06.500
+put this little output here in the middle so that we have a window in to
+
+07:06.500 --> 07:12.680
+look in to see what's stored in memory at any point in time all right so that's
+
+07:12.680 --> 07:19.040
+kind of it and it's all walked through in this video so this video is like 30
+
+07:19.040 --> 07:22.660
+32 minutes something like that but it walks through building all three of
+
+07:22.660 --> 07:27.340
+those circuits and talks a little about them as we're doing it talks about the
+
+07:27.340 --> 07:37.840
+control buffers as well all right so that's the big thing the other big thing
+
+07:37.840 --> 07:44.200
+is this MARS first program definitely read the other stuff because it's
+
+07:44.200 --> 07:48.520
+important as well but this just kind of goes through here write this program and
+
+07:48.520 --> 07:52.000
+type it in don't just copy it type it in
+
+07:52.660 --> 08:03.880
+the pounds line means everything after this on this line is a comment right so
+
+08:03.880 --> 08:15.760
+you can prove this run it see what happens walk through it okay so that's
+
+08:15.760 --> 08:21.520
+really my overview in orientation to this week hopefully if you have any
+
+08:21.520 --> 08:22.280
+questions let me know
+
+08:22.660 --> 08:28.440
+and I will be addressing the fact that I had to fix the reason this is late
+
+08:28.440 --> 08:40.520
+being posted is I had to fix these here we'll go to instruction format I had a
+
+08:40.520 --> 08:45.180
+problem where my widgets that I was creating like these widgets wasn't
+
+08:45.180 --> 08:51.420
+weren't working and I noticed they weren't working for last week either I
+
+08:51.420 --> 08:52.640
+didn't know that last week
+
+08:52.660 --> 08:55.020
+but they are now all
+
+08:55.020 --> 08:59.260
+working so I'll send something out about week 4
+
+08:59.280 --> 09:02.240
+separately but if you've done the
+
+09:02.260 --> 09:03.700
+assignment or haven't done the
+
+09:03.720 --> 09:08.420
+assignment yet or you did it and turned it in you can always redo it if you
+
+09:08.440 --> 09:17.140
+would like now that the week 4 widgets are
+
+09:17.160 --> 09:22.260
+working like these see it in time where
+
+09:22.280 --> 09:30.460
+we had these these images and to look up what happens for different scenarios
+
+09:30.460 --> 09:36.140
+we're not working I didn't know that they are now and then we have this
+
+09:36.140 --> 09:41.740
+moment one here's what's going on in moment one this red line moment two
+
+09:41.740 --> 09:49.060
+three four five little description of what's going on okay so obviously that
+
+09:49.060 --> 09:53.020
+would have helped some people if you did the assignment you're more than
+
+09:53.020 --> 10:00.040
+welcome to redo it and resubmit so like I said I'll treat something out about
+
+10:00.040 --> 10:10.120
+that separately right thanks for your time and we'll talk to you next week`;
 
     var player, timeUpdater, parsedTranscript = [];
 
