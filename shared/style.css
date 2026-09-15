@@ -1292,6 +1292,24 @@ th {
   outline-offset: 2px;
 }
 
+/* Two readings that are not bytes, and must not look like one.
+   Promoted from weeks/week05/01-the-register.html on 2026-09-15 when
+   weeks/labs/lab-05-register-and-mips.html became the second user --
+   Course Standards Section 8.
+     --float  nothing is driving these wires. NOT a value of zero.
+     --err    Logisim's E: no defined value at all. An unwritten
+              MEM_1BIT reads this, and so does a bus with two drivers. */
+.bus-bit--float {
+  border-style: dashed;
+  color: var(--color-text-muted);
+  background: transparent;
+}
+.bus-bit--err {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+  background: #fdf2f2;
+}
+
 /* ---------- Chained identical stages ---------- */
 /* Used by: 02-ripple-carry (the eight full-adder stages),
    04-components-and-synthesis (the comparator chain).
@@ -2184,3 +2202,24 @@ th {
   outline: 3px solid var(--color-accent);
   outline-offset: 2px;
 }
+
+/* ---------- Together / on-your-own tags ---------- */
+/* Used by: lab-03, lab-04, lab-05. A lab page is a running order as
+   much as a reading, so each pacing block says whether it is done with
+   the room or alone. Promoted from three identical inline copies on
+   2026-09-15; the Lab 4 build record asked for this on the next pass
+   through either file -- Course Standards Section 8. */
+.live-tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  padding: 2px var(--space-sm);
+  border-radius: 999px;
+  vertical-align: middle;
+  margin-left: var(--space-sm);
+}
+.live-tag--together { background: var(--color-success); color: #fff; }
+.live-tag--solo     { background: var(--color-danger, #b3261e); color: #fff; }
