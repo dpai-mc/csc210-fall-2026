@@ -254,11 +254,618 @@
       </div>
     </section>
 
+
+    <!-- ============================================================
+         H — Video
+         ============================================================ -->
+    <section id="sec-video">
+      <h2>Week 6 overview video</h2>
+
+      <div class="video-breakout">
+        <div class="video-transcript-row">
+          <div class="video-col">
+            <div class="video-frame" id="video-container">
+              <iframe id="youtube-player"
+                      src="https://www.youtube.com/embed/shcYh0KH3-o?enablejsapi=1&amp;cc_load_policy=1&amp;iv_load_policy=3&amp;modestbranding=1&amp;rel=0"
+                      title="CSC210 Week 6 Orientation: Seven Things at Once"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allowfullscreen loading="lazy"></iframe>
+            </div>
+            <div class="video-caption">Closed captions available. Use the transcript panel to jump to any point in the video.</div>
+          </div>
+          <div class="transcript-col">
+            <h2 class="sr-only">Video transcript</h2>
+            <div class="transcript-panel" id="transcript-container" role="region"
+                 aria-live="polite"
+                 aria-label="Video transcript. Select a line to jump to that point in the video. The line currently being spoken is announced as the video plays.">
+              <p class="transcript-loading">Loading transcript&hellip;</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <footer class="sp-footer">
     CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 6 Orientation
   </footer>
+
+
+  <script>
+  (function () {
+    'use strict';
+
+    /* ------------------------------------------------------------
+       Week 6 overview video. Procedure A -- one video on this page, so
+       no TranscriptManager. VIDEO_ID is the YouTube id; vttContent holds
+       the WEBVTT captions inline so the panel needs no second request
+       and works from the Canvas iframe without a CORS fetch.
+
+       The source VTT (csc210-wk6.vtt, Whisper) carried BOTH defect
+       families catalogued in Week 5. One 1.56s cue at 03:20 held ~500
+       characters of hallucinated text including non-ASCII; a 0.16s cue
+       at 12:47 repeated its predecessor verbatim; and three cues from
+       14:13 restated the 14:07 cue in the streaming rolling-window
+       pattern. Five cues deleted, twelve mis-heard terms repaired,
+       145 cues in and 140 out. The repaired file is csc210-wk6.vtt in
+       this folder. If the transcript is ever regenerated, re-run the
+       repair -- none of this survives a skim.
+       ------------------------------------------------------------ */
+
+    var VIDEO_ID = 'shcYh0KH3-o';
+    var vttContent = `WEBVTT
+
+00:00.040 --> 00:09.160
+Aloha so last week went over creating a register and then introduction to MIPS
+
+00:09.160 --> 00:15.960
+using MARS okay so our instruction set different instruction formats and so
+
+00:15.960 --> 00:23.000
+this week we're going to continue along with the dual role of circuits and
+
+00:23.120 --> 00:28.640
+assembly language programming okay so there's a little bit more work this week
+
+00:28.640 --> 00:36.200
+let's be honest with you because we're gonna do a lot of different stuff okay
+
+00:36.200 --> 00:43.520
+so hardware wise we're gonna build basically all the things that are 8-bit
+
+00:43.520 --> 00:48.080
+CPU is gonna be able to do in the arithmetic logic unit and we're gonna
+
+00:48.080 --> 00:54.920
+just stick with that for our CPU simulation just using the ALU so we're
+
+00:54.920 --> 00:58.480
+not doing graphics we're not doing text generation
+
+00:58.640 --> 01:04.520
+or you know conversions and stuff like that and then we will start working in
+
+01:04.520 --> 01:10.500
+assembly language and you'll have a program to write for as part of your
+
+01:10.500 --> 01:13.680
+homework so your homework is going to include both creating circuits and
+
+01:13.680 --> 01:20.700
+writing a program okay so this week you're gonna build an 8-bit AND
+
+01:20.700 --> 01:26.160
+circuit and eight-bit OR circuit an 8-bit NOT circuit you have an 8-bit adder that
+
+01:26.160 --> 01:28.160
+we built a couple weeks ago
+
+01:28.640 --> 01:37.760
+that we have a shift left a shift right a xor comparator so you have to build the one bit
+
+01:37.760 --> 01:52.240
+and an eight bit and an is zero okay so the zero is just an eight input or inverted meaning
+
+01:52.240 --> 02:03.520
+basically you're looking for all the answer to be one if all the bits are zero okay so um this is
+
+02:05.440 --> 02:09.040
+what we're building so there's a lot of stuff remember friday is a holiday
+
+02:09.040 --> 02:18.000
+this week on campus so there's no um campus the campus is closed on friday assignment 6 100 points
+
+02:20.400 --> 02:22.000
+try to build these things
+
+02:23.040 --> 02:32.720
+as we go through so when you look at the layout for this week when you go through seven things
+
+02:32.720 --> 02:39.440
+a byte can become you should build these circuits as you read it that's what i think you should do
+
+02:40.320 --> 02:46.560
+okay so um this goes through so building the alu so we have an eight bit adder so we want
+
+02:46.560 --> 02:51.440
+to do shift right and shift left doesn't matter which order you do them eight bit not it doesn't
+
+02:52.240 --> 02:59.040
+matter which order you do any of these boxes but you need to do them all before you can create the
+
+02:59.040 --> 03:06.640
+alu which we'll do next week not this week so this week is to basically fill in these top boxes
+
+03:07.600 --> 03:13.400
+we should already have a 3x8 decoder from prior week and so shift right shift left
+
+03:13.400 --> 03:20.060
+not and or and the xor comparator in the zero function
+
+03:21.620 --> 03:28.420
+okay and this just maps the opcode to each one so we have an eight bit um system so the first
+
+03:28.420 --> 03:35.940
+three bits are our opcode and then we'll have register bits and stuff okay and then our eighth
+
+03:35.940 --> 03:42.260
+output is unassigned it's in there it just won't be wired to anything okay so it's not going to
+
+03:42.260 --> 03:48.740
+give us any errors if we accidentally call that opcode it's just going to kind of pretend like
+
+03:48.740 --> 03:56.980
+it did something and move on okay so this just talks about that there's some stuff here's what
+
+03:56.980 --> 04:02.900
+should happen when you and um when you shift right when you shift left this is what it should be
+
+04:03.780 --> 04:09.140
+based on your inputs a and b and so you can double check your individual
+
+04:09.140 --> 04:12.500
+inputs a and b put them in and get see what you get out
+
+04:16.580 --> 04:18.340
+okay the cheap legs and or not
+
+04:19.700 --> 04:24.180
+okay so this just talks about how to do and or and not or what they mean
+
+04:26.100 --> 04:29.940
+you've already built this adder there's no subtract
+
+04:31.700 --> 04:39.860
+okay moving bit sideways shift left and shift right um i only have a diagram for shift left
+
+04:39.860 --> 04:47.300
+for shift right it's the opposite for shift right so shift left meaning you move everything left
+
+04:47.300 --> 04:48.660
+you need to shift something
+
+04:48.900 --> 04:56.900
+into zero and then you need to right and then take the zero and move it to one and take the one
+
+04:56.900 --> 05:01.940
+and move it to two and the two to move it to three blah blah blah and seven becomes the shift out
+
+05:01.940 --> 05:09.860
+because it goes out there's no place to put it shift right is in a mirror image your shift in is
+
+05:11.140 --> 05:17.860
+on seven okay and then you shift into seven
+
+05:18.740 --> 05:24.260
+you shift into seven on register two and register one seven goes to six
+
+05:24.260 --> 05:31.940
+six goes to five five goes to four all the way up to zero goes to out so it's the opposite
+
+05:34.660 --> 05:37.620
+okay and these are essentially multiplying and divided by two
+
+05:38.740 --> 05:42.180
+if you don't want to know that's what shift does it multiplies and divides by two
+
+05:44.500 --> 05:45.000
+okay
+
+05:47.300 --> 05:48.580
+so that's the first one
+
+05:49.460 --> 05:52.900
+and then the next one is larger equals zero
+
+05:54.420 --> 06:00.340
+so it walks through creating an XOR gate and what that means you know your three answers of the
+
+06:00.340 --> 06:08.740
+XOR gate how to do equals okay when it's one they're equal i'm gonna because we're using
+
+06:08.740 --> 06:15.940
+two input when it's one they're equal and when they're i mean when they're zero they're equal
+
+06:15.940 --> 06:18.260
+and when they're one they're not equal
+
+06:19.140 --> 06:23.540
+right because zero zero gives us one one one gives us one zero one or one zero
+
+06:24.180 --> 06:32.260
+i mean zero zero gives us zero one one gives us zero zero one and one zero give us one
+
+06:33.300 --> 06:36.420
+okay so we not the output to get the equals answer
+
+06:41.060 --> 06:47.540
+okay and then you can take the output of your or and end it with a
+
+06:47.540 --> 06:53.360
+to find out if a is larger okay and you can work through that if you would like
+
+06:53.360 --> 07:05.040
+to verify that this is the truth table for that and you can check that out
+
+07:05.040 --> 07:11.000
+figure out how that makes how that works okay it's only larger when a is 1 and B
+
+07:11.000 --> 07:21.280
+is 0 otherwise they're equal or B is larger okay and then but one bits not
+
+07:21.280 --> 07:32.000
+enough so we need to have a prior in for larger and a prior in for equals and we
+
+07:32.000 --> 07:38.760
+need to attach them to the larger is a larger or is are they equal okay remember
+
+07:38.760 --> 07:40.740
+these are just one bit
+
+07:40.740 --> 07:49.620
+all right and then so this tells you oh you know it really need to do this had
+
+07:49.620 --> 07:57.780
+this third leg to do the larger because you have the equals in there all right
+
+07:57.780 --> 08:04.120
+and then you need to redraw you need to here's how I drew it this is my one bit
+
+08:04.120 --> 08:10.720
+redrawn circuit I have one bit in a one bit in B prior larger prior equals
+
+08:10.720 --> 08:18.220
+at the top as input larger equals as my outputs and then just my output which is
+
+08:18.220 --> 08:27.720
+a normal value of the exclusive or output and then you need to chain them
+
+08:27.720 --> 08:33.100
+so you have eight of them take eight of those one bit comparators you take your
+
+08:33.100 --> 08:37.420
+two 8-bit inputs and you pump them in
+
+08:40.720 --> 08:51.900
+and the key here is my XOR bits okay B bit 0 B is down at the bottom bit 0 of a
+
+08:51.900 --> 09:02.240
+is also to the bottom one okay but my is larger and is equal inputs are at bit 7
+
+09:02.240 --> 09:08.880
+okay so you have to actually do them from high to low for equals and larger
+
+09:08.880 --> 09:10.560
+not low to high
+
+09:10.720 --> 09:17.080
+which we would do to add for instance right in the toxin discussion why this
+
+09:17.080 --> 09:23.020
+one is a ground and this one is a 1 and then we have these two outputs for is
+
+09:23.020 --> 09:29.660
+equal or a larger right and then your regular output of your 8-bit XOR
+
+09:29.660 --> 09:38.560
+comparator okay so that goes through that that's larger I mean it doesn't do
+
+09:38.560 --> 09:39.960
+equal and equals
+
+09:40.720 --> 09:45.260
+is zero is not on here because the description at the very beginning is the
+
+09:45.260 --> 09:55.500
+is zero circuit okay so then once you have created all those you move on to
+
+09:55.500 --> 10:02.880
+okay so how do I do some of this guy in assembly language okay so this just
+
+10:02.880 --> 10:08.500
+walks through the add command the subtract command the and command the or
+
+10:08.500 --> 10:09.820
+command
+
+10:10.720 --> 10:20.000
+the nor command the shift left shift i mean it's the comparator and this is uh
+
+10:24.480 --> 10:25.760
+shift less than i think
+
+10:25.760 --> 10:42.000
+um sorry it's set on less than so it sets a flag on less than
+
+10:46.160 --> 10:50.800
+okay and so this talks walks you through that process
+
+10:53.120 --> 10:55.360
+add immediate add i
+
+10:56.720 --> 11:02.480
+and i you know what these are immediate the immediates are actually values you just put them
+
+11:02.480 --> 11:12.240
+in okay you just put the value in the program rather than storing it in a variable which is
+
+11:12.240 --> 11:14.080
+another memory location and calling it
+
+11:17.920 --> 11:23.360
+okay the extension events when your thing is too big and you want to use negative values
+
+11:23.360 --> 11:25.680
+or something this walks you through that
+
+11:25.760 --> 11:32.480
+uh there's a high and a low and so you can keep track of that
+
+11:32.480 --> 11:37.120
+because then you need more than 8 bits you need 16 so you have a high and a low
+
+11:41.520 --> 11:44.560
+all right so this kind of walks through all that and then the
+
+11:45.920 --> 11:53.920
+program i mean a program this just walks you through a program provides a program okay
+
+11:56.000 --> 12:04.880
+um so here's your program data alpha beta gamma these are the values here's your program
+
+12:06.000 --> 12:15.120
+load word t0 t1 t2 so load alpha beta and gamma into t0 t1 t2 add t0 and t1 and put an s0
+
+12:17.760 --> 12:25.600
+okay subtract t2 from s0 so that's alpha plus beta minus k
+
+12:25.760 --> 12:31.440
+gamma and then do some and and i's and ors
+
+12:33.280 --> 12:38.160
+okay and then here we're using immediates with a hex notation
+
+12:40.160 --> 12:42.960
+okay you can also use decimal notation like down here
+
+12:45.360 --> 12:47.600
+decimal rather than hex
+
+12:47.760 --> 13:04.640
+um typically this is how you copy a register so if you want to copy s0 into a0 what you do is you add
+
+13:05.600 --> 13:10.800
+s0 plus the dollar sign zero which from last week is a register that is always zero
+
+13:12.080 --> 13:16.000
+you add that into and you put the result in a in wherever you want it
+
+13:16.720 --> 13:23.040
+okay you could use a move command as well that will work it's typically a pseudo instruction
+
+13:23.040 --> 13:27.280
+and the assembler will actually turn that into an add zero command
+
+13:32.880 --> 13:37.120
+all right so you can you want to put this program in you want to run it
+
+13:37.680 --> 13:43.200
+you want to verify that your registers get the values that you expect okay
+
+13:46.000 --> 13:49.040
+and then when you're done
+
+13:53.040 --> 13:58.640
+okay your assignment six we are done part a should be done because you built those while
+
+13:58.640 --> 14:07.280
+you did the reading part b and c are some answers some questions and then part d is to write your
+
+14:07.280 --> 14:12.880
+program okay so your part a should be done that's worth having in mind and then part b is to write
+
+14:12.880 --> 14:13.680
+your program
+
+14:17.360 --> 14:18.000
+for this week
+
+14:21.520 --> 14:23.920
+all right test the circuit make sure it works
+
+14:25.840 --> 14:31.040
+part b um a few sentences looking for reasoning not length
+
+14:32.720 --> 14:34.960
+okay so answer these questions
+
+14:39.920 --> 14:45.840
+and almost all this stuff is in the right all should be somewhere
+
+14:46.240 --> 14:50.720
+in the previous instructional pages
+
+14:53.440 --> 14:55.760
+okay part c is instruction hardware
+
+14:56.640 --> 15:02.000
+this is more the add subtract kind of things and then part d is write a program
+
+15:02.000 --> 15:09.680
+so open up MARS create a new program or create a new file and then use pq and r with these
+
+15:09.680 --> 15:14.160
+numbers and comp your program must do these 10 things
+
+15:15.920 --> 15:21.840
+to do them you need to figure out how to do them all this stuff is in um the prior
+
+15:23.760 --> 15:31.440
+i guess page three and four of the learning content all right so it should all be there
+
+15:32.480 --> 15:40.080
+hopefully um it works very smoothly for you if you have problems let me know please or you find
+
+15:40.080 --> 15:46.160
+an error like i made an error i corrected a couple errors i made already so hopefully i did
+
+15:46.160 --> 15:48.960
+found them all but if i made an error please let me know
+
+15:51.040 --> 15:55.440
+and good luck and we'll talk at you next week`;
+
+    var player, timeUpdater, parsedTranscript = [];
+
+    function timeToSeconds(timeStr) {
+      if (!timeStr) return 0;
+      var parts = timeStr.trim().split(':');
+      if (parts.length === 2) {
+        return (parseInt(parts[0]) || 0) * 60 + (parseFloat(parts[1]) || 0);
+      } else if (parts.length === 3) {
+        return (parseInt(parts[0]) || 0) * 3600 + (parseInt(parts[1]) || 0) * 60 + (parseFloat(parts[2]) || 0);
+      }
+      return 0;
+    }
+
+    function parseVtt(vttText) {
+      var cues = vttText.trim().split(/\n\n+/);
+      var parsedCues = [];
+      cues.forEach(function (cueBlock) {
+        if (cueBlock.indexOf('WEBVTT') === 0 || cueBlock.trim() === '') return;
+        var lines = cueBlock.trim().split('\n');
+        var timeLine = lines.filter(function (l) { return l.indexOf('-->') !== -1; })[0];
+        if (!timeLine) return;
+        var parts = timeLine.split(' --> ');
+        var textLines = lines.slice(lines.indexOf(timeLine) + 1);
+        parsedCues.push({
+          start: timeToSeconds(parts[0]),
+          end: timeToSeconds(parts[1]),
+          text: textLines.join(' ').trim()
+        });
+      });
+      return parsedCues;
+    }
+
+    function populateTranscript() {
+      var container = document.getElementById('transcript-container');
+      if (!container) return;
+      container.innerHTML = '';
+      parsedTranscript.forEach(function (cue) {
+        var lineEl = document.createElement('div');
+        lineEl.className = 'transcript-line';
+        lineEl.dataset.start = cue.start;
+        lineEl.dataset.end = cue.end;
+        lineEl.textContent = cue.text;
+        lineEl.setAttribute('role', 'button');
+        lineEl.setAttribute('tabindex', '0');
+        var seekTo = function () {
+          if (player && player.seekTo) { player.seekTo(cue.start, true); player.playVideo(); }
+        };
+        lineEl.addEventListener('click', seekTo);
+        lineEl.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); seekTo(); }
+        });
+        container.appendChild(lineEl);
+      });
+    }
+
+    function highlightCurrentLine() {
+      if (!player || !player.getCurrentTime) return;
+      var currentTime = player.getCurrentTime();
+      var lines = document.querySelectorAll('#transcript-container .transcript-line');
+      lines.forEach(function (line) {
+        var start = parseFloat(line.dataset.start);
+        var end = parseFloat(line.dataset.end);
+        if (currentTime >= start && currentTime < end) {
+          if (!line.classList.contains('active-transcript-line')) {
+            var prev = document.querySelector('#transcript-container .active-transcript-line');
+            if (prev) prev.classList.remove('active-transcript-line');
+            line.classList.add('active-transcript-line');
+            line.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else {
+          line.classList.remove('active-transcript-line');
+        }
+      });
+    }
+
+    function syncTranscriptHeight() {
+      var videoContainer = document.getElementById('video-container');
+      var transcriptContainer = document.getElementById('transcript-container');
+      if (!videoContainer || !transcriptContainer) return;
+      var videoCol = videoContainer.closest('.video-col');
+      var transcriptCol = transcriptContainer.closest('.transcript-col');
+      var sideBySide = !!(videoCol && transcriptCol) && Math.abs(
+        transcriptCol.getBoundingClientRect().top - videoCol.getBoundingClientRect().top) < 2;
+      if (sideBySide) {
+        transcriptContainer.style.height = videoContainer.offsetHeight + 'px';
+        transcriptContainer.style.maxHeight = videoContainer.offsetHeight + 'px';
+      } else {
+        transcriptContainer.style.height = '24rem';
+        transcriptContainer.style.maxHeight = '24rem';
+      }
+    }
+
+    window.onYouTubeIframeAPIReady = function () {
+      if (!VIDEO_ID || !document.getElementById('youtube-player')) return;
+      player = new YT.Player('youtube-player', {
+        videoId: VIDEO_ID,
+        events: {
+          onStateChange: function (event) {
+            clearInterval(timeUpdater);
+            if (event.data === YT.PlayerState.PLAYING) {
+              timeUpdater = setInterval(highlightCurrentLine, 300);
+            }
+          }
+        }
+      });
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      if (!VIDEO_ID || !vttContent.trim()) { syncTranscriptHeight(); return; }
+
+      parsedTranscript = parseVtt(vttContent);
+      populateTranscript();
+      setTimeout(syncTranscriptHeight, 100);
+      if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+        var tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      } else {
+        window.onYouTubeIframeAPIReady();
+      }
+    });
+
+    var resizeTimeout;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(syncTranscriptHeight, 250);
+    });
+  })();
+  </script>
 
 </body>
 </html>
