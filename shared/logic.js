@@ -343,6 +343,247 @@
   }
 
   /* ============================================================
+     WEEK 7 -- Control-flow address arithmetic and the assembler
+     (CSCLogic.flow)
+     ============================================================
+     Added 2026-09-18.
+
+     WHY THIS IS IN THE SHARED KERNEL. Standards Section 8's test is
+     whether two or more files need it. Five do: the Branch Bench, the
+     Jump Field Calculator and the What-The-Assembler-Emits widget on
+     02-deciding.html and 03-repeating-and-jumping.html, the loop bench's
+     PC display, and assignment7.html's Part C answer key.
+
+     NAMING. Every helper here is flow-prefixed or lives inside the
+     exported object. `target` was ALREADY a function name at this scope
+     before this block was written, and Week 6 lost 42 test assertions to
+     a silent shadow of exactly that kind (alu's evaluate() over Week 2's
+     CSCLogic.evaluate). Check the file before adding a bare name.
+
+     LOAD-BEARING ASSERTION, in the same category as srSettle's
+     non-convergence and busResolve's contested bus:
+
+       flowBranchOffset returns the offset in INSTRUCTIONS, never in
+       bytes, and `fits` is computed against the word range -32768 to
+       32767. A byte answer is wrong in a way that still looks plausible
+       -- it is the same confusion that produced the Fall 2025 page's
+       "can branch +/-32KB", which is off by a factor of four. week07-
+       spa.test.js asserts the word semantics and the boundary cases, so
+       a "fix" to bytes fails the suite instead of shipping.
+     ============================================================ */
+
+  /* The reach of a conditional branch. The INSTRUCTION figures are the
+     ones the encoding produces; the byte figures are derived, and are
+     given second everywhere in the course for that reason.
+
+     maxBytes is 131068, not 131072: the largest offset is +32767
+     instructions, and 32767 * 4 = 131068. The asymmetry is two's
+     complement's, not a rounding error. */
+  var FLOW_REACH = {
+    minWords: -32768,
+    maxWords: 32767,
+    minBytes: -131072,
+    maxBytes: 131068
+  };
+
+  function flowToBin(value, width) {
+    var v = value < 0 ? value + Math.pow(2, width) : value;
+    var s = (v >>> 0).toString(2);
+    while (s.length < width) { s = '0' + s; }
+    return s.slice(-width);
+  }
+
+  /* flowBranchOffset(pcBranch, targetAddr)
+
+     The number the assembler puts in a beq/bne immediate field:
+
+         words = (targetAddr - (pcBranch + 4)) / 4
+
+     PC + 4 because the machine has already advanced past the branch by
+     the time the branch is acted on. Divided by 4 because every MIPS
+     instruction is four bytes and four-byte aligned, so the low two bits
+     of a byte offset would always be zero -- storing them would spend
+     two bits of a sixteen-bit field to carry no information, and
+     counting instructions instead buys four times the reach for free.
+
+     Returns { words, bits, fits, bytes, aligned }. `aligned` is false
+     if either address is not a multiple of 4, which is a student error
+     rather than a representable offset. */
+  function flowBranchOffset(pcBranch, targetAddr) {
+    var pc = pcBranch >>> 0, t = targetAddr >>> 0;
+    var aligned = (pc % 4 === 0) && (t % 4 === 0);
+    var bytes = t - (pc + 4);
+    var words = bytes / 4;
+    var fits = aligned &&
+               Number.isInteger(words) &&
+               words >= FLOW_REACH.minWords &&
+               words <= FLOW_REACH.maxWords;
+    return {
+      words: words,
+      bytes: bytes,
+      aligned: aligned,
+      fits: fits,
+      bits: fits ? flowToBin(words, 16) : null
+    };
+  }
+
+  /* The inverse: where a branch lands, given its own address and the
+     offset in INSTRUCTIONS. */
+  function flowBranchTarget(pcBranch, offsetWords) {
+    return ((pcBranch >>> 0) + 4 + (offsetWords * 4)) >>> 0;
+  }
+
+  /* flowJumpField(targetAddr, pcJump)
+
+     A J-type instruction carries 26 bits of WORD address. The low two
+     bits are dropped because instructions are aligned; the top four are
+     dropped because they are taken from the PC at run time. That is
+     what limits a jump to a 256 MB region rather than the whole 4 GB
+     address space.
+
+     pcJump is optional. Given it, `fits` also checks that the target is
+     inside the jump's own region -- which is the failure students never
+     see, because every program they write lives in one region. */
+  function flowJumpField(targetAddr, pcJump) {
+    var t = targetAddr >>> 0;
+    var aligned = (t % 4 === 0);
+    var field = (t >>> 2) & 0x03FFFFFF;
+    var sameRegion = true;
+    if (pcJump !== undefined && pcJump !== null) {
+      sameRegion = ((t & 0xF0000000) >>> 0) === ((((pcJump >>> 0) + 4) & 0xF0000000) >>> 0);
+    }
+    return {
+      field: field >>> 0,
+      bits: flowToBin(field, 26),
+      aligned: aligned,
+      sameRegion: sameRegion,
+      fits: aligned && sameRegion
+    };
+  }
+
+  /* flowJumpTarget(pcJump, field)
+
+         PC = ((PC + 4) & 0xF0000000) | (field << 2)
+
+     The shift is part of the formula, not a footnote to it. The Fall
+     2025 page wrote the concatenation without the shift and put the
+     shift in a separate box further down the page. */
+  function flowJumpTarget(pcJump, field) {
+    var hi = (((pcJump >>> 0) + 4) & 0xF0000000) >>> 0;
+    return (hi | ((field << 2) >>> 0)) >>> 0;
+  }
+
+  /* ---- what the assembler actually emits ----
+
+     MIPS has exactly two register-comparison branches: beq and bne.
+     Everything below is a PSEUDO-INSTRUCTION -- convenient to write,
+     and expanded by the assembler into real instructions before
+     anything reaches the machine.
+
+     The four comparison branches expand through `slt`, and slt's answer
+     is the comparator leg's AL output -- the circuit students chained
+     together in Week 6. `if (a < b)` in a high-level language is an slt
+     in assembly is a wire coming out of an XOR cascade. That is the
+     whole stack in one example, and it is why this table is content
+     rather than a reference appendix.
+
+     `$at` is the assembler's reserved scratch register. Week 5's
+     register table already describes it as "reserved for the
+     assembler"; this is what it is reserved FOR.
+
+     `alu` names the ALU output that answers the expansion, for the
+     widget's third panel. */
+  var FLOW_PSEUDO = {
+    blt:  { args: ['rs', 'rt', 'label'], alu: 'AL',
+            expands: [['slt', '$at', 'rs', 'rt'], ['bne', '$at', '$zero', 'label']],
+            why: 'a is less than b exactly when slt says so, and slt is the comparator’s AL flag with the operands in this order.' },
+    bgt:  { args: ['rs', 'rt', 'label'], alu: 'AL',
+            expands: [['slt', '$at', 'rt', 'rs'], ['bne', '$at', '$zero', 'label']],
+            why: '"a greater than b" is "b less than a" -- the same slt with the operands swapped. No new hardware.' },
+    ble:  { args: ['rs', 'rt', 'label'], alu: 'AL',
+            expands: [['slt', '$at', 'rt', 'rs'], ['beq', '$at', '$zero', 'label']],
+            why: '"a at most b" is "not (b less than a)". Same slt as bgt; the branch is inverted instead.' },
+    bge:  { args: ['rs', 'rt', 'label'], alu: 'AL',
+            expands: [['slt', '$at', 'rs', 'rt'], ['beq', '$at', '$zero', 'label']],
+            why: '"a at least b" is "not (a less than b)". Same slt as blt, branch inverted.' },
+    beqz: { args: ['rs', 'label'], alu: 'EQ',
+            expands: [['beq', 'rs', '$zero', 'label']],
+            why: 'one real instruction. $zero always reads 0, so comparing against it is a zero test.' },
+    bnez: { args: ['rs', 'label'], alu: 'EQ',
+            expands: [['bne', 'rs', '$zero', 'label']],
+            why: 'as beqz, inverted.' },
+    move: { args: ['rd', 'rs'], alu: 'ADD leg',
+            expands: [['add', 'rd', 'rs', '$zero']],
+            why: 'adding $zero changes nothing, so the sum is a copy. Week 6 taught this form directly.' },
+    li:   { args: ['rd', 'imm'], alu: 'ADD leg',
+            expands: [['addi', 'rd', '$zero', 'imm']],
+            why: 'add the immediate to nothing. Only works while the value fits a 16-bit signed field -- a larger one expands to lui plus ori instead.',
+            wide: [['lui', '$at', 'imm-upper'], ['ori', 'rd', '$at', 'imm-lower']] },
+    la:   { args: ['rd', 'label'], alu: 'OR leg',
+            expands: [['lui', '$at', 'label-upper'], ['ori', 'rd', '$at', 'label-lower']],
+            why: 'an address is 32 bits and an immediate field is 16, so it takes two instructions: load the top half, or in the bottom half.' }
+  };
+
+  /* flowExpand('blt $t0, $t1, loop') -> the real instructions.
+
+     Deliberately a small hand parser rather than a regex table: the
+     widget shows the operands moving from the pseudo-instruction into
+     the expansion, so the mapping has to be explicit and inspectable.
+     Returns { ok, mnemonic, real: [...], why, alu } or { ok: false }. */
+  function flowExpand(text) {
+    var src = String(text).replace(/#.*$/, '').trim();
+    if (!src) { return { ok: false, error: 'Nothing to expand.' }; }
+
+    var sp = src.indexOf(' ');
+    var m = (sp === -1 ? src : src.slice(0, sp)).toLowerCase();
+    var entry = FLOW_PSEUDO[m];
+    if (!entry) {
+      return { ok: false, error: '"' + m + '" is not a pseudo-instruction. It is either a real MIPS instruction already, or not an instruction at all.' };
+    }
+
+    var rest = (sp === -1) ? '' : src.slice(sp + 1);
+    var ops = rest.split(',').map(function (x) { return x.trim(); }).filter(function (x) { return x.length; });
+    if (ops.length !== entry.args.length) {
+      return { ok: false, error: m + ' takes ' + entry.args.length + ' operands (' + entry.args.join(', ') + '); got ' + ops.length + '.' };
+    }
+
+    var bind = {};
+    entry.args.forEach(function (name, i) { bind[name] = ops[i]; });
+
+    var wide = false;
+    if (m === 'li') {
+      var v = parseInt(bind.imm, 10);
+      wide = !isNaN(v) && (v < -32768 || v > 65535);
+    }
+    var pattern = wide ? entry.wide : entry.expands;
+
+    var real = pattern.map(function (parts) {
+      var mn = parts[0];
+      var rest2 = parts.slice(1).map(function (tok) {
+        if (bind[tok] !== undefined) { return bind[tok]; }
+        if (tok === 'imm-upper')   { return 'upper 16 bits of ' + bind.imm; }
+        if (tok === 'imm-lower')   { return 'lower 16 bits of ' + bind.imm; }
+        if (tok === 'label-upper') { return 'upper 16 bits of ' + bind.label; }
+        if (tok === 'label-lower') { return 'lower 16 bits of ' + bind.label; }
+        return tok;
+      });
+      /* lw/sw-style operands never appear here, so a plain comma join
+         is the whole formatting rule. */
+      return mn + ' ' + rest2.join(', ');
+    });
+
+    return {
+      ok: true,
+      mnemonic: m,
+      real: real,
+      why: entry.why,
+      alu: entry.alu,
+      usesAt: real.some(function (r) { return r.indexOf('$at') !== -1; }),
+      wide: wide
+    };
+  }
+
+  /* ============================================================
      Combinational-circuit primitives — added for Week 3
      ============================================================
      Still pure computation: no DOM, no events, no network. These
@@ -727,6 +968,334 @@
   }
 
   /* ============================================================
+     WEEK 6 -- The ALU operation legs (CSCLogic.alu)
+     ============================================================
+     Added 2026-09-18.
+
+     WHY THIS IS IN THE SHARED KERNEL. Standards Section 8's test is
+     whether two or more files need it. Seven do: four widgets on
+     01-seven-ways.html, the cascade widget on 02-larger-equal-zero.html,
+     two widgets on 03-saying-it-in-mips.html, and assignment6.html's
+     Part C verification table.
+
+     BIT ORDER. MSB-first arrays, matching wordToInt/intToWord and the
+     rest of the Week 5 word section -- [1,0,1,0,1,0,1,0] reads as the
+     byte 10101010, the order a student sees on a Logisim probe. The
+     LSB-first boundary to ripple() lives inside aluAdd() and NOWHERE
+     else.
+
+     WHAT THIS MODELS, AND WHAT IT DOES NOT. These are the seven
+     operation LEGS, built and tested individually as Checkpoint 2a.
+     There is no decoder and no output-selection stage here, because
+     Week 6 does not build them -- they are Checkpoint 2b, Week 7.
+     evaluate() below reaches ahead only far enough to answer "which leg
+     would be selected", because that question is the whole point of the
+     ALU Bench widget.
+
+     TWO LOAD-BEARING ASSERTIONS, in the same category as srSettle's
+     non-convergence and busResolve's contested bus:
+
+       1. evaluate() with opcode 7 returns out: null, NEVER 0. Decoder
+          output 7 connects to nothing (Dave, 2026-09-18), so no leg is
+          enabled and nothing drives the output. A floating output is not
+          a zero output. Week 6 teaches that difference; the day this
+          returns 0 the teaching becomes false.
+
+       2. cmp8() takes no opcode and computes al/eq unconditionally. The
+          comparator is ALWAYS live -- it is where two of the machine's
+          three status flags come from, and Weeks 7 and 10 build
+          branching on them. A future refactor that gates it behind
+          opcode 110 breaks the flag model of the whole CPU.
+
+     week06-spa.test.js asserts both, so a "fix" to either fails the
+     suite instead of shipping.
+
+     THE ALU OUTPUT IS NOT A BUS. Week 5's section 5.3 teaches that a
+     shared wire needs devices that can stop driving rather than drive a
+     0. The seven legs share an output and that is NOT the same
+     situation: unselected legs drive 0, the results are ORed, and 0 is
+     the identity for OR. Do not route these through busResolve(); it
+     would report a conflict that the hardware does not have.
+     ============================================================ */
+
+  /* The operation table. cinRole/coutRole are what the shared carry
+     pins MEAN for each operation -- three operations use them and they
+     mean something different in each, which is the interface-design
+     point the ALU Bench makes by relabelling them live. */
+  var ALU_OPS = [
+    { code: 0, bits: '000', name: 'ADD',         uses: ['a','b','cin'], cinRole: 'carry in',  coutRole: 'carry out' },
+    { code: 1, bits: '001', name: 'SHIFT RIGHT', uses: ['a','cin'],     cinRole: 'shift in',  coutRole: 'shift out' },
+    { code: 2, bits: '010', name: 'SHIFT LEFT',  uses: ['a','cin'],     cinRole: 'shift in',  coutRole: 'shift out' },
+    { code: 3, bits: '011', name: 'NOT',         uses: ['a'],           cinRole: null,        coutRole: null },
+    { code: 4, bits: '100', name: 'AND',         uses: ['a','b'],       cinRole: null,        coutRole: null },
+    { code: 5, bits: '101', name: 'OR',          uses: ['a','b'],       cinRole: null,        coutRole: null },
+    { code: 6, bits: '110', name: 'XOR',         uses: ['a','b'],       cinRole: null,        coutRole: null },
+    { code: 7, bits: '111', name: null,          uses: [],              cinRole: null,        coutRole: null }
+  ];
+
+  function aluWord(bits) {
+    var out = [], i;
+    for (i = 0; i < 8; i++) { out.push(bits && bits[i] ? 1 : 0); }
+    return out;
+  }
+
+  /* ---- the bitwise legs ----
+     Eight gates in parallel. Bit i of the output depends on bit i of the
+     inputs and on nothing else, which is why these settle all at once
+     and the adder does not. That independence is the section 6.3
+     teaching point and it is visible right here in the loop bound. */
+
+  function and8(a, b) {
+    var x = aluWord(a), y = aluWord(b), o = [], i;
+    for (i = 0; i < 8; i++) { o.push(x[i] & y[i]); }
+    return o;
+  }
+
+  function or8(a, b) {
+    var x = aluWord(a), y = aluWord(b), o = [], i;
+    for (i = 0; i < 8; i++) { o.push(x[i] | y[i]); }
+    return o;
+  }
+
+  function xor8(a, b) {
+    var x = aluWord(a), y = aluWord(b), o = [], i;
+    for (i = 0; i < 8; i++) { o.push(x[i] ^ y[i]); }
+    return o;
+  }
+
+  function not8(a) {
+    var x = aluWord(a), o = [], i;
+    for (i = 0; i < 8; i++) { o.push(x[i] ? 0 : 1); }
+    return o;
+  }
+
+  /* ---- the adder leg ----
+     One instance of the Week 3 ADDER_8BIT. Nothing is built here and
+     nothing should be reimplemented here: this wraps ripple(), which is
+     the circuit students already own. The ONLY thing this function adds
+     is the bit-order conversion, and it is the only place in the alu
+     namespace that touches LSB-first order. */
+  function aluAdd(a, b, cin) {
+    var x = aluWord(a), y = aluWord(b), i;
+    var al = [], bl = [];
+    for (i = 7; i >= 0; i--) { al.push(x[i]); bl.push(y[i]); }
+    var r = ripple(al, bl, cin ? 1 : 0);
+    var out = [];
+    for (i = 7; i >= 0; i--) { out.push(r.sum[i]); }
+    return { out: out, cout: r.cout };
+  }
+
+  /* Signed vs unsigned overflow, kept as two separate answers because
+     Standards Section 2 says they are two separate concepts and a single
+     "overflow" flag is exactly the conflation it forbids.
+
+       unsigned  the carry out of the MSB. 255 + 1 does not fit.
+       signed    the two's-complement result contradicts what the
+                 operand signs predict. 127 + 1 fits in eight bits and
+                 is still wrong.
+
+     The adder hardware cannot tell which one the program meant; it
+     produces both indications and the software decides which matters. */
+  function addFlags(a, b, cin) {
+    var x = aluWord(a), y = aluWord(b);
+    var r = aluAdd(x, y, cin);
+    var sa = x[0], sb = y[0], so = r.out[0];
+    return {
+      out: r.out,
+      cout: r.cout,
+      unsignedOverflow: r.cout,
+      signedOverflow: (sa === sb && so !== sa) ? 1 : 0
+    };
+  }
+
+  /* ---- the shift legs ----
+     A shift is a re-indexing. shin fills the vacated end, shout catches
+     the departing bit, and the two are the ALU's shared cin/cout pins
+     doing a second job -- named shin/shout at leg level because this
+     circuit is not adding and should not borrow the adder's vocabulary.
+
+       SHIFT_LEFT   bit i -> bit i+1;  shin fills bit 0,  shout <- bit 7
+       SHIFT_RIGHT  bit i -> bit i-1;  shin fills bit 7,  shout <- bit 0
+
+     Confirmed by Dave 2026-09-18 against the built circuit. */
+  function shiftLeft(a, shin) {
+    var x = aluWord(a), o = [], i;
+    for (i = 1; i < 8; i++) { o.push(x[i]); }
+    o.push(shin ? 1 : 0);
+    return { out: o, shout: x[0] };
+  }
+
+  function shiftRight(a, shin) {
+    var x = aluWord(a), o = [], i;
+    o.push(shin ? 1 : 0);
+    for (i = 0; i < 7; i++) { o.push(x[i]); }
+    return { out: o, shout: x[7] };
+  }
+
+  /* ---- the comparator ----
+
+     cmp1 is XOR_CMP_1BIT: one XOR gate and three answers.
+
+       o = a XOR b                     the bitwise result
+       e = NOT(a XOR b) AND pe         equal here AND equal everywhere above
+       l = pl OR (a AND (a XOR b) AND pe)
+
+     The pe term in l is the part students do not guess. Without it, a
+     lower bit could claim "a is larger" after a higher bit had already
+     settled the question the other way. The pl term carries a decision
+     already made further up, unchanged, to the bottom of the chain.
+
+     Written as the gate expressions rather than as a numeric comparison,
+     for the same reason decode() is written as an AND of polarities: a
+     shortcut would give the right answer while demonstrating nothing,
+     and this kernel drives a widget whose job is to show the gates. */
+  function cmp1(a, b, pl, pe) {
+    a = a ? 1 : 0; b = b ? 1 : 0; pl = pl ? 1 : 0; pe = pe ? 1 : 0;
+    var x = a ^ b;
+    return {
+      o: x,
+      e: (x ? 0 : 1) & pe,
+      l: pl | (a & x & pe)
+    };
+  }
+
+  /* cmp8 -- eight instances of cmp1 chained MSB -> LSB.
+
+     THE DIRECTION IS THE TEACHING POINT. The adder chains LSB -> MSB
+     because a carry propagates upward. The comparator chains the other
+     way because the most significant bit where two numbers differ
+     decides which is larger and nothing below it matters. Same
+     construction pattern, opposite direction, and the reason is in the
+     arithmetic rather than in the wiring.
+
+     Bit 7's instance is seeded pl = 0, pe = 1 -- nothing above it is
+     larger, and everything above it (there is nothing) is equal.
+
+     stages[0] is BIT 7, not bit 0. The array is in cascade order because
+     that is the order the widget steps through and the order the
+     chaining is built in. week06-spa.test.js asserts it. */
+  function cmp8(a, b) {
+    var x = aluWord(a), y = aluWord(b);
+    var pl = 0, pe = 1;
+    var xorBits = [], stages = [], i, s;
+
+    for (i = 0; i < 8; i++) {
+      s = cmp1(x[i], y[i], pl, pe);
+      stages.push({ i: 7 - i, a: x[i], b: y[i], pl: pl, pe: pe, o: s.o, l: s.l, e: s.e });
+      xorBits.push(s.o);
+      pl = s.l;
+      pe = s.e;
+    }
+    return { xor: xorBits, al: pl, eq: pe, stages: stages };
+  }
+
+  /* IS_ZERO -- an eight-input OR, inverted. It watches the ALU's final
+     output, after selection, so it reports on whichever operation was
+     chosen. It belongs to no leg. */
+  function isZero(word) {
+    var x = aluWord(word), i;
+    for (i = 0; i < 8; i++) { if (x[i]) { return 0; } }
+    return 1;
+  }
+
+  /* MIPS_LEG -- which ALU leg each Week 6 instruction drives.
+
+     THIS IS THE WEEK'S SLO2 CONTENT AS DATA. It lives in the shared
+     kernel rather than in a page because two files render it: the
+     instruction cards and the Instruction-to-Leg widget on
+     03-saying-it-in-mips.html, and assignment6.html's Part C table.
+     Two copies free to drift apart is exactly the Fall 2025 failure
+     Standards Section 8 exists to prevent.
+
+       opcode  the 3-bit ALU opcode, or null where no single leg answers
+       via     a short phrase naming the route, shown as a badge
+       from    'output'  the answer is the 8-bit ALU result
+               'flag'    the answer is a status flag, NOT the 8-bit output
+       note    one sentence, where the mapping is not one-to-one
+
+     sub, nor, slt and slti are the four that teach something. The other
+     six are one instruction, one leg, and they are the baseline that
+     makes those four visible as departures. */
+  var MIPS_LEG = {
+    add:  { opcode: 0, via: 'ADD',            from: 'output' },
+    addi: { opcode: 0, via: 'ADD',            from: 'output',
+            note: 'The immediate is sign-extended before it reaches the ALU. The leg is the same one add uses.' },
+    sub:  { opcode: 0, via: 'NOT then ADD',   from: 'output',
+            note: 'No subtract leg exists. B goes through NOT_8BIT and the adder runs with carry-in 1.' },
+    and:  { opcode: 4, via: 'AND',            from: 'output' },
+    andi: { opcode: 4, via: 'AND',            from: 'output',
+            note: 'The immediate is ZERO-extended, not sign-extended. There is no such thing as a signed bit mask.' },
+    or:   { opcode: 5, via: 'OR',             from: 'output' },
+    ori:  { opcode: 5, via: 'OR',             from: 'output',
+            note: 'Zero-extended immediate, same as andi.' },
+    nor:  { opcode: 5, via: 'OR then NOT',    from: 'output',
+            note: 'The only Week 6 instruction with no leg of its own. Two ALU operations, or one extra inverter.' },
+    xor:  { opcode: 6, via: 'XOR',            from: 'output' },
+    slt:  { opcode: 6, via: 'comparator AL',  from: 'flag',
+            note: 'The answer is a status flag, not the 8-bit result. The comparator already computed it.' },
+    slti: { opcode: 6, via: 'comparator AL',  from: 'flag',
+            note: 'Same flag, with a sign-extended immediate standing in for the second register.' }
+  };
+
+  /* aluEvaluate(opcode, a, b, cin)  -- exported as CSCLogic.alu.evaluate.
+     NOT named evaluate(): CSCLogic already has a Boolean-expression
+     evaluate() from Week 2, and a second one at the same scope silently
+     shadowed it. Caught 2026-09-18 when 42 of logic.test.js's Boolean
+     assertions failed on a change that touched no Boolean code.
+
+     COMPUTES ALL SEVEN LEGS ON EVERY CALL, ON PURPOSE. A switch on
+     opcode would be faster and would demonstrate nothing. The machine
+     genuinely performs all seven operations on every input and discards
+     six of them, and the ALU Bench widget exists to show exactly that,
+     so the kernel must actually do it. Do not "optimise" this into a
+     dispatch.
+
+     Returns:
+       legs      every leg's live result, keyed by operation name
+       selected  the ALU_OPS entry for this opcode
+       out       the 8-bit result reaching the output, or NULL for 111
+       cout      the shared carry/shift out bit, or null where unused
+       al, eq    from the comparator -- always live, never gated
+       z         isZero of the OUTPUT, or null when nothing drives it
+
+     out is null rather than 0 for opcode 111. Load-bearing. */
+  function aluEvaluate(opcode, a, b, cin) {
+    var x = aluWord(a), y = aluWord(b), c = cin ? 1 : 0;
+    var code = (opcode | 0) & 7;
+
+    var add = addFlags(x, y, c);
+    var shr = shiftRight(x, c);
+    var shl = shiftLeft(x, c);
+    var cmp = cmp8(x, y);
+
+    var legs = {
+      ADD:           { out: add.out, cout: add.cout,
+                       unsignedOverflow: add.unsignedOverflow,
+                       signedOverflow: add.signedOverflow },
+      'SHIFT RIGHT': { out: shr.out, cout: shr.shout },
+      'SHIFT LEFT':  { out: shl.out, cout: shl.shout },
+      NOT:           { out: not8(x),    cout: null },
+      AND:           { out: and8(x, y), cout: null },
+      OR:            { out: or8(x, y),  cout: null },
+      XOR:           { out: cmp.xor,    cout: null }
+    };
+
+    var sel = ALU_OPS[code];
+    var chosen = sel.name ? legs[sel.name] : null;
+
+    return {
+      legs: legs,
+      selected: sel,
+      out: chosen ? chosen.out.slice() : null,
+      cout: chosen ? chosen.cout : null,
+      al: cmp.al,
+      eq: cmp.eq,
+      z: chosen ? isZero(chosen.out) : null,
+      cmp: cmp
+    };
+  }
+
+  /* ============================================================
      WEEK 5B — MIPS instruction data and codecs (CSCLogic.mips)
      ============================================================
      Added 2026-09-14, approved as Open Decision #2.
@@ -826,8 +1395,9 @@
     { m: 'or',  funct: '100101', form: 'r3',  week: 5, syntax: 'or $rd, $rs, $rt',    desc: 'rd = rs OR rt, bitwise' },
     { m: 'xor', funct: '100110', form: 'r3',  week: 5, syntax: 'xor $rd, $rs, $rt',   desc: 'rd = rs XOR rt, bitwise' },
     { m: 'slt', funct: '101010', form: 'r3',  week: 5, syntax: 'slt $rd, $rs, $rt',   desc: 'rd = 1 if rs < rt, else 0' },
-    { m: 'sll', funct: '000000', form: 'rsh', week: 6, syntax: 'sll $rd, $rt, shamt', desc: 'rd = rt shifted left by shamt' },
-    { m: 'srl', funct: '000010', form: 'rsh', week: 6, syntax: 'srl $rd, $rt, shamt', desc: 'rd = rt shifted right by shamt' },
+    { m: 'nor', funct: '100111', form: 'r3',  week: 6, syntax: 'nor $rd, $rs, $rt',   desc: 'rd = NOT (rs OR rt), bitwise' },
+    { m: 'sll', funct: '000000', form: 'rsh', week: 7, syntax: 'sll $rd, $rt, shamt', desc: 'rd = rt shifted left by shamt' },
+    { m: 'srl', funct: '000010', form: 'rsh', week: 7, syntax: 'srl $rd, $rt, shamt', desc: 'rd = rt shifted right by shamt' },
     { m: 'jr',  funct: '001000', form: 'rjr', week: 7, syntax: 'jr $rs',              desc: 'jump to the address held in rs' }
   ];
 
@@ -835,6 +1405,7 @@
     { m: 'addi', opcode: '001000', form: 'i3',   week: 5, sext: true,  syntax: 'addi $rt, $rs, imm',  desc: 'rt = rs + imm, immediate SIGN-extended' },
     { m: 'andi', opcode: '001100', form: 'i3',   week: 5, sext: false, syntax: 'andi $rt, $rs, imm',  desc: 'rt = rs AND imm, immediate ZERO-extended' },
     { m: 'ori',  opcode: '001101', form: 'i3',   week: 5, sext: false, syntax: 'ori $rt, $rs, imm',   desc: 'rt = rs OR imm, immediate ZERO-extended' },
+    { m: 'slti', opcode: '001010', form: 'i3',   week: 6, sext: true,  syntax: 'slti $rt, $rs, imm', desc: 'rt = 1 if rs < imm, else 0; immediate SIGN-extended' },
     { m: 'lw',   opcode: '100011', form: 'imem', week: 5, sext: true,  syntax: 'lw $rt, imm($rs)',    desc: 'load the word at rs + imm into rt' },
     { m: 'sw',   opcode: '101011', form: 'imem', week: 5, sext: true,  syntax: 'sw $rt, imm($rs)',    desc: 'store rt into memory at rs + imm' },
     { m: 'beq',  opcode: '000100', form: 'ibr',  week: 5, sext: true,  syntax: 'beq $rs, $rt, offset', desc: 'branch if rs equals rt (semantics: Week 7)' },
@@ -1102,6 +1673,37 @@
     enableWord: enableWord,
     busResolve: busResolve,
     register8: register8,
+
+    /* Week 6 additions -- the ALU operation legs. Checkpoint 2a only:
+       no decoder and no output-selection stage, which are Week 7. */
+    alu: {
+      OPS: ALU_OPS,
+      MIPS_LEG: MIPS_LEG,
+      and8: and8,
+      or8: or8,
+      xor8: xor8,
+      not8: not8,
+      add: aluAdd,
+      addFlags: addFlags,
+      shiftLeft: shiftLeft,
+      shiftRight: shiftRight,
+      cmp1: cmp1,
+      cmp8: cmp8,
+      isZero: isZero,
+      evaluate: aluEvaluate
+    },
+
+    /* Week 7 additions -- control-flow address arithmetic and the
+       assembler's pseudo-instruction expansions. */
+    flow: {
+      REACH: FLOW_REACH,
+      PSEUDO: FLOW_PSEUDO,
+      branchOffset: flowBranchOffset,
+      branchTarget: flowBranchTarget,
+      jumpField: flowJumpField,
+      jumpTarget: flowJumpTarget,
+      expand: flowExpand
+    },
 
     /* Week 5B additions -- the MIPS namespace. One opcode table for the
        whole course; SPAs and assignment pages render their reference

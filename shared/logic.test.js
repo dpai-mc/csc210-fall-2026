@@ -563,8 +563,21 @@ console.log('\n--- Week 5: the instruction subset boundary is data, not prose --
   var w5 = M.r.concat(M.i, M.j).filter(function (o) { return o.week === 5; });
   var later = M.r.concat(M.i, M.j).filter(function (o) { return o.week > 5; });
   ok(w5.length === 15, 'fifteen instructions in the Week 5 subset');
-  ok(later.map(function (o) { return o.m; }).sort().join(',') === 'jr,sll,srl',
-     'sll, srl and jr are in the tables but marked for later weeks -- a signpost, not an omission');
+  /* Updated 2026-09-18 for the Week 6 additions. The list is still
+     written out by hand rather than derived, because the point of the
+     assertion is that every instruction beyond the Week 5 subset is
+     DELIBERATELY signposted with the week it arrives. A generated list
+     would agree with whatever the table happened to say.
+
+       nor, slti  Week 6 -- taught. Added with the ALU legs.
+       sll, srl   tagged Week 6 and NOT taught in Week 6 (Dave's scope
+                  ruling, 2026-09-18). Week 6 names them once as the
+                  software counterpart of the two shift legs, deferred.
+                  Their real week is OPEN DECISION 2 in the Week 6 spec;
+                  when it is settled, correct the tag and this line.
+       jr         Week 7. */
+  ok(later.map(function (o) { return o.m; }).sort().join(',') === 'jr,nor,sll,slti,srl',
+     'instructions past the Week 5 subset are in the tables and marked with their week -- a signpost, not an omission');
 })();
 
 console.log('\n--- Week 5: errors are reported, never guessed ---');
