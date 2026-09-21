@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w6-00">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 6 Orientation: Seven Things at Once</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* The circuit list. Deliberately not a .pin-table — that component
+       signals "an interface you must match exactly", which is what gives
+       it weight on the assignment page, and this is an at-a-glance list. */
+    .part-list { list-style: none; padding: 0; margin: var(--space-md) 0; }
+    .part-list li {
+      display: flex; flex-wrap: wrap; align-items: baseline;
+      gap: var(--space-sm); padding: var(--space-sm) 0;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .part-list li:last-child { border-bottom: none; }
+    .part-list code { font-weight: 700; color: var(--color-primary); flex: 0 0 auto; }
+    .part-list span { color: var(--color-text-muted); font-size: var(--fs-sm); }
+
+    .tracks { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin: var(--space-md) 0; }
+    .tracks > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
+    .tracks h3 { margin-top: 0; }
+    @media (max-width: 640px) { .tracks { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 6 &rsaquo; <span>Orientation</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Week 6 — Seven Things at Once</h1>
+    <p><strong>The ALU, and the Words for It</strong> &nbsp;|&nbsp; <strong>09/21 – 09/27</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~8 hours</p>
+
+    <!-- ============================================================
+         A — the gap
+         ============================================================ -->
+    <section id="sec-gap">
+      <div class="callout callout--hook">
+        <div class="callout__title">Where you are, and what is missing</div>
+
+        <p><strong>What you built last week:</strong> a register. Eight cells with one shared write line, an output stage that can stop driving a shared wire, and two control pins that between them decide when a byte goes in and when it comes out. Two of them can hand a value to each other in four controlled steps.</p>
+
+        <p><strong>What you can't do yet:</strong> change a byte. Every circuit you have built moves values or holds them. A register that holds <code>00101101</code> holds it forever unless something gives it a different byte &mdash; and nothing in your machine can produce one. A hundred registers wired together is a filing cabinet.</p>
+
+        <p>The same gap from the software side: you wrote <code>add $t0, $t1, $t2</code> in MARS and it worked, but MARS is a Java program adding two numbers the way any program does. <strong>Your machine could not have executed that instruction.</strong> There is nothing in it that adds.</p>
+
+        <p><strong>What you will be able to do by the end of this week:</strong> every transformation your CPU will ever perform on data &mdash; add, subtract, shift either way, invert, combine bitwise, compare &mdash; as circuits you built, and as instructions you can write.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         B — the two tracks meet
+         ============================================================ -->
+    <section id="sec-tracks">
+      <h2>The week the two tracks describe the same thing</h2>
+
+      <p>Phase 2 runs hardware and assembly side by side, and last week they ran in parallel: you built a register, and separately you learned what an instruction set is. This week they stop being parallel.</p>
+
+      <div class="tracks">
+        <div>
+          <h3>Hardware</h3>
+          <p>The seven <strong>operation legs</strong> of the ALU, each one built and tested on its own, plus the 8-bit comparator and the zero function. This is <strong>Logisim Checkpoint 2a</strong>.</p>
+        </div>
+        <div>
+          <h3>Assembly</h3>
+          <p>The MIPS instructions that ask for those exact operations: six R-type and four I-type, arithmetic and logic.</p>
+        </div>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">These are not two topics this week. They are one object seen from two ends.</div>
+        <p><code>add $t0, $t1, $t2</code> and the ALU's opcode-<code>000</code> leg are the same operation described twice &mdash; once as something a program asks for, once as something a circuit does.</p>
+        <p>You will build the adder leg and then, two pages later, write the instruction that drives it. <strong>That is the whole point of interleaving the tracks</strong>, and this is the week where it pays.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         C — what you build
+         ============================================================ -->
+    <section id="sec-build">
+      <h2>What you build</h2>
+
+      <ul class="part-list">
+        <li><code>AND_8BIT</code> <span>Eight AND gates side by side. Fifteen minutes, and it teaches something about speed that Week 15 spends a whole week on.</span></li>
+        <li><code>OR_8BIT</code> <span>The same, with OR gates.</span></li>
+        <li><code>NOT_8BIT</code> <span>Eight inverters on one input. <strong>Also half of how your machine subtracts.</strong></span></li>
+        <li><code>ADDER_8BIT</code> <span><strong>You already own this one.</strong> You built it in Week 3. Drop one instance in and the hardest leg is done.</span></li>
+        <li><code>SHIFT_LEFT</code> <span>Every bit moves up one place. One falls off the top, one arrives at the bottom.</span></li>
+        <li><code>SHIFT_RIGHT</code> <span>The mirror image.</span></li>
+        <li><code>XOR_CMP_1BIT</code> <span>One XOR gate producing <em>three</em> answers: the XOR result, whether two bits are equal, and which is larger.</span></li>
+        <li><code>XOR_CMP_8BIT</code> <span>Eight of those, chained &mdash; and chained in the opposite direction to your adder, for a reason worth understanding.</span></li>
+        <li><code>IS_ZERO</code> <span>An eight-input OR, inverted. The smallest circuit in the course, and one of the three signals that will let your CPU make a decision.</span></li>
+      </ul>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">You finish this week with nine circuits and no ALU. That is correct.</div>
+        <p>Checkpoint 2a is the <strong>legs</strong>, built and tested individually. The part that chooses between them &mdash; the 3&times;8 decoder and the output-selection stage &mdash; is <strong>Checkpoint 2b, next week</strong>.</p>
+        <p>This is deliberate, and not only because of the holiday. Choosing turns out to be a subtler idea than any of the seven operations, it reuses <code>ENABLE_8BIT</code> from Week 5 in a way that deserves explaining properly, and it is the piece that would have been rushed if everything landed in one week.</p>
+        <p>So do not go looking for the part where it all comes together. It comes together in seven days, and the more thoroughly you test each leg on its own now, the less painful that will be.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         D — the week's shape
+         ============================================================ -->
+    <section id="sec-shape">
+      <h2>A short week with a lot of building</h2>
+
+      <div class="callout">
+        <div class="callout__title">Campus holiday, Friday 09/25</div>
+        <p>The week's load is about <strong>8 hours</strong> rather than the usual 9, and roughly half of it is Logisim work rather than reading. That balance is different from any week so far.</p>
+      </div>
+
+      <p><strong>Assignment 6 is 100 points</strong> across both tracks: Checkpoint 2a (50 points), four written questions, six instruction-to-hardware problems, and a MARS program.</p>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Build each leg as you read about it, not all at the end</div>
+        <p>Every section on pages 1 and 2 is followed by a circuit, and the two are meant to interleave. Reading the whole week and then building the whole week works far less well &mdash; by the time you get to the comparator you will have lost the thread of why the adder chains one way and it chains the other.</p>
+        <p>There is also a practical reason. <strong>Six new circuits is more than any previous week</strong>, and six circuits built in one sitting is six chances to make the same wiring mistake before anybody notices.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         E — learning path
+         ============================================================ -->
+    <section id="sec-path">
+      <h2>This week's learning path</h2>
+
+      <div class="callout">
+        <div class="callout__title">Hardware first, again &mdash; and this week it matters more than last week</div>
+        <p>Page 3's central argument is that <code>slt</code> is answered by a wire coming out of a circuit you built. That sentence does nothing for you if you have not built the circuit yet.</p>
+      </div>
+
+      <div class="spa-card-grid">
+        <div class="spa-card">
+          <div class="spa-card__number">Page 1</div>
+          <div class="spa-card__title">Seven Things a Byte Can Become</div>
+          <div class="spa-card__time">~1.5 hours reading &nbsp;|&nbsp; Sections 6.1–6.5</div>
+          <div class="spa-card__desc">The shape of the ALU, and the fact that it performs all seven operations at once and throws six away. Then the bitwise legs, the adder you already own, subtraction without a subtractor, and the two shift legs.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+
+        <div class="spa-card">
+          <div class="spa-card__number">Page 2</div>
+          <div class="spa-card__title">Larger, Equal, Zero</div>
+          <div class="spa-card__time">~1.3 hours reading &nbsp;|&nbsp; Sections 6.6–6.8</div>
+          <div class="spa-card__desc">One XOR gate that answers three questions, and the chained comparator built from it — the hardest circuit of the week, and the one that will eventually make an <code>if</code> statement possible.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+
+        <div class="spa-card">
+          <div class="spa-card__number">Page 3</div>
+          <div class="spa-card__title">Saying It in MIPS</div>
+          <div class="spa-card__time">~1.4 hours &nbsp;|&nbsp; Sections 6.9–6.11</div>
+          <div class="spa-card__desc">Ten instructions, each one named against the leg it drives. Why the machine has no subtract and no NOT. And the same 16-bit field read two different ways depending on which instruction is holding it.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+
+        <div class="spa-card">
+          <div class="spa-card__number">Page 4</div>
+          <div class="spa-card__title">A Program That Computes</div>
+          <div class="spa-card__time">~0.7 hours &nbsp;|&nbsp; Sections 6.12–6.13</div>
+          <div class="spa-card__desc">A MARS program using all ten instructions, with a register table to check it against. Then what the week added, and the one thing both tracks are still missing.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+
+        <div class="spa-card">
+          <div class="spa-card__number">Assignment 6</div>
+          <div class="spa-card__title">Seven Legs and the Words for Them</div>
+          <div class="spa-card__time">~2.5 hours &nbsp;|&nbsp; 100 points</div>
+          <div class="spa-card__desc">Logisim Checkpoint 2a, four written questions, six instruction-to-hardware problems, and a MARS program. Same <code>.circ</code> file you have been adding to since Week 2.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         F — tools
+         ============================================================ -->
+    <section id="sec-tools">
+      <h2>Your tools this week</h2>
+
+      <div class="tool-card">
+        <div class="tool-card__icon" aria-hidden="true">&#128295;</div>
+        <div>
+          <div class="tool-card__name">Logisim — same file, six new tabs</div>
+          <div class="tool-card__desc">Open the same <code>CSC210_YourName.circ</code> you have been building since Week 2. This week it pays you back: <code>ADDER_8BIT</code> is already in there and you get the ALU's hardest leg by dragging one instance onto the canvas.</div>
+        </div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-card__icon" aria-hidden="true">&#128187;</div>
+        <div>
+          <div class="tool-card__name">MARS — the program layout for this course</div>
+          <div class="tool-card__desc"><code>.data</code> first, then <code>.text</code>, <strong>no <code>main:</code> label and no <code>.globl main</code></strong>. Execution starts at the first instruction in <code>.text</code>. Plenty of examples elsewhere use the other convention; mixing them inside one file is a reliable way to confuse yourself.</div>
+        </div>
+      </div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Which components you may use</div>
+        <p>Anything from Logisim's <strong>Wiring</strong> folder (pins, splitters, tunnels, constants, probes) and anything from <strong>Gates</strong>, including the controlled buffer you met last week. <strong>Nothing from Plexers, Arithmetic, or Memory.</strong></p>
+        <p>The Arithmetic folder is the temptation this week &mdash; it contains an Adder, a Comparator and a Shifter, which is three of the nine circuits you are about to build. Using them would produce a working ALU that teaches nothing, and a student who takes that route discovers in Week 13 that they cannot debug a machine they did not build.</p>
+        <p>Splitters are going to be useful this week. If you have been avoiding them, page 1's shift legs are a good place to get comfortable.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         G — progression
+         ============================================================ -->
+    <section id="sec-progression">
+      <h2>Where Week 6 fits</h2>
+
+      <div class="progression">
+        <div class="progression__item completed">
+          <div class="progression__label">Week 3 &mdash; Computation</div>
+          <div class="progression__detail">Adders and decoders. Both come back this week and next.</div>
+        </div>
+        <div class="progression__item completed">
+          <div class="progression__label">Week 4 &mdash; Memory</div>
+          <div class="progression__detail">A circuit that holds one bit.</div>
+        </div>
+        <div class="progression__item completed">
+          <div class="progression__label">Week 5 &mdash; The Register, and the Language</div>
+          <div class="progression__detail">A byte that holds, and can share a wire. And what an instruction set is.</div>
+        </div>
+        <div class="progression__item active">
+          <div class="progression__label">Week 6 &mdash; The ALU, and the Words for It</div>
+          <div class="progression__detail">Seven operations on a byte, as circuits and as instructions. Checkpoint 2a.</div>
+        </div>
+        <div class="progression__item">
+          <div class="progression__label">Week 7 &mdash; Selection</div>
+          <div class="progression__detail">The decoder and output stage that finish the ALU (Checkpoint 2b), and the branches that choose which instruction runs next.</div>
+        </div>
+        <div class="progression__item">
+          <div class="progression__label">Week 8 &mdash; Memory, at scale</div>
+          <div class="progression__detail">The RAM matrix, load and store &mdash; and the midterm over everything to here.</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 6 Orientation
+  </footer>
+
+</body>
+</html>

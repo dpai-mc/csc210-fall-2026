@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w6-assign">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Assignment 6: Seven Legs and the Words for Them</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ---------- */
+    .q-block { border-left: 3px solid var(--color-border); padding-left: var(--space-md); margin: var(--space-lg) 0; }
+    .q-num { font-weight: 700; color: var(--color-primary); }
+    .q-pts { font-size: var(--fs-sm); color: var(--color-text-muted); }
+
+    /* Typed answers. Every textarea carries a mirror div: a textarea
+       prints only the scrolled-into-view portion of its content and
+       would silently truncate a long answer in the PDF. */
+    .ans { margin-top: var(--space-sm); }
+    .ans__input {
+      display: block; width: 100%; box-sizing: border-box;
+      min-height: 5.2em; resize: vertical;
+      font-family: var(--font-sans); font-size: var(--fs-sm); line-height: 1.55;
+      color: var(--color-text); background: var(--color-surface);
+      border: 1px solid var(--color-border); border-radius: var(--radius);
+      padding: var(--space-sm);
+    }
+    .ans__input:focus { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+    .ans--short .ans__input { min-height: 2.6em; font-family: var(--font-mono); letter-spacing: .04em; }
+    .ans__print { display: none; }
+
+    .field-slot { display: inline-flex; flex-direction: column; margin: 0 var(--space-sm) var(--space-sm) 0; }
+    .field-slot b { font-size: var(--fs-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .04em; }
+    .field-slot input {
+      font-family: var(--font-mono); font-size: var(--fs-sm);
+      border: 1px solid var(--color-border); border-radius: 4px;
+      padding: var(--space-xs) var(--space-sm); background: var(--color-surface); min-width: 9rem;
+    }
+    .field-row { display: flex; flex-wrap: wrap; align-items: flex-end; }
+
+    .cover-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-md); margin: var(--space-md) 0; }
+    .cover-grid > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
+    .cover-grid label { display: block; font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); margin-bottom: var(--space-xs); }
+    .cover-grid input { width: 100%; box-sizing: border-box; font-size: var(--fs-base); padding: var(--space-xs) var(--space-sm); border: 1px solid var(--color-border); border-radius: 4px; }
+
+    .asm {
+      font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.55;
+      background: var(--color-code-bg); border: 1px solid var(--color-border);
+      border-radius: var(--radius); padding: var(--space-md);
+      overflow-x: auto; white-space: pre; margin: var(--space-md) 0;
+    }
+    .regtable { width: 100%; border-collapse: collapse; margin: var(--space-md) 0; font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .regtable th, .regtable td { text-align: left; padding: var(--space-xs) var(--space-sm); border-bottom: 1px solid var(--color-border); }
+    .regtable th { background: var(--color-code-bg); font-family: var(--font-sans); }
+
+    .submit-row { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: var(--space-lg) 0; }
+
+    @media print {
+      .sp-header, .sp-footer { display: none; }
+      .q-block { break-inside: avoid; }
+      body { background: #fff; }
+
+      .ans__input { display: none; }
+      .ans__print {
+        display: block; white-space: pre-wrap; word-break: break-word;
+        border: 1px solid #999; border-radius: 3px;
+        padding: 6px 8px; min-height: 4em; font-size: 10.5pt; line-height: 1.5;
+      }
+      .ans--short .ans__print { min-height: 1.8em; font-family: var(--font-mono); }
+      .field-slot input { border-bottom: 1px solid #999; }
+      .no-print { display: none !important; }
+
+      /* The submit button sets .print-bc on <body>, which trims the page
+         down to the cover block and Parts B and C -- the only things
+         Canvas wants. An unaided Ctrl+P still prints the whole handout. */
+      body.print-bc main > *:not(#submit-cover):not(#part-b):not(#part-c) { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 6 &rsaquo; <span>Assignment 6</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Assignment 6 — Seven Legs and the Words for Them</h1>
+    <p><span class="points-badge">100 points</span> &nbsp; Week 6 &nbsp;|&nbsp; Logisim Checkpoint 2a + MIPS arithmetic and logic</p>
+
+    <section id="overview">
+      <h2>What you submit</h2>
+
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Part</th><th>What it is</th><th>How it is submitted</th><th>Points</th></tr></thead>
+          <tbody>
+            <tr><td><strong>A</strong></td><td>Logisim Checkpoint 2a &mdash; nine circuits</td><td>your single <code>.circ</code> file, plus screenshots</td><td>50</td></tr>
+            <tr><td><strong>B</strong></td><td>Four written questions</td><td>filled in below, printed to PDF</td><td>12</td></tr>
+            <tr><td><strong>C</strong></td><td>Six instruction-to-hardware problems</td><td>filled in below, same PDF</td><td>18</td></tr>
+            <tr><td><strong>D</strong></td><td>A MARS program</td><td><code>lastname_firstname_week6.asm</code></td><td>20</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p><strong>Three files go to Canvas:</strong> the <code>.circ</code>, the PDF of Parts B and C, and the <code>.asm</code>. Fill in Parts B and C on this page, then use the button at the bottom &mdash; it prints only the cover block and those two parts.</p>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Nothing you type on this page is saved anywhere</div>
+        <p>There is no storage behind these boxes. If you close the tab, reload, or let your laptop sleep with the page open, <strong>your typing is gone.</strong> Print to PDF before you leave the page, and if you are working in more than one sitting, write your answers somewhere else first and paste them in.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART A
+         ============================================================ -->
+    <section id="part-a">
+      <h2>Part A &mdash; Logisim Checkpoint 2a <span class="q-pts">(50 points)</span></h2>
+
+      <p>Build the seven ALU operation legs, the 8-bit comparator and the zero function. <strong>Each one is built and tested on its own.</strong> There is no ALU assembly in this checkpoint &mdash; no decoder, no output-selection stage. That is Checkpoint 2b next week.</p>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Requirements that are graded, not suggestions</div>
+        <ul>
+          <li><strong>All circuits are contained within this single <code>.circ</code> file &mdash; no external file links.</strong> Add new tabs to the file you have been building since Week 2. A submission that references Logisim files you did not include is graded as incomplete; the circuit must be fully functional when the file is opened on its own on my machine.</li>
+          <li><strong>Wiring and Gates components only.</strong> Nothing from Plexers, Arithmetic or Memory. The Arithmetic folder contains an Adder, a Comparator and a Shifter &mdash; using any of them is a zero for that circuit.</li>
+          <li><strong>The tab names and pin names below are exact.</strong> They are the interface Week 7 wires into. A circuit whose pins are named differently is a circuit that does not fit.</li>
+        </ul>
+      </div>
+
+      <h3>The nine tabs</h3>
+
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Tab name</th><th>Pins</th><th>Points</th><th>Note</th></tr></thead>
+          <tbody>
+            <tr><td><code class="pin-table__name">AND_8BIT</code></td><td><code>a</code>[8] <code>b</code>[8] &rarr; <code>out</code>[8]</td><td>4</td><td></td></tr>
+            <tr><td><code class="pin-table__name">OR_8BIT</code></td><td><code>a</code>[8] <code>b</code>[8] &rarr; <code>out</code>[8]</td><td>4</td><td></td></tr>
+            <tr><td><code class="pin-table__name">NOT_8BIT</code></td><td><code>a</code>[8] &rarr; <code>out</code>[8]</td><td>4</td><td>one input</td></tr>
+            <tr><td><code class="pin-table__name">ADDER_8BIT</code></td><td><code>a</code>[8] <code>b</code>[8] <code>cin</code> &rarr; <code>sum</code>[8] <code>cout</code></td><td>4</td><td><strong>Week 3. Instantiate it &mdash; do not rebuild it.</strong></td></tr>
+            <tr><td><code class="pin-table__name">SHIFT_LEFT</code></td><td><code>a</code>[8] <code>shin</code> &rarr; <code>out</code>[8] <code>shout</code></td><td>6</td><td><code>shin</code> fills bit 0, <code>shout</code> catches bit 7</td></tr>
+            <tr><td><code class="pin-table__name">SHIFT_RIGHT</code></td><td><code>a</code>[8] <code>shin</code> &rarr; <code>out</code>[8] <code>shout</code></td><td>6</td><td><code>shin</code> fills bit 7, <code>shout</code> catches bit 0</td></tr>
+            <tr><td><code class="pin-table__name">XOR_CMP_1BIT</code></td><td><code>a</code> <code>b</code> <code>pl</code> <code>pe</code> &rarr; <code>o</code> <code>l</code> <code>e</code></td><td>6</td><td></td></tr>
+            <tr><td><code class="pin-table__name">XOR_CMP_8BIT</code></td><td><code>a</code>[8] <code>b</code>[8] &rarr; <code>xor</code>[8] <code>al</code> <code>eq</code></td><td>10</td><td>eight instances, seeded internally</td></tr>
+            <tr><td><code class="pin-table__name">IS_ZERO</code></td><td><code>in</code>[8] &rarr; <code>z</code></td><td>3</td><td></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>The remaining <strong>3 points</strong> are for single-file compliance and exact naming.</p>
+
+      <h3>Test each circuit at these values and screenshot it</h3>
+
+      <p>One screenshot per circuit, showing the input values and the resulting output. Nine images. These are the values I will check against, so use exactly these rather than values of your own.</p>
+
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Circuit</th><th>Inputs</th><th>Expected outputs</th></tr></thead>
+          <tbody>
+            <tr><td><code>AND_8BIT</code></td><td><code>a=11001010</code> <code>b=10110110</code></td><td><code>out=10000010</code></td></tr>
+            <tr><td><code>OR_8BIT</code></td><td>same</td><td><code>out=11111110</code></td></tr>
+            <tr><td><code>NOT_8BIT</code></td><td><code>a=11001010</code></td><td><code>out=00110101</code></td></tr>
+            <tr><td><code>ADDER_8BIT</code></td><td><code>a=11111111</code> <code>b=00000001</code> <code>cin=0</code></td><td><code>sum=00000000</code> <code>cout=1</code></td></tr>
+            <tr><td><code>SHIFT_LEFT</code></td><td><code>a=10101010</code> <code>shin=0</code></td><td><code>out=01010100</code> <code>shout=1</code></td></tr>
+            <tr><td><code>SHIFT_RIGHT</code></td><td><code>a=10101010</code> <code>shin=0</code></td><td><code>out=01010101</code> <code>shout=0</code></td></tr>
+            <tr><td><code>XOR_CMP_1BIT</code></td><td><code>a=1 b=0 pl=0 pe=1</code></td><td><code>o=1 l=1 e=0</code></td></tr>
+            <tr><td><code>XOR_CMP_8BIT</code></td><td><code>a=10000000</code> <code>b=01111111</code></td><td><code>xor=11111111</code> <code>al=1</code> <code>eq=0</code></td></tr>
+            <tr><td><code>IS_ZERO</code></td><td><code>in=00000000</code></td><td><code>z=1</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Two things that catch people, both worth checking before you submit</div>
+        <p><strong>The comparator's seeding.</strong> Bit 7's instance takes <code>pl = 0</code> and <code>pe = 1</code> from Wiring constants. The <code>XOR_CMP_8BIT</code> test value above is chosen specifically to fail if you seeded them the other way round, or if you left the <code>pe</code> term out of the <code>l</code> expression. If <code>al</code> comes out 0 for that row, one of those two is why.</p>
+        <p><strong>A freshly built circuit may show <code>E</code>.</strong> If any of your circuits contains a <code>MEM_1BIT</code> that has never been written &mdash; which can happen if you build the shift legs out of registers &mdash; Logisim shows <code>E</code> on its output and a red wire until the first time it is set. <strong>This is correct behaviour and not a fault in your circuit.</strong> Toggle <code>s</code> from 0 to 1 once and it clears permanently.</p>
+      </div>
+
+      <h3>Submission checklist</h3>
+      <ul class="lab-checklist">
+        <li>All circuits are contained within this single <code>.circ</code> file &mdash; no external file links</li>
+        <li>All nine tabs present, named exactly as in the table above</li>
+        <li><code>ADDER_8BIT</code> is the Week 3 circuit, instantiated rather than rebuilt</li>
+        <li>Every circuit built from Wiring and Gates components only</li>
+        <li>Nine screenshots, at the test values given above</li>
+        <li><code>XOR_CMP_8BIT</code>'s bit-7 instance seeded <code>pl = 0</code>, <code>pe = 1</code></li>
+      </ul>
+    </section>
+
+    <!-- ============================================================
+         PART B
+         ============================================================ -->
+    <section id="part-b">
+      <h2>Part B &mdash; Written <span class="q-pts">(12 points, 3 each)</span></h2>
+
+      <p>A few sentences each. I am looking for the reasoning, not the length.</p>
+
+      <div class="q-block">
+        <p><span class="q-num">1.</span> <span class="q-pts">(3 points)</span> The ALU performs all seven operations on every input and discards six of the results. Give <strong>one reason this is a sensible design rather than a wasteful one.</strong></p>
+        <div class="ans">
+          <label class="sr-only" for="b1">Your answer to Part B question 1</label>
+          <textarea class="ans__input" id="b1" rows="4"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">2.</span> <span class="q-pts">(3 points)</span> Opcode <code>111</code> is not connected to anything. Describe <strong>what appears on the ALU's 8-bit output</strong> when <code>111</code> is selected, and explain why that is different from the output being <code>00000000</code>.</p>
+        <div class="ans">
+          <label class="sr-only" for="b2">Your answer to Part B question 2</label>
+          <textarea class="ans__input" id="b2" rows="4"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">3.</span> <span class="q-pts">(3 points)</span> The machine has <strong>no subtract leg.</strong> Explain how it computes <code>A &minus; B</code> using only components you built this week, and name the Week 1 idea that makes it work.</p>
+        <div class="ans">
+          <label class="sr-only" for="b3">Your answer to Part B question 3</label>
+          <textarea class="ans__input" id="b3" rows="4"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">4.</span> <span class="q-pts">(3 points)</span> <code>10101010</code> shifted right by one, with <code>shin = 0</code>, gives <code>01010101</code>. Explain why this <strong>is</strong> division by two if the byte is read as unsigned, and why it <strong>is not</strong> if the same byte is read as signed. Use the actual values in your answer.</p>
+        <div class="ans">
+          <label class="sr-only" for="b4">Your answer to Part B question 4</label>
+          <textarea class="ans__input" id="b4" rows="4"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART C
+         ============================================================ -->
+    <section id="part-c">
+      <h2>Part C &mdash; From instruction to hardware <span class="q-pts">(18 points, 3 each)</span></h2>
+
+      <p>For each instruction: name the <strong>ALU leg or legs</strong> the course machine uses, and give the <strong>8-bit result</strong> that ends up in the destination register. Two of the six do not work the way the other four do &mdash; that is the point of the exercise, so read each one rather than pattern-matching.</p>
+
+      <p>Throughout: <code>$t1 = 11001010</code> and <code>$t2 = 10110110</code>.</p>
+
+      <div class="q-block">
+        <p><span class="q-num">1.</span> <span class="q-pts">(3 points)</span> <code>add $t0, $t1, $t2</code></p>
+        <div class="field-row">
+          <div class="field-slot"><b><label for="c1-leg">ALU leg</label></b><input type="text" id="c1-leg" autocomplete="off"></div>
+          <div class="field-slot"><b><label for="c1-res">$t0, 8 bits</label></b><input type="text" id="c1-res" autocomplete="off"></div>
+          <div class="field-slot"><b><label for="c1-co">carry-out</label></b><input type="text" id="c1-co" autocomplete="off"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">2.</span> <span class="q-pts">(3 points)</span> <code>sub $t0, $t1, $t2</code></p>
+        <div class="field-row">
+          <div class="field-slot"><b><label for="c2-leg">ALU leg(s)</label></b><input type="text" id="c2-leg" autocomplete="off"></div>
+          <div class="field-slot"><b><label for="c2-cin">carry-in used</label></b><input type="text" id="c2-cin" autocomplete="off"></div>
+          <div class="field-slot"><b><label for="c2-res">$t0, 8 bits</label></b><input type="text" id="c2-res" autocomplete="off"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">3.</span> <span class="q-pts">(3 points)</span> <code>and $t0, $t1, $t2</code></p>
+        <div class="field-row">
+          <div class="field-slot"><b><label for="c3-leg">ALU leg</label></b><input type="text" id="c3-leg" autocomplete="off"></div>
+          <div class="field-slot"><b><label for="c3-res">$t0, 8 bits</label></b><input type="text" id="c3-res" autocomplete="off"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">4.</span> <span class="q-pts">(3 points)</span> <code>nor $t0, $t1, $t2</code></p>
+        <div class="field-row">
+          <div class="field-slot"><b><label for="c4-leg">ALU leg(s), in order</label></b><input type="text" id="c4-leg" autocomplete="off"></div>
+          <div class="field-slot"><b><label for="c4-res">$t0, 8 bits</label></b><input type="text" id="c4-res" autocomplete="off"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">5.</span> <span class="q-pts">(3 points)</span> <code>slt $t0, $t1, $t2</code> &mdash; and say <strong>which ALU output the answer comes from</strong>, not just what the answer is.</p>
+        <div class="field-row">
+          <div class="field-slot"><b><label for="c5-leg">ALU leg</label></b><input type="text" id="c5-leg" autocomplete="off"></div>
+          <div class="field-slot"><b><label for="c5-src">which output</label></b><input type="text" id="c5-src" autocomplete="off"></div>
+          <div class="field-slot"><b><label for="c5-res">$t0</label></b><input type="text" id="c5-res" autocomplete="off"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">6.</span> <span class="q-pts">(3 points)</span> <code>andi $t0, $t1, 0x0F</code> &mdash; and state whether the immediate is <strong>sign-extended or zero-extended</strong>, and why.</p>
+        <div class="field-row">
+          <div class="field-slot"><b><label for="c6-leg">ALU leg</label></b><input type="text" id="c6-leg" autocomplete="off"></div>
+          <div class="field-slot"><b><label for="c6-ext">extension</label></b><input type="text" id="c6-ext" autocomplete="off"></div>
+          <div class="field-slot"><b><label for="c6-res">$t0, 8 bits</label></b><input type="text" id="c6-res" autocomplete="off"></div>
+        </div>
+        <div class="ans ans--short">
+          <label class="sr-only" for="c6-why">Question 6, why that extension</label>
+          <textarea class="ans__input" id="c6-why" rows="2" placeholder="Why that extension and not the other one"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART D
+         ============================================================ -->
+    <section id="part-d">
+      <h2>Part D &mdash; A MARS program <span class="q-pts">(20 points)</span></h2>
+
+      <p>Write a complete MIPS program, test it in MARS, and submit it as <code>lastname_firstname_week6.asm</code>. <strong>This is a separate file upload</strong> &mdash; do not paste it into the PDF.</p>
+
+      <h3>Starting data</h3>
+
+      <div class="asm">        .data
+p:      .word  420
+q:      .word  185
+r:      .word  97</div>
+
+      <h3>What the program must compute</h3>
+
+      <ol>
+        <li><code>$s0 = (p + q) &minus; r</code></li>
+        <li><code>$s1</code> = the <strong>low byte</strong> of <code>$s0</code>, using an immediate instruction</li>
+        <li><code>$s2</code> = <code>$s0</code> with bits 8&ndash;11 set, using an immediate instruction</li>
+        <li><code>$s3</code> = the bitwise <strong>NOT</strong> of <code>$s1</code>. MIPS has no NOT instruction &mdash; <strong>use <code>nor</code> and <code>$zero</code></strong></li>
+        <li><code>$s4</code> = 1 if <code>$s1 &lt; $s2</code>, else 0, using <code>slt</code></li>
+        <li><code>$s5</code> = 1 if <code>$s1 &lt; 200</code>, else 0, using <code>slti</code></li>
+        <li><code>$s6 = $s1 AND $s2</code>, register form</li>
+        <li><code>$s7 = $s1 OR $s2</code>, register form</li>
+        <li><code>$t0 = $s1 + (&minus;52)</code>, using <code>addi</code></li>
+        <li>Print <code>$s0</code> as an integer, then exit cleanly</li>
+      </ol>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Program requirements</div>
+        <ul>
+          <li><code>.data</code> first, then <code>.text</code>. <strong>No <code>main:</code> label and no <code>.globl main</code>.</strong> Execution starts at the first instruction in <code>.text</code>.</li>
+          <li>All ten Week 6 instructions used at least once: <code>add sub and or nor slt addi andi ori slti</code>.</li>
+          <li>A comment header with your name and a one-line description.</li>
+          <li>A comment on <strong>every</strong> instruction saying what it does &mdash; not what it is called.</li>
+          <li>No multiply, divide, shift or <code>lui</code> instructions. Everything on the list above can be done without them.</li>
+        </ul>
+      </div>
+
+      <h3>Check your work against this</h3>
+
+      <p>If a row disagrees, the instruction that produced it is where to look &mdash; not the ones after it.</p>
+
+      <div class="table-scroll">
+        <table class="regtable">
+          <thead><tr><th>Register</th><th>Decimal</th><th>Hex</th></tr></thead>
+          <tbody>
+            <tr><td>$s0</td><td>508</td><td>0x000001FC</td></tr>
+            <tr><td>$s1</td><td>252</td><td>0x000000FC</td></tr>
+            <tr><td>$s2</td><td>4092</td><td>0x00000FFC</td></tr>
+            <tr><td>$s3</td><td>&minus;253</td><td>0xFFFFFF03</td></tr>
+            <tr><td>$s4</td><td>1</td><td>0x00000001</td></tr>
+            <tr><td>$s5</td><td>0</td><td>0x00000000</td></tr>
+            <tr><td>$s6</td><td>252</td><td>0x000000FC</td></tr>
+            <tr><td>$s7</td><td>4092</td><td>0x00000FFC</td></tr>
+            <tr><td>$t0</td><td>200</td><td>0x000000C8</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title"><code>$s3</code> is negative, and nothing in the program mentioned negative numbers</div>
+        <p>That is not a mistake. <code>nor</code> inverted every bit of a small positive value, which turns the leading zeros into leading ones, and a leading 1 in two's complement reads as negative. The bits are exactly right; MARS is showing you a signed reading of something that was never meant to be a signed number. If your <code>$s3</code> is <code>0xFFFFFF03</code>, you are correct.</p>
+      </div>
+
+      <h3>Rubric (20 points)</h3>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Criterion</th><th>Points</th></tr></thead>
+          <tbody>
+            <tr><td>Computations 1&ndash;3 correct</td><td>3</td></tr>
+            <tr><td>Computation 4 &mdash; NOT via <code>nor</code> and <code>$zero</code></td><td>3</td></tr>
+            <tr><td>Computations 5&ndash;6 &mdash; <code>slt</code> and <code>slti</code></td><td>3</td></tr>
+            <tr><td>Computations 7&ndash;9, and the program exits cleanly</td><td>3</td></tr>
+            <tr><td>Program structure: <code>.data</code> then <code>.text</code>, no <code>main:</code>, no <code>.globl main</code></td><td>4</td></tr>
+            <tr><td>Comments and register discipline; all ten instructions used</td><td>4</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="q-pts"><strong>Deductions:</strong> &minus;5 if the program does not assemble and run in MARS. &minus;2 per required instruction not used. &minus;2 if a <code>main:</code> label or <code>.globl main</code> is present.</p>
+    </section>
+
+    <!-- ============================================================
+         Totals + SLO mapping
+         ============================================================ -->
+    <section id="totals">
+      <h2>Points and outcomes</h2>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Part</th><th>Points</th><th>Assesses</th></tr></thead>
+          <tbody>
+            <tr><td>A &mdash; Logisim Checkpoint 2a</td><td>50</td><td>SLO1</td></tr>
+            <tr><td>B &mdash; Written</td><td>12</td><td>SLO1</td></tr>
+            <tr><td>C &mdash; Instruction to hardware</td><td>18</td><td>SLO2</td></tr>
+            <tr><td>D &mdash; MARS program</td><td>20</td><td>SLO3</td></tr>
+            <tr class="rubric-total"><td><strong>Total</strong></td><td><strong>100</strong></td><td></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Cover block — printed with B and C
+         ============================================================ -->
+    <section id="submit-cover">
+      <h2>Your name, for the PDF</h2>
+      <p class="q-pts">Not graded. It is here so the PDF that lands in the gradebook can be told apart from thirty others.</p>
+      <div class="cover-grid">
+        <div>
+          <label for="cv-name">Name</label>
+          <input type="text" id="cv-name" autocomplete="name">
+        </div>
+        <div>
+          <label for="cv-date">Date</label>
+          <input type="text" id="cv-date" autocomplete="off">
+        </div>
+      </div>
+    </section>
+
+    <div class="submit-row no-print">
+      <button class="widget-btn widget-btn--primary" type="button" id="print-bc">Print Parts B and C to PDF</button>
+      <button class="widget-btn widget-btn--outline" type="button" id="print-page">Print the whole handout</button>
+    </div>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Assignment 6
+  </footer>
+
+  <script>
+  /* ============================================================
+     Parts B and C — fill in, then print to PDF
+     ============================================================
+     No dependency on shared/logic.js at all. This page renders no
+     generated tables, so there is nothing to guard -- and keeping the
+     submission flow free of that dependency means a stale kernel on the
+     server can never stop a student printing their answers.
+
+     No storage of any kind, per Course Standards. The page says so
+     plainly in the overview rather than pretending otherwise.
+     ============================================================ */
+  (function () {
+    'use strict';
+
+    var textareas = document.querySelectorAll('.ans__input');
+
+    /* A textarea prints only what is scrolled into view, so a long
+       answer would be silently cut off in the PDF. Every one of them
+       carries a mirror div that is invisible on screen and takes over
+       on paper. */
+    function mirror() {
+      Array.prototype.forEach.call(textareas, function (t) {
+        var out = t.parentNode.querySelector('.ans__print');
+        if (out) { out.textContent = t.value; }
+      });
+    }
+
+    function grow(t) {
+      t.style.height = 'auto';
+      t.style.height = (t.scrollHeight + 2) + 'px';
+    }
+    Array.prototype.forEach.call(textareas, function (t) {
+      t.addEventListener('input', function () { grow(t); });
+    });
+
+    var btn = document.getElementById('print-bc');
+    if (btn) {
+      btn.addEventListener('click', function () {
+        mirror();
+        document.body.classList.add('print-bc');
+        window.print();
+      });
+    }
+
+    /* Printing is not navigation, so Standards Section 5 is not
+       engaged. This is a handout; students submit through Canvas. */
+    var full = document.getElementById('print-page');
+    if (full) {
+      full.addEventListener('click', function () {
+        mirror();
+        document.body.classList.remove('print-bc');
+        window.print();
+      });
+    }
+
+    /* Catch Ctrl+P too, and restore afterwards so the screen view is
+       never left in the trimmed state. Safari fires neither event, so
+       the mirror is also refreshed on every print click above. */
+    if (window.matchMedia) {
+      var mq = window.matchMedia('print');
+      var onChange = function (e) {
+        if (e.matches) { mirror(); } else { document.body.classList.remove('print-bc'); }
+      };
+      if (mq.addEventListener) { mq.addEventListener('change', onChange); }
+      else if (mq.addListener) { mq.addListener(onChange); }
+    }
+  })();
+  </script>
+</body>
+</html>

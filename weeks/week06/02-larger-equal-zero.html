@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w6-02">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 6: Larger, Equal, Zero</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ---------- */
+    .cmp-stack { display: grid; gap: 4px; margin: var(--space-md) 0; }
+    .cmp-stage {
+      display: grid;
+      grid-template-columns: 3.4rem 1fr 1fr;
+      gap: var(--space-sm);
+      align-items: center;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: var(--space-sm) var(--space-md);
+      background: var(--color-surface);
+      font-family: var(--font-mono);
+      font-size: var(--fs-sm);
+    }
+    .cmp-stage--pending { opacity: .35; }
+    .cmp-stage--now { outline: 2px solid var(--color-accent); background: #fff8f1; }
+    .cmp-stage--moot { opacity: .5; background: var(--color-code-bg); }
+    .cmp-stage__bit { font-weight: 700; color: var(--color-primary); font-size: var(--fs-md); }
+    .cmp-stage__io { display: flex; flex-wrap: wrap; gap: var(--space-sm); }
+    .cmp-tag {
+      border: 1px solid var(--color-border); border-radius: 999px;
+      padding: 1px var(--space-sm); font-size: var(--fs-xs); color: var(--color-text-muted);
+      background: var(--color-bg);
+    }
+    .cmp-tag--on { border-color: var(--color-success); color: var(--color-success); font-weight: 700; }
+    .cmp-tag--decided { border-color: var(--color-accent); color: var(--color-accent-hov); font-weight: 700; }
+    .cmp-seed { font-size: var(--fs-xs); color: var(--color-text-muted); font-style: italic; margin-bottom: 2px; }
+
+    .demo-scale {
+      border: 2px dashed var(--color-warning);
+      border-radius: var(--radius);
+      background: #fffbf0;
+      padding: var(--space-sm) var(--space-md);
+      margin: var(--space-md) 0;
+      font-size: var(--fs-sm);
+    }
+    .demo-scale strong { color: #8a5a00; }
+
+    .direction-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin: var(--space-md) 0; }
+    @media (max-width: 640px) { .direction-pair { grid-template-columns: 1fr; } }
+    .direction-pair > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
+    .direction-pair h4 { margin: 0 0 var(--space-sm); }
+    .dir-arrow { font-family: var(--font-mono); font-size: var(--fs-lg); color: var(--color-accent); text-align: center; letter-spacing: .1em; }
+
+    .byte-toggle { display: flex; gap: 3px; flex-wrap: wrap; }
+    .byte-toggle button {
+      font-family: var(--font-mono); font-size: var(--fs-md);
+      width: 2rem; height: 2.3rem; cursor: pointer;
+      border: 1px solid var(--color-border); border-radius: 4px;
+      background: var(--color-surface); color: var(--color-text-muted);
+    }
+    .byte-toggle button[aria-pressed="true"] { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .byte-label { font-size: var(--fs-xs); color: var(--color-text-muted); font-family: var(--font-mono); }
+
+    .verdict { margin-top: var(--space-md); padding: var(--space-md); border-radius: var(--radius); background: var(--color-code-bg); border-left: 4px solid var(--color-primary); }
+    .verdict__val { font-family: var(--font-mono); font-size: var(--fs-md); }
+
+    .three-out { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-sm); margin: var(--space-md) 0; }
+    @media (max-width: 560px) { .three-out { grid-template-columns: 1fr; } }
+    .three-out > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
+    .three-out code { display: block; font-size: var(--fs-md); color: var(--color-primary); font-weight: 700; margin-bottom: var(--space-xs); }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 6 &rsaquo; <span>Page 2 — Larger, Equal, Zero</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Larger, Equal, Zero</h1>
+    <p><strong>Sections 6.6 – 6.8</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1.3 hours reading, ~1.3 hours building</p>
+
+    <p>Two legs left, and they are not like the other five. The XOR leg answers three questions instead of one, and the zero function does not belong to any leg at all. Between them they produce the three signals that will eventually let your CPU make a decision.</p>
+
+    <!-- ============================================================
+         6.6 — one XOR gate, three answers
+         ============================================================ -->
+    <section id="sec-6-6">
+      <h2>6.6 &nbsp; One XOR gate, three answers</h2>
+
+      <p>Start with the gate. XOR outputs 1 when its two inputs are <em>different</em> and 0 when they are the same.</p>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/xor-truth-table.jpg"
+             alt="The truth table for a two-input XOR gate: inputs 0 and 0 give 0, inputs 0 and 1 give 1, inputs 1 and 0 give 1, and inputs 1 and 1 give 0.">
+        <figcaption class="circuit-canvas__caption">XOR: 1 when the inputs differ, 0 when they match.</figcaption>
+      </figure>
+
+      <p>Read that table again with a different question in mind. You wanted to know whether the bitwise XOR of two bytes is &mdash; and it is, that is the seventh operation. But look at what else is sitting in the same table: <strong>"the inputs differ" is exactly the opposite of "the inputs are equal."</strong> A comparison is already there; it is just upside down.</p>
+
+      <p>So this leg produces three outputs from the same gate:</p>
+
+      <div class="three-out">
+        <div>
+          <code>o</code>
+          <strong>the XOR result</strong>
+          <p class="byte-label" style="font-family:var(--font-sans);font-size:var(--fs-sm)">Straight off the gate. This is the bit that goes into the 8-bit XOR output.</p>
+        </div>
+        <div>
+          <code>e</code>
+          <strong>are these two bits equal?</strong>
+          <p class="byte-label" style="font-family:var(--font-sans);font-size:var(--fs-sm)">The XOR result, inverted. Free &mdash; one NOT gate hanging off a wire that already existed.</p>
+        </div>
+        <div>
+          <code>l</code>
+          <strong>is <em>a</em> larger than <em>b</em>?</strong>
+          <p class="byte-label" style="font-family:var(--font-sans);font-size:var(--fs-sm)">The interesting one. Needs one more gate and one more idea.</p>
+        </div>
+      </div>
+
+      <h3>The equals output</h3>
+
+      <p>Branch off the XOR output and put a NOT gate on the branch. When the bits match, XOR gives 0, the NOT gives 1, and <code>e</code> reads "equal." That is the whole circuit.</p>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/xor-equals-1bit.jpg"
+             alt="A one-bit comparator circuit: inputs a and b feed an XOR gate whose output is the XOR result, with a branch from that output through a NOT gate producing the equals signal.">
+        <figcaption class="circuit-canvas__caption">The equals output is a NOT gate on a branch of the XOR result.</figcaption>
+      </figure>
+
+      <h3>The "a is larger" output</h3>
+
+      <p>For a single pair of bits, "a is larger than b" can only mean one thing: <code>a</code> is 1 and <code>b</code> is 0. There is no other way for one bit to beat another.</p>
+
+      <p>The Fall 2025 build finds this with an AND gate fed by <code>a</code> and by the XOR result, and the reasoning is worth following because it reuses work rather than adding a new comparison:</p>
+
+      <ul>
+        <li>If the XOR result is <strong>0</strong>, the bits are the same, so <code>a</code> cannot be larger. The AND gives 0. Correct.</li>
+        <li>If the XOR result is <strong>1</strong>, the bits differ &mdash; one of them is 1 and the other is 0. Which one? Look at <code>a</code>. If <code>a</code> is 1 then it is the larger one. The AND gives 1. Correct.</li>
+      </ul>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/xor-aLarger-1bit.jpg"
+             alt="A one-bit comparator circuit extended with an AND gate taking input a and the XOR output, producing the a-is-larger signal.">
+        <figcaption class="circuit-canvas__caption">"a is larger" is an AND of <code>a</code> with the XOR result. Build this and test all four input combinations before going further.</figcaption>
+      </figure>
+
+      <div class="callout">
+        <div class="callout__title">Verify the one-bit comparator</div>
+        <p>Four input combinations, and only one of them should light <code>l</code>:</p>
+        <div class="table-scroll">
+          <table class="pin-table">
+            <thead><tr><th>a</th><th>b</th><th>o (XOR)</th><th>e (equal)</th><th>l (a larger)</th></tr></thead>
+            <tbody>
+              <tr><td>0</td><td>0</td><td>0</td><td>1</td><td>0</td></tr>
+              <tr><td>0</td><td>1</td><td>1</td><td>0</td><td>0</td></tr>
+              <tr><td>1</td><td>0</td><td>1</td><td>0</td><td><strong>1</strong></td></tr>
+              <tr><td>1</td><td>1</td><td>0</td><td>1</td><td>0</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <h3>Why one bit is not enough, and what has to be passed along</h3>
+
+      <p>Comparing whole bytes is where this gets interesting, and it is the reason the circuit needs two more pins.</p>
+
+      <p>Compare <code>10000000</code> with <code>01111111</code>. Bit by bit, <code>b</code> wins six of the eight comparisons. But <code>a</code> is 128 and <code>b</code> is 127, so <code>a</code> is larger. <strong>Counting which side wins more bits gives the wrong answer.</strong></p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">The most significant bit where the two numbers differ decides everything</div>
+        <p>Work down from bit 7. As long as the bits match, the question is still open. The <em>first</em> place they differ, whichever number has the 1 there is larger &mdash; and nothing below that position can change it, because every bit below is worth less than the one you just resolved.</p>
+        <p>This is exactly how you compare two decimal numbers of the same length. 4,182 versus 4,179: the thousands match, the hundreds match, the tens differ &mdash; 8 beats 7 &mdash; and you stop. You do not look at the units, because you cannot make up 10 with a single digit worth 1.</p>
+      </div>
+
+      <p>So each bit's comparator needs to be told two things by the bit above it:</p>
+
+      <ul>
+        <li><code>pl</code> &mdash; <strong>"prior larger":</strong> has some higher bit already settled that <code>a</code> is larger?</li>
+        <li><code>pe</code> &mdash; <strong>"prior equal":</strong> have <em>all</em> the higher bits matched, so this bit still gets a say?</li>
+      </ul>
+
+      <p>And the three cases the Fall 2025 build walks through are the three things those two signals have to handle.</p>
+
+      <h4>Case 1 &mdash; the decision was already made above</h4>
+
+      <p>If a higher bit resolved that <code>a</code> is larger, that verdict must survive all the way to the bottom regardless of what the lower bits say. So the <code>l</code> output ORs in <code>pl</code>: once it is 1, it stays 1.</p>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/xor-aLarger-cascade.jpg"
+             alt="The one-bit comparator with an OR gate added, combining the prior-larger input with this stage's own a-is-larger result, so a decision made higher up is carried through unchanged.">
+        <figcaption class="circuit-canvas__caption">Case 1: OR in <code>pl</code> so a verdict from above is carried down untouched.</figcaption>
+      </figure>
+
+      <h4>Case 2 &mdash; equality has to be unanimous</h4>
+
+      <p>Two bytes are equal only if <em>every</em> pair of bits is equal. So this stage's <code>e</code> output ANDs its own equality with <code>pe</code>: equal here <strong>and</strong> equal everywhere above. One mismatch anywhere and <code>pe</code> goes to 0 and stays there.</p>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/xor-aEquals-cascade.jpg"
+             alt="The one-bit comparator with an AND gate combining the prior-equal input with this stage's own equality result, so equality only survives if every higher bit also matched.">
+        <figcaption class="circuit-canvas__caption">Case 2: AND in <code>pe</code>. Equality is unanimous or it is nothing.</figcaption>
+      </figure>
+
+      <h4>Case 3 &mdash; the one that catches people</h4>
+
+      <p>Here is the subtle one. This stage may only announce "a is larger" if the question was <em>still open</em> when it got here. If a higher bit had already decided that <strong>b</strong> is larger, then <code>pl</code> is 0 and <code>pe</code> is 0 &mdash; and this stage must stay quiet even if its own <code>a</code> bit beats its own <code>b</code> bit.</p>
+
+      <p>Nothing in cases 1 and 2 prevents that. The fix is to widen the AND gate on the <code>l</code> leg from two inputs to three, and feed <code>pe</code> in as the third. Now this stage can only claim a win when everything above it was equal.</p>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/xor-aEquals-cascade-final.jpg"
+             alt="The completed one-bit comparator stage: a three-input AND gate takes input a, the XOR result, and the prior-equal signal, and its output is ORed with the prior-larger signal to produce this stage's a-is-larger output.">
+        <figcaption class="circuit-canvas__caption">Case 3, and the finished stage: the <code>l</code> leg's AND takes three inputs, and <code>pe</code> is the permission to speak.</figcaption>
+      </figure>
+
+      <div class="callout callout--note">
+        <div class="callout__title">The whole stage, written out</div>
+        <p>Three outputs from one pair of bits and two incoming status signals:</p>
+        <div class="table-scroll">
+          <table class="pin-table">
+            <thead><tr><th>Output</th><th>Expression</th><th>In words</th></tr></thead>
+            <tbody>
+              <tr><td><code>o</code></td><td><code>a XOR b</code></td><td>the bitwise XOR result for this bit</td></tr>
+              <tr><td><code>e</code></td><td><code>NOT(a XOR b) AND pe</code></td><td>equal here <em>and</em> equal everywhere above</td></tr>
+              <tr><td><code>l</code></td><td><code>pl OR (a AND (a XOR b) AND pe)</code></td><td>already decided above, <em>or</em> decided here with permission</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><strong>The <code>pe</code> term in <code>l</code> is the part almost nobody derives on their own.</strong> Leave it out and your comparator will be right for most inputs and wrong for the ones where the higher bits favour <code>b</code> &mdash; which is the worst kind of bug, because it passes casual testing.</p>
+      </div>
+
+      <p>Build this as <code>XOR_CMP_1BIT</code> with pins <code>a</code>, <code>b</code>, <code>pl</code>, <code>pe</code> in and <code>o</code>, <code>l</code>, <code>e</code> out, and test it against the table above with <code>pl = 0</code> and <code>pe = 1</code>. Then test it once more with <code>pe = 0</code> and confirm that <code>l</code> and <code>e</code> both stay at 0 no matter what <code>a</code> and <code>b</code> do. That second test is the one that proves case 3 works.</p>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/xor-1bit-appearance.png"
+             alt="The circuit appearance for the one-bit comparator component, with inputs a and b on the left, the prior-larger and prior-equal inputs at the top, the XOR result on the right, and the larger and equal outputs at the bottom.">
+        <figcaption class="circuit-canvas__caption">One suggested circuit appearance. The <code>pl</code> and <code>pe</code> inputs are at the <em>top</em> and the <code>l</code> and <code>e</code> outputs at the <em>bottom</em>, on purpose &mdash; section 6.7 explains why that choice matters.</figcaption>
+      </figure>
+    </section>
+
+    <!-- ============================================================
+         6.7 — the cascade
+         ============================================================ -->
+    <section id="sec-6-7">
+      <h2>6.7 &nbsp; Eight of them, chained the other way</h2>
+
+      <p><code>XOR_CMP_8BIT</code> is eight instances of <code>XOR_CMP_1BIT</code>, each one's <code>l</code> and <code>e</code> feeding the next one's <code>pl</code> and <code>pe</code>. The eight <code>o</code> outputs go back together, in position, to make the 8-bit XOR result.</p>
+
+      <p>Two details make it work:</p>
+
+      <div class="callout">
+        <div class="callout__title">Chain from bit 7 down to bit 0</div>
+        <p>Bit 7's instance runs first, bit 6's takes its outputs, and so on down to bit 0. <strong>Bit 0's <code>l</code> and <code>e</code> are the whole circuit's <code>al</code> and <code>eq</code> outputs</strong> &mdash; by then every bit has had its say.</p>
+      </div>
+
+      <div class="callout">
+        <div class="callout__title">Seed the top of the chain with constants</div>
+        <p>Bit 7's instance has nothing above it, so its <code>pl</code> and <code>pe</code> come from Wiring constants:</p>
+        <ul>
+          <li><code>pl = 0</code> &mdash; nothing above has decided that <code>a</code> is larger, because there is nothing above.</li>
+          <li><code>pe = 1</code> &mdash; everything above matches, vacuously, because there is nothing above to mismatch.</li>
+        </ul>
+        <p>Get these backwards and the circuit will report that <code>a</code> is always larger, or that nothing is ever equal.</p>
+      </div>
+
+      <p>That layout choice in the circuit appearance now makes sense: with the <code>pl</code>/<code>pe</code> inputs at the top of the component and the <code>l</code>/<code>e</code> outputs at the bottom, you can stack the eight instances vertically with bit 7 highest, and the status signals flow straight down the stack with no wire crossing anything.</p>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img circuit-canvas__img--wide" src="images/xor-8bit-chaining-circuit.png"
+             alt="The eight-bit comparator: eight one-bit comparator components stacked vertically with bit 7 at the top, each one's larger and equal outputs wired down into the next one's prior-larger and prior-equal inputs, with constants seeding the top instance and the final outputs taken from the bottom instance.">
+        <figcaption class="circuit-canvas__caption">Eight instances stacked, status flowing downward from bit 7 to bit 0. The constants at the top are the seeds; the outputs at the bottom are the verdict.</figcaption>
+      </figure>
+
+      <h3>The direction is the point</h3>
+
+      <p>You have now built two circuits made of eight identical stages chained together, passing a status signal from one to the next. They run in opposite directions, and the reason is not a wiring convention.</p>
+
+      <div class="direction-pair">
+        <div>
+          <h4>The adder &mdash; LSB to MSB</h4>
+          <div class="dir-arrow">bit 0 &rarr; bit 7</div>
+          <p>A carry is produced by a low bit and consumed by the next higher one. It has nowhere to go but up.</p>
+        </div>
+        <div>
+          <h4>The comparator &mdash; MSB to LSB</h4>
+          <div class="dir-arrow">bit 7 &rarr; bit 0</div>
+          <p>The most significant differing bit decides the answer. Information flows from where the decision gets made toward the bits that no longer matter.</p>
+        </div>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Same construction, opposite direction, and the arithmetic is what decides</div>
+        <p>Both circuits are "build one stage, instantiate it eight times, hand a status signal along." That is the pattern this whole course is built on &mdash; the same one that gave you <code>FULL_ADDER</code> &times; 8 in Week 3 and <code>MEM_1BIT</code> &times; 8 in Week 5.</p>
+        <p>But you cannot pick the direction by looking at the wiring. You have to ask what the operation actually needs: addition builds an answer from the bottom up, comparison resolves one from the top down. <strong>Get the direction from the mathematics, then wire it.</strong></p>
+      </div>
+
+      <div class="callout">
+        <div class="callout__title">Verify the 8-bit comparator</div>
+        <div class="table-scroll">
+          <table class="pin-table">
+            <thead><tr><th>a</th><th>b</th><th>xor</th><th>al</th><th>eq</th></tr></thead>
+            <tbody>
+              <tr><td><code>11001010</code></td><td><code>10110110</code></td><td><code>01111100</code></td><td>1</td><td>0</td></tr>
+              <tr><td><code>00111100</code></td><td><code>00111100</code></td><td><code>00000000</code></td><td>0</td><td>1</td></tr>
+              <tr><td><code>00000001</code></td><td><code>10000000</code></td><td><code>10000001</code></td><td>0</td><td>0</td></tr>
+              <tr><td><code>10000000</code></td><td><code>01111111</code></td><td><code>11111111</code></td><td>1</td><td>0</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The last row is the one that catches a comparator built without the <code>pe</code> term, and the third row is the one that catches a chain wired the wrong way up.</p>
+      </div>
+
+      <!-- ========== WIDGET 5 — The Cascade ========== -->
+      <div class="widget-card" id="w-cascade">
+        <div class="widget-card__title">The Cascade</div>
+        <div class="widget-card__subtitle">Step down the chain and watch the verdict get made &mdash; and watch the stages below it stop mattering.</div>
+
+        <div class="demo-scale">
+          <strong>This demonstration is 4 bits wide. The circuit you build is 8 bits wide.</strong>
+          Four stages fit on a phone screen and eight do not, so this shows the chain shortened.
+          What changes when you widen it: <strong>the number of identical stages</strong>, and <strong>which stage the seeding constants attach to</strong> (bit 3 here, bit 7 in your circuit).
+          Nothing else changes &mdash; not the stage, not the expressions, not the direction, not the seed values.
+        </div>
+
+        <div class="widget-input-row">
+          <div class="widget-input-group">
+            <label id="cc-a-lbl">a &nbsp;<span class="byte-label">(4 bits)</span></label>
+            <div class="byte-toggle" id="cc-a" role="group" aria-labelledby="cc-a-lbl"></div>
+          </div>
+          <div class="widget-input-group">
+            <label id="cc-b-lbl">b &nbsp;<span class="byte-label">(4 bits)</span></label>
+            <div class="byte-toggle" id="cc-b" role="group" aria-labelledby="cc-b-lbl"></div>
+          </div>
+        </div>
+
+        <div class="preset-row">
+          <button class="preset-btn" type="button" data-ccpreset="8,7">1000 vs 0111 — a wins on one bit</button>
+          <button class="preset-btn" type="button" data-ccpreset="5,5">equal</button>
+          <button class="preset-btn" type="button" data-ccpreset="3,12">0011 vs 1100 — b wins early</button>
+        </div>
+
+        <p class="cmp-seed">seeded at the top: pl = 0, pe = 1</p>
+        <div class="cmp-stack" id="cc-stack" aria-live="polite"></div>
+
+        <div class="step-nav">
+          <button class="widget-btn widget-btn--outline widget-btn--small" type="button" id="cc-reset">Restart</button>
+          <button class="widget-btn widget-btn--primary widget-btn--small" type="button" id="cc-next">Next bit down &rarr;</button>
+          <button class="widget-btn widget-btn--outline widget-btn--small" type="button" id="cc-all">Show all</button>
+        </div>
+
+        <div class="verdict" id="cc-verdict"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         6.8 — the zero function and the flags
+         ============================================================ -->
+    <section id="sec-6-8">
+      <h2>6.8 &nbsp; Answers about the answer</h2>
+
+      <p>The last circuit this week is the smallest one in the course.</p>
+
+      <p><code>IS_ZERO</code> takes the 8-bit value and reports 1 if every single bit is 0. An 8-input OR gate gives you 1 when <em>any</em> bit is set and 0 only when they are all clear &mdash; which is precisely backwards from what you want. So put a NOT on it. <strong>An eight-input OR, inverted. Eight bits in, one bit out.</strong> That is the entire circuit.</p>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Where it goes matters more than what it is</div>
+        <p><code>IS_ZERO</code> is not one of the seven legs and it does not belong to any of them. It watches the ALU's <strong>final output</strong>, after the selection stage &mdash; so it reports on whichever operation was chosen, whatever that was. AND two bytes together and get zero, and <code>Z</code> lights. Subtract two equal bytes and get zero, and <code>Z</code> lights.</p>
+      </div>
+
+      <p>The same is true of the comparator's two outputs, and it is worth being explicit because it is easy to miss. <code>al</code> and <code>eq</code> come off the comparator leg, and that leg is running <em>all the time</em> &mdash; not only when opcode <code>110</code> is selected. Ask the ALU to AND two bytes and it will also, in the same instant, tell you which of them is larger.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">These three are the machine's status flags</div>
+        <div class="table-scroll">
+          <table class="pin-table">
+            <thead><tr><th>Flag</th><th>Comes from</th><th>Means</th></tr></thead>
+            <tbody>
+              <tr><td><code>Z</code></td><td>the output stage</td><td>the 8-bit result is all zeros</td></tr>
+              <tr><td><code>AL</code></td><td>the comparator leg</td><td>A is greater than B</td></tr>
+              <tr><td><code>EQ</code></td><td>the comparator leg</td><td>A equals B</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><strong>The ALU does not only produce an answer. It produces answers <em>about</em> its answer.</strong> That is the difference between a calculator and a component a computer can be built from, and it is why the flags are live regardless of what was selected &mdash; whatever asks the question next should not have to ask the ALU to compute the comparison first.</p>
+      </div>
+
+      <p>What are they for? Next week you meet instructions that change <em>which instruction runs next</em> &mdash; branches. A branch is the machine looking at one of these flags and deciding where to go. The circuit that makes an <code>if</code> statement possible is the one you just built, and the wire it will read is <code>EQ</code>.</p>
+
+      <p>That is as much as is worth saying about it now. Week 7 does the rest.</p>
+    </section>
+
+    <!-- ============================================================
+         Where you are
+         ============================================================ -->
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+
+      <p>Nine circuits, if you have been building along: three bitwise legs, the adder instantiated from Week 3, two shift legs, the one-bit comparator, the eight-bit comparator, and the zero function. <strong>That is Logisim Checkpoint 2a, complete.</strong></p>
+
+      <p>Test each one on its own and get them right now. Next week they go inside a single component with a decoder choosing between them, and a leg that is quietly wrong is much harder to find once seven of them are wired to the same output.</p>
+
+      <p>The remaining two pages of this week are the other track: the MIPS instructions that ask for these operations by name.</p>
+
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 6, Page 2
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['alu'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.alu</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.alu) { return; }
+    var A = L.alu;
+
+    /* ============================================================
+       WIDGET 5 — The Cascade
+       ============================================================
+       Four bits, not eight. Standards Section 0.1: the banner in the
+       markup states the demo width, the deliverable width, and what
+       changes between them. That banner is not decoration -- a
+       demonstration whose width silently differs from the deliverable
+       is a defect.
+
+       The stage logic comes from CSCLogic.alu.cmp1, the same function
+       the 8-bit cmp8 chains. Nothing about the stage is reimplemented
+       here at a narrower width; only the chain length differs, which is
+       exactly the claim the banner makes. */
+    var host = document.getElementById('w-cascade');
+    if (!host) { return; }
+
+    var WIDTH = 4;
+    var a = [1, 0, 0, 0], b = [0, 1, 1, 1];   /* MSB-first, bit 3 .. bit 0 */
+    var shown = 0;                            /* how many stages revealed */
+
+    var elA = document.getElementById('cc-a'), elB = document.getElementById('cc-b');
+    var elStack = document.getElementById('cc-stack'), elVerdict = document.getElementById('cc-verdict');
+
+    function toggles(el, word) {
+      el.innerHTML = '';
+      for (var i = 0; i < WIDTH; i++) {
+        (function (i) {
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = word[i];
+          btn.setAttribute('aria-pressed', word[i] ? 'true' : 'false');
+          btn.setAttribute('aria-label', 'bit ' + (WIDTH - 1 - i) + ', currently ' + word[i]);
+          btn.addEventListener('click', function () {
+            word[i] = word[i] ? 0 : 1;
+            shown = 0;
+            repaint(); render();
+          });
+          el.appendChild(btn);
+        }(i));
+      }
+    }
+    function repaint() {
+      [[elA, a], [elB, b]].forEach(function (pair) {
+        var bs = pair[0].querySelectorAll('button');
+        for (var i = 0; i < WIDTH; i++) {
+          bs[i].textContent = pair[1][i];
+          bs[i].setAttribute('aria-pressed', pair[1][i] ? 'true' : 'false');
+          bs[i].setAttribute('aria-label', 'bit ' + (WIDTH - 1 - i) + ', currently ' + pair[1][i]);
+        }
+      });
+    }
+
+    toggles(elA, a); toggles(elB, b);
+
+    host.querySelectorAll('[data-ccpreset]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var v = btn.dataset.ccpreset.split(',').map(Number);
+        for (var i = 0; i < WIDTH; i++) {
+          a[i] = (v[0] >> (WIDTH - 1 - i)) & 1;
+          b[i] = (v[1] >> (WIDTH - 1 - i)) & 1;
+        }
+        shown = 0; repaint(); render();
+      });
+    });
+
+    document.getElementById('cc-next').addEventListener('click', function () {
+      if (shown < WIDTH) { shown++; render(); }
+    });
+    document.getElementById('cc-reset').addEventListener('click', function () { shown = 0; render(); });
+    document.getElementById('cc-all').addEventListener('click', function () { shown = WIDTH; render(); });
+
+    function chain() {
+      var pl = 0, pe = 1, out = [], i, s;
+      for (i = 0; i < WIDTH; i++) {
+        s = A.cmp1(a[i], b[i], pl, pe);
+        out.push({ bit: WIDTH - 1 - i, a: a[i], b: b[i], pl: pl, pe: pe, o: s.o, l: s.l, e: s.e });
+        pl = s.l; pe = s.e;
+      }
+      return { stages: out, al: pl, eq: pe };
+    }
+
+    function tag(label, on, decided) {
+      var cls = 'cmp-tag' + (decided ? ' cmp-tag--decided' : (on ? ' cmp-tag--on' : ''));
+      return '<span class="' + cls + '">' + label + '</span>';
+    }
+
+    function render() {
+      var r = chain();
+      elStack.innerHTML = '';
+
+      r.stages.forEach(function (s, idx) {
+        var d = document.createElement('div');
+        var revealed = idx < shown;
+        var isNow = (idx === shown - 1);
+        /* A stage is "moot" once the question is already settled above
+           it -- the whole point of the widget. */
+        var moot = revealed && s.pe === 0;
+        d.className = 'cmp-stage' +
+          (revealed ? (isNow ? ' cmp-stage--now' : (moot ? ' cmp-stage--moot' : '')) : ' cmp-stage--pending');
+
+        d.innerHTML =
+          '<div class="cmp-stage__bit">bit ' + s.bit + '</div>' +
+          '<div class="cmp-stage__io">a=' + s.a + ' b=' + s.b +
+            ' &nbsp;' + tag('pl ' + s.pl, s.pl) + tag('pe ' + s.pe, s.pe) + '</div>' +
+          '<div class="cmp-stage__io">' +
+            (revealed
+              ? 'o=' + s.o + ' &nbsp;' + tag('l ' + s.l, s.l, s.l && !s.pl) + tag('e ' + s.e, s.e) +
+                (moot ? ' <span class="byte-label">already settled above</span>' : '')
+              : '<span class="byte-label">not yet</span>') +
+          '</div>';
+        elStack.appendChild(d);
+      });
+
+      if (shown < WIDTH) {
+        elVerdict.innerHTML = '<div class="byte-label">Step down the chain to see the verdict form. ' +
+          'The constants at the top are the seed: nothing above is larger, and everything above matches.</div>';
+      } else {
+        var word = function (w) { return w.join(''); };
+        var av = parseInt(word(a), 2), bv = parseInt(word(b), 2);
+        var decidedAt = null, i;
+        for (i = 0; i < WIDTH; i++) { if (r.stages[i].pe === 1 && r.stages[i].a !== r.stages[i].b) { decidedAt = r.stages[i].bit; break; } }
+        elVerdict.innerHTML =
+          '<div class="verdict__val">a = ' + word(a) + ' (' + av + ') &nbsp; b = ' + word(b) + ' (' + bv + ')</div>' +
+          '<div class="verdict__val">al = ' + r.al + ' &nbsp; eq = ' + r.eq + '</div>' +
+          '<p style="margin:var(--space-sm) 0 0">' +
+            (r.eq
+              ? 'Every bit matched, so <code>pe</code> survived all the way down and the circuit reports equal.'
+              : 'Bit ' + decidedAt + ' is the most significant place the two differ, and it decided the answer. ' +
+                'Every stage below it had <code>pe = 0</code> and was not allowed to speak — which is exactly what the ' +
+                'three-input AND on the <code>l</code> leg is for.') +
+          '</p>';
+      }
+    }
+
+    render();
+  })();
+  </script>
+</body>
+</html>

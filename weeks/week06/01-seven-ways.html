@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w6-01">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 6: Seven Things a Byte Can Become</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ----------
+       The seven-leg grid is the page's signature component. It is NOT
+       .display-grid: that one lays out independent readouts, and the
+       whole point here is that the seven cells are siblings competing
+       for one output. Candidate for shared/style.css once the
+       assignment's Part C table is built against it (Standards §8 —
+       diff before merging). */
+    .leg-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: var(--space-sm);
+      margin: var(--space-md) 0;
+    }
+    .leg-card {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: var(--space-sm) var(--space-md);
+      background: var(--color-surface);
+      transition: border-color .12s, box-shadow .12s;
+    }
+    .leg-card--selected {
+      border-color: var(--color-accent);
+      border-width: 2px;
+      box-shadow: var(--shadow-lg);
+      padding: calc(var(--space-sm) - 1px) calc(var(--space-md) - 1px);
+    }
+    .leg-card--dead { opacity: .62; }
+    .leg-card__name {
+      font-size: var(--fs-xs); letter-spacing: .05em; text-transform: uppercase;
+      color: var(--color-text-muted); display: flex; justify-content: space-between; gap: var(--space-sm);
+    }
+    .leg-card--selected .leg-card__name { color: var(--color-accent-hov); font-weight: 700; }
+    .leg-card__val { font-family: var(--font-mono); font-size: var(--fs-md); margin-top: 2px; }
+    .leg-card__extra { font-size: var(--fs-xs); color: var(--color-text-muted); font-family: var(--font-mono); }
+
+    .out-panel {
+      border: 2px solid var(--color-primary); border-radius: var(--radius);
+      background: var(--color-code-bg); padding: var(--space-md); margin-top: var(--space-md);
+    }
+    .out-panel__val { font-family: var(--font-mono); font-size: var(--fs-lg); color: var(--color-primary); }
+    .out-panel__float { font-family: var(--font-sans); font-size: var(--fs-md); color: var(--color-danger); font-style: italic; }
+
+    .flag-row { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin-top: var(--space-sm); }
+    .flag-pill {
+      font-family: var(--font-mono); font-size: var(--fs-sm);
+      border: 1px solid var(--color-border); border-radius: 999px;
+      padding: 2px var(--space-sm); background: var(--color-surface); color: var(--color-text-muted);
+    }
+    .flag-pill--on { border-color: var(--color-success); color: var(--color-success); font-weight: 700; }
+    .flag-pill--na { opacity: .5; }
+
+    .opcode-row { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
+    .opbit {
+      font-family: var(--font-mono); min-width: 3.1rem;
+      border: 1px solid var(--color-border); border-radius: var(--radius);
+      background: var(--color-surface); padding: var(--space-xs) var(--space-sm); cursor: pointer;
+    }
+    .opbit[aria-pressed="true"] { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+
+    /* Byte toggles. .bit-cell is deliberately NOT reused: it is sized
+       differently in Weeks 1 and 5 on purpose (Standards §8), and this
+       page needs a third size. Kept local rather than fighting over it. */
+    .byte-toggle { display: flex; gap: 3px; flex-wrap: wrap; }
+    .byte-toggle button {
+      font-family: var(--font-mono); font-size: var(--fs-md);
+      width: 2rem; height: 2.3rem; cursor: pointer;
+      border: 1px solid var(--color-border); border-radius: 4px;
+      background: var(--color-surface); color: var(--color-text-muted);
+    }
+    .byte-toggle button[aria-pressed="true"] { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .byte-label { font-size: var(--fs-xs); color: var(--color-text-muted); font-family: var(--font-mono); }
+
+    /* Widget 2's per-bit columns. */
+    .bitcols { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; margin: var(--space-md) 0; }
+    .bitcol { text-align: center; font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .bitcol div { padding: 3px 0; border-radius: 3px; }
+    .bitcol .bc-in { background: var(--color-code-bg); }
+    .bitcol .bc-op { color: var(--color-text-muted); font-size: var(--fs-xs); }
+    .bitcol .bc-out { background: var(--color-primary); color: #fff; font-weight: 700; }
+    .bitcol .bc-out--lit { animation: bcflash .5s ease-out; }
+    @keyframes bcflash { from { background: var(--color-accent); } to { background: var(--color-primary); } }
+    .bitcol .bc-idx { color: var(--color-text-muted); font-size: var(--fs-xs); }
+
+    /* Widget 3's two overflow indicators. Two, never one. */
+    .ovf-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); margin-top: var(--space-md); }
+    @media (max-width: 560px) { .ovf-pair { grid-template-columns: 1fr; } }
+    .ovf {
+      border: 1px solid var(--color-border); border-left-width: 4px;
+      border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-surface);
+    }
+    .ovf__name { font-weight: 700; font-size: var(--fs-sm); }
+    .ovf__why { font-size: var(--fs-xs); color: var(--color-text-muted); }
+    .ovf--off { opacity: .55; }
+    .ovf--on { border-left-color: var(--color-danger); background: #fdf2f2; }
+    .ovf--on .ovf__name { color: var(--color-danger); }
+
+    .sub-steps { display: grid; gap: var(--space-xs); font-family: var(--font-mono); margin: var(--space-md) 0; }
+    .sub-step { display: flex; gap: var(--space-md); align-items: baseline; padding: var(--space-xs) var(--space-sm); border-radius: 4px; }
+    .sub-step--future { opacity: .35; }
+    .sub-step--now { background: var(--color-code-bg); outline: 2px solid var(--color-accent); }
+    .sub-step__lbl { flex: 0 0 11rem; font-family: var(--font-sans); font-size: var(--fs-sm); color: var(--color-text-muted); }
+
+    /* Widget 4's dual signed/unsigned readout — the whole point of the
+       widget is that these two disagree. */
+    .dual-read { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); margin-top: var(--space-sm); }
+    .dual-read > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm); background: var(--color-surface); text-align: center; }
+    .dual-read .dr-lbl { font-size: var(--fs-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .04em; }
+    .dual-read .dr-val { font-family: var(--font-mono); font-size: var(--fs-md); }
+    .dual-read .dr-note { font-size: var(--fs-xs); }
+    .dr-ok { color: var(--color-success); }
+    .dr-bad { color: var(--color-danger); font-weight: 700; }
+
+    .shiftviz { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; font-family: var(--font-mono); margin: var(--space-md) 0; }
+    .shiftviz__edge { font-size: var(--fs-sm); color: var(--color-text-muted); text-align: center; min-width: 5.5rem; }
+    .shiftviz__edge b { display: block; font-size: var(--fs-lg); color: var(--color-accent-hov); }
+    .shiftviz__bits { display: flex; gap: 3px; }
+    .shiftviz__bits span {
+      width: 1.9rem; height: 2.2rem; line-height: 2.2rem; text-align: center;
+      border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-surface);
+    }
+    .shiftviz__bits span.sv-new { border-color: var(--color-accent); background: #fff5eb; font-weight: 700; }
+
+    .not-a-bus { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; margin: var(--space-md) 0; font-size: var(--fs-sm); }
+    .not-a-bus > div { padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border); }
+    .not-a-bus > div:nth-child(3n+1) { font-weight: 600; background: var(--color-code-bg); }
+    .not-a-bus > .nab-head { font-weight: 700; background: var(--color-primary); color: #fff; border-bottom: none; }
+    @media (max-width: 680px) {
+      .not-a-bus { grid-template-columns: 1fr; }
+      .not-a-bus > div:nth-child(3n+1) { margin-top: var(--space-sm); }
+      .not-a-bus > .nab-head:not(:first-child) { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 6 &rsaquo; <span>Page 1 — Seven Things a Byte Can Become</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Seven Things a Byte Can Become</h1>
+    <p><strong>Sections 6.1 – 6.5</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1.5 hours reading, ~1.4 hours building</p>
+
+    <!-- ============================================================
+         6.1 — the gap
+         ============================================================ -->
+    <section id="sec-6-1">
+      <h2>6.1 &nbsp; What a register cannot do</h2>
+
+      <div class="callout callout--hook">
+        <div class="callout__title">Everything you have built so far moves bytes. Nothing changes one.</div>
+
+        <p>Last week you built <code>REGISTER_8BIT</code>, and it is a genuinely good piece of engineering: it captures a byte at a chosen moment, holds it indefinitely, and releases the shared wire when it is not speaking. Wire two together and a value can travel from one to the other in four controlled steps.</p>
+
+        <p>Now look at what that machine can actually do. A register that holds <code>00101101</code> will hold <code>00101101</code> forever, unless something hands it a <em>different</em> byte. And nothing in your machine can produce a different byte. <strong>A hundred registers wired together is a filing cabinet, not a computer.</strong></p>
+
+        <p>The same gap shows up from the other end. Last week you wrote <code>add $t0, $t1, $t2</code> in MARS and watched it work &mdash; but MARS is a simulator written in Java, and it added those numbers the way any program adds numbers. Your machine could not. There is nothing in it that adds.</p>
+
+        <p><strong>By the end of this week</strong> you will have built the seven circuits that transform bytes &mdash; add them, shift them, invert them, combine them bitwise, compare them &mdash; and you will know the MIPS instructions that name those transformations. Every operation your CPU will ever perform on data is in this week.</p>
+      </div>
+
+      <p>One thing this week does <em>not</em> give you: the part that chooses. You will finish with nine working circuits and no assembled ALU, because choosing turns out to be its own idea and it deserves its own week. That is Week 7.</p>
+    </section>
+
+    <!-- ============================================================
+         6.2 — the shape
+         ============================================================ -->
+    <section id="sec-6-2">
+      <h2>6.2 &nbsp; Seven legs, all running</h2>
+
+      <p>The component you are working toward is called the <strong>Arithmetic Logic Unit</strong>, and before it is a circuit it is a shape. Two 8-bit inputs, called <code>A</code> and <code>B</code>. One carry-in bit. One 8-bit output, plus a carry-out and three single-bit status outputs. And in between, <strong>seven separate circuits</strong> &mdash; the <em>legs</em> &mdash; each computing one operation.</p>
+
+      <p>Here is the part that surprises people, and it is worth getting used to now rather than in Week 7:</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">The ALU always performs all seven operations. Every time. On every input.</div>
+        <p>It is not a machine that does what it is told. It is a machine that does <em>everything</em>, all at once, continuously &mdash; and then answers one question about the results.</p>
+        <p>When you select <code>ADD</code>, the AND leg is also computing. So is the XOR leg, and both shift legs. Their answers are correct, current, and thrown away. The selector does not decide what gets <em>computed</em>; it decides what gets <em>through</em>.</p>
+        <p><strong>Why that is sensible rather than wasteful:</strong> these legs are made of gates, and a gate that nobody is reading costs nothing to leave running. Switching them on and off would take circuitry and, worse, it would take <em>time</em> &mdash; the ALU would have to settle after being told what to do, instead of having already settled. And two of the status outputs need to be live regardless of what was selected, which you will see in section 6.8.</p>
+      </div>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/ALU_flowchart.jpg"
+             alt="A flowchart of the ALU build. Eight boxes across the top show the individual operations — add, shift left and shift right, NOT, AND, OR, XOR comparator, and the zero function — each feeding down into a combining stage that produces the ALU's single output.">
+        <figcaption class="circuit-canvas__caption">The build order for the ALU. The eight boxes across the top are the individual operations; everything below them is the selection stage, which is Week 7. This week you build the top row.</figcaption>
+      </figure>
+
+      <p>Selection is done by a <strong>3-bit opcode</strong>. Three bits give eight combinations, and the machine has seven operations, so one code is left over:</p>
+
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead>
+            <tr><th>Opcode</th><th>Operation</th><th>Inputs it uses</th><th>What the carry pins mean</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>000</code></td><td><strong>ADD</strong></td><td>A, B, carry-in</td><td>carry in / carry out</td></tr>
+            <tr><td><code>001</code></td><td><strong>SHIFT RIGHT</strong></td><td>A, carry-in</td><td>shift in / shift out</td></tr>
+            <tr><td><code>010</code></td><td><strong>SHIFT LEFT</strong></td><td>A, carry-in</td><td>shift in / shift out</td></tr>
+            <tr><td><code>011</code></td><td><strong>NOT</strong></td><td>A</td><td>&mdash;</td></tr>
+            <tr><td><code>100</code></td><td><strong>AND</strong></td><td>A, B</td><td>&mdash;</td></tr>
+            <tr><td><code>101</code></td><td><strong>OR</strong></td><td>A, B</td><td>&mdash;</td></tr>
+            <tr><td><code>110</code></td><td><strong>XOR</strong></td><td>A, B</td><td>&mdash;</td></tr>
+            <tr><td><code>111</code></td><td><em>unassigned</em></td><td>&mdash;</td><td>&mdash;</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Two things to notice in that table before you build anything</div>
+        <p><strong>There is no subtract.</strong> Not an oversight &mdash; section 6.4.</p>
+        <p><strong>There is one carry-in pin and one carry-out pin, and three operations share them.</strong> The adder needs a bit in and a bit out. So does each shift. Rather than carry six pins on the ALU's boundary, the design noticed that three operations need structurally identical extra bits and gave them one pair to share. Only one operation runs at a time as far as the <em>output</em> is concerned, so there is never a fight over them.</p>
+        <p>That is a small piece of real interface design, and it is the kind of decision that distinguishes a component someone can use from a component with fourteen pins on it.</p>
+      </div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Opcode <code>111</code> does not produce zero. It produces nothing.</div>
+        <p>Decoder output 7 is wired to nothing at all. When you select <code>111</code>, no leg is enabled, and <strong>nothing drives the output</strong>. That is not the same as the output being <code>00000000</code>, and the difference matters: a zero is a value that something asserted, and this is the absence of anyone asserting.</p>
+        <p>Real processors face this question for every undefined opcode in their instruction set, and they answer it in different ways &mdash; some define an illegal-instruction trap, some leave the behaviour genuinely unspecified. Your machine leaves the leg unconnected, which is the simplest honest answer.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         DELIVERABLE 3 — the required aside
+         ============================================================ -->
+    <section id="sec-not-a-bus">
+      <div class="callout callout--warn">
+        <div class="callout__title">Important: the ALU's output is not a bus</div>
+
+        <p>Last week you spent a whole section on a hard idea: a shared wire needs devices that can <strong>stop driving</strong> rather than drive a zero, because a zero is a value and two devices asserting values onto one wire is a fault &mdash; even when they happen to agree. That is why <code>REGISTER_8BIT</code> has controlled buffers in it.</p>
+
+        <p>Now look at the ALU: seven legs, all live, all reaching one 8-bit output. It looks like exactly the situation you just learned to be careful about. <strong>It is not, and the difference is worth being precise about.</strong></p>
+
+        <div class="not-a-bus">
+          <div class="nab-head">&nbsp;</div>
+          <div class="nab-head">The bus (Week 5)</div>
+          <div class="nab-head">The ALU output (Weeks 6&ndash;7)</div>
+
+          <div>An unselected source&hellip;</div>
+          <div><strong>releases</strong> the wire &mdash; drives nothing at all</div>
+          <div><strong>drives <code>00000000</code></strong></div>
+
+          <div>How the result forms</div>
+          <div>one driver at a time, by discipline</div>
+          <div>all seven at once, <strong>ORed together</strong></div>
+
+          <div>Two active sources</div>
+          <div>a conflict, even if they agree</div>
+          <div>cannot happen &mdash; the decoder raises exactly one enable</div>
+
+          <div>Why it works</div>
+          <div>tri-state buffers that can let go</div>
+          <div><code>0</code> is the identity for OR</div>
+        </div>
+
+        <p>Six legs driving <code>00000000</code> and one driving its answer, all ORed together, gives you that one answer. Nothing has to let go of anything, because nothing else is saying anything.</p>
+
+        <p><strong>So why does the machine use two different schemes?</strong> Because they solve different problems. A bus joins components that are far apart, added at different times, and not all known in advance &mdash; so it needs a discipline that works without any one component knowing what else is attached. The ALU's output joins seven legs that are fixed, adjacent, and designed together, with a decoder guaranteeing structurally that only one is live.</p>
+
+        <p><strong>Where you can guarantee a single driver by construction, OR is simpler and cheaper. Where you cannot, you pay for the buffer.</strong> That is an engineering judgment, not a rule, and it is the reason the same machine does it both ways.</p>
+      </div>
+
+      <!-- ========== WIDGET 1 — The ALU Bench ========== -->
+      <div class="widget-card" id="w-alu-bench">
+        <div class="widget-card__title">The ALU Bench</div>
+        <div class="widget-card__subtitle">All seven legs, live, at the same time. Change the opcode and watch which one gets through &mdash; and notice that the other six never stop.</div>
+
+        <div class="widget-input-row">
+          <div class="widget-input-group">
+            <label id="ab-a-lbl">Input A</label>
+            <div class="byte-toggle" id="ab-a" role="group" aria-labelledby="ab-a-lbl"></div>
+            <div class="byte-label" id="ab-a-read"></div>
+          </div>
+          <div class="widget-input-group">
+            <label id="ab-b-lbl">Input B</label>
+            <div class="byte-toggle" id="ab-b" role="group" aria-labelledby="ab-b-lbl"></div>
+            <div class="byte-label" id="ab-b-read"></div>
+          </div>
+        </div>
+
+        <div class="widget-input-row">
+          <div class="widget-input-group">
+            <label id="ab-op-lbl">Opcode</label>
+            <div class="opcode-row" id="ab-op" role="group" aria-labelledby="ab-op-lbl"></div>
+          </div>
+          <div class="widget-input-group">
+            <label id="ab-ci-lbl" for="ab-ci">Carry / shift in</label>
+            <button class="opbit" id="ab-ci" type="button" aria-pressed="false">CI = 0</button>
+            <div class="byte-label" id="ab-ci-role"></div>
+          </div>
+        </div>
+
+        <div class="preset-row">
+          <button class="preset-btn" type="button" data-preset="mixed">A=11001010 B=10110110</button>
+          <button class="preset-btn" type="button" data-preset="carry">A=11111111 B=00000001</button>
+          <button class="preset-btn" type="button" data-preset="equal">A = B</button>
+          <button class="preset-btn" type="button" data-preset="zero">result is zero</button>
+        </div>
+
+        <p class="byte-label" style="margin-top:var(--space-md)">All seven legs, computing right now:</p>
+        <div class="leg-grid" id="ab-legs"></div>
+
+        <div class="out-panel">
+          <div class="display-box__label">ALU output <code>C</code> &mdash; the one leg that gets through</div>
+          <div aria-live="polite" id="ab-out-live">
+            <div id="ab-out" class="out-panel__val">&mdash;</div>
+            <div class="flag-row" id="ab-flags"></div>
+          </div>
+        </div>
+
+        <p class="byte-label" id="ab-hint" style="margin-top:var(--space-sm)"></p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         6.3 — the cheap legs
+         ============================================================ -->
+    <section id="sec-6-3">
+      <h2>6.3 &nbsp; The cheap legs: AND, OR, NOT</h2>
+
+      <p>Three of the seven legs are the easiest circuits in this course, and it is worth saying so rather than padding them out.</p>
+
+      <p>You already know what an AND gate does with two bits. An 8-bit AND does it eight times, side by side: bit 0 of <code>A</code> with bit 0 of <code>B</code> into bit 0 of the output, bit 1 with bit 1 into bit 1, and so on up to bit 7. Eight AND gates, no wiring between them. <code>OR_8BIT</code> is the same with OR gates. <code>NOT_8BIT</code> takes one input and puts eight inverters in its path.</p>
+
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Circuit</th><th>Pins</th><th>Contents</th></tr></thead>
+          <tbody>
+            <tr><td><code>AND_8BIT</code></td><td><code>a</code>[8] <code>b</code>[8] &rarr; <code>out</code>[8]</td><td>8 AND gates</td></tr>
+            <tr><td><code>OR_8BIT</code></td><td><code>a</code>[8] <code>b</code>[8] &rarr; <code>out</code>[8]</td><td>8 OR gates</td></tr>
+            <tr><td><code>NOT_8BIT</code></td><td><code>a</code>[8] &rarr; <code>out</code>[8]</td><td>8 NOT gates</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Build all three, verify them, and move on. But before you do, there is something genuinely worth noticing about <em>why</em> they are easy, because it is the single most important idea in computer performance and you can see it clearly right here.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Independence is what makes a circuit fast</div>
+        <p>Bit 3 of an AND depends on bit 3 of <code>A</code>, bit 3 of <code>B</code>, and <strong>nothing else</strong>. It does not need to know what bit 2 decided. So when you change the inputs, all eight output bits settle <em>simultaneously</em> &mdash; one gate delay, and the whole byte is correct.</p>
+        <p>Now think about the adder. Bit 3 of a sum depends on the carry coming out of bit 2, which depends on bit 1, which depends on bit 0. The answer cannot appear all at once; it has to <em>ripple</em>. An 8-bit ripple-carry adder is eight gate delays deep, not one.</p>
+        <p><strong>Same eight bits. Eight times slower.</strong> And the reason is not the complexity of addition &mdash; it is that addition has a dependency and AND does not. In Week 15 you will meet the techniques real processors use to buy that time back, and every one of them is an attempt to break a dependency.</p>
+      </div>
+
+      <div class="callout">
+        <div class="callout__title">Verify these three before you go on</div>
+        <p>With <code>a = 11001010</code> and <code>b = 10110110</code>:</p>
+        <ul>
+          <li><code>AND_8BIT</code> &rarr; <code>10000010</code></li>
+          <li><code>OR_8BIT</code> &rarr; <code>11111110</code></li>
+          <li><code>NOT_8BIT</code> of <code>a</code> &rarr; <code>00110101</code></li>
+        </ul>
+      </div>
+
+      <!-- ========== WIDGET 2 — The Bitwise Bench ========== -->
+      <div class="widget-card" id="w-bitwise">
+        <div class="widget-card__title">The Bitwise Bench</div>
+        <div class="widget-card__subtitle">Each column is one gate, working on its own. Change a bit and watch that column &mdash; and only that column &mdash; change.</div>
+
+        <div class="widget-input-row">
+          <div class="widget-input-group">
+            <label id="bw-a-lbl">Input A</label>
+            <div class="byte-toggle" id="bw-a" role="group" aria-labelledby="bw-a-lbl"></div>
+          </div>
+          <div class="widget-input-group">
+            <label id="bw-b-lbl">Input B</label>
+            <div class="byte-toggle" id="bw-b" role="group" aria-labelledby="bw-b-lbl"></div>
+          </div>
+          <div class="widget-input-group">
+            <label for="bw-op">Operation</label>
+            <select id="bw-op">
+              <option value="AND">AND</option>
+              <option value="OR">OR</option>
+              <option value="NOT">NOT (input A only)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="bitcols" id="bw-cols" aria-live="polite"></div>
+        <p class="byte-label" id="bw-note"></p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         6.4 — the adder leg
+         ============================================================ -->
+    <section id="sec-6-4">
+      <h2>6.4 &nbsp; The leg you already built, and the one you don't need</h2>
+
+      <p>Open the <code>.circ</code> file you have been adding to since Week 2 and look at your list of tabs. <code>ADDER_8BIT</code> is already there. You built it in Week 3, out of eight instances of a <code>FULL_ADDER</code> you built once.</p>
+
+      <p><strong>Drop one instance of it into your ALU work and you are done with the adder leg.</strong> Its pins already match what the ALU needs: <code>a</code>[8], <code>b</code>[8], <code>cin</code>, <code>sum</code>[8], <code>cout</code>. You do not rebuild it, you do not modify it, you do not copy it into a new file.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">This is what the single-file rule has been for</div>
+        <p>Three weeks ago, building a full adder and then chaining eight of them probably felt like an exercise. It was not. It was <strong>component one of your final project</strong>, and today you spent twenty minutes getting the hardest leg of the ALU for free.</p>
+        <p>Everything in this course works like this. The decoder you built in Week 3 becomes RAM addressing in Week 8 and part of the control unit in Week 11. The register you built last week becomes R0 through R3, the program counter, the memory address register and the instruction register. <strong>Nothing you build gets thrown away.</strong></p>
+      </div>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/8bit-adder-alu-appearanceredrawn.jpg"
+             alt="The 8-bit adder redrawn as a component for use inside the ALU, showing 8-bit inputs a and b on the left, a single-bit carry-in below them, an 8-bit sum output on the right, and a single-bit carry-out.">
+        <figcaption class="circuit-canvas__caption">Your Week 3 adder, drawn as the ALU will use it. Wide pins for the bytes, narrow pins for the two carry bits.</figcaption>
+      </figure>
+
+      <h3>There is no subtract leg</h3>
+
+      <p>Go back to the opcode table in section 6.2 and look for subtraction. It is not there, and you are going to need to subtract &mdash; MIPS has a <code>sub</code> instruction and you will meet it on page 3.</p>
+
+      <p>The machine subtracts using the adder. Here is the whole trick:</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">A &minus; B is A + NOT(B) + 1</div>
+        <p>Run <code>B</code> through <code>NOT_8BIT</code>. Feed the result into the adder along with <code>A</code>. Set the carry-in to <strong>1</strong>. The sum that comes out is <code>A &minus; B</code>.</p>
+        <p><strong>Two legs you already have, plus a pin you already have, and no new hardware whatsoever.</strong></p>
+      </div>
+
+      <p>Why does it work? Because of a decision made in Week 1. Negating a two's-complement number means inverting every bit and adding one &mdash; so <code>NOT(B) + 1</code> <em>is</em> <code>&minus;B</code>, and <code>A + (&minus;B)</code> is what you wanted. The carry-in pin supplies the "+ 1" for free, which is why it is there.</p>
+
+      <p>In Week 1 the argument for two's complement was that it gives a single representation of zero and that "arithmetic just works." <strong>This is what that sentence was worth.</strong> Sign-magnitude would need a separate subtractor circuit, and a comparison to decide which operation to run. Two's complement makes the same adder do both jobs, and the only cost is one pin that was already there for carrying.</p>
+
+      <div class="callout callout--note">
+        <div class="callout__title">The carry-in comes up as 0, on purpose</div>
+        <p>The <code>cin</code> pin is set to <strong>pull-down</strong> in Logisim, which means it reads 0 after every simulation reset. So an ordinary addition is an ordinary addition without you doing anything, and setting <code>cin</code> to 1 is always a deliberate act. That saves you from the classic debugging afternoon spent chasing an adder that is quietly adding one.</p>
+        <p>Pull-down is a <em>property of the pin</em>, not a component &mdash; select the pin and change its "Pull behavior" attribute. Nothing is added to your circuit.</p>
+      </div>
+
+      <h3>Two different things both called overflow</h3>
+
+      <p>An 8-bit adder produces an 8-bit answer, and sometimes the right answer does not fit. But "does not fit" means two entirely different things depending on how you are reading the bytes, and they do not happen at the same times.</p>
+
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th></th><th>Unsigned overflow</th><th>Signed overflow</th></tr></thead>
+          <tbody>
+            <tr><td><strong>What it means</strong></td><td>the true sum is more than 255 and wrapped around</td><td>the two's-complement result has a sign the operands could not have produced</td></tr>
+            <tr><td><strong>How to detect it</strong></td><td>the carry-out of bit 7 is 1</td><td>both operands have the same sign and the result's sign differs from it</td></tr>
+            <tr><td><strong>Example</strong></td><td><code>11111111 + 00000001</code><br>255 + 1 &rarr; 0</td><td><code>01111111 + 00000001</code><br>+127 + 1 &rarr; &minus;128</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">These are separate conditions, and each example shows only one of them</div>
+        <p><code>11111111 + 00000001</code> sets the carry-out, so it is an <strong>unsigned</strong> overflow. Read as signed, it is &minus;1 + 1 = 0, which is perfectly correct &mdash; no signed overflow.</p>
+        <p><code>01111111 + 00000001</code> does <em>not</em> set the carry-out, so there is no unsigned overflow &mdash; 127 + 1 = 128 fits in eight bits unsigned. Read as signed, it is +127 + 1 = &minus;128, which is badly wrong. That is a <strong>signed</strong> overflow, and the carry-out says nothing about it.</p>
+        <p><strong>The adder cannot tell which one you meant.</strong> It does not know whether your bytes are signed. It produces both indications and leaves the question to the program &mdash; which is exactly why MIPS has both <code>add</code> and <code>addu</code>.</p>
+      </div>
+
+      <!-- ========== WIDGET 3 — Subtract Without a Subtractor ========== -->
+      <div class="widget-card" id="w-subtract">
+        <div class="widget-card__title">Subtract Without a Subtractor</div>
+        <div class="widget-card__subtitle">Step through <code>A &minus; B</code> built from a NOT leg, your Week 3 adder, and a carry-in of 1.</div>
+
+        <div class="widget-input-row">
+          <div class="widget-input-group">
+            <label id="sb-a-lbl">A</label>
+            <div class="byte-toggle" id="sb-a" role="group" aria-labelledby="sb-a-lbl"></div>
+          </div>
+          <div class="widget-input-group">
+            <label id="sb-b-lbl">B</label>
+            <div class="byte-toggle" id="sb-b" role="group" aria-labelledby="sb-b-lbl"></div>
+          </div>
+          <div class="widget-input-group">
+            <label for="sb-mode">Operation</label>
+            <select id="sb-mode">
+              <option value="sub">A &minus; B &nbsp;(NOT B, carry-in 1)</option>
+              <option value="add">A + B &nbsp;(plain addition)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="preset-row">
+          <button class="preset-btn" type="button" data-sbpreset="sov">01111111 + 00000001 &mdash; signed only</button>
+          <button class="preset-btn" type="button" data-sbpreset="uov">11111111 + 00000001 &mdash; unsigned only</button>
+          <button class="preset-btn" type="button" data-sbpreset="sub">40 &minus; 25</button>
+        </div>
+
+        <div class="sub-steps" id="sb-steps" aria-live="polite"></div>
+
+        <div class="step-nav">
+          <button class="widget-btn widget-btn--outline widget-btn--small" type="button" id="sb-prev">&larr; Back</button>
+          <button class="widget-btn widget-btn--primary widget-btn--small" type="button" id="sb-next">Next step &rarr;</button>
+          <button class="widget-btn widget-btn--outline widget-btn--small" type="button" id="sb-all">Show all</button>
+        </div>
+
+        <div class="ovf-pair" id="sb-ovf"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         6.5 — the shift legs
+         ============================================================ -->
+    <section id="sec-6-5">
+      <h2>6.5 &nbsp; Moving bits sideways</h2>
+
+      <p>The last two legs on this page move every bit one position along. A bit falls off one end, and a bit arrives at the other.</p>
+
+      <p>Take <code>10101010</code>. Shift it <strong>left</strong> and every bit moves up one place: the <code>1</code> that was in bit 7 falls off the top, and bit 0 is left empty and has to be filled from somewhere. Shift it <strong>right</strong> and every bit moves down one: the <code>0</code> from bit 0 falls off the bottom and bit 7 needs filling.</p>
+
+      <p>"Falls off" and "needs filling" are exactly the two carry pins from section 6.2, doing their second job:</p>
+
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Leg</th><th>Every bit moves</th><th><code>shin</code> fills</th><th><code>shout</code> catches</th></tr></thead>
+          <tbody>
+            <tr><td><code>SHIFT_LEFT</code></td><td>bit <em>i</em> &rarr; bit <em>i</em>+1</td><td>bit 0</td><td>bit 7</td></tr>
+            <tr><td><code>SHIFT_RIGHT</code></td><td>bit <em>i</em> &rarr; bit <em>i</em>&minus;1</td><td>bit 7</td><td>bit 0</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Inside the leg these pins are called <code>shin</code> and <code>shout</code>, because this circuit is not adding anything and borrowing the adder's vocabulary would be confusing. When the ALU is assembled in Week 7 they connect to the shared <code>CI</code> and <code>CO</code> pins.</p>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Building the shift legs</div>
+        <p>A shift is <em>re-indexing</em> &mdash; it does not compute anything. Use a splitter to break the 8-bit input into individual bits, wire each one across to the next position, put a constant or the <code>shin</code> pin on the vacated end, and take the departing bit out to <code>shout</code>. No gates at all.</p>
+        <p>The version of this circuit in the reference design is built differently: two <code>REGISTER_8BIT</code> instances with <code>set</code> and <code>enable</code> tied permanently to 1, so that each one passes its input straight through, with the offset wiring between them. <strong>Either construction is accepted for the checkpoint, provided the pin names and behaviour match the table above.</strong> If your instructor tells you the two-register version is required for your file, build that one.</p>
+      </div>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/shift-left-conceptual-circuit.png"
+             alt="A conceptual diagram of the shift-left circuit: an 8-bit value enters on the left, each bit line crosses up one position, the bit leaving the top becomes the shift-out signal, and the vacated bottom position is fed by the shift-in signal.">
+        <figcaption class="circuit-canvas__caption">Shift left, conceptually. Every line crosses one position; one leaves at the top, one arrives at the bottom.</figcaption>
+      </figure>
+
+      <div class="callout">
+        <div class="callout__title">Verify both legs</div>
+        <p>With <code>a = 10101010</code> and <code>shin = 0</code>:</p>
+        <ul>
+          <li><code>SHIFT_LEFT</code> &rarr; <code>out = 01010100</code>, <code>shout = 1</code></li>
+          <li><code>SHIFT_RIGHT</code> &rarr; <code>out = 01010101</code>, <code>shout = 0</code></li>
+        </ul>
+        <p>Then set <code>shin = 1</code> and check that the bit actually arrives at the end you expect.</p>
+      </div>
+
+      <h3>Shifting looks like multiplying and dividing. Sometimes it is.</h3>
+
+      <p>Shift <code>00000110</code> (6) left and you get <code>00001100</code> (12). Shift it right and you get <code>00000011</code> (3). That is not a coincidence &mdash; in base 2, moving every digit one place left multiplies by 2, exactly as moving a decimal digit left multiplies by 10.</p>
+
+      <p>This is genuinely useful. A shift is one of the fastest things a processor can do, and multiplication is one of the slowest, so compilers turn <code>x * 8</code> into three left shifts without being asked.</p>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">A logical right shift divides <em>unsigned</em> values by two. It does something else to signed ones.</div>
+        <p>Take <code>10101010</code> and shift right with <code>shin = 0</code>. You get <code>01010101</code>.</p>
+        <p><strong>Read as unsigned:</strong> 170 &rarr; 85. Exactly half. Correct.</p>
+        <p><strong>Read as signed:</strong> &minus;86 &rarr; +85. Not half of &minus;86, and not even negative any more. The sign bit was overwritten by the zero you shifted in.</p>
+        <p>This is a different failure from unsigned overflow in section 6.4, and it fails for a different reason &mdash; nothing was lost off the end that mattered, the problem is that bit 7 <em>means something</em> in a signed value and the shift treated it as an ordinary bit.</p>
+        <p>The fix is a shift that copies the sign bit back into itself instead of shifting a zero in. MIPS calls it <code>sra</code>, "shift right arithmetic." <strong>Your machine does not have one</strong> &mdash; it has the logical shift only, and that is a real limit of this design rather than something you will add later.</p>
+      </div>
+
+      <!-- ========== WIDGET 4 — The Shift Bench ========== -->
+      <div class="widget-card" id="w-shift">
+        <div class="widget-card__title">The Shift Bench</div>
+        <div class="widget-card__subtitle">Watch the bit that arrives and the bit that leaves &mdash; and watch the two readouts at the bottom disagree.</div>
+
+        <div class="widget-input-row">
+          <div class="widget-input-group">
+            <label id="sh-a-lbl">Input</label>
+            <div class="byte-toggle" id="sh-a" role="group" aria-labelledby="sh-a-lbl"></div>
+          </div>
+          <div class="widget-input-group">
+            <label for="sh-dir">Direction</label>
+            <select id="sh-dir">
+              <option value="right">SHIFT RIGHT</option>
+              <option value="left">SHIFT LEFT</option>
+            </select>
+          </div>
+          <div class="widget-input-group">
+            <label id="sh-si-lbl" for="sh-si">Shift in</label>
+            <button class="opbit" id="sh-si" type="button" aria-pressed="false">shin = 0</button>
+          </div>
+        </div>
+
+        <div class="preset-row">
+          <button class="preset-btn" type="button" data-shpreset="170">10101010</button>
+          <button class="preset-btn" type="button" data-shpreset="6">00000110 &mdash; a small positive</button>
+          <button class="preset-btn" type="button" data-shpreset="1">00000001</button>
+        </div>
+
+        <div class="shiftviz" aria-live="polite">
+          <div class="shiftviz__edge" id="sh-in-lbl"></div>
+          <div>
+            <div class="byte-label">before</div>
+            <div class="shiftviz__bits" id="sh-before"></div>
+            <div class="byte-label" style="margin-top:var(--space-sm)">after</div>
+            <div class="shiftviz__bits" id="sh-after"></div>
+          </div>
+          <div class="shiftviz__edge" id="sh-out-lbl"></div>
+        </div>
+
+        <div class="dual-read" id="sh-dual"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Where you are
+         ============================================================ -->
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+
+      <p>Five of the seven legs are built: <code>AND_8BIT</code>, <code>OR_8BIT</code>, <code>NOT_8BIT</code>, <code>SHIFT_LEFT</code>, <code>SHIFT_RIGHT</code>, plus the adder you already owned. Test each one on its own before moving on &mdash; a leg that is wrong now is a leg that is wrong inside an assembled ALU in Week 7, where it will be very much harder to find.</p>
+
+      <p>The two that remain are the interesting ones. The XOR leg turns out to answer three questions at once rather than one, and the answers it gives are what will eventually let your CPU make a decision.</p>
+
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 6, Page 1
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <!-- ============================================================
+       Kernel capability guard
+       ============================================================
+       Deliberately inline and dependency-free: it has to work on exactly
+       the occasion when shared/logic.js and shared/style.css are the
+       stale ones. A page whose widgets are silently dead looks like bad
+       content rather than a bad deploy, and that misdiagnosis costs a
+       review cycle. This one says which file is behind.
+       ============================================================ -->
+  <script>
+  (function () {
+    var NEED = ['alu'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive parts of this page are not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.alu</code>), so the widgets below have nothing to run on. The written content is unaffected ' +
+      'and still correct. <em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.alu) { return; }
+    var A = L.alu;
+
+    /* ---------- shared helpers ----------
+       Words are MSB-first arrays throughout, matching CSCLogic's word
+       section. str() and num() are the only two places this file
+       converts, so a bit-order mistake has exactly one home. */
+    function str(w) { return w.join(''); }
+    function num(w) { var n = 0, i; for (i = 0; i < 8; i++) { n = (n << 1) | w[i]; } return n; }
+    function signed(w) { var n = num(w); return w[0] ? n - 256 : n; }
+    function fromNum(v) { var o = [], i; for (i = 7; i >= 0; i--) { o.push((v >> i) & 1); } return o; }
+
+    /* A row of eight toggle buttons. Returns a live word array; the
+       caller supplies onChange. Keyboard: the buttons are real <button>
+       elements, so Enter and Space work without extra handlers. */
+    function byteToggle(el, word, onChange) {
+      el.innerHTML = '';
+      for (var i = 0; i < 8; i++) {
+        (function (i) {
+          var b = document.createElement('button');
+          b.type = 'button';
+          b.textContent = word[i];
+          b.setAttribute('aria-pressed', word[i] ? 'true' : 'false');
+          b.setAttribute('aria-label', 'bit ' + (7 - i) + ', currently ' + word[i]);
+          b.addEventListener('click', function () {
+            word[i] = word[i] ? 0 : 1;
+            b.textContent = word[i];
+            b.setAttribute('aria-pressed', word[i] ? 'true' : 'false');
+            b.setAttribute('aria-label', 'bit ' + (7 - i) + ', currently ' + word[i]);
+            onChange();
+          });
+          el.appendChild(b);
+        }(i));
+      }
+    }
+    function repaintToggle(el, word) {
+      var bs = el.querySelectorAll('button'), i;
+      for (i = 0; i < 8; i++) {
+        bs[i].textContent = word[i];
+        bs[i].setAttribute('aria-pressed', word[i] ? 'true' : 'false');
+        bs[i].setAttribute('aria-label', 'bit ' + (7 - i) + ', currently ' + word[i]);
+      }
+    }
+
+    /* ============================================================
+       WIDGET 1 — The ALU Bench
+       ============================================================
+       The page's argument is that all seven legs run all the time. So
+       this widget renders all seven, every time, from
+       CSCLogic.alu.evaluate -- which genuinely computes all seven. It
+       does NOT render the selected leg and grey placeholders for the
+       rest; that would illustrate the opposite of the claim. */
+    (function () {
+      var host = document.getElementById('w-alu-bench');
+      if (!host) { return; }
+
+      var a = fromNum(0xCA), b = fromNum(0xB6), cin = 0, op = 0;
+
+      var elA = document.getElementById('ab-a'), elB = document.getElementById('ab-b');
+      var elLegs = document.getElementById('ab-legs'), elOut = document.getElementById('ab-out');
+      var elFlags = document.getElementById('ab-flags'), elHint = document.getElementById('ab-hint');
+      var elCi = document.getElementById('ab-ci'), elCiRole = document.getElementById('ab-ci-role');
+      var elAread = document.getElementById('ab-a-read'), elBread = document.getElementById('ab-b-read');
+      var elOp = document.getElementById('ab-op');
+
+      /* Opcode bits are labelled A, B, C top-to-bottom to match the
+         circuit-appearance figure the students will be looking at. */
+      var opBtns = [];
+      ['A', 'B', 'C'].forEach(function (nm, idx) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'opbit';
+        btn.setAttribute('aria-pressed', 'false');
+        btn.dataset.idx = idx;
+        btn.addEventListener('click', function () {
+          op ^= (1 << (2 - idx));
+          render();
+        });
+        opBtns.push({ btn: btn, nm: nm, idx: idx });
+        elOp.appendChild(btn);
+      });
+      var opName = document.createElement('span');
+      opName.style.cssText = 'font-weight:700;margin-left:.5rem';
+      elOp.appendChild(opName);
+
+      elCi.addEventListener('click', function () { cin = cin ? 0 : 1; render(); });
+
+      byteToggle(elA, a, render);
+      byteToggle(elB, b, render);
+
+      host.querySelectorAll('[data-preset]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var p = btn.dataset.preset;
+          if (p === 'mixed') { a = fromNum(0xCA); b = fromNum(0xB6); op = 0; cin = 0; }
+          if (p === 'carry') { a = fromNum(0xFF); b = fromNum(0x01); op = 0; cin = 0; }
+          if (p === 'equal') { a = fromNum(0x3C); b = fromNum(0x3C); op = 6; cin = 0; }
+          if (p === 'zero')  { a = fromNum(0x0F); b = fromNum(0xF0); op = 4; cin = 0; }
+          repaintToggle(elA, a); repaintToggle(elB, b);
+          render();
+        });
+      });
+
+      function render() {
+        var r = A.evaluate(op, a, b, cin);
+
+        opBtns.forEach(function (o) {
+          var on = (op >> (2 - o.idx)) & 1;
+          o.btn.textContent = o.nm + ' = ' + on;
+          o.btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+        opName.textContent = r.selected.bits + (r.selected.name ? ' — ' + r.selected.name : ' — unassigned');
+
+        elCi.textContent = 'CI = ' + cin;
+        elCi.setAttribute('aria-pressed', cin ? 'true' : 'false');
+        /* The relabelling IS the shared-pin lesson; it needs no prose. */
+        elCiRole.textContent = r.selected.cinRole
+          ? 'on this operation CI means: ' + r.selected.cinRole
+          : 'this operation does not use CI';
+
+        elAread.textContent = 'A = ' + num(a) + ' unsigned, ' + signed(a) + ' signed';
+        elBread.textContent = 'B = ' + num(b) + ' unsigned, ' + signed(b) + ' signed';
+
+        elLegs.innerHTML = '';
+        A.OPS.forEach(function (o) {
+          if (!o.name) { return; }
+          var leg = r.legs[o.name];
+          var card = document.createElement('div');
+          var isSel = (o.code === op);
+          card.className = 'leg-card' + (isSel ? ' leg-card--selected' : '');
+          var extra = '';
+          if (leg.cout !== null && leg.cout !== undefined) {
+            extra = (o.name === 'ADD' ? 'cout' : 'shout') + ' = ' + leg.cout;
+          }
+          card.innerHTML =
+            '<div class="leg-card__name"><span>' + o.name + '</span><span>' + o.bits + '</span></div>' +
+            '<div class="leg-card__val">' + str(leg.out) + '</div>' +
+            '<div class="leg-card__extra">' + (extra || '&nbsp;') + '</div>';
+          elLegs.appendChild(card);
+        });
+
+        if (r.out === null) {
+          elOut.className = 'out-panel__float';
+          elOut.textContent = '— nothing driving —';
+        } else {
+          elOut.className = 'out-panel__val';
+          elOut.textContent = str(r.out) + '   (' + num(r.out) + ' unsigned, ' + signed(r.out) + ' signed)';
+        }
+
+        function pill(label, val) {
+          if (val === null) { return '<span class="flag-pill flag-pill--na">' + label + ' = —</span>'; }
+          return '<span class="flag-pill' + (val ? ' flag-pill--on' : '') + '">' + label + ' = ' + val + '</span>';
+        }
+        elFlags.innerHTML =
+          pill('CO', r.cout) +
+          pill('AL (A &gt; B)', r.al) +
+          pill('EQ (A = B)', r.eq) +
+          pill('Z (result is zero)', r.z);
+
+        elHint.textContent = (r.out === null)
+          ? 'Opcode 111 enables no leg. The seven results above are still being computed — nothing is carrying one of them to the output.'
+          : 'Six of the seven values above are being discarded right now. They are still correct, and still current.';
+      }
+
+      render();
+    }());
+
+    /* ============================================================
+       WIDGET 2 — The Bitwise Bench
+       ============================================================ */
+    (function () {
+      var host = document.getElementById('w-bitwise');
+      if (!host) { return; }
+      var a = fromNum(0xCA), b = fromNum(0xB6);
+      var elA = document.getElementById('bw-a'), elB = document.getElementById('bw-b');
+      var elOp = document.getElementById('bw-op'), elCols = document.getElementById('bw-cols');
+      var elNote = document.getElementById('bw-note');
+
+      byteToggle(elA, a, render);
+      byteToggle(elB, b, render);
+      elOp.addEventListener('change', render);
+
+      function render() {
+        var mode = elOp.value;
+        var out = (mode === 'AND') ? A.and8(a, b) : (mode === 'OR') ? A.or8(a, b) : A.not8(a);
+        var unary = (mode === 'NOT');
+        elB.style.opacity = unary ? '.35' : '1';
+        elB.querySelectorAll('button').forEach(function (btn) { btn.disabled = unary; });
+
+        elCols.innerHTML = '';
+        for (var i = 0; i < 8; i++) {
+          var c = document.createElement('div');
+          c.className = 'bitcol';
+          c.innerHTML =
+            '<div class="bc-idx">bit ' + (7 - i) + '</div>' +
+            '<div class="bc-in">' + a[i] + '</div>' +
+            (unary ? '' : '<div class="bc-in">' + b[i] + '</div>') +
+            '<div class="bc-op">' + mode + '</div>' +
+            '<div class="bc-out bc-out--lit">' + out[i] + '</div>';
+          elCols.appendChild(c);
+        }
+        elNote.textContent = unary
+          ? 'Eight inverters, each one minding its own bit. Column 3 has no idea what column 2 is doing.'
+          : 'Eight ' + mode + ' gates side by side. Change one input bit and exactly one column changes — no column depends on any other, which is why all eight settle at the same instant.';
+      }
+      render();
+    }());
+
+    /* ============================================================
+       WIDGET 3 — Subtract Without a Subtractor
+       ============================================================
+       Two overflow indicators, always both present, never merged.
+       Standards Section 2 — this is the widget that rule was written
+       for, and a single "overflow" light here would be the defect. */
+    (function () {
+      var host = document.getElementById('w-subtract');
+      if (!host) { return; }
+      var a = fromNum(40), b = fromNum(25), step = 4;
+      var elA = document.getElementById('sb-a'), elB = document.getElementById('sb-b');
+      var elMode = document.getElementById('sb-mode'), elSteps = document.getElementById('sb-steps');
+      var elOvf = document.getElementById('sb-ovf');
+
+      byteToggle(elA, a, function () { step = 4; render(); });
+      byteToggle(elB, b, function () { step = 4; render(); });
+      elMode.addEventListener('change', function () { step = 4; render(); });
+
+      document.getElementById('sb-next').addEventListener('click', function () { if (step < 4) { step++; render(); } });
+      document.getElementById('sb-prev').addEventListener('click', function () { if (step > 0) { step--; render(); } });
+      document.getElementById('sb-all').addEventListener('click', function () { step = 4; render(); });
+
+      host.querySelectorAll('[data-sbpreset]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var p = btn.dataset.sbpreset;
+          if (p === 'sov') { a = fromNum(0x7F); b = fromNum(0x01); elMode.value = 'add'; }
+          if (p === 'uov') { a = fromNum(0xFF); b = fromNum(0x01); elMode.value = 'add'; }
+          if (p === 'sub') { a = fromNum(40);   b = fromNum(25);   elMode.value = 'sub'; }
+          repaintToggle(elA, a); repaintToggle(elB, b);
+          step = 4; render();
+        });
+      });
+
+      function render() {
+        var sub = (elMode.value === 'sub');
+        var operand = sub ? A.not8(b) : b;
+        var carry = sub ? 1 : 0;
+        var r = A.addFlags(a, operand, carry);
+
+        var rows = [
+          { lbl: 'A', val: str(a) },
+          { lbl: sub ? 'B, before inverting' : 'B', val: str(b) },
+          { lbl: sub ? 'NOT B — the NOT leg' : 'straight to the adder', val: str(operand) },
+          { lbl: 'carry-in', val: String(carry) },
+          { lbl: sub ? 'A + NOT(B) + 1' : 'A + B', val: str(r.out) + '   cout = ' + r.cout }
+        ];
+
+        elSteps.innerHTML = '';
+        rows.forEach(function (row, i) {
+          var d = document.createElement('div');
+          d.className = 'sub-step' + (i > step ? ' sub-step--future' : (i === step ? ' sub-step--now' : ''));
+          d.innerHTML = '<span class="sub-step__lbl">' + row.lbl + '</span><span>' + row.val + '</span>';
+          elSteps.appendChild(d);
+        });
+
+        var uo = r.unsignedOverflow, so = r.signedOverflow;
+        elOvf.innerHTML =
+          '<div class="ovf ' + (uo ? 'ovf--on' : 'ovf--off') + '">' +
+            '<div class="ovf__name">Unsigned overflow: ' + (uo ? 'YES' : 'no') + '</div>' +
+            '<div class="ovf__why">Detected from the carry-out of bit 7. ' +
+            (uo ? 'The true sum is over 255 and has wrapped.' : 'The true sum fits in eight bits unsigned.') +
+            '</div></div>' +
+          '<div class="ovf ' + (so ? 'ovf--on' : 'ovf--off') + '">' +
+            '<div class="ovf__name">Signed overflow: ' + (so ? 'YES' : 'no') + '</div>' +
+            '<div class="ovf__why">Detected from the operand signs versus the result sign. ' +
+            (so ? 'Both operands had the same sign and the result does not — the two’s-complement answer is wrong.'
+                : 'The result’s sign is consistent with the operands.') +
+            '</div></div>';
+
+        if (step >= 4) {
+          var msg = document.createElement('div');
+          msg.className = 'byte-label';
+          msg.style.marginTop = 'var(--space-sm)';
+          msg.setAttribute('aria-live', 'polite');
+          msg.textContent = 'Result read as unsigned: ' + num(r.out) + '.  Read as signed: ' + signed(r.out) + '.';
+          elSteps.appendChild(msg);
+        }
+      }
+      render();
+    }());
+
+    /* ============================================================
+       WIDGET 4 — The Shift Bench
+       ============================================================ */
+    (function () {
+      var host = document.getElementById('w-shift');
+      if (!host) { return; }
+      var a = fromNum(0xAA), shin = 0;
+      var elA = document.getElementById('sh-a'), elDir = document.getElementById('sh-dir');
+      var elSi = document.getElementById('sh-si');
+      var elBefore = document.getElementById('sh-before'), elAfter = document.getElementById('sh-after');
+      var elInL = document.getElementById('sh-in-lbl'), elOutL = document.getElementById('sh-out-lbl');
+      var elDual = document.getElementById('sh-dual');
+
+      byteToggle(elA, a, render);
+      elDir.addEventListener('change', render);
+      elSi.addEventListener('click', function () { shin = shin ? 0 : 1; render(); });
+      host.querySelectorAll('[data-shpreset]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          a = fromNum(parseInt(btn.dataset.shpreset, 10));
+          repaintToggle(elA, a); render();
+        });
+      });
+
+      function bits(el, word, newIdx) {
+        el.innerHTML = '';
+        for (var i = 0; i < 8; i++) {
+          var s = document.createElement('span');
+          s.textContent = word[i];
+          if (i === newIdx) { s.className = 'sv-new'; }
+          el.appendChild(s);
+        }
+      }
+
+      function render() {
+        var left = (elDir.value === 'left');
+        var r = left ? A.shiftLeft(a, shin) : A.shiftRight(a, shin);
+        elSi.textContent = 'shin = ' + shin;
+        elSi.setAttribute('aria-pressed', shin ? 'true' : 'false');
+
+        bits(elBefore, a, -1);
+        bits(elAfter, r.out, left ? 7 : 0);
+
+        var inTxt = '<span class="byte-label">shin into bit ' + (left ? '0' : '7') + '</span><b>' + shin + '</b>';
+        var outTxt = '<span class="byte-label">shout from bit ' + (left ? '7' : '0') + '</span><b>' + r.shout + '</b>';
+        elInL.innerHTML = left ? outTxt : inTxt;
+        elOutL.innerHTML = left ? inTxt : outTxt;
+
+        var uBefore = num(a), uAfter = num(r.out);
+        var sBefore = signed(a), sAfter = signed(r.out);
+        var uOK = left ? (uAfter === ((uBefore * 2) & 255)) : (uAfter === Math.floor(uBefore / 2));
+        var sOK = left ? (sAfter === (((sBefore * 2) << 24 >> 24))) : (sAfter === Math.floor(sBefore / 2));
+
+        elDual.innerHTML =
+          '<div><div class="dr-lbl">read as unsigned</div>' +
+            '<div class="dr-val">' + uBefore + ' &rarr; ' + uAfter + '</div>' +
+            '<div class="dr-note ' + (uOK ? 'dr-ok' : 'dr-bad') + '">' +
+            (uOK ? (left ? 'exactly doubled' : 'exactly halved') : (left ? 'a bit was lost off the top' : 'rounded down')) +
+            '</div></div>' +
+          '<div><div class="dr-lbl">read as signed</div>' +
+            '<div class="dr-val">' + sBefore + ' &rarr; ' + sAfter + '</div>' +
+            '<div class="dr-note ' + (sOK ? 'dr-ok' : 'dr-bad') + '">' +
+            (sOK ? (left ? 'doubled' : 'halved') : 'NOT half or double — the sign bit was treated as an ordinary bit') +
+            '</div></div>';
+      }
+      render();
+    }());
+
+  })();
+  </script>
+</body>
+</html>

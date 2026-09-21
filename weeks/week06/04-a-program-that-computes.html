@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w6-04">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 6: A Program That Computes</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ---------- */
+    .asm {
+      font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.55;
+      background: var(--color-code-bg); border: 1px solid var(--color-border);
+      border-radius: var(--radius); padding: var(--space-md);
+      overflow-x: auto; white-space: pre; margin: var(--space-md) 0;
+    }
+    .asm .cm { color: var(--color-text-muted); }
+    .asm .dir { color: var(--color-accent-hov); font-weight: 700; }
+    .asm .lbl { color: var(--color-primary); font-weight: 700; }
+
+    .regtable { width: 100%; border-collapse: collapse; margin: var(--space-md) 0; font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .regtable th, .regtable td { text-align: left; padding: var(--space-xs) var(--space-sm); border-bottom: 1px solid var(--color-border); }
+    .regtable th { background: var(--color-code-bg); font-family: var(--font-sans); }
+
+    .halves { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin: var(--space-md) 0; }
+    @media (max-width: 660px) { .halves { grid-template-columns: 1fr; } }
+    .halves > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
+    .halves h3 { margin-top: 0; }
+    .halves ul { margin-bottom: 0; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 6 &rsaquo; <span>Page 4 — A Program That Computes</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>A Program That Computes</h1>
+    <p><strong>Sections 6.12 – 6.13</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~0.7 hours</p>
+
+    <!-- ============================================================
+         6.12 — the program
+         ============================================================ -->
+    <section id="sec-6-12">
+      <h2>6.12 &nbsp; Ten instructions, one program</h2>
+
+      <p>Last week's MARS program moved values around and printed one. This one computes with them. Type it in, assemble it, and single-step through it &mdash; every instruction in it is one you met on page 3, and every one of them is a leg you built.</p>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">The program layout for this course</div>
+        <p><strong><code>.data</code> comes first, then <code>.text</code>. There is no <code>main:</code> label and no <code>.globl main</code>.</strong> Execution starts at the first instruction in <code>.text</code>.</p>
+        <p>You will find plenty of MIPS examples online, and in older material, that open with <code>.globl main</code> and a <code>main:</code> label. That style exists because of how programs get linked together in a full toolchain, and MARS accepts it &mdash; but this course does not use it, the video playlist you were pointed at does not use it, and mixing the two conventions inside one file is a reliable way to produce a program that assembles and then does not run the way you expect. <strong>Pick this layout and keep it for the rest of the course.</strong></p>
+      </div>
+
+      <div class="asm"><span class="dir">        .data</span>
+<span class="lbl">alpha:</span>  <span class="dir">.word</span>  250
+<span class="lbl">beta:</span>   <span class="dir">.word</span>  175
+<span class="lbl">gamma:</span>  <span class="dir">.word</span>  68
+
+<span class="dir">        .text</span>
+        lw    $t0, alpha        <span class="cm"># $t0 = 250</span>
+        lw    $t1, beta         <span class="cm"># $t1 = 175</span>
+        lw    $t2, gamma        <span class="cm"># $t2 = 68</span>
+
+        add   $s0, $t0, $t1     <span class="cm"># 250 + 175 = 425      -- ADD leg</span>
+        sub   $s0, $s0, $t2     <span class="cm"># 425 - 68  = 357      -- NOT leg, then ADD with carry-in 1</span>
+
+        andi  $s1, $s0, 0x00FF  <span class="cm"># keep the low byte    -- AND leg, immediate ZERO-extended</span>
+        ori   $s2, $s0, 0x0F00  <span class="cm"># set bits 8-11        -- OR leg, immediate ZERO-extended</span>
+
+        and   $t3, $s1, $s2     <span class="cm"># register form of the same leg</span>
+        or    $t4, $s1, $s2     <span class="cm"># register form of the same leg</span>
+        nor   $s3, $s1, $s2     <span class="cm"># OR leg, then NOT leg</span>
+
+        slt   $s4, $s1, $s2     <span class="cm"># is $s1 &lt; $s2?         -- comparator AL flag</span>
+        slti  $s5, $s1, 100     <span class="cm"># is $s1 &lt; 100?         -- same flag, immediate SIGN-extended</span>
+        addi  $t5, $s1, -1      <span class="cm"># ADD leg, immediate SIGN-extended</span>
+
+        li    $v0, 1            <span class="cm"># service 1: print integer</span>
+        add   $a0, $s0, $zero   <span class="cm"># copy $s0 into $a0 by adding zero to it</span>
+        syscall
+
+        li    $v0, 10           <span class="cm"># service 10: exit</span>
+        syscall</div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Two small things in there worth noticing</div>
+        <p><strong><code>add $a0, $s0, $zero</code> is how you copy a register.</strong> MIPS has no move instruction, and it does not need one: <code>$zero</code> always reads as 0, so adding it to something and storing the result somewhere else is a copy. You will see MARS accept <code>move $a0, $s0</code> &mdash; that is a <em>pseudo-instruction</em>, and the assembler turns it into exactly the line above. Writing it out yourself once is worth doing.</p>
+        <p><strong><code>andi</code> and <code>ori</code> use the same 16-bit field and both zero-extend it</strong>, while <code>slti</code> and <code>addi</code> two lines below sign-extend theirs. Same format, same field, opposite treatment &mdash; and the <code>-1</code> in the last <code>addi</code> is the one that would break if it were zero-extended.</p>
+      </div>
+
+      <h3>What should be in the registers when it stops</h3>
+
+      <p>Run it and check the register window against this. If any row disagrees, the instruction above it is the one to look at &mdash; do not go hunting further down.</p>
+
+      <div class="table-scroll">
+        <table class="regtable">
+          <thead><tr><th>Register</th><th>Decimal</th><th>Hex</th><th>Where it came from</th></tr></thead>
+          <tbody>
+            <tr><td>$s0</td><td>357</td><td>0x00000165</td><td>(250 + 175) &minus; 68</td></tr>
+            <tr><td>$s1</td><td>101</td><td>0x00000065</td><td>0x165 AND 0x0FF</td></tr>
+            <tr><td>$s2</td><td>3941</td><td>0x00000F65</td><td>0x165 OR 0xF00</td></tr>
+            <tr><td>$t3</td><td>101</td><td>0x00000065</td><td>0x065 AND 0xF65</td></tr>
+            <tr><td>$t4</td><td>3941</td><td>0x00000F65</td><td>0x065 OR 0xF65</td></tr>
+            <tr><td>$s3</td><td>&minus;3942</td><td>0xFFFFF09A</td><td>NOT (0x065 OR 0xF65)</td></tr>
+            <tr><td>$s4</td><td>1</td><td>0x00000001</td><td>101 &lt; 3941 is true</td></tr>
+            <tr><td>$s5</td><td>0</td><td>0x00000000</td><td>101 &lt; 100 is false</td></tr>
+            <tr><td>$t5</td><td>100</td><td>0x00000064</td><td>101 + (&minus;1)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        <div class="callout__title"><code>$s3</code> is the interesting row</div>
+        <p>It is negative, and nothing in the program said anything about negative numbers. <code>nor</code> inverted every bit of a small positive value, which turns all the leading zeros into leading ones &mdash; and a leading 1 in two's complement is a negative number.</p>
+        <p>The bits are exactly what you would expect; the <em>reading</em> is the surprise. MARS is showing you a signed interpretation of a result that was never meant to be a number at all. This is the Week 1 point about a byte meaning whatever its context says it means, arriving a second time in a place where it actually matters.</p>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Step it, do not just run it</div>
+        <p>Assemble, then use single-step and watch the register window after each instruction rather than only at the end. Two things are worth watching for specifically: the moment <code>sub</code> executes (the value changes as if a subtractor existed, and you know one does not), and the moment <code>slt</code> executes (a whole register becomes 1, from a single wire).</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         6.13 — synthesis
+         ============================================================ -->
+    <section id="sec-6-13">
+      <h2>6.13 &nbsp; One machine, two halves</h2>
+
+      <p>Take stock of what this week actually added.</p>
+
+      <div class="halves">
+        <div>
+          <h3>Hardware</h3>
+          <ul>
+            <li>Three bitwise legs: AND, OR, NOT</li>
+            <li>The adder leg &mdash; instantiated, not built</li>
+            <li>Two shift legs</li>
+            <li>A one-bit comparator, chained into an eight-bit one</li>
+            <li>The zero function</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Assembly</h3>
+          <ul>
+            <li>Six R-type instructions: <code>add sub and or nor slt</code></li>
+            <li>Four I-type: <code>addi andi ori slti</code></li>
+            <li>Sign-extension versus zero-extension</li>
+            <li>A program that computes rather than one that moves</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">You now own every transformation your CPU will ever perform on data</div>
+        <p>Not most of them. All of them. Weeks 8 through 17 add memory, a control unit, a datapath and a program counter &mdash; but nothing in any of those weeks does anything <em>to</em> a byte that is not on the list above. Every arithmetic and logical operation your finished machine can perform is a leg you built this week.</p>
+        <p>The rest of the course is about getting the right bytes to those legs, at the right moment, in the order a program asks for.</p>
+      </div>
+
+      <h3>What you cannot do yet, and it is one thing twice</h3>
+
+      <p>Your seven legs all compute, all the time, and every one of their answers reaches the same place. Nothing chooses. You have been choosing by hand all week &mdash; setting an opcode yourself and reading the leg you wanted.</p>
+
+      <p>And your program runs straight down the page. Every instruction executes, in order, exactly once. It cannot skip anything and it cannot repeat anything, which means it cannot make a decision or a loop. Nothing chooses.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Week 7 &mdash; selection, from both directions</div>
+        <p><strong>Hardware.</strong> The 3&times;8 decoder and the output-selection stage, which together make your nine circuits into one <code>ALU_8BIT</code>. That is <strong>Logisim Checkpoint 2b</strong>, and it is where <code>ENABLE_8BIT</code> from Week 5 comes back &mdash; seven of them, one per leg.</p>
+        <p><strong>Assembly.</strong> Branches and jumps: instructions whose effect is to change which instruction runs next. They are how an <code>if</code> and a <code>while</code> exist at all, and the wire they read is the <code>EQ</code> flag off the comparator you built this week.</p>
+        <p>Two tracks, one idea, arriving in the same week. That is not a coincidence &mdash; it is the same missing capability seen from the two ends, which is what this whole phase of the course is built to show you.</p>
+      </div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Before you go: your ALU is not assembled, and it should not be</div>
+        <p>You finish this week with <strong>nine separate circuits and no ALU</strong>. That is the checkpoint, in full, and it is not an unfinished job.</p>
+        <p>Test each leg on its own now, while it is a small circuit with four pins that you can reason about completely. Next week seven of them get wired to one output with a decoder in between, and a leg with a quiet fault in it becomes very much harder to find.</p>
+      </div>
+
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 6, Page 4
+  </footer>
+
+</body>
+</html>

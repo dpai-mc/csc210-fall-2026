@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w6-03">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 6: Saying It in MIPS</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ---------- */
+    .instr-card {
+      border: 1px solid var(--color-border);
+      border-left: 4px solid var(--color-primary);
+      border-radius: var(--radius);
+      padding: var(--space-md);
+      margin: var(--space-md) 0;
+      background: var(--color-surface);
+    }
+    .instr-card__top { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: baseline; justify-content: space-between; }
+    .instr-card__syn { font-family: var(--font-mono); font-size: var(--fs-md); font-weight: 700; color: var(--color-primary); }
+    .instr-card__desc { margin: var(--space-sm) 0; }
+    .instr-card__eg {
+      font-family: var(--font-mono); font-size: var(--fs-sm);
+      background: var(--color-code-bg); border-radius: 4px;
+      padding: var(--space-sm) var(--space-md); margin-top: var(--space-sm);
+      white-space: pre-wrap;
+    }
+    .leg-badge {
+      font-size: var(--fs-xs); font-family: var(--font-mono);
+      border: 1px solid var(--color-accent); color: var(--color-accent-hov);
+      border-radius: 999px; padding: 2px var(--space-sm); background: #fff8f1; white-space: nowrap;
+    }
+    .leg-badge--flag { border-color: var(--color-success); color: var(--color-success); background: #f2fbf6; }
+    .instr-card__note { font-size: var(--fs-sm); color: var(--color-text-muted); margin-top: var(--space-sm); }
+
+    .field-strip { display: flex; flex-wrap: wrap; gap: 2px; margin: var(--space-sm) 0; font-family: var(--font-mono); font-size: var(--fs-xs); }
+    .field-strip > div { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px var(--space-sm); background: var(--color-surface); text-align: center; }
+    .field-strip .fs-name { display: block; color: var(--color-text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
+
+    .route { display: grid; grid-template-columns: 1fr auto 1fr; gap: var(--space-sm); align-items: center; margin: var(--space-md) 0; }
+    @media (max-width: 620px) { .route { grid-template-columns: 1fr; } }
+    .route__box { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-surface); font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .route__box--out { border-color: var(--color-accent); border-width: 2px; }
+    .route__box--flag { border-color: var(--color-success); border-width: 2px; background: #f2fbf6; }
+    .route__box--dim { opacity: .4; }
+    .route__arrow { font-size: var(--fs-lg); color: var(--color-text-muted); text-align: center; }
+
+    .extend-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin: var(--space-md) 0; }
+    @media (max-width: 620px) { .extend-pair { grid-template-columns: 1fr; } }
+    .extend-pair > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
+    .extend-pair h4 { margin: 0 0 var(--space-xs); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .extend-pair .ep-bits { font-family: var(--font-mono); font-size: var(--fs-xs); word-break: break-all; }
+    .extend-pair .ep-fill { color: var(--color-accent-hov); font-weight: 700; }
+    .extend-pair .ep-val { font-family: var(--font-mono); font-size: var(--fs-md); margin-top: var(--space-xs); }
+    .extend-pair .ep-users { font-size: var(--fs-xs); color: var(--color-text-muted); margin-top: var(--space-xs); }
+
+    .byte-label { font-size: var(--fs-xs); color: var(--color-text-muted); font-family: var(--font-mono); }
+    .reg-val { font-family: var(--font-mono); }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 6 &rsaquo; <span>Page 3 — Saying It in MIPS</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Saying It in MIPS</h1>
+    <p><strong>Sections 6.9 – 6.11</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1.4 hours</p>
+
+    <p>You have spent the week building circuits that transform bytes. This page is the other half: the instructions that ask for those transformations by name. Every instruction here corresponds to something you have wired up, and the point of the page is to make that correspondence impossible to miss.</p>
+
+    <!-- ============================================================
+         6.9 — R-type arithmetic and logic
+         ============================================================ -->
+    <section id="sec-6-9">
+      <h2>6.9 &nbsp; R-type arithmetic and logic</h2>
+
+      <p>Last week you met the three MIPS instruction formats. R-type is the one that takes three registers: two to read and one to write. All the instructions in this section share the R-type shape, the opcode field <code>000000</code>, and are distinguished from each other by the <code>funct</code> field at the bottom.</p>
+
+      <p>Each one reads two registers, hands the values to the ALU, and writes the result back to a third register. <strong>That sentence is the entire execution model for this section</strong>, and the only thing that varies is which ALU leg gets used.</p>
+
+      <div id="rtype-cards"></div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Why does an instruction set bother having <code>nor</code>?</div>
+        <p><code>nor</code> is the odd one here. Your ALU has no NOR leg, so the machine has to do an OR and then a NOT &mdash; two operations for one instruction. Given that, why does MIPS define it at all?</p>
+        <p>Because of what it can do with <code>$zero</code>. <code>nor $t1, $t0, $zero</code> computes <code>NOT(t0 OR 0)</code>, which is just <code>NOT t0</code> &mdash; and MIPS has <strong>no NOT instruction</strong>. Rather than spend an opcode on a dedicated NOT, the designers included NOR and let it cover both jobs. One instruction, two uses, one fewer opcode consumed.</p>
+        <p>That is a recurring theme in instruction-set design, and it is worth noticing while the example is small: <strong>the instruction set is not a list of the operations the hardware has.</strong> It is a set of choices about which combinations are worth naming.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         6.10 — slt
+         ============================================================ -->
+    <section id="sec-6-10">
+      <h2>6.10 &nbsp; <code>slt</code>, and the flag that already exists</h2>
+
+      <p><code>slt</code> is "set on less than." <code>slt $t2, $t0, $t1</code> puts <strong>1</strong> into <code>$t2</code> if <code>$t0</code> is less than <code>$t1</code>, and <strong>0</strong> otherwise.</p>
+
+      <p>It looks like the most complicated instruction on this page. It is the simplest, and that is the point of this section.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Your machine already computes this. It has been computing it all week.</div>
+        <p>The comparator leg you built on page 2 produces <code>AL</code> &mdash; "A is larger than B" &mdash; and it produces it <em>continuously</em>, on every input, regardless of which opcode is selected. It is one of the three status flags.</p>
+        <p><code>slt $t2, $t0, $t1</code> asks whether <code>$t0 &lt; $t1</code>, which is the same question as whether <code>$t1 &gt; $t0</code>. Put <code>$t1</code> on the ALU's A input and <code>$t0</code> on B, and the answer is <strong><code>AL</code>, already sitting on a wire.</strong> Widen that one bit to a full word &mdash; seven zeros and the flag &mdash; and write it to <code>$t2</code>.</p>
+        <p><strong>A whole MIPS instruction, answered by a single wire coming out of a circuit you built on Tuesday.</strong></p>
+      </div>
+
+      <p>This is worth sitting with, because it is what an instruction set actually <em>is</em>. <code>slt</code> is not a capability the hardware was given in order to support it. The hardware could already compare; <code>slt</code> is the name by which a program asks for the answer. Somebody designing MIPS looked at what the datapath could already tell them and decided which of those things deserved an instruction.</p>
+
+      <p>Notice what is <em>not</em> true here: the answer does not come out of the ALU's 8-bit output. It comes out of a flag. Every other instruction on this page reads the result; <code>slt</code> reads a status bit and ignores the result entirely. Widget 6 draws that difference rather than describing it.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Where this goes</div>
+        <p>MIPS has no "branch if less than" instruction. The way you write <code>if (x &lt; y)</code> in MIPS assembly is <code>slt</code> followed by <code>beq</code> or <code>bne</code> against <code>$zero</code> &mdash; compute the comparison into a register, then branch on whether that register is zero. That is Week 7, and it is the reason <code>slt</code> is taught here rather than alongside the branches.</p>
+      </div>
+
+      <!-- ========== WIDGET 6 — Instruction to Leg ========== -->
+      <div class="widget-card" id="w-instr-leg">
+        <div class="widget-card__title">Instruction to Leg</div>
+        <div class="widget-card__subtitle">Pick an instruction and follow it into the hardware: the fields it assembles into, the leg it drives, and where its answer comes from.</div>
+
+        <div class="widget-input-row">
+          <div class="widget-input-group">
+            <label for="il-instr">Instruction</label>
+            <select id="il-instr"></select>
+          </div>
+          <div class="widget-input-group">
+            <label for="il-x">First operand &nbsp;<span class="byte-label">(8-bit)</span></label>
+            <input type="number" id="il-x" min="0" max="255" value="202">
+          </div>
+          <div class="widget-input-group">
+            <label for="il-y" id="il-y-lbl">Second operand</label>
+            <input type="number" id="il-y" min="-128" max="255" value="182">
+          </div>
+        </div>
+
+        <p class="byte-label">How it assembles:</p>
+        <div class="field-strip" id="il-fields" aria-live="polite"></div>
+
+        <p class="byte-label" style="margin-top:var(--space-md)">How the hardware answers it:</p>
+        <div class="route" id="il-route" aria-live="polite"></div>
+
+        <p id="il-note" class="instr-card__note"></p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         6.11 — I-type and the extension split
+         ============================================================ -->
+    <section id="sec-6-11">
+      <h2>6.11 &nbsp; The same field, treated two ways</h2>
+
+      <p>Every instruction so far has taken its operands from two registers. Often what you want is a register and a <em>constant</em> &mdash; add 4 to a pointer, mask off the low byte, test a value against a limit. Loading the constant into a register first works, but it costs an instruction every time, and constants are common enough that MIPS gives them their own instruction format.</p>
+
+      <p>These are the I-type arithmetic and logic instructions, and they follow a naming convention that makes them easy to read: the R-type mnemonic with an <code>i</code> on the end.</p>
+
+      <div id="itype-cards"></div>
+
+      <p>All four have the identical shape: a 6-bit opcode, two 5-bit register fields, and a <strong>16-bit immediate</strong>. Same format, same field, same width. But the ALU works on full-width values, so that 16-bit field has to be widened before it can be used &mdash; and here the four instructions split into two camps.</p>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Two different ways to widen the same 16 bits, and the instruction decides which</div>
+        <p><strong>Sign-extension</strong> &mdash; used by <code>addi</code> and <code>slti</code>. Copy the immediate's top bit into every new position. A 16-bit <code>1111111111111011</code> becomes a 32-bit value that is still &minus;5.</p>
+        <p><strong>Zero-extension</strong> &mdash; used by <code>andi</code> and <code>ori</code>. Fill every new position with 0. The same 16 bits become 65,531.</p>
+        <p>Same bits in the same field of the same format, and two instructions read them as a small negative number while two others read them as a large positive one.</p>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">The reason is not arbitrary, and it is worth knowing rather than memorising</div>
+        <p><code>addi</code> and <code>slti</code> are <strong>arithmetic</strong>. Their immediate is a number, and numbers have signs. Adding &minus;5 has to mean adding &minus;5, so the value must survive being widened &mdash; and sign-extension is precisely the operation that preserves a two's-complement value at a greater width.</p>
+        <p><code>andi</code> and <code>ori</code> are <strong>bitwise</strong>. Their immediate is a <em>mask</em>, and a mask is not a number at all &mdash; it is a pattern saying which bits to keep and which to clear. <strong>There is no such thing as a negative bit mask.</strong> Sign-extending <code>0x00FF</code> would be fine, but sign-extending <code>0xF000</code> would silently set sixteen bits you never asked for, and your mask would stop being your mask.</p>
+        <p>So the rule is not "remember which two do which." It is: <strong>extension preserves whatever the field was meant to be.</strong> A number keeps its value; a pattern keeps its shape.</p>
+      </div>
+
+      <!-- ========== WIDGET 7 — The Extension Bench ========== -->
+      <div class="widget-card" id="w-extend">
+        <div class="widget-card__title">The Extension Bench</div>
+        <div class="widget-card__subtitle">One 16-bit immediate, widened both ways at once. Try a negative value.</div>
+
+        <div class="widget-input-row">
+          <div class="widget-input-group">
+            <label for="ex-imm">16-bit immediate</label>
+            <input type="number" id="ex-imm" min="-32768" max="65535" value="-5">
+          </div>
+          <div class="widget-input-group">
+            <label for="ex-reg">Register value &nbsp;<span class="byte-label">(applied below)</span></label>
+            <input type="number" id="ex-reg" min="0" max="65535" value="4660">
+          </div>
+        </div>
+
+        <div class="preset-row">
+          <button class="preset-btn" type="button" data-expreset="-5">&minus;5</button>
+          <button class="preset-btn" type="button" data-expreset="255">0x00FF — a low-byte mask</button>
+          <button class="preset-btn" type="button" data-expreset="-4096">0xF000 — a high-nibble mask</button>
+          <button class="preset-btn" type="button" data-expreset="4">4</button>
+        </div>
+
+        <p class="byte-label">The same 16 bits: <span id="ex-raw" class="reg-val"></span></p>
+
+        <div class="extend-pair" id="ex-panels" aria-live="polite"></div>
+
+        <p class="instr-card__note" id="ex-note"></p>
+      </div>
+
+      <!-- ========== Self-check A ========== -->
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Six questions, not graded. Answer before you look &mdash; getting one wrong here is cheaper than getting it wrong on the assignment.</div>
+        <div id="sc-body"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Where you are
+         ============================================================ -->
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+
+      <p>Ten instructions, and every one of them names something you built this week. Six are one instruction to one leg. Four are not, and those four are the ones worth revisiting: <code>sub</code> has no leg, <code>nor</code> has no leg, and <code>slt</code> and <code>slti</code> are answered by a flag rather than by a result.</p>
+
+      <p>One page left. You write a program that uses all ten and watch it run.</p>
+
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 6, Page 3
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['alu', 'mips'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length && L.alu && L.alu.MIPS_LEG) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive parts of this page are not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.alu</code>, <code>CSCLogic.alu.MIPS_LEG</code> or <code>CSCLogic.mips</code>), so the instruction ' +
+      'cards, the widgets and the self-check below have nothing to run on. The written content is unaffected and still ' +
+      'correct. <em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.alu || !L.alu.MIPS_LEG || !L.mips) { return; }
+    var A = L.alu, M = L.mips, LEG = L.alu.MIPS_LEG;
+
+    function fromNum(v) { var o = [], i; v = v & 255; for (i = 7; i >= 0; i--) { o.push((v >> i) & 1); } return o; }
+    function str(w) { return w.join(''); }
+    function num(w) { var n = 0, i; for (i = 0; i < 8; i++) { n = (n << 1) | w[i]; } return n; }
+    function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+    /* ---------- the instruction cards ----------
+       Rendered from CSCLogic.mips plus CSCLogic.alu.MIPS_LEG rather than
+       written out in the markup. Three files this week show these rows --
+       this page twice and assignment6.html's Part C -- and the Fall 2025
+       course had two copies of its opcode data that were free to drift
+       apart (Standards Section 8). */
+    var WORKED = {
+      add:  { a: '$t1 = 40',  b: '$t2 = 25',  r: '$t0 = 65' },
+      sub:  { a: '$t1 = 40',  b: '$t2 = 25',  r: '$t0 = 15' },
+      and:  { a: '$t1 = 0xCA', b: '$t2 = 0xB6', r: '$t0 = 0x82' },
+      or:   { a: '$t1 = 0xCA', b: '$t2 = 0xB6', r: '$t0 = 0xFE' },
+      nor:  { a: '$t1 = 0xCA', b: '$t2 = 0xB6', r: '$t0 = 0x01' },
+      slt:  { a: '$t1 = 25',  b: '$t2 = 40',  r: '$t0 = 1' },
+      addi: { a: '$t1 = 40',  b: 'immediate = -8', r: '$t0 = 32' },
+      andi: { a: '$t1 = 0xCA', b: 'immediate = 0x0F', r: '$t0 = 0x0A' },
+      ori:  { a: '$t1 = 0xCA', b: 'immediate = 0x0F', r: '$t0 = 0xCF' },
+      slti: { a: '$t1 = 25',  b: 'immediate = 40',   r: '$t0 = 1' }
+    };
+
+    function card(op, isR) {
+      var leg = LEG[op.m];
+      var w = WORKED[op.m];
+      var badgeCls = 'leg-badge' + (leg && leg.from === 'flag' ? ' leg-badge--flag' : '');
+      var badge = leg
+        ? '<span class="' + badgeCls + '">ALU leg: ' + esc(leg.via) +
+          (leg.from === 'flag' ? ' &rarr; flag' : '') + '</span>'
+        : '';
+      var field = isR ? ('funct ' + op.funct) : ('opcode ' + op.opcode);
+      var eg = w
+        ? '<div class="instr-card__eg">before:  ' + esc(w.a) + '\n         ' + esc(w.b) +
+          '\nafter:   ' + esc(w.r) + '</div>'
+        : '';
+      return '<div class="instr-card">' +
+        '<div class="instr-card__top"><span class="instr-card__syn">' + esc(op.syntax) + '</span>' + badge + '</div>' +
+        '<div class="instr-card__desc">' + esc(op.desc) + '</div>' +
+        '<div class="byte-label">' + field + (op.sext === undefined ? '' :
+            (op.sext ? ' &middot; immediate SIGN-extended' : ' &middot; immediate ZERO-extended')) + '</div>' +
+        eg +
+        (leg && leg.note ? '<div class="instr-card__note">' + esc(leg.note) + '</div>' : '') +
+      '</div>';
+    }
+
+    var R_WEEK6 = ['add', 'sub', 'and', 'or', 'nor', 'slt'];
+    var I_WEEK6 = ['addi', 'andi', 'ori', 'slti'];
+
+    function byM(list, m) { for (var i = 0; i < list.length; i++) { if (list[i].m === m) { return list[i]; } } return null; }
+
+    document.getElementById('rtype-cards').innerHTML =
+      R_WEEK6.map(function (m) { var o = byM(M.r, m); return o ? card(o, true) : ''; }).join('');
+    document.getElementById('itype-cards').innerHTML =
+      I_WEEK6.map(function (m) { var o = byM(M.i, m); return o ? card(o, false) : ''; }).join('');
+
+    /* ============================================================
+       WIDGET 6 — Instruction to Leg
+       ============================================================
+       The SLO2 centrepiece. The two things it has to show that prose
+       cannot: that sub and nor take a route rather than a leg, and that
+       slt's answer leaves the ALU on a different wire from everything
+       else. The flag path is drawn in a different colour for exactly
+       that reason. */
+    (function () {
+      var host = document.getElementById('w-instr-leg');
+      if (!host) { return; }
+      var sel = document.getElementById('il-instr');
+      var elX = document.getElementById('il-x'), elY = document.getElementById('il-y');
+      var elYL = document.getElementById('il-y-lbl');
+      var elF = document.getElementById('il-fields'), elR = document.getElementById('il-route');
+      var elN = document.getElementById('il-note');
+
+      R_WEEK6.concat(I_WEEK6).forEach(function (m) {
+        var o = document.createElement('option');
+        o.value = m; o.textContent = m;
+        sel.appendChild(o);
+      });
+      sel.value = 'slt';
+
+      sel.addEventListener('change', render);
+      elX.addEventListener('input', render);
+      elY.addEventListener('input', render);
+
+      function render() {
+        var m = sel.value;
+        var leg = LEG[m];
+        var imm = I_WEEK6.indexOf(m) !== -1;
+        elYL.textContent = imm ? 'Immediate' : 'Second operand (8-bit)';
+
+        var x = parseInt(elX.value, 10); if (isNaN(x)) { x = 0; }
+        var y = parseInt(elY.value, 10); if (isNaN(y)) { y = 0; }
+        var a = fromNum(x), b = fromNum(y);
+
+        /* Fields, from the shared codec. Immediates are shown at the
+           width the format actually carries. */
+        var text = imm
+          ? m + ' $t0, $t1, ' + y
+          : m + ' $t0, $t1, $t2';
+        var enc = M.encode(text);
+        elF.innerHTML = enc.ok
+          ? enc.fields.map(function (f) {
+              return '<div><span class="fs-name">' + esc(f.name) + '</span>' + f.bits + '</div>';
+            }).join('')
+          : '<div class="byte-label">' + esc(enc.error) + '</div>';
+
+        /* The route. sub inverts B and carries in; nor takes two passes;
+           everything else is one leg. */
+        var operandB = (m === 'sub') ? A.not8(b) : b;
+        var cin = (m === 'sub') ? 1 : 0;
+        var r = A.evaluate(leg.opcode, a, operandB, cin);
+        var result = r.out;
+        if (m === 'nor') { result = A.not8(result); }
+
+        var isFlag = (leg.from === 'flag');
+        /* slt asks "is x < y", which is "is y larger than x" -- so the
+           comparator is read with the operands the other way round. */
+        var flagAnswer = isFlag ? (A.cmp8(b, a).al) : null;
+
+        var mid = '<div class="route__arrow" aria-hidden="true">&rarr;</div>';
+        elR.innerHTML =
+          '<div class="route__box">' +
+            'A = ' + str(a) + ' (' + num(a) + ')<br>' +
+            'B = ' + str(b) + ' (' + num(b) + ')' +
+            (m === 'sub' ? '<br><span class="byte-label">B inverted, carry-in 1</span>' : '') +
+          '</div>' + mid +
+          '<div class="route__box' + (isFlag ? ' route__box--flag' : ' route__box--out') + '">' +
+            '<strong>' + esc(leg.via) + '</strong><br>' +
+            (isFlag
+              ? 'AL flag = <strong>' + flagAnswer + '</strong><br>' +
+                '<span class="byte-label">the 8-bit output is ignored</span>'
+              : 'result = ' + str(result) + ' (' + num(result) + ')') +
+          '</div>';
+
+        elN.innerHTML = (leg.note ? esc(leg.note) + ' ' : '') +
+          (isFlag
+            ? '<strong>Notice the colour.</strong> Every other instruction on this page reads the ALU’s 8-bit output. ' +
+              'This one reads a status bit and discards the output entirely — the register gets seven zeros and the flag.'
+            : 'The answer is the ALU’s 8-bit output, written back to the destination register.');
+      }
+      render();
+    }());
+
+    /* ============================================================
+       WIDGET 7 — The Extension Bench
+       ============================================================
+       Standards Section 2: both panels are permanently present and
+       permanently labelled. Neither is a default and neither can be
+       dismissed, because the whole content of the widget is that the
+       same bits mean two things. */
+    (function () {
+      var host = document.getElementById('w-extend');
+      if (!host) { return; }
+      var elImm = document.getElementById('ex-imm'), elReg = document.getElementById('ex-reg');
+      var elRaw = document.getElementById('ex-raw'), elP = document.getElementById('ex-panels');
+      var elN = document.getElementById('ex-note');
+
+      elImm.addEventListener('input', render);
+      elReg.addEventListener('input', render);
+      host.querySelectorAll('[data-expreset]').forEach(function (btn) {
+        btn.addEventListener('click', function () { elImm.value = btn.dataset.expreset; render(); });
+      });
+
+      function hex(v) { return '0x' + (v >>> 0).toString(16).toUpperCase().padStart(8, '0'); }
+
+      function render() {
+        var v = parseInt(elImm.value, 10); if (isNaN(v)) { v = 0; }
+        var raw = v & 0xFFFF;
+        var reg = parseInt(elReg.value, 10); if (isNaN(reg)) { reg = 0; }
+        reg = reg >>> 0;
+
+        var bits = M.toBin(raw, 16);
+        elRaw.textContent = bits + '   (' + hex(raw).slice(-6) + ')';
+
+        var signBit = bits.charAt(0);
+        var sext = (signBit === '1' ? 'FFFF' : '0000');
+        var sVal = (signBit === '1') ? (raw - 65536) : raw;
+        var zVal = raw;
+
+        var sFill = (signBit === '1' ? '1111111111111111' : '0000000000000000');
+        var zFill = '0000000000000000';
+
+        var andZ = (reg & zVal) >>> 0;
+        var addS = (reg + sVal) | 0;
+
+        elP.innerHTML =
+          '<div>' +
+            '<h4>Sign-extended &mdash; addi, slti</h4>' +
+            '<div class="ep-bits"><span class="ep-fill">' + sFill + '</span>' + bits + '</div>' +
+            '<div class="ep-val">' + sVal + '</div>' +
+            '<div class="ep-users">Copies bit 15 into every new position. The value survives the widening.</div>' +
+            '<div class="ep-users"><code>addi</code> with register ' + reg + ' &rarr; <strong>' + addS + '</strong></div>' +
+          '</div>' +
+          '<div>' +
+            '<h4>Zero-extended &mdash; andi, ori</h4>' +
+            '<div class="ep-bits"><span class="ep-fill">' + zFill + '</span>' + bits + '</div>' +
+            '<div class="ep-val">' + zVal + '</div>' +
+            '<div class="ep-users">Fills with zeros. The pattern survives the widening; the value does not.</div>' +
+            '<div class="ep-users"><code>andi</code> with register ' + reg + ' &rarr; <strong>' + andZ + '</strong></div>' +
+          '</div>';
+
+        elN.innerHTML = (signBit === '1')
+          ? 'Bit 15 is set, so the two panels disagree — <strong>' + sVal + '</strong> against <strong>' + zVal +
+            '</strong>. This is the case where choosing the wrong extension is a bug rather than a technicality: as a mask, ' +
+            'the sign-extended version would set sixteen high bits nobody asked for.'
+          : 'Bit 15 is clear, so both panels agree. Set a negative immediate — or try the 0xF000 preset — and watch them separate.';
+      }
+      render();
+    }());
+
+    /* ============================================================
+       Self-check A
+       ============================================================ */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+
+      var Q = [
+        { q: 'Which ALU leg does <code>sub $t0, $t1, $t2</code> use?',
+          opts: ['A dedicated subtract leg', 'The NOT leg, then the ADD leg with carry-in 1', 'The XOR leg', 'The comparator leg'],
+          correct: 1,
+          why: 'There is no subtract leg. B goes through NOT_8BIT and the adder runs with a carry-in of 1, which is A + NOT(B) + 1 — exactly the two’s-complement negation from Week 1.' },
+        { q: 'Where does the answer to <code>slt</code> come from?',
+          opts: ['The ALU’s 8-bit output', 'The carry-out bit', 'The comparator’s AL status flag', 'A dedicated comparison instruction in hardware'],
+          correct: 2,
+          why: 'The comparator computes AL continuously. slt widens that one bit into a word and writes it. The 8-bit output is ignored entirely — the only instruction this week that does that.' },
+        { q: 'A 16-bit immediate of <code>1111111111111011</code> is used by <code>addi</code>. What value reaches the ALU?',
+          opts: ['65531', '−5', '−65531', '5'],
+          correct: 1,
+          why: 'addi sign-extends. Bit 15 is 1, so it is copied into all the new positions and the value stays −5. The same bits under andi would zero-extend to 65531.' },
+        { q: 'Why does <code>andi</code> zero-extend rather than sign-extend?',
+          opts: ['Because AND is faster than ADD', 'Because its immediate is a bit mask, and a mask has no sign', 'Because the opcode field is different', 'Because MIPS is a RISC design'],
+          correct: 1,
+          why: 'Extension preserves whatever the field was meant to be. addi’s immediate is a number, so its value must survive. andi’s is a pattern, so its shape must survive — sign-extending 0xF000 would set sixteen bits you never asked for.' },
+        { q: '<code>nor $t1, $t0, $zero</code> computes what?',
+          opts: ['Always zero', 'NOT $t0', '$t0 unchanged', 'Always all ones'],
+          correct: 1,
+          why: 'NOT($t0 OR 0) is NOT($t0). MIPS has no NOT instruction, and this is why it does not need one — which is also why the instruction set bothers defining nor at all.' },
+        { q: 'With A = <code>11001010</code> and B = <code>10110110</code>, which ALU status outputs are live if opcode <code>100</code> (AND) is selected?',
+          opts: ['Only Z', 'Only AL and EQ', 'Z, AL and EQ are all live', 'None — flags only work on opcode 110'],
+          correct: 2,
+          why: 'All three. Z watches the selected output, and AL and EQ come off the comparator leg, which runs continuously regardless of the opcode. The ALU produces answers about its answer, whatever it was asked for.' }
+      ];
+
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p>' +
+          '<div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+
+      function answer(qi, oi) {
+        var item = Q[qi];
+        var ok = (oi === item.correct);
+        var fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (ok ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (ok ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) {
+          el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false');
+        });
+      }
+
+      host.addEventListener('click', function (e) {
+        var t = e.target.closest('.quiz-option');
+        if (t) { answer(+t.dataset.q, +t.dataset.o); }
+      });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+
+  })();
+  </script>
+</body>
+</html>
