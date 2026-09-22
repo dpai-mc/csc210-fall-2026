@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="lab-06">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210L — Lab 6: One Answer, Two Readings</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ----------
+       .lab-*, .scope-table, .logisim-steps, .callout--*, .points-badge,
+       .pin-table, .table-scroll and the checklist components all live
+       in shared/style.css.
+
+       .live-tag and .obs-table are carried here as copies of lab-05's,
+       not promoted. Promoting them means editing published pages, and
+       past content is never modified (Dave, 2026-09-15). Consolidate
+       forward only: a new page carries its own copy.
+
+       This page loads no shared kernel and has no widget. The
+       interactive part of this lab is the bench the student builds in
+       Logisim; a simulated adder on the page would answer the
+       observation sheet for them. */
+
+    /* Learning-page titles. Named, never linked -- Course Standards §5. */
+    cite { font-style: normal; font-weight: 600; color: var(--color-text); }
+
+    .live-tag {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: var(--fs-xs);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      padding: 2px var(--space-sm);
+      border-radius: 999px;
+      vertical-align: middle;
+      margin-left: var(--space-sm);
+    }
+    .live-tag--together { background: var(--color-success); color: #fff; }
+    .live-tag--solo     { background: var(--color-danger, #b3261e); color: #fff; }
+
+    /* The observation sheet. What the student writes here is what the
+       completion check collects, so the cells must be big enough to write
+       in by hand and must survive printing. */
+    .obs-table { width: 100%; border-collapse: collapse; margin: var(--space-md) 0; }
+    .obs-table th, .obs-table td {
+      border: 1px solid var(--color-border);
+      padding: var(--space-sm);
+      text-align: left;
+      vertical-align: top;
+      font-size: var(--fs-sm);
+    }
+    .obs-table th { background: var(--color-code-bg); font-weight: 700; }
+    .obs-table td.fill {
+      background: var(--color-code-bg);
+      min-width: 64px;
+      height: 46px;
+    }
+    .obs-table td.fill--wide { min-width: 110px; }
+    .obs-table td.given { font-family: var(--font-mono); white-space: nowrap; }
+    .obs-table caption {
+      caption-side: top;
+      text-align: left;
+      font-weight: 700;
+      padding-bottom: var(--space-sm);
+    }
+
+    /* The bench sketch. Schematic on purpose: it shows what connects to
+       what, and leaves the placement to the student. */
+    .bench-sketch { width: 100%; max-width: 640px; height: auto; display: block; margin: var(--space-md) auto; }
+    .bench-sketch .wire { stroke: var(--color-text); stroke-width: 3; fill: none; }
+    .bench-sketch .box  { fill: var(--color-surface); stroke: var(--color-text); stroke-width: 2; }
+    .bench-sketch .det  { fill: var(--color-code-bg); stroke: var(--color-text-muted); stroke-width: 2; stroke-dasharray: 5 3; }
+    .bench-sketch .stub { stroke: var(--color-text-muted); stroke-width: 2; fill: none; }
+    .bench-sketch .lbl  { font-family: var(--font-mono); font-size: 14px; fill: var(--color-text); }
+    .bench-sketch .lbl--sm { font-size: 11px; fill: var(--color-text-muted); }
+
+    @media print {
+      .sp-header, .sp-footer, .no-print { display: none; }
+      .lab-step, .obs-table, .lab-verify { break-inside: avoid; }
+      .table-scroll { overflow: visible; }
+      .obs-table code { font-size: inherit; }
+      /* Ten columns must fit a portrait page: smaller type, inputs allowed
+         to wrap, and no minimum width on the writing cells. Height stays,
+         because height is what you write in. */
+      .obs-table th, .obs-table td { font-size: 9px; padding: 3px; }
+      .obs-table td.fill, .obs-table td.fill--wide { min-width: 0; }
+      .obs-table td.given { white-space: normal; }
+      a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== Header ==================== -->
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210L — Computer Organization &amp; Architecture Lab</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Lab 6 &rsaquo; <span>One Answer, Two Readings</span>
+    </nav>
+  </header>
+
+  <!-- ==================== Main ==================== -->
+  <main class="sp-main sp-main--full">
+
+    <h1>Lab 6 — One Answer, Two Readings: Carry, Overflow, and the Adder That Cannot Tell</h1>
+
+    <div class="lab-meta">
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Lab Session</span>
+        <span class="lab-meta__value">Tuesday, Sep 22, 2026</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">In-Class Time</span>
+        <span class="lab-meta__value">90 minutes &mdash; 50 Logisim, 40 MARS</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Format</span>
+        <span class="lab-meta__value">Live on Zoom</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Today's build</span>
+        <span class="lab-meta__value"><code>ARITH_BENCH</code></span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Assignment</span>
+        <span class="lab-meta__value">Completion Check 6 &mdash; 10 pts</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Due</span>
+        <span class="lab-meta__value lab-meta__value--due">Sun, Sep 27 &middot; 11:59 PM</span>
+      </div>
+    </div>
+
+    <div class="callout callout--aha">
+      <div class="callout__title">What This Session Is, and What It Is Not</div>
+      <p><strong>This lab does not build the ALU.</strong> The nine circuits of Checkpoint 2a &mdash; the operation legs, the comparator and the zero function &mdash; are Assignment 6 Part A, built from the assignment page on your own time. The build steps and test values are there, not here. Walking through them twice would waste the one thing this room has that your desk does not.</p>
+      <p><strong>What we build here is an instrument.</strong> <code>ARITH_BENCH</code> puts two of your adders side by side &mdash; one adding, one subtracting &mdash; and adds two small detectors that watch their results. It is not graded in CSC210, it is not part of your CPU, and nothing later instantiates it. It exists so you can feed the same pair of bytes to the machine six times and see for yourself when its answer can be trusted.</p>
+      <p>Last week's page said this is where you would get subtraction out of your adder by inverting one operand and forcing the carry in. That promise is kept &mdash; on a bench, where you get to watch it, rather than as one of the circuits you are graded on.</p>
+    </div>
+
+    <div class="callout callout--hook">
+      <div class="callout__title">The Question Today Answers</div>
+      <p><strong>What you have:</strong> An 8-bit adder from Week 3, and this week a way to make it subtract. Put two bytes in, get a byte out.</p>
+      <p><strong>What you cannot do yet:</strong> Say whether that byte is <em>right</em>. The adder has no idea whether you meant <code>11001000</code> as 200 or as &minus;56, and it gives you the same eight bits either way. Sometimes those bits are the correct answer for one reading and nonsense for the other. The learning page tells you this happens. Today you find out <em>when</em>, from your own measurements.</p>
+      <p><strong>What you can do after today:</strong> Look at an addition or a subtraction and say, from two signals, whether the unsigned reading of the result can be trusted and whether the signed reading can &mdash; and then watch a real MIPS processor act on one of those two signals and ignore the other.</p>
+    </div>
+
+    <!-- ============================================================
+         Outcomes
+         ============================================================ -->
+    <section id="sec-outcomes">
+      <h2>What You Will Be Able to Do</h2>
+
+      <ol>
+        <li><strong>Build a test bench</strong> that computes <code>A + B</code> and <code>A &minus; B</code> from the same two inputs at the same time, using circuits you already own.</li>
+        <li><strong>Build a signed-overflow detector</strong> from gates, from a rule stated in words.</li>
+        <li><strong>Read one result two ways</strong> &mdash; unsigned and signed &mdash; and say for each reading whether it is correct.</li>
+        <li><strong>Find the rule yourself</strong> that connects the carry-out and the overflow signal to which reading can be trusted, including the case that surprises almost everyone: what carry-out means on a subtraction.</li>
+        <li><strong>Break the detector on purpose</strong> and find which inputs it lies about.</li>
+        <li><strong>Write a MIPS program to a specification</strong> that makes MARS stop, and explain from your bench which of your two signals made it stop.</li>
+      </ol>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">CS301 Reference</div>
+        <p>Binary arithmetic, carry and overflow are covered in Saylor CS301 <strong>Unit 4: Computer Arithmetic</strong>. Log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> and open Unit 4 as supporting reading.</p>
+        <p>What CS301 does not do is have you build the detector and measure the machine against it. That part is this session's own.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Before you arrive
+         ============================================================ -->
+    <section id="sec-before">
+      <h2>Before You Arrive</h2>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Bring <code>ADDER_8BIT</code> and <code>NOT_8BIT</code> Working</div>
+        <p>Today's bench <strong>instantiates</strong> your Week 3 <code>ADDER_8BIT</code> twice and your <code>NOT_8BIT</code> once. The adder you have had since Week 3. <code>NOT_8BIT</code> is the first circuit on this week's assignment and it is eight inverters &mdash; if you have not built it yet, build it from the Assignment 6 page before the session. It takes five minutes and the pin names are on that page.</p>
+        <p><strong>If either one is not working, come anyway and come early.</strong> Ten minutes before the session with someone looking at your file beats an hour alone.</p>
+      </div>
+
+      <p><strong>Read section 6.4 of <cite>Seven Things a Byte Can Become</cite></strong>, the first of the week's learning pages in the Canvas module &mdash; the part about subtraction and the two different things both called overflow. Today is that section in hardware, and it will make much more sense if the words are already in your head. The page is named rather than linked, because each learning page is embedded in its own Canvas page; you open it from the module list.</p>
+
+      <p><strong>Bring your <code>CSC210_YourName.circ</code> file.</strong> Today adds one tab to it.</p>
+
+      <p><strong>Print this page, or have it open on a second screen.</strong> The observation sheet is what you submit, and you fill it in as you go.</p>
+    </section>
+
+    <!-- ============================================================
+         Scope
+         ============================================================ -->
+    <section id="sec-scope">
+      <h2>What Is Here, and What Is on the Assignment</h2>
+
+      <p>The two do not overlap, and that is deliberate. Assignment 6 grades the components and your reasoning about them. This session uses two of them and measures what they do.</p>
+
+      <div class="table-scroll">
+      <table class="scope-table">
+        <thead>
+          <tr><th>Work</th><th>Where it happens</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>The nine Checkpoint 2a circuits</td>
+            <td class="scope-solo">Assignment 6 Part A &mdash; not here</td>
+            <td>Tab names, pin names, test values and the submission checklist are all on that page. 50 points in the lecture course. Today uses only <code>ADDER_8BIT</code> and <code>NOT_8BIT</code>, and assumes they work.</td>
+          </tr>
+          <tr>
+            <td><strong><code>ARITH_BENCH</code></strong></td>
+            <td class="scope-lab"><strong>Built here, and only here</strong></td>
+            <td>Two adders, one inverter block, two detectors. Not on any assignment, not on any checkpoint, not in your CPU.</td>
+          </tr>
+          <tr>
+            <td>The signed-overflow detector</td>
+            <td class="scope-lab">Here &mdash; nowhere else</td>
+            <td>Your CPU does not have one. You build it today as a measuring instrument, and then find out that a real MIPS processor does.</td>
+          </tr>
+          <tr>
+            <td>Six input pairs, read two ways</td>
+            <td class="scope-lab">Here</td>
+            <td>The values are chosen to be different from every value on the assignment, so today is practice rather than a preview of answers.</td>
+          </tr>
+          <tr>
+            <td>Written reasoning about the ALU</td>
+            <td class="scope-solo">Assignment 6 Part B</td>
+            <td>Four questions. Today touches the subject of one of them, but none of today's questions is one of those four, and nothing you write here is collected there.</td>
+          </tr>
+          <tr>
+            <td>Instruction-to-hardware problems</td>
+            <td class="scope-solo">Assignment 6 Part C</td>
+            <td>Not touched today.</td>
+          </tr>
+          <tr>
+            <td>MARS: the assignment program</td>
+            <td class="scope-solo">Assignment 6 Part D</td>
+            <td>A different program from today's, with its own specification and check table.</td>
+          </tr>
+          <tr>
+            <td>MARS: a program that makes the processor stop, and three questions</td>
+            <td class="scope-lab">Here</td>
+            <td>You get a specification, not code. The questions are about the bench you built this morning. You submit the <code>.asm</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Part 1 — File check
+         ============================================================ -->
+    <section id="sec-part-1">
+      <h2>Part 1 — File Check <span class="points-badge">~5 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <p>Open <code>CSC210_YourName.circ</code>. Confirm everything from Labs 1 through 5 is still a tab in this one file, and that <code>ADDER_8BIT</code> and <code>NOT_8BIT</code> are among them.</p>
+
+      <div class="lab-step">
+        <div class="lab-step__num">1</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Sixty-second adder check</div>
+          <p>Open <code>ADDER_8BIT</code>. Put <code>00000011</code> on <code>a</code> and <code>00000101</code> on <code>b</code>, leave <code>cin</code> alone, and read <code>sum</code>. It should read <code>00001000</code>. Now set <code>cin</code> to 1 and read it again: <code>00001001</code>. If <code>cin</code> does nothing, it is not wired into bit 0's full adder, and half of today depends on it.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">2</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Create today's tab</div>
+          <p><strong>Project &rarr; Add Circuit&hellip;</strong>, named exactly:</p>
+          <pre><code>ARITH_BENCH</code></pre>
+          <p>Like <code>BUS_DEMO</code> last week, this is a test bench, not a component. Nothing instantiates it. Keep it anyway &mdash; when you come to debug the finished CPU, a small bench that you trust is the thing you compare a large circuit against.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Part 2 — Build the bench
+         ============================================================ -->
+    <section id="sec-part-2">
+      <h2>Part 2 — Build <code>ARITH_BENCH</code> <span class="points-badge">~20 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <p>Two bytes in. Their sum and their difference out, both at once, each with two signals beside it that say something about whether it can be trusted.</p>
+
+      <svg class="bench-sketch" viewBox="0 0 640 300" role="img" aria-labelledby="bench-title bench-desc">
+        <title id="bench-title">ARITH_BENCH: two adders fed from the same inputs, with detectors</title>
+        <desc id="bench-desc">Two 8-bit input pins, a and b, on the left. The upper path feeds a and b straight into an ADDER_8BIT with carry-in held at 0; its outputs are sum and the carry-out sc, and a dashed detector box beside it produces sv. The lower path feeds a directly, and b through a NOT_8BIT block, into a second ADDER_8BIT with carry-in held at 1; its outputs are diff and the carry-out dc, and a second dashed detector box produces dv. Each detector box takes bit 7 of the two numbers that adder is actually adding, and bit 7 of its result.</desc>
+
+        <!-- inputs -->
+        <text class="lbl" x="14" y="84">a</text>
+        <text class="lbl" x="14" y="214">b</text>
+        <line class="wire" x1="30" y1="80" x2="230" y2="80"></line>
+        <line class="wire" x1="60" y1="80" x2="60" y2="196"></line>
+        <line class="wire" x1="60" y1="196" x2="230" y2="196"></line>
+        <line class="wire" x1="30" y1="210" x2="90" y2="210"></line>
+        <line class="wire" x1="90" y1="210" x2="90" y2="104"></line>
+        <line class="wire" x1="90" y1="104" x2="230" y2="104"></line>
+        <line class="wire" x1="90" y1="228" x2="120" y2="228"></line>
+        <line class="wire" x1="90" y1="210" x2="90" y2="228"></line>
+
+        <!-- NOT block -->
+        <rect class="box" x="120" y="212" width="80" height="32" rx="4"></rect>
+        <text class="lbl lbl--sm" x="160" y="232" text-anchor="middle">NOT_8BIT</text>
+        <line class="wire" x1="200" y1="228" x2="230" y2="228"></line>
+
+        <!-- upper adder -->
+        <rect class="box" x="230" y="60" width="140" height="64" rx="4"></rect>
+        <text class="lbl" x="300" y="90" text-anchor="middle">ADDER_8BIT</text>
+        <text class="lbl lbl--sm" x="300" y="110" text-anchor="middle">cin = 0</text>
+        <line class="wire" x1="370" y1="80" x2="600" y2="80"></line>
+        <text class="lbl" x="606" y="84">sum</text>
+        <line class="stub" x1="370" y1="104" x2="600" y2="104"></line>
+        <text class="lbl" x="606" y="108">sc</text>
+
+        <!-- upper detector -->
+        <rect class="det" x="430" y="24" width="120" height="36" rx="4"></rect>
+        <text class="lbl lbl--sm" x="490" y="46" text-anchor="middle">detector</text>
+        <line class="stub" x1="550" y1="42" x2="600" y2="42"></line>
+        <text class="lbl" x="606" y="46">sv</text>
+
+        <!-- lower adder -->
+        <rect class="box" x="230" y="180" width="140" height="64" rx="4"></rect>
+        <text class="lbl" x="300" y="210" text-anchor="middle">ADDER_8BIT</text>
+        <text class="lbl lbl--sm" x="300" y="230" text-anchor="middle">cin = 1</text>
+        <line class="wire" x1="370" y1="200" x2="600" y2="200"></line>
+        <text class="lbl" x="606" y="204">diff</text>
+        <line class="stub" x1="370" y1="224" x2="600" y2="224"></line>
+        <text class="lbl" x="606" y="228">dc</text>
+
+        <!-- lower detector -->
+        <rect class="det" x="430" y="252" width="120" height="36" rx="4"></rect>
+        <text class="lbl lbl--sm" x="490" y="274" text-anchor="middle">detector</text>
+        <line class="stub" x1="550" y1="270" x2="600" y2="270"></line>
+        <text class="lbl" x="606" y="274">dv</text>
+      </svg>
+
+      <ol class="logisim-steps">
+          <li>Add two <strong>8-bit input pins</strong>, <code>a</code> and <code>b</code>, on the left.</li>
+          <li>Place <strong>two <code>ADDER_8BIT</code> instances</strong> from the project pane, one above the other. Label them with text objects &mdash; <em>ADD</em> and <em>SUB</em> &mdash; so you can tell them apart at a glance.</li>
+          <li><strong>The upper adder:</strong> <code>a</code> into its <code>a</code>, <code>b</code> into its <code>b</code>. Put a <strong>Wiring &rarr; Constant</strong> set to 0 on its <code>cin</code> &mdash; explicit, rather than trusting whatever pull behaviour your Week 3 pin happens to have, and it makes the two adders visibly differ in exactly one place. Bring its outputs to an 8-bit output pin <code>sum</code> and a 1-bit output pin <code>sc</code>.</li>
+          <li>Place one <strong><code>NOT_8BIT</code> instance</strong>. Feed it from <code>b</code>.</li>
+          <li><strong>The lower adder:</strong> <code>a</code> into its <code>a</code>, the <em><code>NOT_8BIT</code> output</em> into its <code>b</code>, and a <strong>Wiring &rarr; Constant</strong> set to 1 into its <code>cin</code>. Bring its outputs to an 8-bit output pin <code>diff</code> and a 1-bit output pin <code>dc</code>.</li>
+          <li>On each of <code>sum</code> and <code>diff</code>, add <strong>two probes</strong>: set one probe's <strong>Radix</strong> attribute to <strong>unsigned decimal</strong> and the other's to <strong>signed decimal</strong>. The same eight wires now tell you two numbers at once, and that is the whole subject of today.</li>
+        </ol>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Why the Lower Adder Subtracts</div>
+        <p>The learning page explains why inverting <code>b</code> and adding one produces <code>a &minus; b</code>, and the assignment asks you to explain it in your own words. Neither of those is today's job. Today you <em>use</em> it and watch what it does to the carry, which is something neither of them covers.</p>
+      </div>
+
+      <h3>The detector &mdash; you design this one</h3>
+
+      <p>The carry-out is a pin on your adder, so the unsigned signal is free. <strong>The signed signal is not a pin anywhere.</strong> It is hiding in three bits you already have, and the rule for reading it is one you met on the learning page:</p>
+
+      <blockquote>
+        Signed overflow has happened when the two numbers being added have the <strong>same</strong> sign, and the result has the <strong>opposite</strong> sign.
+      </blockquote>
+
+      <p>In an 8-bit two's-complement byte, the sign is bit 7. So the detector's inputs are three wires: bit 7 of the adder's first input, bit 7 of its second input, and bit 7 of its result. Its output is one wire.</p>
+
+      <div class="lab-step">
+        <div class="lab-step__num">3</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Turn the sentence into gates</div>
+          <p>&ldquo;Same sign&rdquo; is a comparison of two bits. &ldquo;Opposite sign&rdquo; is another. &ldquo;When &hellip; and &hellip;&rdquo; joins them. Everything you need is in the Gates folder, and it is <strong>three gates</strong>. Work it out on paper first, then build it.</p>
+          <p>Use <strong>splitters</strong> (Wiring folder, as in Lab 2) to reach bit 7 of each 8-bit wire. Bring the result to a 1-bit output pin named <code>sv</code> for the upper adder.</p>
+        </div>
+      </div>
+
+      <details class="lab-troubleshoot">
+        <summary>Stuck on the three gates? Open this after you have tried.</summary>
+        <p>Two bits are the <em>same</em> exactly when a gate you have used since Week 2 outputs 0 for them &mdash; and there is a gate in the Gates folder that outputs 1 in that case instead. Two bits are <em>different</em> exactly when that first gate outputs 1. Then one more gate says &ldquo;both of those.&rdquo;</p>
+      </details>
+
+      <div class="lab-step">
+        <div class="lab-step__num">4</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Build the second detector for the lower adder</div>
+          <p>Same three gates, output pin <code>dv</code>. Now the question that matters: <strong>what are the two numbers the lower adder is adding?</strong> Not <code>a</code> and <code>b</code>. Look at what is actually wired into its <code>b</code> input, and take your bit 7 from there.</p>
+          <p>Part 4 comes back to this, on purpose.</p>
+        </div>
+      </div>
+
+      <div class="lab-verify">
+        <div class="lab-verify__title">Verify before going on &mdash; two minutes</div>
+        <ol>
+          <li><code>a</code> = <code>00000101</code>, <code>b</code> = <code>00000011</code>. <code>sum</code> reads 8 on both probes, <code>diff</code> reads 2 on both. <code>sv</code> and <code>dv</code> are both 0.</li>
+          <li>Swap them: <code>a</code> = <code>00000011</code>, <code>b</code> = <code>00000101</code>. <code>diff</code> should read &minus;2 on the signed probe. Read the unsigned probe too, and do not worry yet about what it says.</li>
+        </ol>
+        <p>If <code>diff</code> is off by exactly one in step 1, the constant is not reaching the lower adder's <code>cin</code>.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Part 3 — Measure
+         ============================================================ -->
+    <section id="sec-part-3">
+      <h2>Part 3 — Six Pairs, Two Readings Each <span class="points-badge">~12 min</span><span class="live-tag live-tag--solo">Your own, then compare</span></h2>
+
+      <p>For each row of the observation sheet, set <code>a</code> and <code>b</code> and record what the bench shows &mdash; the result's bits, both probe readings, and the two signals. Then fill in the last two columns yourself, with arithmetic you do in your head: <strong>is the unsigned reading the right answer to the unsigned question? Is the signed reading the right answer to the signed question?</strong></p>
+
+      <p>The inputs are given with both of their readings so you do not have to convert them. The results you must read off your own circuit. <strong>Do the addition table first, then the subtraction table.</strong></p>
+
+      <p>Do not look for the pattern until both tables are full. Then look.</p>
+
+      <div class="lab-step">
+        <div class="lab-step__num">5</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Find the rule</div>
+          <p>With both tables filled, finish these three sentences on the observation sheet, in your own words:</p>
+          <ul>
+            <li>On an <strong>addition</strong>, the unsigned reading is correct exactly when <code>sc</code> is &hellip;</li>
+            <li>On a <strong>subtraction</strong>, the unsigned reading is correct exactly when <code>dc</code> is &hellip;</li>
+            <li>On either, the signed reading is correct exactly when the detector is &hellip;</li>
+          </ul>
+          <p>The second sentence is the one that surprises people. If it surprises you, check a row before you trust it: does it hold for every row in your table?</p>
+        </div>
+      </div>
+
+      <details class="lab-troubleshoot">
+        <summary>Written your three sentences? Open this to check the second one.</summary>
+        <p>On a subtraction, carry-out <strong>1</strong> means the unsigned result is correct, and carry-out <strong>0</strong> means it is not &mdash; the opposite sense from addition. Hardware designers call the missing carry a <em>borrow</em>: <code>dc</code> = 0 says &ldquo;<code>b</code> was bigger than <code>a</code>, and the unsigned answer went below zero and wrapped.&rdquo;</p>
+        <p>Nothing about the adder changed. It added <code>a</code> to the inverse of <code>b</code>, plus one, exactly as it always adds. The carry means something different because of what you fed it, not because of anything it did &mdash; which is the whole of today in one sentence.</p>
+      </details>
+    </section>
+
+    <!-- ============================================================
+         Part 4 — Break it
+         ============================================================ -->
+    <section id="sec-part-4">
+      <h2>Part 4 — Break It On Purpose <span class="points-badge">~8 min</span><span class="live-tag live-tag--solo">Your own, then compare</span></h2>
+
+      <p>Nobody breaks a working circuit for points, which is exactly why it only happens if there is a session for it. Two breaks, each undone before the next.</p>
+
+      <div class="lab-step">
+        <div class="lab-step__num">A</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Forget the carry-in</div>
+          <p>Change the lower adder's constant from 1 to 0. Run <strong>row 2</strong> of the subtraction table again &mdash; a number minus itself.</p>
+          <p>Record what <code>diff</code> reads on both probes, and how far from the right answer it is. Try one more row of your choice. Is it always wrong by the same amount? Then put the constant back to 1.</p>
+          <p>This is the single most common subtraction bug in a hand-built ALU, and it is hard to spot because the answers look almost right.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">B</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Wire the detector to the wrong input</div>
+          <p>Move the wire that feeds the lower detector's second input so that it takes bit 7 of <code>b</code> itself &mdash; the pin &mdash; rather than bit 7 of what the adder actually sees.</p>
+          <p>Now run <strong>all six subtraction rows</strong> again, recording only <code>dv</code>. <strong>Which rows does the broken detector lie about?</strong> Count them. Then put the wire back.</p>
+          <p>The detector is three gates and the change is one wire, and whether it is right depends on a question you could not answer by looking at the gates: what is this circuit actually adding?</p>
+        </div>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Compare With the Room</div>
+        <p>Before anyone looks at a probe: <strong>is <code>00101100</code> the right answer to <code>11001000</code> + <code>01100100</code>?</strong> That is row 3. Everybody answers yes or no, out loud or in the chat, and we count.</p>
+        <p>If the room splits, nobody is wrong. The bits cannot settle the question, because they do not know which of their two readings you meant. The adder produced one answer; it is your program that decides which question it was answering.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Part 5 — MARS
+         ============================================================ -->
+    <section id="sec-part-5">
+      <h2>Part 5 — MARS: Make the Processor Stop <span class="points-badge">~40 min</span><span class="live-tag live-tag--solo">Together, then your own</span></h2>
+
+      <p>The session turns ninety degrees. Your bench is 8 bits wide and a MIPS register is 32, but the adder is the same idea stretched: 32 full adders in a chain, with bit 31 as the sign bit instead of bit 7. So a 32-bit machine faces exactly the question your bench just answered &mdash; <em>can this result be trusted?</em> &mdash; and it has to decide what to <em>do</em> about the answer.</p>
+
+      <p>You are about to find out what MIPS decides, by writing a program that asks it.</p>
+
+      <h3>Write a program &mdash; the specification, not the code</h3>
+
+      <div class="callout callout--hook">
+        <div class="callout__title">Your Program</div>
+        <p>Write a MIPS program, in one file named <code>lab06_yourname.asm</code>, that runs three experiments in order and prints each result on its own line:</p>
+        <ol>
+          <li><strong>Experiment 1.</strong> Put the <strong>largest positive 32-bit two's-complement value</strong> in a register, then add 1 to it with <code>addi</code>.</li>
+          <li><strong>Experiment 2.</strong> Put the value whose 32 bits are <strong>all ones</strong> in a register <em>without using <code>.data</code></em>, then add 1 to it with <code>addi</code>.</li>
+          <li><strong>Experiment 3.</strong> Put the <strong>most negative 32-bit two's-complement value</strong> in a register, then subtract it from zero with <code>sub</code>.</li>
+          <li>Exit cleanly.</li>
+        </ol>
+        <p><strong>Constraints:</strong> the two values in Experiments 1 and 3 go in <code>.data</code>, written in <strong>hex</strong> &mdash; work them out yourself, the same way you worked out the 8-bit ones in Week 1. <code>.data</code> first, then <code>.text</code>, no <code>main:</code> label and no <code>.globl main</code>. Only this week's instructions plus <code>lw</code> and <code>syscall</code>: no <code>li</code> with a large constant, no <code>lui</code>, no shifts, no branches. <strong>Comment every executable line.</strong></p>
+      </div>
+
+      <p>It is fifteen to twenty instructions. The only part that needs thought is Experiment 2 &mdash; and everything you need for it is an instruction on this week's list, and a register that always reads zero.</p>
+
+      <h3>What you need to know to write it</h3>
+
+      <div class="table-scroll">
+      <table class="pin-table">
+        <thead>
+          <tr><th>To do this</th><th>Write</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Declare a word in <code>.data</code></td><td><code>big: .word 0x0000002A</code></td><td>a label, then the value; hex needs the <code>0x</code></td></tr>
+          <tr><td>Load that word into a register</td><td><code>lw $t0, big</code></td><td>the same form the learning page uses</td></tr>
+          <tr><td>Add a constant</td><td><code>addi $t1, $t0, 1</code></td><td>destination first</td></tr>
+          <tr><td>Subtract two registers</td><td><code>sub $t2, $t0, $t1</code></td><td><code>$t2 = $t0 - $t1</code></td></tr>
+          <tr><td>Bitwise NOR</td><td><code>nor $t3, $t0, $t1</code></td><td>OR, then invert every bit</td></tr>
+          <tr><td>Copy a register</td><td><code>add $a0, $t1, $zero</code></td><td>you worked this out in Lab 5</td></tr>
+          <tr><td>Print the integer in <code>$a0</code></td><td><code>addi $v0, $zero, 1</code> then <code>syscall</code></td><td>service 1</td></tr>
+          <tr><td>Print the character in <code>$a0</code></td><td><code>addi $v0, $zero, 11</code> then <code>syscall</code></td><td>service 11. <code>$a0 = 10</code> is a newline</td></tr>
+          <tr><td>Exit</td><td><code>addi $v0, $zero, 10</code> then <code>syscall</code></td><td>service 10</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <ol class="logisim-steps">
+          <li><strong>Assemble</strong> (F3) and <strong>run</strong> (F5).</li>
+          <li><strong>When MARS stops, do not fix anything yet.</strong> Copy the message from the Run I/O or Messages pane, word for word, into a comment. Note the address it names, and find that line in the Text Segment pane.</li>
+          <li>Look at the <strong>Registers</strong> pane. The instruction that stopped was supposed to write a destination register. <strong>Did it?</strong> Write down what that register holds.</li>
+          <li>Comment out that one instruction and the print that follows it, re-assemble, and run again. Repeat until the program reaches the exit.</li>
+        </ol>
+
+      <p>When you are done, the file you submit is the version that runs to the end, with the lines that stopped it still there as comments &mdash; and the messages you copied beside them.</p>
+
+      <h3>Three questions &mdash; answer them in the comments of your <code>.asm</code></h3>
+
+      <p>These are the point of the exercise. They are about the bench, not about MIPS.</p>
+
+      <div class="lab-step">
+        <div class="lab-step__num">Q1</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Which signal does MIPS act on?</div>
+          <p>Imagine <code>ARITH_BENCH</code> stretched to 32 bits, with its detectors reading bit 31. For each of your three experiments, write the carry-out and the detector output it would show &mdash; remember which adder an <code>addi</code> is and which a <code>sub</code> is &mdash; and whether MARS stopped.</p>
+          <p>Then one sentence: <strong>which of the two signals does MIPS act on, and which does it ignore?</strong></p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">Q2</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Why ignore the carry?</div>
+          <p>Experiment 2 carried out of bit 31 and MARS said nothing. From your <strong>addition</strong> table, pick a row where the carry-out is 1 and the detector is 0. Say what the signed calculation in that row was, and whether its answer was right.</p>
+          <p>Then say what would happen to that calculation on a processor that stopped every time the carry-out was 1.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">Q3</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">The answer that does not exist</div>
+          <p>Experiment 3 asked for the negative of the most negative number. Find the row in your <strong>subtraction</strong> table that is the 8-bit version of that question, and write what your bench gave for it.</p>
+          <p>Then explain, using the range of an 8-bit signed byte, why there is no correct 8-bit answer &mdash; and why the bits your bench produced are the same bits you started with.</p>
+        </div>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">If You Finish Early</div>
+        <p>The learning page mentions, once, that MIPS has a second add instruction besides <code>add</code>. Look it up in <strong>Help &rarr; MIPS</strong> in MARS, put it in Experiment 1 in place of <code>addi</code> (you will need the value 1 in a register), and run it. Then decide which of your bench's two readings that instruction is for.</p>
+        <p>This is not graded, and that instruction is not on this course's instruction list or on any assignment. It is here because it finishes the argument.</p>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">The Two Halves, Joined</div>
+        <p>This morning you built a detector that your CPU does not have, as a measuring instrument. This afternoon you found the same detector inside a real processor, sitting on bit 31, wired to something that stops the program.</p>
+        <p><strong>The adder in MIPS cannot tell signed from unsigned either.</strong> Nobody has ever built one that can, because the bits do not carry that information. What the designers did instead was decide, per instruction, which reading the programmer meant &mdash; and put a detector behind the ones that mean &ldquo;signed.&rdquo; The instruction is where the question gets asked, because the wires cannot ask it.</p>
+        <p>Your own CPU makes a smaller choice: its ALU reports the carry-out and does not check for signed overflow at all. That is a legitimate design for a machine this size, and now you know what it gives up.</p>
+      </div>
+
+      <p><strong>Two resources worth bookmarking:</strong> <a href="https://github.com/dpetersanderson/MARS" target="_blank" rel="noopener">the MARS repository</a>, and <a href="https://www.youtube.com/playlist?list=PLZ9NgFYEMxp5cLlPZ25zOD6zjnKKPv06p" target="_blank" rel="noopener">Amell Peralta's MIPS assembly playlist</a>, whose conventions this course follows.</p>
+    </section>
+
+    <!-- ============================================================
+         Observation sheet
+         ============================================================ -->
+    <section id="sec-observations">
+      <h2>Observation Sheet</h2>
+
+      <p>Fill this in as you go &mdash; it is what Completion Check 6 collects. <strong>Write what your bench showed, not what you expected.</strong> If your circuit disagrees with the person next to you, that disagreement is the most useful thing on this page: one of the two circuits is wired differently, and finding out which is worth more than any explanation.</p>
+
+      <p class="no-print" style="font-size:var(--fs-sm);color:var(--color-text-muted);">On a narrow screen the two tables scroll sideways. On paper they print at full width.</p>
+
+      <div class="table-scroll">
+      <table class="obs-table" id="obs-add">
+        <caption>Part 3 — addition: <code>sum</code> = <code>a</code> + <code>b</code></caption>
+        <thead>
+          <tr>
+            <th>Row</th><th><code>a</code> (unsigned / signed)</th><th><code>b</code> (unsigned / signed)</th>
+            <th><code>sum</code> bits</th><th>unsigned</th><th>signed</th><th><code>sc</code></th><th><code>sv</code></th>
+            <th>Unsigned right?</th><th>Signed right?</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td class="given">01100100 (100 / 100)</td><td class="given">00011011 (27 / 27)</td><td class="fill fill--wide"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>2</td><td class="given">01100100 (100 / 100)</td><td class="given">01100100 (100 / 100)</td><td class="fill fill--wide"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>3</td><td class="given">11001000 (200 / &minus;56)</td><td class="given">01100100 (100 / 100)</td><td class="fill fill--wide"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>4</td><td class="given">00011011 (27 / 27)</td><td class="given">01100100 (100 / 100)</td><td class="fill fill--wide"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>5</td><td class="given">10000000 (128 / &minus;128)</td><td class="given">10000000 (128 / &minus;128)</td><td class="fill fill--wide"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>6</td><td class="given">00000000 (0 / 0)</td><td class="given">10000000 (128 / &minus;128)</td><td class="fill fill--wide"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="table-scroll">
+      <table class="obs-table" id="obs-sub">
+        <caption>Part 3 — subtraction: <code>diff</code> = <code>a</code> &minus; <code>b</code></caption>
+        <thead>
+          <tr>
+            <th>Row</th><th><code>a</code> (unsigned / signed)</th><th><code>b</code> (unsigned / signed)</th>
+            <th><code>diff</code> bits</th><th>unsigned</th><th>signed</th><th><code>dc</code></th><th><code>dv</code></th>
+            <th>Unsigned right?</th><th>Signed right?</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td class="given">01100100 (100 / 100)</td><td class="given">00011011 (27 / 27)</td><td class="fill fill--wide"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>2</td><td class="given">01100100 (100 / 100)</td><td class="given">01100100 (100 / 100)</td><td class="fill fill--wide"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>3</td><td class="given">11001000 (200 / &minus;56)</td><td class="given">01100100 (100 / 100)</td><td class="fill fill--wide"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>4</td><td class="given">00011011 (27 / 27)</td><td class="given">01100100 (100 / 100)</td><td class="fill fill--wide"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>5</td><td class="given">10000000 (128 / &minus;128)</td><td class="given">10000000 (128 / &minus;128)</td><td class="fill fill--wide"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>6</td><td class="given">00000000 (0 / 0)</td><td class="given">10000000 (128 / &minus;128)</td><td class="fill fill--wide"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <table class="obs-table" id="obs-rule">
+        <caption>Part 3, step 5 — the rule, in your words</caption>
+        <thead>
+          <tr><th>Sentence</th><th>Your ending</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>On an addition, the unsigned reading is correct exactly when <code>sc</code> is&hellip;</td><td class="fill fill--wide"></td></tr>
+          <tr><td>On a subtraction, the unsigned reading is correct exactly when <code>dc</code> is&hellip;</td><td class="fill fill--wide"></td></tr>
+          <tr><td>On either, the signed reading is correct exactly when the detector is&hellip;</td><td class="fill fill--wide"></td></tr>
+        </tbody>
+      </table>
+
+      <table class="obs-table" id="obs-break">
+        <caption>Part 4 — the two breaks</caption>
+        <thead>
+          <tr><th>Break</th><th>What you saw</th><th>Why, in one sentence</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>A</strong> &mdash; carry-in 0: what <code>diff</code> read on row 2, and how far off</td><td class="fill fill--wide"></td><td class="fill fill--wide"></td></tr>
+          <tr><td><strong>A</strong> &mdash; is it always off by the same amount?</td><td class="fill fill--wide"></td><td class="fill fill--wide"></td></tr>
+          <tr><td><strong>B</strong> &mdash; which subtraction rows the broken detector lied about</td><td class="fill fill--wide"></td><td class="fill fill--wide"></td></tr>
+          <tr><td>Row 3, before the probes: your yes/no, and how the room split</td><td class="fill fill--wide"></td><td class="fill fill--wide"></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============================================================
+         Assignment
+         ============================================================ -->
+    <section id="sec-assignment">
+      <h2>Assignment: Completion Check 6</h2>
+
+      <div class="lab-meta">
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Points</span>
+          <span class="lab-meta__value">10</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Due</span>
+          <span class="lab-meta__value lab-meta__value--due">Sunday, Sep 27, 2026 &middot; 11:59 PM</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Submit via</span>
+          <span class="lab-meta__value">Canvas &mdash; Lab 6 Completion Check</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Assesses</span>
+          <span class="lab-meta__value">CSLO 1, CSLO 3</span>
+        </div>
+      </div>
+
+      <p>This is a CSC210L grade and it collects <strong>nothing that Assignment 6 collects</strong>. Your Checkpoint 2a circuits are graded there; <code>ARITH_BENCH</code> is graded here and nowhere else. Nothing in CSC210 depends on your attendance in this room.</p>
+
+      <h3>What to Submit</h3>
+
+      <ol>
+        <li><strong>Your <code>.circ</code> file.</strong> Only the <code>ARITH_BENCH</code> tab is looked at for this check.</li>
+        <li><strong><code>lab06_yourname.asm</code></strong> &mdash; the actual file, not a screenshot. It should run to the exit as submitted, with the lines that stopped it commented out and the messages beside them, and your three answers in the comments.</li>
+        <li><strong>Your observation sheet</strong> &mdash; a photo of the printout, or the same tables typed up. Neatness is not graded.</li>
+      </ol>
+
+      <h3>Grading Rubric</h3>
+
+      <table>
+        <thead>
+          <tr><th>Criterion</th><th>Points</th><th>Full credit requires</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>ARITH_BENCH</code> built and working</td>
+            <td>3</td>
+            <td>A tab named exactly <code>ARITH_BENCH</code>: two instances of your own <code>ADDER_8BIT</code> and one of your own <code>NOT_8BIT</code>; outputs <code>sum</code>, <code>sc</code>, <code>sv</code>, <code>diff</code>, <code>dc</code>, <code>dv</code>; both detectors built from gates. Wiring and Gates components only.</td>
+          </tr>
+          <tr>
+            <td>Observation sheet, Part 3</td>
+            <td>3</td>
+            <td>Both tables filled from what your bench showed, and the three rule sentences completed. Being wrong costs nothing here; leaving it blank does.</td>
+          </tr>
+          <tr>
+            <td>Observation sheet, Part 4</td>
+            <td>2</td>
+            <td>Both breaks attempted, with a one-sentence reason each. The reasons may be wrong &mdash; this row is for having run the experiment and thought about it.</td>
+          </tr>
+          <tr>
+            <td>Your program, and the three answers</td>
+            <td>2</td>
+            <td>A program you wrote that meets the specification, runs to the exit as submitted, and has every executable line commented; the messages MARS gave recorded in comments; Q1, Q2 and Q3 answered in the comments.</td>
+          </tr>
+          <tr class="rubric-total">
+            <td>Total</td>
+            <td>10</td>
+            <td>&nbsp;</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p style="font-size:var(--fs-sm);color:var(--color-text-muted);"><strong>CSLO alignment.</strong> Supports <strong>CSLO&nbsp;1</strong> (describe the organization and architecture of a computer system) through the bench and its measurements, and <strong>CSLO&nbsp;3</strong> (use appropriate tools to write and test assembly language programs) through the MARS experiments. The graded SLO evidence for this material is Assignment 6 in the lecture course; nothing in CSC210 depends on your attendance here.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">If You Could Not Finish</div>
+        <p><code>ARITH_BENCH</code> is about fifteen minutes of wiring on your own once <code>ADDER_8BIT</code> and <code>NOT_8BIT</code> work, and the two tables are ten minutes of poking. Everything is on this page in the order we did it.</p>
+        <p>If your adder is the thing blocking you rather than the bench, that is the first thing to sort out &mdash; it is in your Week 3 work, and Assignment 6 needs it too.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Checklist
+         ============================================================ -->
+    <section id="sec-checklist">
+      <h2>Pre-Submission Checklist</h2>
+
+      <p>Two minutes before you upload. Check an item only after you have actually verified it.</p>
+
+      <div class="widget-card" id="widget-checklist">
+        <div class="widget-card__title">Pre-Submission Checklist</div>
+        <div class="widget-card__subtitle">Nothing here is saved &mdash; it is a thinking prompt, not a record.</div>
+
+        <ul class="lab-checklist" id="ck-list">
+          <li>
+            <input type="checkbox" id="ck-1">
+            <label for="ck-1">My file has a tab named exactly <code>ARITH_BENCH</code>.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-2">
+            <label for="ck-2">It uses <strong>instances</strong> of my own <code>ADDER_8BIT</code> (two) and <code>NOT_8BIT</code> (one) &mdash; not copies of their insides, and nothing from the Arithmetic folder.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-3">
+            <label for="ck-3">The lower adder's <code>cin</code> is a constant 1, and a number minus itself gives <code>00000000</code>.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-4">
+            <label for="ck-4">Outputs <code>sum</code>, <code>sc</code>, <code>sv</code>, <code>diff</code>, <code>dc</code> and <code>dv</code> are all present and named exactly.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-5">
+            <label for="ck-5">The lower detector takes its second bit 7 from what the adder <strong>actually adds</strong>, not from the <code>b</code> pin.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-6">
+            <label for="ck-6">Both Part 3 tables are filled in from my own bench, and the three rule sentences are finished.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-7">
+            <label for="ck-7">I ran both breaks in Part 4 and put the circuit back afterwards.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-8">
+            <label for="ck-8">My program's <code>.data</code> comes first, then <code>.text</code>, with no <code>main:</code> label and no <code>.globl main</code>.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-9">
+            <label for="ck-9">The messages MARS gave are copied into comments, and the submitted file runs all the way to the exit.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-10">
+            <label for="ck-10">Q1, Q2 and Q3 are answered in the comments, and I am uploading the <code>.asm</code> <strong>file</strong>, not a screenshot of it.</label>
+          </li>
+        </ul>
+
+        <div class="checklist-status" id="ck-status" role="status" aria-live="polite">0 of 10 verified</div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         What comes next
+         ============================================================ -->
+    <section id="sec-next">
+      <h2>What Comes Next</h2>
+
+      <p>Today you measured an adder that cannot tell what its answer means, and then watched a real processor settle the question per instruction instead. The machine never knows what a byte <em>is</em>. It knows what it was told to do with it.</p>
+
+      <p>Next week the hardware track in the lecture course assembles the ALU, and the software track starts changing <em>which instruction runs next</em> &mdash; branches and loops, which is where the flags your comparator produces start to matter. Lab 7 is where you get to watch the program counter jump.</p>
+
+      <div class="progression">
+        <div class="progression__item completed">
+          <div class="progression__label">Lab 4 &mdash; Latches, Timing, and the Memory Cell</div>
+          <div class="progression__detail">Logic becomes memory &mdash; <code>SR_LATCH</code>, <code>MEM_1BIT</code></div>
+        </div>
+        <div class="progression__item completed">
+          <div class="progression__label">Lab 5 &mdash; Moving a Byte</div>
+          <div class="progression__detail">Two registers, one wire &mdash; <code>BUS_DEMO</code></div>
+        </div>
+        <div class="progression__item active">
+          <div class="progression__label">Lab 6 &mdash; One Answer, Two Readings</div>
+          <div class="progression__detail">When the adder's answer can be trusted &mdash; <code>ARITH_BENCH</code></div>
+        </div>
+        <div class="progression__item">
+          <div class="progression__label">Lab 7 &mdash; Control Flow</div>
+          <div class="progression__detail">Branches, loops, and the program counter</div>
+        </div>
+      </div>
+
+      <p>Bring your file on Tuesday.</p>
+    </section>
+
+  </main>
+
+  <!-- ==================== Footer ==================== -->
+  <footer class="sp-footer">
+    CSC210L — Computer Organization &amp; Architecture Lab &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <!-- ==================== Scripts ==================== -->
+  <script>
+  /* ============================================================
+     Pre-Submission Checklist
+     ============================================================
+     A count, and nothing more. No persistence, deliberately --
+     this is a thinking prompt at submission time, not a record.
+     No shared kernel is loaded: the page has no widget, and an
+     on-page adder would fill in the observation sheet for the
+     student.
+     ============================================================ */
+  (function () {
+    'use strict';
+
+    var boxes = document.querySelectorAll('#ck-list input[type="checkbox"]');
+    var total = boxes.length;
+
+    function update() {
+      var count = 0, i;
+      for (i = 0; i < boxes.length; i++) {
+        if (boxes[i].checked) { count++; boxes[i].parentNode.classList.add('checked'); }
+        else { boxes[i].parentNode.classList.remove('checked'); }
+      }
+      var status = document.getElementById('ck-status');
+      if (count === total) {
+        status.className = 'checklist-status checklist-status--ready';
+        status.innerHTML = '&#10004; All ' + total + ' verified &mdash; you are ready to submit.';
+      } else {
+        status.className = 'checklist-status';
+        status.textContent = count + ' of ' + total + ' verified';
+      }
+    }
+
+    Array.prototype.forEach.call(boxes, function (b) {
+      b.addEventListener('change', update);
+    });
+  })();
+  </script>
+
+</body>
+</html>
