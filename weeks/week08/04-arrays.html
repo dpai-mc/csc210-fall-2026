@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w8-04">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 8: Arrays and Strings</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ---------- */
+    .asm {
+      font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.55;
+      background: var(--color-code-bg); border: 1px solid var(--color-border);
+      border-radius: var(--radius); padding: var(--space-md); margin: var(--space-md) 0;
+      overflow-x: auto; white-space: pre;
+    }
+    .asm .cm { color: var(--color-text-muted); }
+    .asm .lbl { color: var(--color-primary); font-weight: 700; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); }
+    @media (max-width: 720px) { .two-col { grid-template-columns: 1fr; } }
+    .two-col > div > h4 { margin: 0 0 var(--space-xs) 0; }
+
+    /* The array as memory: one cell per word. */
+    .words { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 3px; margin: var(--space-sm) 0; }
+    .word { border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-surface); text-align: center; padding: var(--space-xs) 2px; font-family: var(--font-mono); }
+    .word__i { display: block; font-size: 10px; color: var(--color-primary); }
+    .word__v { display: block; font-size: var(--fs-md); }
+    .word__a { display: block; font-size: 10px; color: var(--color-text-muted); }
+    .word--hit { border: 2px solid var(--color-accent); background: #fff5eb; padding: calc(var(--space-xs) - 1px) 1px; }
+    .word--hit .word__v { color: var(--color-accent-hov); font-weight: 700; }
+
+    /* The listing with a moving cursor. */
+    .listing { font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.5; background: var(--color-code-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) 0; margin: var(--space-sm) 0; overflow-x: auto; }
+    .listing__ln { white-space: pre; padding: 0 var(--space-md); border-left: 4px solid transparent; }
+    .listing__ln--cur { background: #fff5eb; border-left-color: var(--color-accent); font-weight: 700; }
+    .regs { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: var(--space-xs); margin: var(--space-sm) 0; }
+    .reg { border: 1px solid var(--color-border); border-radius: 4px; padding: var(--space-xs) var(--space-sm); background: var(--color-surface); font-family: var(--font-mono); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+    .reg b { color: var(--color-primary); }
+    .reg--changed { border-color: var(--color-success); background: #f0faf4; }
+    .walk-status { font-size: var(--fs-sm); margin: var(--space-xs) 0; }
+    .ctl-row { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: var(--space-sm) 0; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 8 &rsaquo; <span>Page 4 — Arrays and Strings</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Arrays and Strings</h1>
+    <p><strong>Sections 8.12 – 8.15</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1 hour</p>
+
+    <!-- ============================================================
+         8.12
+         ============================================================ -->
+    <section id="sec-8-12">
+      <h2>8.12 &nbsp; An array is a base address and some arithmetic</h2>
+
+      <p>Week 1 said an array is its elements laid end to end in memory. Now you can see it. In C, <code>int a[10];</code> reserves ten 4-byte integers, one after another &mdash; <strong>40 contiguous bytes</strong>. The array has no other structure at all: no length stored anywhere, no boundaries between elements. There is a starting address, and there is arithmetic.</p>
+
+      <p>If the array starts at address <em>base</em>, then element <em>i</em> starts at</p>
+      <div class="asm">        address of a[i]  =  base + 4 &times; i</div>
+
+      <p>That formula explains something you have probably taken on faith: <strong>C arrays start at index 0 because <code>a[0]</code> is the base address itself.</strong> The index is not a position in a list; it is a distance from the start, counted in elements.</p>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">An index is not a byte offset</div>
+        <p><code>a[3]</code> is the fourth element, and it starts <strong>12</strong> bytes in, not 3. MIPS addresses count bytes; C indexes count elements. Every array bug on this page is a version of forgetting which of the two numbers you are holding.</p>
+      </div>
+
+      <p>In MARS you declare an array with <code>.word</code> (initial values) or <code>.space</code> (a number of bytes, all zero):</p>
+      <div class="asm">        <span class="lbl">.data</span>
+nums:   .word  5, 12, -7, 20, 3, 9      <span class="cm"># six ints: 24 bytes, at 0x10010000</span>
+len:    .word  6                        <span class="cm"># the length is just another variable</span>
+copy:   .space 24                       <span class="cm"># room for six more, all zero</span></div>
+
+      <div class="words" id="arr-static" aria-label="The array nums in memory"></div>
+    </section>
+
+    <!-- ============================================================
+         8.13
+         ============================================================ -->
+    <section id="sec-8-13">
+      <h2>8.13 &nbsp; Walking an array</h2>
+
+      <p>Visiting every element is a loop from Week 7 with a load in the middle. There are two standard ways to keep track of where you are, and both are worth knowing.</p>
+
+      <div class="two-col">
+        <div>
+          <h4>Index walk</h4>
+          <p>Keep <code>i</code> in a register; turn it into an address every time round.</p>
+<div class="asm">        la    $s0, nums
+        lw    $s1, len
+        li    $s2, 0          <span class="cm"># sum</span>
+        li    $t0, 0          <span class="cm"># i</span>
+<span class="lbl">loop:</span>   beq   $t0, $s1, done
+        sll   $t1, $t0, 2     <span class="cm"># i * 4</span>
+        add   $t1, $s0, $t1   <span class="cm"># &amp;nums[i]</span>
+        lw    $t2, 0($t1)
+        add   $s2, $s2, $t2
+        addi  $t0, $t0, 1
+        j     loop
+<span class="lbl">done:</span></div>
+        </div>
+        <div>
+          <h4>Pointer walk</h4>
+          <p>Keep the <em>address</em> in a register; step it by 4.</p>
+<div class="asm">        la    $t1, nums       <span class="cm"># p = &amp;nums[0]</span>
+        lw    $s1, len
+        sll   $t3, $s1, 2
+        add   $t3, $t1, $t3   <span class="cm"># end = &amp;nums[len]</span>
+        li    $s2, 0          <span class="cm"># sum</span>
+<span class="lbl">loop:</span>   beq   $t1, $t3, done
+        lw    $t2, 0($t1)
+        add   $s2, $s2, $t2
+        addi  $t1, $t1, 4     <span class="cm"># p++</span>
+        j     loop
+<span class="lbl">done:</span></div>
+        </div>
+      </div>
+
+      <p>Both leave <strong>42</strong> in <code>$s2</code>. The index walk spends seven instructions per element; the pointer walk spends five, because it never has to turn an index into an address &mdash; the address <em>is</em> the loop variable. That is exactly why C programmers write <code>*p++</code>, and why a compiler often turns the first loop into the second for you.</p>
+
+      <p>Two details that matter:</p>
+      <ul>
+        <li><strong><code>sll $t1, $t0, 2</code> is the multiply by 4.</strong> Shifting left two places multiplies by 4 &mdash; Week 7&rsquo;s <code>sll</code>, and nothing else needed. Your own ALU has no multiplier and shifts one place per pass, so on your machine this is two trips through the shift-left leg.</li>
+        <li><strong>The loop bound is <code>len</code>, not 6.</strong> Load the length from memory rather than typing it into the branch. The array is data; the code should not have to change when the data does.</li>
+      </ul>
+
+      <!-- ========== WIDGET 4 — The Array Walker ========== -->
+      <div class="widget-card" id="w-walker">
+        <div class="widget-card__title">The Array Walker</div>
+        <div class="widget-card__subtitle">Step either loop one instruction at a time and watch the address and the element move together.</div>
+
+        <div class="tab-navigation" role="tablist" aria-label="Which loop">
+          <button type="button" class="tab-button active" role="tab" aria-selected="true" data-w="index">index walk</button>
+          <button type="button" class="tab-button" role="tab" aria-selected="false" data-w="pointer">pointer walk</button>
+        </div>
+
+        <div class="listing" id="aw-list" aria-label="The program, with the next instruction highlighted"></div>
+        <div class="ctl-row">
+          <button type="button" class="widget-btn widget-btn--primary" id="aw-step">step</button>
+          <button type="button" class="widget-btn widget-btn--outline" id="aw-iter">run one element</button>
+          <button type="button" class="widget-btn widget-btn--outline" id="aw-run">run to the end</button>
+          <button type="button" class="widget-btn widget-btn--outline" id="aw-reset">reset</button>
+        </div>
+        <div class="regs" id="aw-regs"></div>
+        <div class="words" id="aw-words" aria-label="The array nums, with the word just loaded highlighted"></div>
+        <p class="walk-status" id="aw-status" aria-live="polite"></p>
+      </div>
+
+      <h3>Three bugs worth recognising on sight</h3>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>You wrote</th><th>What happens</th><th>Fix</th></tr></thead>
+          <tbody>
+            <tr><td><code>add $t1, $s0, $t0</code> &mdash; no <code>sll</code></td><td>the address advances 1 byte per element; the second <code>lw</code> is unaligned and MARS stops</td><td>scale first: <code>sll $t1, $t0, 2</code></td></tr>
+            <tr><td><code>bgt $t0, $s1, done</code></td><td>runs one element past the end and reads whatever follows the array &mdash; here, <code>len</code> itself</td><td>stop when <code>i == len</code>: <code>beq</code> or <code>bge</code></td></tr>
+            <tr><td><code>lw $t2, 1($t1)</code> meaning &ldquo;the next element&rdquo;</td><td>offset 1 is one <em>byte</em> on &mdash; unaligned, MARS stops</td><td>the next word is <code>4($t1)</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         8.14
+         ============================================================ -->
+    <section id="sec-8-14">
+      <h2>8.14 &nbsp; Strings are byte arrays</h2>
+
+      <p>A string is an array of characters, one byte each, holding the character codes from Week 1. MARS&rsquo;s <code>.asciiz</code> directive lays one down and adds a <strong>zero byte</strong> at the end &mdash; the <em>z</em> in the name. That zero is the only thing marking where the string stops. There is no length stored; a program finds the end by walking until it reads a 0.</p>
+
+      <div class="asm">        <span class="lbl">.data</span>
+msg:    .asciiz "hello, world"          <span class="cm"># 12 characters + 1 zero byte = 13 bytes</span>
+        <span class="lbl">.text</span>
+        la    $t0, msg                  <span class="cm"># p = &amp;msg[0]</span>
+        li    $t3, 'l'                  <span class="cm"># the character to count: 108</span>
+        li    $s0, 0                    <span class="cm"># count</span>
+<span class="lbl">loop:</span>   lbu   $t1, 0($t0)               <span class="cm"># one character</span>
+        beq   $t1, $zero, done          <span class="cm"># the terminator</span>
+        bne   $t1, $t3, next
+        addi  $s0, $s0, 1
+<span class="lbl">next:</span>   addi  $t0, $t0, 1               <span class="cm"># characters are 1 byte: step by 1, not 4</span>
+        j     loop
+<span class="lbl">done:</span>                                   <span class="cm"># $s0 = 3</span></div>
+
+      <p>Two differences from the word loop, and each has a reason:</p>
+      <ul>
+        <li><strong>The pointer steps by 1.</strong> Each element is one byte, so the next one is one address on. The &ldquo;multiply by element size&rdquo; is still there &mdash; the size just happens to be 1.</li>
+        <li><strong><code>lbu</code>, not <code>lb</code>.</strong> For plain ASCII (codes 0&ndash;127) the two give the same answer, because the top bit is 0. But a byte from outside ASCII &mdash; an accented letter, or part of an emoji in UTF-8 &mdash; has its top bit set, and <code>lb</code> would sign-extend it into a negative number. A character code is never negative. <code>lbu</code> is the load that means &ldquo;this byte is a value from 0 to 255&rdquo;, which is what a character is.</li>
+      </ul>
+
+      <p><code>li $t3, 'l'</code> is MARS letting you write a character in quotes instead of looking up 108. It is the same number.</p>
+
+      <!-- ========== Self-check B ========== -->
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Four questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         8.15
+         ============================================================ -->
+    <section id="sec-8-15">
+      <h2>8.15 &nbsp; Both halves have memory</h2>
+
+      <p>Phase 2 ends here. Look at what you now have on each side.</p>
+
+      <p><strong>In hardware:</strong> a register, an ALU, and a RAM &mdash; storage for a value, a way to transform values, and a place to keep many of them, each reachable by a number. Every one is built from gates you placed and components you built earlier, in one file.</p>
+
+      <p><strong>In software:</strong> programs that compute, decide, repeat, call procedures, and now keep data in memory and walk through it. That is every construct in a small C program, and you have seen what each one is at the level of the machine.</p>
+
+      <p>Four weeks ago these were two separate tracks. This week they met in a single instruction: <code>lw $t0, 8($s0)</code> is an add on your ALU, a latch in your MAR, a row and a column out of your decoders, and one AND gate in one byte of your RAM.</p>
+
+      <p><strong>Phase 3 connects the parts.</strong> Week 9 steps back to the von Neumann model &mdash; the idea that a program&rsquo;s instructions live in the same memory as its data, so the RAM you just built will one day hold the program too. Week 10 joins your ALU to a register file, and Week 12 connects memory to the CPU through a memory bus.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">The midterm is this week</div>
+        <p>It covers Weeks 1 through 8 &mdash; both phases so far. Your instructor will post the details. The self-checks on pages 3 and 4, and the ones from Weeks 5&ndash;7, are the fastest review of the MIPS side; the verification tables on each hardware page are the fastest review of the circuits.</p>
+      </div>
+
+      <p>For a second treatment of arrays and strings in MIPS, log into your Saylor CS301 account at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 2: Instructions &mdash; Hardware Language</strong>.</p>
+
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 8, Page 4
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['mem'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.mem</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.mem) { return; }
+    var MEM = L.mem;
+
+    function hex(v, n) { var s = (v >>> 0).toString(16).toUpperCase(); while (s.length < n) { s = '0' + s; } return '0x' + s; }
+    function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+    var DATA = '.data\nnums: .word 5, 12, -7, 20, 3, 9\nlen: .word 6\n.text\n';
+    function ln(l) { var m = /^(\w+:)\s*(.*)$/.exec(l); return m ? (m[1] + '        ').slice(0, 8) + m[2] : '        ' + l; }
+    var PROG = {
+      index: [
+        'la    $s0, nums', 'lw    $s1, len', 'li    $s2, 0', 'li    $t0, 0',
+        'loop: beq   $t0, $s1, done', 'sll   $t1, $t0, 2', 'add   $t1, $s0, $t1', 'lw    $t2, 0($t1)',
+        'add   $s2, $s2, $t2', 'addi  $t0, $t0, 1', 'j     loop', 'done: li    $v0, 10', 'syscall'
+      ].map(ln),
+      pointer: [
+        'la    $t1, nums', 'lw    $s1, len', 'sll   $t3, $s1, 2', 'add   $t3, $t1, $t3', 'li    $s2, 0',
+        'loop: beq   $t1, $t3, done', 'lw    $t2, 0($t1)', 'add   $s2, $s2, $t2', 'addi  $t1, $t1, 4', 'j     loop',
+        'done: li    $v0, 10', 'syscall'
+      ].map(ln)
+    };
+    var REGS = {
+      index:   ['$t0', '$t1', '$t2', '$s2'],
+      pointer: ['$t1', '$t3', '$t2', '$s2']
+    };
+    var NOTE = {
+      '$t0': 'i', '$t1': 'address', '$t2': 'element', '$s2': 'sum', '$t3': 'end address'
+    };
+
+    /* ---------- the static picture of nums ---------- */
+    function wordsHtml(m, hitAddr) {
+      var base = m.label('nums'), h = '', k;
+      for (k = 0; k < 6; k++) {
+        var a = base + 4 * k;
+        h += '<div class="word' + (a === hitAddr ? ' word--hit' : '') + '"><span class="word__i">nums[' + k + ']</span>' +
+             '<span class="word__v">' + m.word(a) + '</span><span class="word__a">' + hex(a, 8).slice(-4) + '</span></div>';
+      }
+      return h;
+    }
+    (function () {
+      var el = document.getElementById('arr-static');
+      if (el) { el.innerHTML = wordsHtml(MEM.machine(DATA), -1); }
+    }());
+
+    /* ============================================================
+       WIDGET 4 — The Array Walker
+       ============================================================
+       Runs the two loops on CSCLogic.mem.machine. The final sum (42)
+       and both MARS instruction counts (51 and 40) are asserted in the
+       Week 8 suite against values taken from MARS 4.5. */
+    (function () {
+      var host = document.getElementById('w-walker');
+      if (!host) { return; }
+      var which = 'index', m, steps, prev, lastEa, loopStart;
+      var elList = document.getElementById('aw-list'), elRegs = document.getElementById('aw-regs');
+      var elWords = document.getElementById('aw-words'), elStatus = document.getElementById('aw-status');
+
+      function reset() {
+        m = MEM.machine(DATA + PROG[which].join('\n'));
+        steps = 0; lastEa = -1; prev = {};
+        REGS[which].forEach(function (r) { prev[r] = m.reg(r); });
+        paint('Ready. The highlighted line runs next.');
+      }
+
+      function one() {
+        if (m.halted()) { return false; }
+        var before = {};
+        REGS[which].forEach(function (r) { before[r] = m.reg(r); });
+        var r = m.step();
+        if (r.halted && r.src === undefined) { return false; }
+        steps++;
+        prev = before;
+        if (r.mem) { lastEa = r.ea; }
+        return r;
+      }
+
+      function paint(msg) {
+        var cur = m.pc();
+        elList.innerHTML = m.text.map(function (t, k) {
+          return '<div class="listing__ln' + (k === cur && !m.halted() ? ' listing__ln--cur' : '') + '">' + esc(t.src) + '</div>';
+        }).join('');
+        elRegs.innerHTML = REGS[which].map(function (r) {
+          var v = m.reg(r), shown = (r === '$t1' || r === '$t3') ? hex(v, 8) : String(v);
+          return '<div class="reg' + (prev[r] !== v ? ' reg--changed' : '') + '"><b>' + r + '</b> ' + NOTE[r] + '<br>' + shown + '</div>';
+        }).join('');
+        elWords.innerHTML = wordsHtml(m, lastEa);
+        elStatus.innerHTML = msg + ' &nbsp;<span class="byte-label">source lines executed: ' + steps + '</span>';
+      }
+
+      function describe(r) {
+        if (!r) { return 'Finished.'; }
+        if (r.mem) { return '<code>' + esc(r.src.trim()) + '</code> read the word at ' + hex(r.ea, 8) + '.'; }
+        if (r.taken === true) { return '<code>' + esc(r.src.trim()) + '</code> &mdash; branch taken.'; }
+        if (r.taken === false) { return '<code>' + esc(r.src.trim()) + '</code> &mdash; not taken, fall through.'; }
+        return '<code>' + esc(r.src.trim()) + '</code>';
+      }
+
+      document.getElementById('aw-step').addEventListener('click', function () {
+        var r = one();
+        paint(m.halted() ? 'Finished: $s2 = ' + m.reg('$s2') + '.' : describe(r));
+      });
+      document.getElementById('aw-iter').addEventListener('click', function () {
+        var r, guard = 0, got = false;
+        while (!m.halted() && guard++ < 40) {
+          r = one();
+          if (r && r.mem) { got = true; }
+          if (got && r && r.src.indexOf('j ') >= 0 && r.src.trim().indexOf('j') === 0) { break; }
+        }
+        paint(m.halted() ? 'Finished: $s2 = ' + m.reg('$s2') + '.' : 'One trip round the loop. Sum so far: ' + m.reg('$s2') + '.');
+      });
+      document.getElementById('aw-run').addEventListener('click', function () {
+        var guard = 0;
+        while (!m.halted() && guard++ < 500) { one(); }
+        paint('Finished: $s2 = ' + m.reg('$s2') + '. MARS, which also counts the extra instructions <code>la</code> and <code>lw len</code> expand into, reports ' +
+              (which === 'index' ? '51' : '40') + ' instructions for this program.');
+      });
+      document.getElementById('aw-reset').addEventListener('click', reset);
+      host.querySelectorAll('.tab-button').forEach(function (b) {
+        b.addEventListener('click', function () {
+          which = b.getAttribute('data-w');
+          host.querySelectorAll('.tab-button').forEach(function (x) {
+            var on = x === b;
+            x.classList.toggle('active', on);
+            x.setAttribute('aria-selected', on ? 'true' : 'false');
+          });
+          reset();
+        });
+      });
+      reset();
+    }());
+
+    /* ============================================================
+       Self-check B
+       ============================================================ */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+        { q: '<code>int a[20]</code> starts at <code>0x10010020</code>. Where does <code>a[5]</code> start?',
+          opts: ['0x10010025', '0x10010034', '0x10010040', '0x10010030'],
+          correct: 1,
+          why: 'base + 4 &times; 5 = 0x10010020 + 20 = 0x10010020 + 0x14 = 0x10010034. The trap is adding 5 (bytes) instead of 20.' },
+        { q: 'An index-walk loop does <code>add $t1, $s0, $t0</code> with no <code>sll</code> first. What happens?',
+          opts: ['It works, only slower', 'The second lw uses an address 1 byte on, which is not word-aligned, and MARS stops', 'It reads every fourth element', 'The assembler rejects it'],
+          correct: 1,
+          why: 'i = 1 gives base + 1. <code>lw</code> needs a multiple of 4, so MARS raises the alignment exception on the second element.' },
+        { q: 'How does a loop over an <code>.asciiz</code> string know it has reached the end?',
+          opts: ['The length is stored in the byte before the string', 'It reads a byte equal to 0', 'MARS raises an exception at the end', 'It reads a newline'],
+          correct: 1,
+          why: '<code>.asciiz</code> adds one zero byte after the characters. Nothing else marks the end.' },
+        { q: 'Why load characters with <code>lbu</code> rather than <code>lb</code>?',
+          opts: ['lb cannot load from an odd address', 'lbu is faster', 'A character code is 0&ndash;255 and never negative; lb would sign-extend any byte with its top bit set into a negative number', 'They are identical for every byte'],
+          correct: 2,
+          why: 'For ASCII the two agree, but only because ASCII never sets the top bit. <code>lbu</code> says what you mean: this byte is an unsigned value.' }
+      ];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p>' +
+          '<div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi];
+        var okAns = (oi === item.correct);
+        var fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) {
+          el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false');
+        });
+      }
+      host.addEventListener('click', function (e) {
+        var t = e.target.closest('.quiz-option');
+        if (t) { answer(+t.dataset.q, +t.dataset.o); }
+      });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+  })();
+  </script>
+</body>
+</html>

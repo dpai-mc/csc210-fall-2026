@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w8-03">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 8: Load and Store</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ---------- */
+    .asm {
+      font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.55;
+      background: var(--color-code-bg); border: 1px solid var(--color-border);
+      border-radius: var(--radius); padding: var(--space-md); margin: var(--space-md) 0;
+      overflow-x: auto; white-space: pre;
+    }
+    .asm .cm { color: var(--color-text-muted); }
+    .asm .lbl { color: var(--color-primary); font-weight: 700; }
+
+    /* The data-segment strip: one cell per byte, lowest address left. */
+    .seg { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 3px; margin: var(--space-sm) 0; }
+    .seg__cell {
+      border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-surface);
+      text-align: center; padding: var(--space-xs) 2px; font-family: var(--font-mono);
+    }
+    .seg__addr { display: block; font-size: 10px; color: var(--color-text-muted); }
+    .seg__val  { display: block; font-size: var(--fs-md); }
+    .seg__lab  { display: block; font-size: 10px; color: var(--color-primary); min-height: 1.1em; }
+    .seg__cell--hit { border-color: var(--color-accent); border-width: 2px; background: #fff5eb; }
+    .seg__cell--hit .seg__val { color: var(--color-accent-hov); font-weight: 700; }
+    .seg__cell--changed .seg__val { color: var(--color-success); font-weight: 700; }
+
+    .ea-line { font-family: var(--font-mono); font-size: var(--fs-md); margin: var(--space-sm) 0; overflow-wrap: anywhere; }
+    .ea-line b { color: var(--color-primary); }
+    .result-box { border: 2px solid var(--color-primary); border-radius: var(--radius); padding: var(--space-md); background: var(--color-code-bg); margin-top: var(--space-md); }
+    .result-box--fault { border-color: var(--color-danger); background: #fdf0ef; }
+    .result-box__val { font-family: var(--font-mono); font-size: var(--fs-lg); color: var(--color-primary); overflow-wrap: anywhere; }
+    .result-box--fault .result-box__val { color: var(--color-danger); font-size: var(--fs-md); }
+
+    .mb-controls select, .mb-controls input {
+      font-family: var(--font-mono); font-size: var(--fs-sm); padding: var(--space-xs) var(--space-sm);
+      border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-surface);
+    }
+    .mb-controls input { width: 5rem; }
+
+    /* §8.11 — the chain from an instruction to one AND gate. */
+    .chain { list-style: none; padding: 0; margin: var(--space-md) 0; counter-reset: ch; }
+    .chain > li {
+      counter-increment: ch; position: relative;
+      border: 1px solid var(--color-border); border-left: 4px solid var(--color-primary);
+      border-radius: var(--radius); background: var(--color-surface);
+      padding: var(--space-sm) var(--space-md) var(--space-sm) 2.8rem; margin-bottom: var(--space-sm);
+    }
+    .chain > li::before {
+      content: counter(ch); position: absolute; left: .7rem; top: .6rem;
+      width: 1.5rem; height: 1.5rem; line-height: 1.5rem; text-align: center;
+      background: var(--color-primary); color: #fff; border-radius: 50%;
+      font-size: var(--fs-xs); font-weight: 700;
+    }
+    .chain__where { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .ls-table code { white-space: nowrap; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 8 &rsaquo; <span>Page 3 — Load and Store</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Load and Store</h1>
+    <p><strong>Sections 8.8 – 8.11</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1 hour</p>
+
+    <div class="callout callout--note">
+      <div class="callout__title">You can read this page before your RAM is finished</div>
+      <p>Everything here builds on Weeks 5&ndash;7, not on Checkpoint 3. Only &sect;8.11 refers to the circuit, and it makes sense from the figures on pages 1 and 2 whether or not yours is wired yet.</p>
+    </div>
+
+    <!-- ============================================================
+         8.8
+         ============================================================ -->
+    <section id="sec-8-8">
+      <h2>8.8 &nbsp; The only way in or out</h2>
+
+      <p>Every MIPS instruction you have written so far reads its operands from registers and writes its result to a register. <code>add</code>, <code>slt</code>, <code>sll</code>, <code>beq</code> &mdash; none of them can touch memory, and none of them ever will. MIPS is a <strong>load/store architecture</strong>: arithmetic happens only between registers, and memory is reached by a small, separate family of instructions whose one job is moving data between the two.</p>
+
+      <p>That is a design decision, not a limitation. It keeps every arithmetic instruction the same shape and the same speed, and it means the part of the processor that talks to memory is used by exactly five instructions this week instead of by all of them. When you wire load and store into your own CPU in Week 14, it will be this same separation that keeps the job manageable.</p>
+
+      <div class="table-scroll">
+        <table class="pin-table ls-table" id="ls-table">
+          <thead><tr><th>Instruction</th><th>Syntax</th><th>Moves</th><th>What it does</th></tr></thead>
+          <tbody id="ls-body"><tr><td colspan="4"><em>Loading the instruction table&hellip;</em></td></tr></tbody>
+        </table>
+      </div>
+
+      <p>All five are I-type &mdash; the format you encoded in Week 5. <code>lw</code> and <code>sw</code> were in your Week 5 reference table as encodings; this week is the first time they mean anything.</p>
+
+      <h3>Where the data lives</h3>
+      <p>In MARS, everything you declare after <code>.data</code> is placed starting at address <code>0x10010000</code>, in the order you write it. Open the <strong>Data Segment</strong> pane in the Execute tab and you are looking at exactly that memory, eight words to a row. Your instructions live somewhere else entirely &mdash; the text segment starts at <code>0x00400000</code> &mdash; and the stack starts near <code>0x7FFFEFFC</code>, which is where MARS sets <code>$sp</code> before your first instruction runs.</p>
+    </section>
+
+    <!-- ============================================================
+         8.9
+         ============================================================ -->
+    <section id="sec-8-9">
+      <h2>8.9 &nbsp; Base plus offset</h2>
+
+      <p>A load or store names its address in two parts: a register holding a <strong>base</strong> address, and a constant <strong>offset</strong> added to it.</p>
+
+      <div class="asm">        lw    $t0, 8($s0)       <span class="cm"># $t0 &larr; the word at address ($s0 + 8)</span>
+        sw    $t0, -4($sp)      <span class="cm"># the word at address ($sp - 4) &larr; $t0</span></div>
+
+      <p>The sum is called the <strong>effective address</strong>. The offset is the instruction's 16-bit immediate field, so it is <strong>sign-extended</strong> before the add &mdash; which is why <code>-4($sp)</code> works &mdash; and it must fit in &minus;32,768 to +32,767. The base register can hold any 32-bit address. Between them they reach anywhere.</p>
+
+      <p>MARS accepts three spellings. Use the first one:</p>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>You write</th><th>Means</th></tr></thead>
+          <tbody>
+            <tr><td><code>lw $t0, 0($s0)</code></td><td>the word at <code>$s0</code>. The form the hardware actually has, and the one to use</td></tr>
+            <tr><td><code>lw $t0, ($s0)</code></td><td>the same thing, offset 0 assumed</td></tr>
+            <tr><td><code>lw $t0, vals</code></td><td>the word at label <code>vals</code>. A pseudo-instruction &mdash; the assembler builds the address in <code>$at</code> first, exactly as <code>la</code> does</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>To get a label's address into a register so you can use it as a base, use <code>la</code> from Week 7:</p>
+      <div class="asm">        <span class="lbl">.data</span>
+vals:   .word  14, -3, 27
+        <span class="lbl">.text</span>
+        la    $s0, vals         <span class="cm"># $s0 &larr; 0x10010000</span>
+        lw    $t0, 0($s0)       <span class="cm"># 14</span>
+        lw    $t1, 4($s0)       <span class="cm"># -3</span>
+        lw    $t2, 8($s0)       <span class="cm"># 27</span></div>
+
+      <p>The offsets go 0, 4, 8 &mdash; not 0, 1, 2. <strong>MIPS memory is byte-addressed</strong>: every address names one byte, and a word is four of them. The second word starts four addresses after the first.</p>
+
+      <h3>Words must start on a multiple of 4</h3>
+      <p><code>lw</code> and <code>sw</code> require the effective address to be a multiple of 4 &mdash; <strong>word-aligned</strong>. Ask for a word at <code>0x10010002</code> and MARS does not load anything; it stops the program:</p>
+      <div class="asm">Runtime exception at 0x00400008: fetch address not aligned on word boundary 0x10010002</div>
+      <p>The reason is the memory hardware: a word-wide memory fetches four bytes that start on a word boundary in one access. A word straddling two boundaries would need two accesses and some reassembly, and MIPS chose to refuse rather than pay for that. Byte loads have no such rule &mdash; every address is a byte boundary.</p>
+    </section>
+
+    <!-- ============================================================
+         8.10
+         ============================================================ -->
+    <section id="sec-8-10">
+      <h2>8.10 &nbsp; Bytes: <code>lb</code>, <code>lbu</code>, <code>sb</code>, and which end comes first</h2>
+
+      <h3>Loading one byte into a 32-bit register</h3>
+      <p>A byte is 8 bits and a register is 32. Something has to fill the other 24, and there are two sensible choices. You have met this exact pair before: in Week 6 it was the immediate field, <strong>sign-extended</strong> for <code>addi</code> and <strong>zero-extended</strong> for <code>andi</code>.</p>
+
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>The byte in memory</th><th><code>lb</code> &mdash; <strong>sign-extends</strong></th><th><code>lbu</code> &mdash; <strong>zero-extends</strong></th></tr></thead>
+          <tbody>
+            <tr><td><code>0x41</code> &nbsp;(<code>01000001</code>)</td><td><code>0x00000041</code> = 65</td><td><code>0x00000041</code> = 65</td></tr>
+            <tr><td><code>0xC8</code> &nbsp;(<code>11001000</code>)</td><td><code>0xFFFFFFC8</code> = <strong>&minus;56</strong></td><td><code>0x000000C8</code> = <strong>200</strong></td></tr>
+            <tr><td><code>0x80</code> &nbsp;(<code>10000000</code>)</td><td><code>0xFFFFFF80</code> = &minus;128</td><td><code>0x00000080</code> = 128</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>When the byte's top bit is 0 the two agree. When it is 1, <strong>sign-extension</strong> copies that 1 into all 24 upper bits and the value reads as negative &mdash; Week 1's two's complement, widened. <strong>Zero-extension</strong> fills with 0s and the value reads as unsigned. Neither is right in general: <code>lb</code> is correct for a signed 8-bit number, <code>lbu</code> for a character or any byte you mean as 0&ndash;255. Page 4 uses <code>lbu</code> for text, and says why.</p>
+
+      <p><code>sb $t0, 0($s0)</code> is the reverse: it writes the <strong>low 8 bits</strong> of <code>$t0</code> into one byte and ignores the rest. There is no signed or unsigned store &mdash; the upper bits are simply not written.</p>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Writing byte values in <code>.data</code></div>
+        <p>MARS treats <code>.byte</code> values as signed, so <code>.byte 0xC8</code> draws an assembler warning (&ldquo;out-of-range for a signed value&rdquo;). It still stores the right bits, but write it as <code>.byte -56</code> and the warning goes away.</p>
+      </div>
+
+      <h3>Which byte of a word is at the lowest address?</h3>
+      <p>A word is four bytes at four consecutive addresses. Which end of the number goes first is a choice, and processors differ. <strong>MARS is little-endian</strong>: the <em>least</em> significant byte is stored at the <em>lowest</em> address.</p>
+
+      <div class="asm">w:      .word  0x0A0B0C0D       <span class="cm"># stored at 0x10010000</span>
+
+        address     0x10010000  0x10010001  0x10010002  0x10010003
+        byte           0D          0C          0B          0A</div>
+
+      <p>So <code>lbu $t0, 0($s0)</code> with <code>$s0</code> pointing at <code>w</code> gives <code>0x0D</code>, and offset 3 gives <code>0x0A</code>. Check it: MARS's Data Segment pane shows the word as <code>0x0a0b0c0d</code> because it displays whole words, but a byte load tells you which byte lives where.</p>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">You may read that &ldquo;MIPS is big-endian&rdquo;</div>
+        <p>MIPS as an architecture can run either way, and many real MIPS systems were big-endian &mdash; so that sentence is common, and some course material states it flatly. <strong>MARS is little-endian</strong>, and MARS is the MIPS you run. When a page and MARS disagree about which byte comes back, believe MARS.</p>
+      </div>
+
+      <!-- ========== WIDGET 3 — The Memory Bench ========== -->
+      <div class="widget-card" id="w-membench">
+        <div class="widget-card__title">The Memory Bench</div>
+        <div class="widget-card__subtitle">Eight bytes of a MARS data segment. Pick an instruction, a base and an offset. Every try starts from the original data.</div>
+
+        <div class="asm" style="margin-top:0">        .data
+w:      .word  0x0A0B0C0D       <span class="cm"># 0x10010000</span>
+b:      .byte  -128, 127, -56, 65   <span class="cm"># 0x10010004 .. 0x10010007</span>
+        <span class="cm"># for the stores, $t9 holds 0x11223344</span></div>
+
+        <div class="widget-input-row mb-controls">
+          <div class="widget-input-group">
+            <label for="mb-op">instruction</label>
+            <select id="mb-op">
+              <option>lw</option><option>lb</option><option selected>lbu</option><option>sw</option><option>sb</option>
+            </select>
+          </div>
+          <div class="widget-input-group">
+            <label for="mb-off">offset</label>
+            <input type="number" id="mb-off" min="-4" max="7" step="1" value="3">
+          </div>
+          <div class="widget-input-group">
+            <label for="mb-base">base register holds</label>
+            <select id="mb-base">
+              <option value="w" selected>la $s0, w &nbsp;(0x10010000)</option>
+              <option value="b">la $s0, b &nbsp;(0x10010004)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="preset-row" role="group" aria-label="Presets">
+          <button type="button" class="preset-btn" data-p="lbu,3,w">which byte is at +3?</button>
+          <button type="button" class="preset-btn" data-p="lb,2,b">lb of 0xC8</button>
+          <button type="button" class="preset-btn" data-p="lbu,2,b">lbu of 0xC8</button>
+          <button type="button" class="preset-btn" data-p="lw,4,w">lw the bytes as a word</button>
+          <button type="button" class="preset-btn" data-p="lw,2,w">lw at +2</button>
+          <button type="button" class="preset-btn" data-p="sb,1,w">sb into the middle of w</button>
+        </div>
+
+        <p class="ea-line" id="mb-code"></p>
+        <p class="ea-line" id="mb-ea"></p>
+        <div class="seg" id="mb-seg" aria-label="The eight bytes of the data segment"></div>
+        <div class="result-box" id="mb-res" aria-live="polite">
+          <div class="byte-label" id="mb-res-lbl">result</div>
+          <div class="result-box__val" id="mb-res-val">&mdash;</div>
+          <div id="mb-res-why" style="font-size:var(--fs-sm);margin-top:var(--space-xs)"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         8.11 ★
+         ============================================================ -->
+    <section id="sec-8-11">
+      <h2>8.11 &nbsp; What <code>lw</code> does to the circuit you built</h2>
+
+      <p>Week 7 traced <code>if (a &lt; b)</code> from C down to one wire out of your comparator. This is the same exercise for memory, and it goes through almost every circuit you have built.</p>
+
+      <p>C writes <code>x = a[2];</code>. The compiler has the array's base address in <code>$s0</code>, and element 2 is eight bytes in, so it emits:</p>
+      <div class="asm">        lw    $t0, 8($s0)</div>
+
+      <p>Here is what that instruction asks of the hardware, one component at a time:</p>
+
+      <ol class="chain">
+        <li>
+          <div class="chain__where">ALU &middot; Week 7 &middot; opcode 000</div>
+          <strong>Add the base and the offset.</strong> <code>$s0 + 8</code> is an addition like any other, and it goes through your ALU's ADD leg. A load instruction does arithmetic before it does anything else &mdash; the effective address is an ALU result.
+        </li>
+        <li>
+          <div class="chain__where">MAR &middot; Week 8 &middot; a <code>MEM_8BIT</code></div>
+          <strong>Latch it into the MAR.</strong> <code>sa</code> goes high and the MAR takes the sum. From here on the address no longer depends on the ALU, which is free to do something else.
+        </li>
+        <li>
+          <div class="chain__where">Two <code>DECODER_4TO16</code> &middot; Week 3</div>
+          <strong>Split it.</strong> The high nibble raises one row line; the low nibble raises one column line. Sixteen plus sixteen lines, two of them high.
+        </li>
+        <li>
+          <div class="chain__where"><code>RAM_BYTE</code> &middot; Week 8</div>
+          <strong>One AND gate goes high.</strong> Of all the bytes, exactly one sits where the lit row crosses the lit column. Its <code>h AND v</code> is 1; every other byte's is 0.
+        </li>
+        <li>
+          <div class="chain__where"><code>REGISTER_8BIT</code> &middot; Week 5</div>
+          <strong>Read.</strong> <code>e</code> rises. Only the selected byte's enable passes it, so only that byte drives <code>o</code> &mdash; and some register in the CPU raises its <code>s</code> to capture what is there.
+        </li>
+      </ol>
+
+      <div class="callout callout--aha">
+        <div class="callout__title"><code>a[2]</code> is an AND gate</div>
+        <p>An array index in C becomes an offset in assembly, becomes a sum out of your adder, becomes a row and a column out of your two decoders, becomes one AND gate in one byte going high. There is no step in that chain you have not built.</p>
+      </div>
+
+      <h3><code>sw</code> is the Week 5 transfer, pointed the other way</h3>
+      <p>A store puts the address in the MAR the same way. Then it has to move a value <em>from</em> a register <em>into</em> the selected byte, and that is the four-step transfer from Week 5 &sect;5.3 with the RAM as the destination:</p>
+      <ol>
+        <li>the source register's <code>e</code> goes high &mdash; its value is on the bus;</li>
+        <li>the RAM's <code>s</code> goes high &mdash; the selected byte follows the bus;</li>
+        <li>the RAM's <code>s</code> goes low &mdash; the byte holds the value;</li>
+        <li>the source register's <code>e</code> goes low.</li>
+      </ol>
+      <p><strong>The write pulse is nested inside the read pulse</strong>, for the same reason it was in Week 5: the byte is a latch, transparent while <code>s</code> is high, so the value on its input must not move until <code>s</code> is low again.</p>
+
+      <h3>Where the course machine and MIPS part company</h3>
+      <p>Two honest differences, and they are differences of size, not of kind:</p>
+      <ul>
+        <li><strong>Addresses.</strong> MIPS addresses are 32 bits. Your MAR is 8 bits, so your machine can name 256 bytes &mdash; and has 32 of them wired.</li>
+        <li><strong>How much moves.</strong> <code>lw</code> moves four bytes at once. Your RAM moves one byte per access, because your whole machine is 8 bits wide. The instruction your CPU will actually have is closest to <code>lbu</code>: one byte in, nothing to extend.</li>
+      </ul>
+      <p>Neither changes the chain above. A 32-bit machine has a wider adder, a wider MAR, bigger decoders and four bytes enabled at once, but the path from an offset to a selected cell is the one you just followed.</p>
+
+      <!-- ========== Self-check A ========== -->
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Five questions, not graded. Two of these shapes are on the assignment.</div>
+        <div id="sc-body"></div>
+      </div>
+
+      <p>For the MIPS side of this material in a second voice, log into your Saylor CS301 account at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 2: Instructions &mdash; Hardware Language</strong>, which covers load/store and addressing. CS301 does not cover MARS's byte order or the two-decoder circuit; this page is the only source for those.</p>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>You can move a word or a byte between memory and a register, and you know what that costs the hardware. Next page: doing it in a loop, which is what an array is for.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 8, Page 3
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['mem'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.mem</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.mem) { return; }
+    var MEM = L.mem;
+
+    function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function hex(v, n) { var s = (v >>> 0).toString(16).toUpperCase(); while (s.length < n) { s = '0' + s; } return '0x' + s; }
+
+    /* ---------- The instruction table, from the one copy ---------- */
+    (function () {
+      var body = document.getElementById('ls-body');
+      if (!body) { return; }
+      body.innerHTML = MEM.LOADSTORE.map(function (o) {
+        var moves = o.size === 4 ? '4 bytes' : '1 byte';
+        return '<tr><td><code>' + o.m + '</code></td><td><code>' + esc(o.syntax) + '</code></td><td>' + moves + '</td><td>' + esc(o.desc) + '</td></tr>';
+      }).join('');
+    }());
+
+    /* ============================================================
+       WIDGET 3 — The Memory Bench
+       ============================================================
+       Every try assembles a three-line program and runs it through
+       CSCLogic.mem.machine, so the bench and the Array Walker share one
+       model of MIPS memory, and the suite can check that model against
+       values that came from running MARS. Little-endian throughout. */
+    (function () {
+      var host = document.getElementById('w-membench');
+      if (!host) { return; }
+      var elOp = document.getElementById('mb-op'), elOff = document.getElementById('mb-off');
+      var elBase = document.getElementById('mb-base');
+      var elCode = document.getElementById('mb-code'), elEa = document.getElementById('mb-ea');
+      var elSeg = document.getElementById('mb-seg');
+      var elRes = document.getElementById('mb-res'), elLbl = document.getElementById('mb-res-lbl');
+      var elVal = document.getElementById('mb-res-val'), elWhy = document.getElementById('mb-res-why');
+      var DATA = '.data\nw: .word 0x0A0B0C0D\nb: .byte -128, 127, -56, 65\n.text\n';
+      var BASE = 0x10010000;
+
+      function render() {
+        var op = elOp.value, off = parseInt(elOff.value, 10), base = elBase.value;
+        if (isNaN(off)) { off = 0; }
+        off = Math.max(-4, Math.min(7, off));
+        var store = (op === 'sw' || op === 'sb');
+        var reg = store ? '$t9' : '$t0';
+        var line = op + ' ' + reg + ', ' + off + '($s0)';
+        var src = DATA + 'la $s0, ' + base + '\nli $t9, 0x11223344\n' + line + '\n';
+        var m = MEM.machine(src);
+        var baseAddr = m.label(base);
+        var before = [], k;
+        for (k = 0; k < 8; k++) { before.push(m.byte(BASE + k)); }
+        m.step(); m.step();
+        var r = m.step();
+        var ea = MEM.effective(baseAddr, off).address;
+        var size = (op === 'lw' || op === 'sw') ? 4 : 1;
+
+        elCode.innerHTML = '<b>' + esc(line) + '</b>';
+        elEa.innerHTML = 'effective address = ' + hex(baseAddr, 8) + ' + (' + off + ') = <b>' + hex(ea, 8) + '</b>' +
+          (size === 4 ? (MEM.aligned(ea, 4) ? ' &nbsp;&mdash; a multiple of 4' : ' &nbsp;&mdash; <strong>not</strong> a multiple of 4') : '');
+
+        var cells = '';
+        for (k = 0; k < 8; k++) {
+          var a = BASE + k;
+          var hit = !r.fault && a >= ea && a < ea + size;
+          var now = m.byte(a);
+          var cls = 'seg__cell' + (hit ? ' seg__cell--hit' : '') + (now !== before[k] ? ' seg__cell--changed' : '');
+          cells += '<div class="' + cls + '"><span class="seg__lab">' + (k === 0 ? 'w' : (k === 4 ? 'b' : '')) + '</span>' +
+                   '<span class="seg__val">' + hex(now, 2).slice(2) + '</span>' +
+                   '<span class="seg__addr">&hellip;' + hex(a, 8).slice(-2) + '</span></div>';
+        }
+        elSeg.innerHTML = cells;
+
+        elRes.className = 'result-box' + (r.fault ? ' result-box--fault' : '');
+        if (r.fault) {
+          elLbl.textContent = 'MARS stops the program';
+          elVal.textContent = 'Runtime exception: ' + (store ? 'store' : 'fetch') + ' address not aligned on word boundary ' + hex(ea, 8);
+          elWhy.innerHTML = '<code>' + op + '</code> moves four bytes and needs an address that is a multiple of 4. Nothing was loaded or stored.';
+          return;
+        }
+        if (ea < BASE || ea + size > BASE + 8) {
+          elWhy.innerHTML = 'That address is outside the eight bytes shown here. MARS would still ' + (store ? 'store there' : 'load from there') + ' &mdash; this bench only draws <code>w</code> and <code>b</code>.';
+        } else { elWhy.innerHTML = ''; }
+        if (store) {
+          elLbl.textContent = 'memory after ' + op;
+          elVal.textContent = size === 4 ? 'four bytes written: 44 33 22 11 (little-endian)' : 'one byte written: 44 (the low byte of $t9)';
+          elWhy.innerHTML = (size === 4 ?
+            'The low byte of <code>$t9</code>, <code>0x44</code>, goes to the lowest address. That is what little-endian means.' :
+            '<code>sb</code> writes only the low 8 bits. The upper 24 bits of <code>$t9</code> are not stored anywhere.') + ' ' + elWhy.innerHTML;
+          return;
+        }
+        var v = m.reg('$t0');
+        elLbl.textContent = '$t0 after ' + op;
+        elVal.textContent = hex(v, 8) + '  =  ' + (v | 0);
+        var why = '';
+        if (op === 'lb') {
+          why = (v | 0) < 0 ? 'The byte&rsquo;s top bit is 1, so <code>lb</code> <strong>sign-extends</strong>: 24 copies of that 1 above it, and the value is negative.'
+                            : 'The byte&rsquo;s top bit is 0, so sign-extension fills with 0s &mdash; <code>lb</code> and <code>lbu</code> agree here.';
+        } else if (op === 'lbu') {
+          why = '<code>lbu</code> <strong>zero-extends</strong>: the upper 24 bits are 0 whatever the byte was.';
+        } else {
+          why = 'Four bytes, lowest address = least significant byte. Read the highlighted cells right to left and you have the word.';
+        }
+        elWhy.innerHTML = why + (elWhy.innerHTML ? ' ' + elWhy.innerHTML : '');
+      }
+
+      [elOp, elOff, elBase].forEach(function (el) { el.addEventListener('change', render); el.addEventListener('input', render); });
+      host.querySelectorAll('.preset-btn').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var p = b.getAttribute('data-p').split(',');
+          elOp.value = p[0]; elOff.value = p[1]; elBase.value = p[2];
+          render();
+        });
+      });
+      render();
+    }());
+
+    /* ============================================================
+       Self-check A
+       ============================================================ */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+        { q: '<code>$s0 = 0x10010008</code>. What is the effective address of <code>lw $t0, -4($s0)</code>?',
+          opts: ['0x10010004', '0x1001000C', '0x10010007', '0x10010008 &mdash; the offset is applied after the load'],
+          correct: 0,
+          why: 'The offset is sign-extended and added to the base: 0x10010008 &minus; 4 = 0x10010004. It is a multiple of 4, so the <code>lw</code> is legal.' },
+        { q: 'A byte in memory is <code>0xF0</code>. What does <code>lb</code> leave in the register?',
+          opts: ['0x000000F0 = 240', '0xFFFFFFF0 = &minus;16', '0xF0000000', '0x0000000F'],
+          correct: 1,
+          why: 'Top bit 1, so <code>lb</code> copies it into all 24 upper bits. <code>lbu</code> would give 0x000000F0 = 240.' },
+        { q: 'MARS stores <code>.word 0x11223344</code> at address <code>A</code>. Which byte is at <code>A + 1</code>?',
+          opts: ['0x11', '0x22', '0x33', '0x44'],
+          correct: 2,
+          why: 'Little-endian: 0x44 at A, 0x33 at A+1, 0x22 at A+2, 0x11 at A+3.' },
+        { q: '<code>$t1 = 0x10010000</code>. What does <code>lw $t0, 6($t1)</code> do in MARS?',
+          opts: ['Loads the word starting at 0x10010006', 'Loads the word at 0x10010004 and ignores the extra 2', 'Stops with a runtime exception: the address is not word-aligned', 'Loads 6 into $t0'],
+          correct: 2,
+          why: '0x10010006 is not a multiple of 4. <code>lw</code> refuses rather than assembling a word from two halves.' },
+        { q: 'In the course machine, which ALU operation computes the effective address of a load?',
+          opts: ['None &mdash; the MAR computes it', 'ADD, opcode 000', 'OR, opcode 101', 'The comparator'],
+          correct: 1,
+          why: 'Base + offset is an addition, and your ALU does additions on its ADD leg. The MAR only holds the result.' }
+      ];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p>' +
+          '<div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi];
+        var okAns = (oi === item.correct);
+        var fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) {
+          el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false');
+        });
+      }
+      host.addEventListener('click', function (e) {
+        var t = e.target.closest('.quiz-option');
+        if (t) { answer(+t.dataset.q, +t.dataset.o); }
+      });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+  })();
+  </script>
+</body>
+</html>

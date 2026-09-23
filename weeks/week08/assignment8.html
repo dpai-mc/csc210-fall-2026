@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w8-assign">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Assignment 8: Somewhere to Put Things</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .q-block { border-left: 3px solid var(--color-border); padding-left: var(--space-md); margin: var(--space-lg) 0; }
+    .q-num { font-weight: 700; color: var(--color-primary); }
+    .q-pts { font-size: var(--fs-sm); color: var(--color-text-muted); }
+
+    .ans { margin-top: var(--space-sm); }
+    .ans__input {
+      display: block; width: 100%; box-sizing: border-box;
+      min-height: 5.2em; resize: vertical;
+      font-family: var(--font-sans); font-size: var(--fs-sm); line-height: 1.55;
+      color: var(--color-text); background: var(--color-surface);
+      border: 1px solid var(--color-border); border-radius: var(--radius);
+      padding: var(--space-sm);
+    }
+    .ans__input:focus { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+    .ans--short .ans__input { min-height: 2.6em; font-family: var(--font-mono); letter-spacing: .04em; }
+    .ans__print { display: none; }
+
+    .field-slot { display: inline-flex; flex-direction: column; margin: 0 var(--space-sm) var(--space-sm) 0; }
+    .field-slot b { font-size: var(--fs-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .04em; }
+    .field-slot input {
+      font-family: var(--font-mono); font-size: var(--fs-sm);
+      border: 1px solid var(--color-border); border-radius: 4px;
+      padding: var(--space-xs) var(--space-sm); background: var(--color-surface); min-width: 10rem;
+    }
+    .field-row { display: flex; flex-wrap: wrap; align-items: flex-end; }
+
+    .cover-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-md); margin: var(--space-md) 0; }
+    .cover-grid > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
+    .cover-grid label { display: block; font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); margin-bottom: var(--space-xs); }
+    .cover-grid input { width: 100%; box-sizing: border-box; font-size: var(--fs-base); padding: var(--space-xs) var(--space-sm); border: 1px solid var(--color-border); border-radius: 4px; }
+
+    .asm {
+      font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.55;
+      background: var(--color-code-bg); border: 1px solid var(--color-border);
+      border-radius: var(--radius); padding: var(--space-md);
+      overflow-x: auto; white-space: pre; margin: var(--space-md) 0;
+    }
+    .asm .cm { color: var(--color-text-muted); }
+
+    .regtable { width: 100%; border-collapse: collapse; margin: var(--space-md) 0; font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .regtable th, .regtable td { text-align: left; padding: var(--space-xs) var(--space-sm); border-bottom: 1px solid var(--color-border); }
+    .regtable th { background: var(--color-code-bg); font-family: var(--font-sans); }
+
+    .bonus-block { border: 2px dashed var(--color-success); border-radius: var(--radius); background: #f2fbf6; padding: var(--space-md); margin: var(--space-lg) 0; }
+    .bonus-block h3 { margin-top: 0; color: var(--color-success); }
+
+    .submit-row { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: var(--space-lg) 0; }
+
+    @media print {
+      .sp-header, .sp-footer { display: none; }
+      .q-block { break-inside: avoid; }
+      body { background: #fff; }
+      .ans__input { display: none; }
+      .ans__print {
+        display: block; white-space: pre-wrap; word-break: break-word;
+        border: 1px solid #999; border-radius: 3px;
+        padding: 6px 8px; min-height: 4em; font-size: 10.5pt; line-height: 1.5;
+      }
+      .ans--short .ans__print { min-height: 1.8em; font-family: var(--font-mono); }
+      .field-slot input { border-bottom: 1px solid #999; }
+      .no-print { display: none !important; }
+      body.print-bc main > *:not(#submit-cover):not(#part-b):not(#part-c) { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 8 &rsaquo; <span>Assignment 8</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Assignment 8 — Somewhere to Put Things</h1>
+    <p><span class="points-badge">100 points</span> &nbsp;|&nbsp; Week 8 &nbsp;|&nbsp; Logisim Checkpoint 3 + MIPS memory</p>
+
+    <section id="overview">
+      <h2>What you submit</h2>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Part</th><th>What it is</th><th>How</th><th>Points</th></tr></thead>
+          <tbody>
+            <tr><td><strong>A</strong></td><td>Logisim Checkpoint 3 — the RAM and MAR</td><td><code>.circ</code> file + 10 screenshots</td><td>50</td></tr>
+            <tr><td><strong>B</strong></td><td>Four written questions</td><td>filled in below, printed to PDF</td><td>12</td></tr>
+            <tr><td><strong>C</strong></td><td>Address arithmetic</td><td>filled in below, same PDF</td><td>18</td></tr>
+            <tr><td><strong>D</strong></td><td>A short MARS array program</td><td><code>lastname_firstname_week8.asm</code></td><td>20</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>This assignment is smaller than Week 7&rsquo;s on purpose: the midterm is this week too. Most of the points are in the circuit, and the circuit is where most of the time goes &mdash; start it first.</p>
+      <div class="callout callout--warn">
+        <div class="callout__title">Nothing you type on this page is saved anywhere</div>
+        <p>There is no storage behind these boxes. Close the tab or reload and <strong>your typing is gone.</strong> Print to PDF before you leave, and if you are working across two sittings, draft your answers elsewhere and paste them in.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART A
+         ============================================================ -->
+    <section id="part-a">
+      <h2>Part A &mdash; Logisim Checkpoint 3 <span class="q-pts">(50 points)</span></h2>
+      <p>Build <code>RAM_BYTE</code> and <code>RAM_16X16</code> in your single course file. Pages 1 and 2 of this week walk through both.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Three of the parts are already in your file</div>
+        <p><code>REGISTER_8BIT</code> and <code>MEM_8BIT</code> from <strong>Week 5</strong>; <code>DECODER_4TO16</code> from <strong>Week 3</strong>. <strong>Instantiate them. Do not rebuild them, and do not modify <code>REGISTER_8BIT</code></strong> &mdash; it already has every buffer it needs. The controlled buffer this checkpoint adds goes inside <code>RAM_BYTE</code>, after an instance of your register.</p>
+      </div>
+
+      <h3>Tab <code>RAM_BYTE</code> &mdash; these pin names are exact</h3>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><code class="pin-table__name">h</code></td><td>1</td><td>in</td><td>row select</td></tr>
+            <tr><td><code class="pin-table__name">i</code></td><td>8</td><td>in</td><td>data in</td></tr>
+            <tr><td><code class="pin-table__name">v</code></td><td>1</td><td>in</td><td>column select</td></tr>
+            <tr><td><code class="pin-table__name">s</code></td><td>1</td><td>in</td><td>write</td></tr>
+            <tr><td><code class="pin-table__name">e</code></td><td>1</td><td>in</td><td>read</td></tr>
+            <tr><td><code class="pin-table__name">reset</code></td><td>1</td><td>in</td><td>write <code>i</code> regardless of selection</td></tr>
+            <tr><td><code class="pin-table__name">o</code></td><td>8</td><td>out</td><td>data out, driven only when selected and <code>e</code> = 1</td></tr>
+            <tr><td><code class="pin-table__name">mem</code></td><td>8</td><td>out</td><td>the stored byte, always visible</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Inside: <code>sel = h AND v</code> &middot; <code>set = (sel AND s) OR reset</code> to the register&rsquo;s <code>s</code> &middot; <code>sel AND e</code> to the register&rsquo;s <code>e</code> and to an 8-bit controlled buffer on its <code>o</code> &middot; the register&rsquo;s <code>reg</code> to <code>mem</code>.</p>
+
+      <h3>Tab <code>RAM_16X16</code> &mdash; these pin names are exact</h3>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><code class="pin-table__name">address</code></td><td>8</td><td>in</td><td>into the MAR</td></tr>
+            <tr><td><code class="pin-table__name">sa</code></td><td>1</td><td>in</td><td>MAR set</td></tr>
+            <tr><td><code class="pin-table__name">i</code></td><td>8</td><td>in</td><td>data in, to every byte</td></tr>
+            <tr><td><code class="pin-table__name">s</code></td><td>1</td><td>in</td><td>write, to every byte</td></tr>
+            <tr><td><code class="pin-table__name">e</code></td><td>1</td><td>in</td><td>read, to every byte</td></tr>
+            <tr><td><code class="pin-table__name">reset</code></td><td>1</td><td>in</td><td>broadcast write, to every byte</td></tr>
+            <tr><td><code class="pin-table__name">o</code></td><td>8</td><td>out</td><td>the selected byte, or floating</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Inside: a <code>MEM_8BIT</code> as the MAR, set by <code>sa</code>; <strong>address bits 7&ndash;4 to the row decoder and bits 3&ndash;0 to the column decoder</strong>; 32 <code>RAM_BYTE</code> instances in rows 0 and 1; row-decoder outputs 2&ndash;15 connected to nothing; one shared output line through an 8-bit controlled buffer, controlled by <code>e</code>, to <code>o</code>.</p>
+
+      <h3>Points</h3>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Criterion</th><th>Points</th></tr></thead>
+          <tbody>
+            <tr><td><code>RAM_BYTE</code> tab present with all eight pins named exactly</td><td>8</td></tr>
+            <tr><td>Select, write and read gating correct: <code>h AND v</code>, then <code>AND s</code> and <code>AND e</code></td><td>8</td></tr>
+            <tr><td><code>reset</code> ORed into the write line</td><td>4</td></tr>
+            <tr><td><code>REGISTER_8BIT</code> <strong>instantiated</strong>, not rebuilt or modified</td><td>4</td></tr>
+            <tr><td><code>RAM_16X16</code> tab present with all seven pins named exactly</td><td>6</td></tr>
+            <tr><td>Two <code>DECODER_4TO16</code> instances; high nibble to rows, low nibble to columns</td><td>6</td></tr>
+            <tr><td>MAR is a <code>MEM_8BIT</code> instance, set by <code>sa</code></td><td>4</td></tr>
+            <tr><td>32 <code>RAM_BYTE</code> instances with shared <code>i</code>, <code>s</code>, <code>e</code>, <code>reset</code> and output line</td><td>6</td></tr>
+            <tr><td>Ten verification screenshots, matching the table below</td><td>3</td></tr>
+            <tr><td>Single-file compliance</td><td>1</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Verify, and screenshot each step</h3>
+      <p><code>s</code>, <code>e</code>, <code>sa</code> and <code>reset</code> start at 0. &ldquo;Pulse&rdquo; means 0 &rarr; 1 &rarr; 0. Never change the MAR while <code>s</code> is high.</p>
+      <div class="table-scroll">
+        <table class="pin-table" id="verify-table">
+          <thead><tr><th>#</th><th>Do</th><th>Expect</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Nothing yet &mdash; a fresh circuit</td><td>every byte&rsquo;s <code>mem</code> shows <code>EEEEEEEE</code> (correct)</td></tr>
+            <tr><td>2</td><td><code>i = 00000000</code>, pulse <code>reset</code></td><td>all 32 <code>mem</code> show <code>00000000</code></td></tr>
+            <tr><td>3</td><td><code>address = 00000101</code>, pulse <code>sa</code>; <code>i = 00111100</code>, pulse <code>s</code></td><td>byte 5 = <code>00111100</code>; nothing else changes</td></tr>
+            <tr><td>4</td><td><code>address = 00011011</code>, pulse <code>sa</code>; <code>i = 10100101</code>, pulse <code>s</code></td><td>byte 27 = <code>10100101</code></td></tr>
+            <tr><td>5</td><td><code>address = 00000101</code>, pulse <code>sa</code>; <code>e = 1</code></td><td><code>o = 00111100</code></td></tr>
+            <tr><td>6</td><td><code>address = 00011011</code>, pulse <code>sa</code></td><td><code>o = 10100101</code></td></tr>
+            <tr><td>7</td><td><code>address = 00010101</code>, pulse <code>sa</code></td><td><code>o = 00000000</code></td></tr>
+            <tr><td>8</td><td><code>address = 00001011</code>, pulse <code>sa</code></td><td><code>o = 00000000</code></td></tr>
+            <tr><td>9</td><td><code>address = 00100101</code>, pulse <code>sa</code></td><td><code>o = xxxxxxxx</code></td></tr>
+            <tr><td>10</td><td><code>e = 0</code></td><td><code>o = xxxxxxxx</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Submission checklist</h3>
+      <ul class="lab-checklist">
+        <li>All circuits are contained within this single <code>.circ</code> file — no external file links</li>
+        <li><code>RAM_BYTE</code> and <code>RAM_16X16</code> present, pins named exactly as above</li>
+        <li><code>REGISTER_8BIT</code>, <code>DECODER_4TO16</code> and <code>MEM_8BIT</code> instantiated from the tabs you already had &mdash; none rebuilt, none modified</li>
+        <li>Address bits 7&ndash;4 drive the row decoder; bits 3&ndash;0 the column decoder</li>
+        <li>Row decoder outputs 2&ndash;15 connected to nothing</li>
+        <li>32 <code>RAM_BYTE</code> instances, rows 0 and 1</li>
+        <li>Ten screenshots, one per verification step</li>
+        <li>Only <strong>Wiring</strong> and <strong>Gates</strong> components used &mdash; nothing from Plexers, Arithmetic or Memory</li>
+      </ul>
+    </section>
+
+    <!-- ============================================================
+         PART B
+         ============================================================ -->
+    <section id="part-b">
+      <h2>Part B &mdash; Written <span class="q-pts">(12 points, 3 each)</span></h2>
+
+      <div class="q-block">
+        <p><span class="q-num">1.</span> <span class="q-pts">(3 points)</span> Your MAR is a <code>MEM_8BIT</code>, not a <code>REGISTER_8BIT</code>. <strong>Why does it not need an enable or output buffers?</strong></p>
+        <div class="ans">
+          <label class="sr-only" for="b1">Your answer to Part B question 1</label>
+          <textarea class="ans__input" id="b1" rows="3"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">2.</span> <span class="q-pts">(3 points)</span> Why does the RAM use two 4&times;16 decoders instead of one 8&times;256 decoder? Compare the two designs &mdash; and <strong>include the gate every byte needs that the decoders do not provide</strong>.</p>
+        <div class="ans">
+          <label class="sr-only" for="b2">Your answer to Part B question 2</label>
+          <textarea class="ans__input" id="b2" rows="4"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">3.</span> <span class="q-pts">(3 points)</span> You load <code>01000000</code> into the MAR and raise <code>e</code>. <strong>What does <code>o</code> show, and why is that not <code>00000000</code>?</strong> What happens if you pulse <code>s</code> at that address instead?</p>
+        <div class="ans">
+          <label class="sr-only" for="b3">Your answer to Part B question 3</label>
+          <textarea class="ans__input" id="b3" rows="4"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">4.</span> <span class="q-pts">(3 points)</span> <code>$t0 = 0x10010000</code> and a program runs <code>lw $t1, 2($t0)</code>. <strong>What does MARS do</strong>, and why does <code>lw</code> need its address to be a multiple of 4?</p>
+        <div class="ans">
+          <label class="sr-only" for="b4">Your answer to Part B question 4</label>
+          <textarea class="ans__input" id="b4" rows="4"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART C
+         ============================================================ -->
+    <section id="part-c">
+      <h2>Part C &mdash; Address arithmetic <span class="q-pts">(18 points, 3 each)</span></h2>
+      <p>Give addresses in hex, and other numbers as each question asks. Show enough working that a wrong answer can earn partial credit.</p>
+
+      <div class="q-block">
+        <p><span class="q-num">1.</span> <span class="q-pts">(3 points)</span> <code>$s0 = 0x10010008</code>. Give the effective address of each instruction.</p>
+        <div class="field-row">
+          <div class="field-slot"><b><label for="c1a">lw $t0, 12($s0)</label></b><input type="text" id="c1a" autocomplete="off"></div>
+          <div class="field-slot"><b><label for="c1b">sw $t1, -8($s0)</label></b><input type="text" id="c1b" autocomplete="off"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">2.</span> <span class="q-pts">(3 points)</span> A C array <code>int a[10]</code> starts at <code>0x10010040</code>.</p>
+        <div class="field-row">
+          <div class="field-slot"><b><label for="c2a">how many bytes it occupies</label></b><input type="text" id="c2a" autocomplete="off"></div>
+          <div class="field-slot"><b><label for="c2b">address of a[7]</label></b><input type="text" id="c2b" autocomplete="off"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">3.</span> <span class="q-pts">(3 points)</span> The index <code>i</code> is in <code>$t0</code> and the base of <code>a</code> is in <code>$s0</code>. Write the <strong>two instructions</strong> that leave the address of <code>a[i]</code> in <code>$t1</code>.</p>
+        <div class="ans ans--short">
+          <label class="sr-only" for="c3">Part C question 3</label>
+          <textarea class="ans__input" id="c3" rows="2"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">4.</span> <span class="q-pts">(3 points)</span> For each RAM address, give the row, the column, the byte number, and whether your RAM has that byte.</p>
+        <div class="field-row">
+          <div class="field-slot"><b><label for="c4a">00011011</label></b><input type="text" id="c4a" autocomplete="off"></div>
+          <div class="field-slot"><b><label for="c4b">00111010</label></b><input type="text" id="c4b" autocomplete="off"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">5.</span> <span class="q-pts">(3 points)</span> A byte in memory holds <code>0xC8</code>. What does each instruction leave in the register, in hex and in decimal?</p>
+        <div class="field-row">
+          <div class="field-slot"><b><label for="c5a">lb</label></b><input type="text" id="c5a" autocomplete="off"></div>
+          <div class="field-slot"><b><label for="c5b">lbu</label></b><input type="text" id="c5b" autocomplete="off"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">6.</span> <span class="q-pts">(3 points)</span> MARS stores <code>.word 0x0A0B0C0D</code> at address <code>0x10010004</code>. Which byte is at each address?</p>
+        <div class="field-row">
+          <div class="field-slot"><b><label for="c6a">0x10010004</label></b><input type="text" id="c6a" autocomplete="off"></div>
+          <div class="field-slot"><b><label for="c6b">0x10010007</label></b><input type="text" id="c6b" autocomplete="off"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART D
+         ============================================================ -->
+    <section id="part-d">
+      <h2>Part D &mdash; A MARS array program <span class="q-pts">(20 points)</span></h2>
+      <p>Submit as <code>lastname_firstname_week8.asm</code>. <strong>This is a separate file upload</strong> &mdash; do not paste it into the PDF. Start from this data section, unchanged:</p>
+
+      <div class="asm">        .data
+vals:   .word  14, -3, 27, 8, -11, 30, 5, 2
+len:    .word  8
+out:    .space 32</div>
+
+      <p>Then, in <code>.text</code>:</p>
+      <ol>
+        <li><strong>Sum</strong> the elements of <code>vals</code> into <code>$s0</code>.</li>
+        <li>Find the <strong>largest</strong> element and leave it in <code>$s1</code>. The comparison must be <strong>signed</strong> &mdash; one element is negative.</li>
+        <li><strong>Copy <code>vals</code> into <code>out</code> in reverse order</strong>, so <code>out[0]</code> is the last element of <code>vals</code>, one <code>lw</code> and one <code>sw</code> per element.</li>
+      </ol>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Requirements</div>
+        <ul>
+          <li><code>.data</code> first, then <code>.text</code>, with no <code>main:</code> label and no <code>.globl main</code> &mdash; the course&rsquo;s standing layout.</li>
+          <li>Every loop takes its bound from <code>len</code>. Do not type 8 into a branch.</li>
+          <li>Index walk or pointer walk, as you prefer &mdash; page 4 shows both.</li>
+          <li>Pseudo-instructions (<code>la</code>, <code>li</code>, <code>move</code>, <code>blt</code> and the rest) are permitted.</li>
+          <li>Nothing here needs multiplication or division. <code>mult</code>, <code>div</code>, <code>mfhi</code>, <code>mflo</code> and <code>lui</code> are not taught and must not appear in your source &mdash; multiply by 4 with <code>sll</code>. (MARS&rsquo;s Basic column will show <code>lui</code> where it expands your <code>la</code>; that is the assembler&rsquo;s, not yours.)</li>
+          <li>Comment every line that is not obvious.</li>
+        </ul>
+      </div>
+
+      <p><strong>Check yourself before submitting.</strong> When your program finishes, MARS should show:</p>
+      <table class="regtable">
+        <thead><tr><th>Where</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td><code>$s0</code></td><td>72</td></tr>
+          <tr><td><code>$s1</code></td><td>30</td></tr>
+          <tr><td><code>out</code>, in order</td><td>2, 5, 30, -11, 8, 27, -3, 14</td></tr>
+        </tbody>
+      </table>
+      <p>In the Data Segment pane, <code>vals</code> starts at <code>0x10010000</code>, <code>len</code> is at <code>0x10010020</code>, and <code>out</code> starts at <code>0x10010024</code>. Switch the pane to decimal to read the values directly.</p>
+
+      <h3>Points</h3>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Criterion</th><th>Points</th></tr></thead>
+          <tbody>
+            <tr><td>Sum correct in <code>$s0</code></td><td>5</td></tr>
+            <tr><td>Signed maximum correct in <code>$s1</code></td><td>5</td></tr>
+            <tr><td>Reverse copy correct in <code>out</code></td><td>7</td></tr>
+            <tr><td>Structure, comments, layout, loops bounded by <code>len</code></td><td>3</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Totals
+         ============================================================ -->
+    <section id="totals">
+      <h2>Points and outcomes</h2>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Part</th><th>Points</th><th>Assesses</th></tr></thead>
+          <tbody>
+            <tr><td>A — Checkpoint 3</td><td>50</td><td>SLO1</td></tr>
+            <tr><td>B — Written</td><td>12</td><td>SLO1, SLO2</td></tr>
+            <tr><td>C — Address arithmetic</td><td>18</td><td>SLO2</td></tr>
+            <tr><td>D — MARS program</td><td>20</td><td>SLO3</td></tr>
+            <tr class="rubric-total"><td><strong>Total</strong></td><td><strong>100</strong></td><td></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="submit-cover">
+      <h2>Your name, for the PDF</h2>
+      <p class="q-pts">Not graded. It is here so the PDF that lands in the gradebook can be told apart from thirty others.</p>
+      <div class="cover-grid">
+        <div>
+          <label for="cv-name">Name</label>
+          <input type="text" id="cv-name" autocomplete="name">
+        </div>
+        <div>
+          <label for="cv-date">Date</label>
+          <input type="text" id="cv-date" autocomplete="off">
+        </div>
+      </div>
+    </section>
+
+    <div class="submit-row no-print">
+      <button class="widget-btn widget-btn--primary" type="button" id="print-bc">Print Parts B and C to PDF</button>
+      <button class="widget-btn widget-btn--outline" type="button" id="print-page">Print the whole handout</button>
+    </div>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Assignment 8
+  </footer>
+
+  <script>
+  /* ============================================================
+     Parts B and C — fill in, then print to PDF
+     ============================================================
+     No dependency on shared/logic.js. This page renders no generated
+     tables, so there is nothing to guard — and keeping the submission
+     flow free of that dependency means a stale kernel on the server can
+     never stop a student printing their answers.
+
+     No storage of any kind, per Course Standards. The page says so
+     plainly in the overview rather than pretending otherwise.
+     ============================================================ */
+  (function () {
+    'use strict';
+
+    var textareas = document.querySelectorAll('.ans__input');
+
+    /* A textarea prints only what is scrolled into view, so a long
+       answer would be silently cut off in the PDF. Every one carries a
+       mirror div that is invisible on screen and takes over on paper. */
+    function mirror() {
+      Array.prototype.forEach.call(textareas, function (t) {
+        var out = t.parentNode.querySelector('.ans__print');
+        if (out) { out.textContent = t.value; }
+      });
+    }
+
+    function grow(t) {
+      t.style.height = 'auto';
+      t.style.height = (t.scrollHeight + 2) + 'px';
+    }
+    Array.prototype.forEach.call(textareas, function (t) {
+      t.addEventListener('input', function () { grow(t); });
+    });
+
+    var btn = document.getElementById('print-bc');
+    if (btn) {
+      btn.addEventListener('click', function () {
+        mirror();
+        document.body.classList.add('print-bc');
+        window.print();
+      });
+    }
+
+    /* Printing is not navigation, so Standards §5 is not engaged. */
+    var full = document.getElementById('print-page');
+    if (full) {
+      full.addEventListener('click', function () {
+        mirror();
+        document.body.classList.remove('print-bc');
+        window.print();
+      });
+    }
+
+    if (window.matchMedia) {
+      var mq = window.matchMedia('print');
+      var onChange = function (e) {
+        if (e.matches) { mirror(); } else { document.body.classList.remove('print-bc'); }
+      };
+      if (mq.addEventListener) { mq.addEventListener('change', onChange); }
+      else if (mq.addListener) { mq.addListener(onChange); }
+    }
+  })();
+  </script>
+</body>
+</html>

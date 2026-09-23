@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w8-02">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 8: The RAM Matrix</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ---------- */
+    .byte-toggle { display: flex; gap: 3px; flex-wrap: wrap; }
+    .byte-toggle button {
+      font-family: var(--font-mono); font-size: var(--fs-md);
+      width: 2rem; height: 2.3rem; cursor: pointer;
+      border: 1px solid var(--color-border); border-radius: 4px;
+      background: var(--color-surface); color: var(--color-text-muted);
+    }
+    .byte-toggle button[aria-pressed="true"] { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .byte-toggle--addr button:nth-child(-n+4) { border-bottom: 3px solid var(--color-accent); }
+    .byte-toggle--addr button:nth-child(n+5)  { border-bottom: 3px solid var(--color-success); }
+    .byte-label { font-size: var(--fs-xs); color: var(--color-text-muted); font-family: var(--font-mono); }
+
+    .ctl-btn {
+      font-family: var(--font-mono); font-size: var(--fs-sm);
+      border: 1px solid var(--color-border); border-radius: var(--radius);
+      background: var(--color-surface); padding: var(--space-xs) var(--space-sm); cursor: pointer;
+    }
+    .ctl-btn[aria-pressed="true"] { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .ctl-btn--warn[aria-pressed="true"] { background: var(--color-danger); border-color: var(--color-danger); }
+    .ctl-row { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; margin: var(--space-sm) 0; }
+
+    .mar-read { font-family: var(--font-mono); font-size: var(--fs-md); margin: var(--space-sm) 0; overflow-wrap: anywhere; }
+    .mar-read .hn { color: var(--color-accent-hov); font-weight: 700; }
+    .mar-read .ln { color: var(--color-success); font-weight: 700; }
+
+    /* The matrix. Rows 0-1 are real bytes; rows 2-15 are thin hatched
+       strips, because they are addresses with nothing behind them. */
+    .mx { display: grid; grid-template-columns: 1.8rem repeat(16, minmax(0, 1fr)); gap: 2px; margin: var(--space-md) 0; font-family: var(--font-mono); }
+    .mx__h { font-size: 9px; text-align: center; color: var(--color-text-muted); padding: 1px 0; border-radius: 2px; }
+    .mx__h--on { background: var(--color-success); color: #fff; font-weight: 700; }
+    .mx__r { font-size: 9px; text-align: right; padding-right: 3px; color: var(--color-text-muted); border-radius: 2px; }
+    .mx__r--on { background: var(--color-accent); color: #fff; font-weight: 700; }
+    .mx__c {
+      font-size: 10px; text-align: center; border: 1px solid var(--color-border); border-radius: 3px;
+      background: var(--color-surface); padding: 3px 0; min-width: 0; overflow: hidden;
+    }
+    .mx__c--E { color: var(--color-danger); }
+    .mx__c--sel { border: 2px solid var(--color-primary); background: #eef4fb; font-weight: 700; padding: 2px 0; }
+    .mx__c--wrote { background: #f0faf4; }
+    .mx__c--col { box-shadow: inset 0 0 0 1px var(--color-success); }
+    .mx__c--row { box-shadow: inset 0 0 0 1px var(--color-accent); }
+    .mx__void {
+      height: 7px; border-radius: 2px;
+      background: repeating-linear-gradient(45deg, var(--color-border) 0 3px, transparent 3px 6px);
+    }
+    .mx__void--row { background: repeating-linear-gradient(45deg, var(--color-accent) 0 3px, transparent 3px 6px); }
+    .mx__void--hit { background: var(--color-danger); }
+
+    .o-box { border: 2px solid var(--color-primary); border-radius: var(--radius); padding: var(--space-md); background: var(--color-code-bg); }
+    .o-box__val { font-family: var(--font-mono); font-size: var(--fs-lg); color: var(--color-primary); }
+    .o-box__float { font-family: var(--font-sans); font-size: var(--fs-md); color: var(--color-danger); font-style: italic; }
+    .mx-log { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--color-text-muted); max-height: 7.5em; overflow-y: auto; border-top: 1px solid var(--color-border); margin-top: var(--space-sm); padding-top: var(--space-xs); }
+    .verify-box { border: 1px dashed var(--color-primary); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); margin: var(--space-md) 0; background: var(--color-surface); }
+
+    .wire-steps { counter-reset: ws; list-style: none; padding: 0; }
+    .wire-steps > li {
+      counter-increment: ws; position: relative; padding-left: 2.6rem;
+      margin-bottom: var(--space-md); border-left: 2px solid var(--color-border); padding-bottom: var(--space-sm);
+    }
+    .wire-steps > li::before {
+      content: counter(ws); position: absolute; left: .55rem; top: -2px;
+      width: 1.5rem; height: 1.5rem; line-height: 1.5rem; text-align: center;
+      background: var(--color-primary); color: #fff; border-radius: 50%;
+      font-size: var(--fs-xs); font-weight: 700;
+    }
+    .cost-table td:nth-child(2), .cost-table td:nth-child(3) { font-family: var(--font-mono); text-align: right; }
+    .cost-table tr.cost-total td { font-weight: 700; border-top: 2px solid var(--color-border); }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 8 &rsaquo; <span>Page 2 — The RAM Matrix</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>The RAM Matrix</h1>
+    <p><strong>Sections 8.4 – 8.7</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~0.8 hours reading, ~2 hours building</p>
+
+    <!-- ============================================================
+         8.4
+         ============================================================ -->
+    <section id="sec-8-4">
+      <h2>8.4 &nbsp; An address is two numbers</h2>
+
+      <p>Page 1 left you with a byte that answers only when its <code>h</code> and <code>v</code> are both high. This page supplies those two lines, for every byte at once, from one 8-bit number.</p>
+
+      <p>Split the address down the middle. The <strong>high four bits</strong> pick a <strong>row</strong>; the <strong>low four bits</strong> pick a <strong>column</strong>. Sixteen rows times sixteen columns is 256 places, and the byte at row <em>r</em>, column <em>c</em> is byte number 16<em>r</em> + <em>c</em> &mdash; which is simply the address read as one number.</p>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/RAM_Matrix_Conceptual_Diagram.png"
+             alt="A 16 by 16 grid. A 4 by 16 decoder labels the columns across the top and another labels the rows down the left side. Each cell is labelled with its 4-bit row number and its 4-bit column number, from Row 0000 Col 0000 in the top left to Row 1111 Col 1111 in the bottom right.">
+        <figcaption class="circuit-canvas__caption">One decoder per dimension. Every cell is named by a row nibble and a column nibble &mdash; together, its 8-bit address.</figcaption>
+      </figure>
+
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Address</th><th>High nibble &rarr; row &rarr; <code>h</code></th><th>Low nibble &rarr; column &rarr; <code>v</code></th><th>Byte</th></tr></thead>
+          <tbody>
+            <tr><td><code>0000 0101</code></td><td>0</td><td>5</td><td>5</td></tr>
+            <tr><td><code>0001 1011</code></td><td>1</td><td>11</td><td>27</td></tr>
+            <tr><td><code>0010 1100</code></td><td>2</td><td>12</td><td>44 &mdash; an address your RAM can name but does not have (&sect;8.7)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         8.5
+         ============================================================ -->
+    <section id="sec-8-5">
+      <h2>8.5 &nbsp; Why two decoders</h2>
+
+      <p>You could decode all eight bits at once. An 8&times;256 decoder is the same construction as your 4&times;16 one, extended: 256 AND gates of 8 inputs each, one per byte. Nothing wrong with it except its size.</p>
+
+      <p>Two 4&times;16 decoders do the same job with 32 four-input AND gates between them. But count honestly: every byte then needs one more two-input AND to combine its row line and its column line &mdash; the <code>h AND v</code> gate you put in <code>RAM_BYTE</code> on page 1. At full size that is 256 extra gates, and they belong in the comparison:</p>
+
+      <div class="table-scroll">
+        <table class="pin-table cost-table" id="cost-table">
+          <thead><tr><th>For all 256 bytes</th><th>one 8&times;256 decoder</th><th>two 4&times;16 decoders</th></tr></thead>
+          <tbody id="cost-body"><tr><td colspan="3"><em>Loading the comparison&hellip;</em></td></tr></tbody>
+        </table>
+      </div>
+
+      <p>Counted fairly, two decoders still win by more than three to one in gate inputs. But the bigger difference is the last row. <strong>One decoder sends 256 separate select lines out into the memory; two decoders send 32</strong>, running as a grid, with each byte sitting where one row line crosses one column line. On a real chip every one of those lines has to be routed somewhere and takes area of its own, and wiring, as much as gate count, is why memory is built two-dimensionally.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">You built this part in Week 3, for exactly this</div>
+        <p>Week 3 asked you for a <code>DECODER_4TO16</code>, built by extending the pattern rather than by cascading two 3&times;8s, and said two of them would address the rows and columns of RAM. This is that. You place two instances of the tab you already have. You do not build a decoder this week.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         8.6
+         ============================================================ -->
+    <section id="sec-8-6">
+      <h2>8.6 &nbsp; The MAR, and a bus that really is one</h2>
+
+      <h3>The Memory Address Register is the simpler component</h3>
+      <p>The decoders need an address to hold still while the RAM reads or writes. That is a job for storage, so the address goes into a register first: the <strong>Memory Address Register</strong>, or MAR. Its set line is called <code>sa</code> &mdash; &ldquo;set address&rdquo;.</p>
+
+      <p>Your MAR is a <strong><code>MEM_8BIT</code></strong>, not a <code>REGISTER_8BIT</code>. It has no enable and no output buffers, and that is correct. Week 5 split two ideas apart: <em>holding</em> a value (<code>MEM_8BIT</code>) and <em>putting it on a shared wire</em> (the enable stage). The MAR's output goes to two decoders and nowhere else. It never shares a wire with anything, so it never needs to stop driving &mdash; it needs only the first half. This is the first place in the course where you use one without the other, and it is a good test of whether the Week 5 split made sense.</p>
+
+      <h3>This one is a bus</h3>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">The reverse of Weeks 6 and 7 &mdash; read this before you connect 32 outputs</div>
+        <p><strong>This one is a bus.</strong> Thirty-two bytes share one output line, and each of them can stop driving &mdash; that is what their buffers are for. The ALU&rsquo;s seven legs were combined differently, with OR gates, and Weeks 6 and 7 were careful to say that was not a bus. Here the outputs really do share one wire, and an unselected byte drives <em>nothing</em>.</p>
+        <p>Why not OR them, the way the ALU does? The decoders guarantee at most one byte is selected, so inside the RAM an OR would work &mdash; at 32 inputs per bit. But the RAM&rsquo;s <code>o</code> will later join your CPU&rsquo;s bus, where the registers also drive, and there it <strong>must</strong> be able to let go. The buffer has to be at the edge regardless, and once it is, one shared line inside is the simpler circuit.</p>
+        <p><strong>The rule from Week 6 still decides it:</strong> where one driver is guaranteed structurally, OR is cheaper; where it is not, pay for the buffer. The ALU output and the RAM output come out on opposite sides of that rule, and now you have seen both.</p>
+      </div>
+
+      <p>Between the shared line and the <code>o</code> pin goes one more 8-bit controlled buffer, controlled by <code>e</code>. Like the one inside each byte, it changes nothing on paper &mdash; every byte behind it already floats unless selected and enabled. It is part of the RAM as Dave built and ran it in Logisim 2.7.1, and it stays &mdash; the same decision as the ninth buffer in your register. That is a description of what has worked in this simulator, not a claim about why.</p>
+    </section>
+
+    <!-- ============================================================
+         8.7
+         ============================================================ -->
+    <section id="sec-8-7">
+      <h2>8.7 &nbsp; 256 by design, 32 by construction</h2>
+
+      <p>Your RAM is designed for 256 bytes. <strong>You will build 32 of them</strong> &mdash; rows 0 and 1, sixteen bytes each. With the full matrix wired, Logisim 2.7.1 becomes too slow to use, and 32 bytes is enough to run real programs on the CPU you finish in Week 17.</p>
+
+      <p>That is not a shortcut to hide. It is the ordinary state of real computers: the address space a processor can name is almost always larger than the memory actually installed. Your 8-bit MAR can name 256 bytes; 32 answer. <strong>Row decoder outputs 2 through 15 connect to nothing.</strong> Put <code>00100101</code> in the MAR and raise <code>e</code>, and no byte is selected, so nothing drives <code>o</code> &mdash; a probe shows <code>xxxxxxxx</code>. That is not <code>00000000</code>: no byte is driving the line at all. Pulse <code>s</code> at that address and the write goes nowhere.</p>
+
+      <h3>The interface &mdash; tab <code>RAM_16X16</code></h3>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><code class="pin-table__name">address</code></td><td>8</td><td>in</td><td>the address, into the MAR</td></tr>
+            <tr><td><code class="pin-table__name">sa</code></td><td>1</td><td>in</td><td>MAR set &mdash; while high, the MAR follows <code>address</code></td></tr>
+            <tr><td><code class="pin-table__name">i</code></td><td>8</td><td>in</td><td>data in, to every byte</td></tr>
+            <tr><td><code class="pin-table__name">s</code></td><td>1</td><td>in</td><td>write, to every byte</td></tr>
+            <tr><td><code class="pin-table__name">e</code></td><td>1</td><td>in</td><td>read, to every byte</td></tr>
+            <tr><td><code class="pin-table__name">reset</code></td><td>1</td><td>in</td><td>broadcast write, to every byte</td></tr>
+            <tr><td><code class="pin-table__name">o</code></td><td>8</td><td>out</td><td>the selected byte, or floating</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Set <code>sa</code>, <code>s</code>, <code>e</code> and <code>reset</code> to pull-down.</p>
+
+      <h3>The wiring, in five steps</h3>
+      <ol class="wire-steps">
+        <li>
+          <strong>The MAR.</strong>
+          <p>One instance of your <code>MEM_8BIT</code>: <code>address</code> into its <code>i</code>, <code>sa</code> into its <code>s</code>. Put a splitter on its output.</p>
+        </li>
+        <li>
+          <strong>Two instances of your <code>DECODER_4TO16</code>.</strong>
+          <p><strong>Bits 7&ndash;4 to the row decoder, bits 3&ndash;0 to the column decoder.</strong> Get this backwards and most addresses land on rows you never built: <code>00000101</code> would select row 5, which has no bytes, and step 3 of the verification table fails.</p>
+        </li>
+        <li>
+          <strong>Thirty-two instances of <code>RAM_BYTE</code>, in two rows of sixteen.</strong>
+          <p>Row decoder output 0 to every <code>h</code> in row 0; output 1 to every <code>h</code> in row 1; <strong>outputs 2&ndash;15 to nothing.</strong> Column decoder output <em>k</em> to the <code>v</code> of both bytes in column <em>k</em>. Build one row, check it, then copy the whole row and paste it below.</p>
+        </li>
+        <li>
+          <strong>The shared lines.</strong>
+          <p><code>i</code>, <code>s</code>, <code>e</code> and <code>reset</code> go to all 32 bytes. Every byte&rsquo;s <code>o</code> joins one shared 8-bit line. Tunnels named <code>i</code>, <code>s</code>, <code>e</code>, <code>reset</code> and <code>bus</code> will keep the canvas readable.</p>
+        </li>
+        <li>
+          <strong>The output buffer.</strong>
+          <p>One 8-bit controlled buffer from the shared line to the <code>o</code> pin, controlled by <code>e</code>.</p>
+        </li>
+      </ol>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/cpu-ram-4byte-wiring.jpg"
+             alt="A Logisim circuit showing four RAM bytes arranged in two rows and two columns. On the left, an address pin feeds a CPU MEM 8 block set by a pin labelled sa; its output is split into two 4-bit groups. One group drives a 4 by 16 decoder on the left whose outputs run horizontally to the bytes' h pins; the other drives a 4 by 16 decoder at the top whose outputs run vertically to the bytes' v pins. Shared i, reset, s and e lines run to all four bytes, and their o outputs join a shared line that passes through a controlled buffer to the o pin. One byte's monitor reads 00000000 and the other three read EEEEEEEE.">
+        <figcaption class="circuit-canvas__caption"><strong>This figure shows four bytes, in a 2&times;2 arrangement. You build 32, in two rows of sixteen.</strong> What changes when you widen it: fourteen more columns in each row, each taking the next column-decoder output. What does not change: the MAR, the splitter, both decoders, and how every byte is connected. Notice the three bytes still showing <code>EEEEEEEE</code> &mdash; they have never been written.</figcaption>
+      </figure>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/cpu-ram-circuit-appearance.jpg" style="max-width:260px"
+             alt="A tall rectangular circuit appearance. The top section is labelled MAR with two input pins. Below it, two rows of sixteen small output points run across the top, and the main section is labelled RAM 256 with input pins down the left side and an output pin at the bottom left.">
+        <figcaption class="circuit-canvas__caption">One way to draw the finished component. The appearance labels its pins with short names; your tab&rsquo;s pins keep the full names in the table above. The two rows of sixteen points bring each byte&rsquo;s <code>mem</code> out to the edge &mdash; optional, and useful.</figcaption>
+      </figure>
+
+      <h3>One timing rule</h3>
+      <div class="callout callout--warn">
+        <div class="callout__title">Never change the MAR while <code>s</code> is high</div>
+        <p>The MAR is a latch. While <code>sa</code> is high, the decoders see each new address the moment it arrives &mdash; and if <code>s</code> is high at the same time, the byte under each new address gets written too. The order is always: <strong>set the address, release <code>sa</code>, then pulse <code>s</code></strong>. It is Week 5&rsquo;s rule about nesting one pulse inside another, applied to addressing. The bench below can break this on purpose.</p>
+      </div>
+
+      <!-- ========== WIDGET 2 — The RAM Matrix Bench ========== -->
+      <div class="widget-card" id="w-matrix">
+        <div class="widget-card__title">The RAM Matrix Bench</div>
+        <div class="widget-card__subtitle">Your <code>RAM_16X16</code>, all of it. Nothing reaches the MAR until you pulse <code>sa</code>.</div>
+
+        <div class="widget-input-row">
+          <div class="widget-input-group">
+            <label id="mx-a-lbl">address &nbsp;<span class="byte-label">(row nibble | column nibble)</span></label>
+            <div class="byte-toggle byte-toggle--addr" id="mx-a" role="group" aria-labelledby="mx-a-lbl"></div>
+          </div>
+          <div class="widget-input-group">
+            <label id="mx-i-lbl">i</label>
+            <div class="byte-toggle" id="mx-i" role="group" aria-labelledby="mx-i-lbl"></div>
+          </div>
+        </div>
+        <div class="ctl-row">
+          <button type="button" class="ctl-btn" id="mx-sa">pulse sa</button>
+          <button type="button" class="ctl-btn" id="mx-s">pulse s</button>
+          <button type="button" class="ctl-btn" id="mx-reset">pulse reset</button>
+          <button type="button" class="ctl-btn" id="mx-e" aria-pressed="false">e = 0</button>
+          <button type="button" class="ctl-btn ctl-btn--warn" id="mx-hold" aria-pressed="false">hold s high: off</button>
+          <button type="button" class="ctl-btn" id="mx-fresh">start over (fresh RAM)</button>
+        </div>
+
+        <p class="mar-read" id="mx-mar" aria-live="polite"></p>
+        <div class="mx" id="mx-grid" aria-label="The 16 by 16 matrix. Rows 0 and 1 are populated."></div>
+
+        <div class="o-box" aria-live="polite">
+          <div class="byte-label"><code>o</code></div>
+          <div id="mx-o" class="o-box__val">&mdash;</div>
+          <div id="mx-o-why" style="font-size:var(--fs-sm);margin-top:var(--space-xs)"></div>
+        </div>
+
+        <div class="verify-box">
+          <strong>Walk the verification table.</strong> <span class="byte-label" id="mx-vstep">step 0 of 10</span>
+          <p id="mx-vtext" style="margin:var(--space-xs) 0">Starts from a fresh RAM. Each press does one row of the table below.</p>
+          <button type="button" class="widget-btn widget-btn--primary" id="mx-vnext">next step</button>
+        </div>
+        <div class="mx-log" id="mx-log" aria-label="What happened"></div>
+      </div>
+
+      <h3>Verify before you submit</h3>
+      <p><code>s</code>, <code>e</code>, <code>sa</code> and <code>reset</code> start at 0. &ldquo;Pulse&rdquo; means 0 &rarr; 1 &rarr; 0. Screenshot each step.</p>
+      <div class="table-scroll">
+        <table class="pin-table" id="verify-table">
+          <thead><tr><th>#</th><th>Do</th><th>Expect</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Nothing yet &mdash; a fresh circuit</td><td>every byte&rsquo;s <code>mem</code> shows <code>EEEEEEEE</code>. Correct: Week 5&rsquo;s <code>E</code> state, 32 times</td></tr>
+            <tr><td>2</td><td><code>i = 00000000</code>, pulse <code>reset</code></td><td>all 32 <code>mem</code> show <code>00000000</code></td></tr>
+            <tr><td>3</td><td><code>address = 00000101</code>, pulse <code>sa</code>; <code>i = 00111100</code>, pulse <code>s</code></td><td>byte 5 = <code>00111100</code>; nothing else changes</td></tr>
+            <tr><td>4</td><td><code>address = 00011011</code>, pulse <code>sa</code>; <code>i = 10100101</code>, pulse <code>s</code></td><td>byte 27 = <code>10100101</code></td></tr>
+            <tr><td>5</td><td><code>address = 00000101</code>, pulse <code>sa</code>; <code>e = 1</code></td><td><code>o = 00111100</code></td></tr>
+            <tr><td>6</td><td><code>address = 00011011</code>, pulse <code>sa</code></td><td><code>o = 10100101</code></td></tr>
+            <tr><td>7</td><td><code>address = 00010101</code>, pulse <code>sa</code></td><td><code>o = 00000000</code> &mdash; byte 21: <strong>same column as byte 5, other row</strong></td></tr>
+            <tr><td>8</td><td><code>address = 00001011</code>, pulse <code>sa</code></td><td><code>o = 00000000</code> &mdash; byte 11: <strong>same column as byte 27, other row</strong></td></tr>
+            <tr><td>9</td><td><code>address = 00100101</code>, pulse <code>sa</code></td><td><code>o = xxxxxxxx</code> &mdash; row 2 is not populated; nothing drives</td></tr>
+            <tr><td>10</td><td><code>e = 0</code></td><td><code>o = xxxxxxxx</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>Steps 7 and 8 are the ones that catch mistakes.</strong> A byte in the right column but the wrong row must not answer. If yours does, a byte is taking its select from <code>v</code> alone, or the two nibbles are swapped.</p>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>With Checkpoint 3 wired, your machine has somewhere to put things: 32 bytes, each reachable by an 8-bit number. The next two pages are the software that uses it &mdash; and page 3 ends by tracing one MIPS instruction through the circuit you just built.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 8, Page 2
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['mem', 'decode'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code>, <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.mem) { return; }
+    var MEM = L.mem;
+
+    function b8(v) { var s = (v & 255).toString(2); while (s.length < 8) { s = '0' + s; } return s; }
+    function h2(v) { var s = (v & 255).toString(16).toUpperCase(); return s.length < 2 ? '0' + s : s; }
+
+    /* ---------- Decode-cost comparison ---------- */
+    (function () {
+      var body = document.getElementById('cost-body');
+      if (!body) { return; }
+      var c = MEM.decodeCost(8);
+      var rows = [
+        ['AND gates inside the decoder(s)', c.one.andGates + ' &times; 8-input', c.two.decoderAnds + ' &times; 4-input'],
+        ['AND gates inside the bytes (<code>h AND v</code>)', '&mdash;', c.two.perByteAnds + ' &times; 2-input'],
+        ['<strong>Total AND-gate inputs</strong>', c.one.gateInputs.toLocaleString('en-US'), String(c.two.gateInputs)],
+        ['<strong>Select lines leaving the decoders</strong>', String(c.one.selectLines), String(c.two.selectLines)]
+      ];
+      body.innerHTML = rows.map(function (r, k) {
+        return '<tr' + (k >= 2 ? ' class="cost-total"' : '') + '><td>' + r[0] + '</td><td>' + r[1] + '</td><td>' + r[2] + '</td></tr>';
+      }).join('');
+    }());
+
+    /* ============================================================
+       WIDGET 2 — The RAM Matrix Bench
+       ============================================================
+       A thin view over CSCLogic.mem.ram(), which runs the MAR, both
+       decoders (through CSCLogic.decode -- the AND-of-polarities Week 3
+       construction), all 32 RAM_BYTE instances and the shared output.
+       The widget adds nothing to the model; it only draws it.
+
+       Three states of o, and the widget names each in words:
+         driven  a selected, enabled, written byte
+         E       a selected, enabled byte that has never been written
+         float   nothing selected or e = 0 -- NOT 00000000 */
+    (function () {
+      var host = document.getElementById('w-matrix');
+      if (!host) { return; }
+      var ram, last, eOn, holdS, addr, ival, vstep;
+      var elA = document.getElementById('mx-a'), elI = document.getElementById('mx-i');
+      var elMar = document.getElementById('mx-mar'), elGrid = document.getElementById('mx-grid');
+      var elO = document.getElementById('mx-o'), elWhy = document.getElementById('mx-o-why');
+      var elLog = document.getElementById('mx-log');
+      var elE = document.getElementById('mx-e'), elHold = document.getElementById('mx-hold');
+
+      function log(msg) {
+        var d = document.createElement('div');
+        d.textContent = msg;
+        elLog.insertBefore(d, elLog.firstChild);
+      }
+
+      function byteToggle(el, get, set, label) {
+        el.innerHTML = '';
+        for (var i = 0; i < 8; i++) {
+          (function (i) {
+            var bit = 7 - i;
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.addEventListener('click', function () { set(get() ^ (1 << bit)); paintToggles(); });
+            el.appendChild(btn);
+          }(i));
+        }
+        el._get = get; el._label = label;
+      }
+      function paintToggle(el) {
+        var v = el._get(), btns = el.querySelectorAll('button');
+        for (var i = 0; i < 8; i++) {
+          var on = (v >> (7 - i)) & 1;
+          btns[i].textContent = on;
+          btns[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+          btns[i].setAttribute('aria-label', el._label + ' bit ' + (7 - i) + ', currently ' + on);
+        }
+      }
+      function paintToggles() { paintToggle(elA); paintToggle(elI); }
+
+      byteToggle(elA, function () { return addr; }, function (v) { addr = v; }, 'address');
+      byteToggle(elI, function () { return ival; }, function (v) { ival = v; }, 'i');
+
+      function fresh() {
+        ram = MEM.ram(); eOn = 0; holdS = 0; addr = 0; ival = 0; vstep = 0;
+        elLog.innerHTML = '';
+        last = ram.step({ e: 0 });
+        elE.setAttribute('aria-pressed', 'false'); elE.textContent = 'e = 0';
+        elHold.setAttribute('aria-pressed', 'false'); elHold.textContent = 'hold s high: off';
+        document.getElementById('mx-vstep').textContent = 'step 0 of 10';
+        document.getElementById('mx-vtext').textContent = 'Starts from a fresh RAM. Each press does one row of the table below.';
+        paintToggles(); paint();
+      }
+
+      function pulseSa() {
+        last = ram.step({ address: addr, sa: 1, i: ival, s: holdS, e: eOn });
+        var w = last.wrote.slice();
+        last = ram.step({ sa: 0, i: ival, s: holdS, e: eOn });
+        log('MAR ← ' + b8(addr) + (holdS && w.length ? '   (s was high: byte ' + w.join(', ') + ' written as the address changed!)' : ''));
+        last.wrote = w;
+        paint();
+      }
+      function pulseS() {
+        last = ram.step({ i: ival, s: 1, e: eOn });
+        var w = last.wrote.slice();
+        last = ram.step({ i: ival, s: holdS, e: eOn });
+        last.wrote = w;
+        log(w.length ? 'write ' + b8(ival) + ' → byte ' + w.join(', ') : 'pulse s: no byte selected, nothing written');
+        paint();
+      }
+      function pulseReset() {
+        last = ram.step({ i: ival, reset: 1, e: eOn });
+        var w = last.wrote.slice();
+        last = ram.step({ i: ival, reset: 0, e: eOn });
+        last.wrote = w;
+        log('reset with i = ' + b8(ival) + ' → all 32 bytes now ' + b8(ival));
+        paint();
+      }
+      function setE(v) {
+        eOn = v ? 1 : 0;
+        elE.setAttribute('aria-pressed', eOn ? 'true' : 'false');
+        elE.textContent = 'e = ' + eOn;
+        last = ram.step({ i: ival, s: holdS, e: eOn });
+        last.wrote = [];
+        paint();
+      }
+
+      function paint() {
+        var w = last.where;
+        if (last.mar === null) {
+          elMar.innerHTML = 'MAR: <strong>EEEEEEEE</strong> &mdash; never set, so neither decoder has a valid input';
+        } else {
+          var s = b8(last.mar);
+          elMar.innerHTML = 'MAR = <span class="hn">' + s.slice(0, 4) + '</span> <span class="ln">' + s.slice(4) + '</span>' +
+            ' &rarr; row <span class="hn">' + w.row + '</span>, column <span class="ln">' + w.col + '</span>' +
+            (w.populated ? ' &rarr; byte ' + w.index : ' &rarr; <strong>row ' + w.row + ' is not populated</strong>');
+        }
+        var rowOn = last.mar === null ? -1 : w.row, colOn = last.mar === null ? -1 : w.col;
+        var html = '<div></div>', r, c;
+        for (c = 0; c < 16; c++) { html += '<div class="mx__h' + (c === colOn ? ' mx__h--on' : '') + '">' + c + '</div>'; }
+        for (r = 0; r < 16; r++) {
+          html += '<div class="mx__r' + (r === rowOn ? ' mx__r--on' : '') + '">' + r + '</div>';
+          for (c = 0; c < 16; c++) {
+            if (r < 2) {
+              var idx = r * 16 + c, v = ram.peek(idx);
+              var cls = 'mx__c' + (v === null ? ' mx__c--E' : '') +
+                (idx === last.selected ? ' mx__c--sel' : (r === rowOn ? ' mx__c--row' : (c === colOn ? ' mx__c--col' : ''))) +
+                (last.wrote.indexOf(idx) >= 0 ? ' mx__c--wrote' : '');
+              html += '<div class="' + cls + '" title="byte ' + idx + '">' + (v === null ? 'E' : h2(v)) + '</div>';
+            } else {
+              html += '<div class="mx__void' + (r === rowOn ? (c === colOn ? ' mx__void--hit' : ' mx__void--row') : '') + '"></div>';
+            }
+          }
+        }
+        elGrid.innerHTML = html;
+
+        if (last.oState === 'driven') {
+          elO.className = 'o-box__val'; elO.textContent = b8(last.o);
+          elWhy.textContent = 'Byte ' + last.selected + ' is selected and e = 1, so it drives the shared line.';
+        } else if (last.oState === 'E') {
+          elO.className = 'o-box__val'; elO.textContent = 'EEEEEEEE';
+          elWhy.textContent = 'Byte ' + last.selected + ' is selected and enabled, but has never been written. It is driving E, not floating.';
+        } else {
+          elO.className = 'o-box__float'; elO.textContent = 'xxxxxxxx — nothing driving';
+          elWhy.textContent = !eOn ? 'e = 0: every byte has let go of the line. Floating, not 00000000.' :
+            (last.mar !== null && !last.where.populated ? 'Row ' + last.where.row + ' has no bytes. The row-decoder line is high and reaches nothing, so no byte answers. Floating, not 00000000.' :
+             'No byte is selected.');
+        }
+      }
+
+      document.getElementById('mx-sa').addEventListener('click', pulseSa);
+      document.getElementById('mx-s').addEventListener('click', pulseS);
+      document.getElementById('mx-reset').addEventListener('click', pulseReset);
+      elE.addEventListener('click', function () { setE(!eOn); });
+      elHold.addEventListener('click', function () {
+        holdS = holdS ? 0 : 1;
+        elHold.setAttribute('aria-pressed', holdS ? 'true' : 'false');
+        elHold.textContent = 'hold s high: ' + (holdS ? 'ON' : 'off');
+        last = ram.step({ i: ival, s: holdS, e: eOn });
+        var w = last.wrote.slice();
+        if (holdS && w.length) { log('s held high: byte ' + w.join(', ') + ' is being written continuously'); }
+        paint();
+      });
+      document.getElementById('mx-fresh').addEventListener('click', fresh);
+
+      /* The ten-step verification walk. Each entry sets the controls the
+         way the table says, then performs the table's action. */
+      var V = [
+        { t: 'Fresh circuit. Every byte shows E — never written.', f: function () { fresh(); } },
+        { t: 'i = 00000000, pulse reset. All 32 bytes cleared.', f: function () { ival = 0; pulseReset(); } },
+        { t: 'address = 00000101, pulse sa; i = 00111100, pulse s. Byte 5 written.', f: function () { addr = 0x05; pulseSa(); ival = 0x3C; pulseS(); } },
+        { t: 'address = 00011011, pulse sa; i = 10100101, pulse s. Byte 27 written.', f: function () { addr = 0x1B; pulseSa(); ival = 0xA5; pulseS(); } },
+        { t: 'address = 00000101, pulse sa; e = 1. Read byte 5.', f: function () { addr = 0x05; pulseSa(); setE(1); } },
+        { t: 'address = 00011011, pulse sa. Read byte 27.', f: function () { addr = 0x1B; pulseSa(); } },
+        { t: 'address = 00010101, pulse sa. Byte 21 — same column as byte 5, other row. Must read 00000000.', f: function () { addr = 0x15; pulseSa(); } },
+        { t: 'address = 00001011, pulse sa. Byte 11 — same column as byte 27, other row. Must read 00000000.', f: function () { addr = 0x0B; pulseSa(); } },
+        { t: 'address = 00100101, pulse sa. Row 2 is not populated — floats.', f: function () { addr = 0x25; pulseSa(); } },
+        { t: 'e = 0. Floats.', f: function () { setE(0); } }
+      ];
+      document.getElementById('mx-vnext').addEventListener('click', function () {
+        if (vstep >= V.length) { vstep = 0; }
+        var k = vstep;
+        V[k].f();
+        vstep = k + 1;
+        paintToggles(); paint();
+        document.getElementById('mx-vstep').textContent = 'step ' + vstep + ' of 10';
+        document.getElementById('mx-vtext').textContent = V[k].t;
+        this.textContent = vstep >= V.length ? 'start the walk again' : 'next step';
+      });
+
+      fresh();
+    }());
+  })();
+  </script>
+</body>
+</html>

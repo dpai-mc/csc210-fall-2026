@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w8-00">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 8 Orientation: Somewhere to Put Things</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .part-list { list-style: none; padding: 0; margin: var(--space-md) 0; }
+    .part-list li {
+      display: flex; flex-wrap: wrap; align-items: baseline;
+      gap: var(--space-sm); padding: var(--space-sm) 0;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .part-list li:last-child { border-bottom: none; }
+    .part-list code { font-weight: 700; color: var(--color-primary); flex: 0 0 auto; }
+    .part-list span { color: var(--color-text-muted); font-size: var(--fs-sm); }
+    .tracks { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin: var(--space-md) 0; }
+    .tracks > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
+    .tracks h3 { margin-top: 0; }
+    @media (max-width: 640px) { .tracks { grid-template-columns: 1fr; } }
+
+    .split-bar { display: flex; height: 2.2rem; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--color-border); margin: var(--space-sm) 0; }
+    .split-bar > div { display: flex; align-items: center; justify-content: center; font-size: var(--fs-xs); font-weight: 700; color: #fff; text-align: center; padding: 0 2px; overflow: hidden; }
+    .split-bar .sb-hw { background: var(--color-primary); }
+    .split-bar .sb-sw { background: var(--color-accent); }
+    .split-bar .sb-mt { background: var(--color-success); }
+    .split-legend { display: flex; justify-content: space-between; font-size: var(--fs-xs); color: var(--color-text-muted); gap: var(--space-sm); }
+    .one-line { text-align: center; margin: var(--space-md) 0; font-family: var(--font-mono); overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 8 &rsaquo; <span>Orientation</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Week 8 — Somewhere to Put Things</h1>
+    <p><strong>The RAM matrix, and MIPS memory</strong> &nbsp;|&nbsp; <strong>10/05 – 10/11</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~9 hours, including the midterm</p>
+
+    <section id="sec-gap">
+      <div class="callout callout--hook">
+        <div class="callout__title">Seven weeks about what a machine does with a value. This one is about where it keeps one.</div>
+        <p><strong>Your hardware</strong> can store one byte in a register and transform bytes in an ALU. It has nowhere to keep more than a few, and no way to say <em>which</em> of many it means.</p>
+        <p><strong>Your software</strong> names every operand by register. A C program with <code>int scores[100];</code> has nowhere to live, and no instruction you know can reach &ldquo;the location whose number I just computed&rdquo;.</p>
+        <p>Both halves need <strong>a number that means a place</strong>. This week you build the hardware that turns an 8-bit number into one selected byte, and learn the MIPS instructions that compute such a number and use it.</p>
+      </div>
+    </section>
+
+    <section id="sec-shape">
+      <h2>The shape of the week</h2>
+      <div class="callout callout--warn">
+        <div class="callout__title">The biggest build of the term, in the same week as the midterm</div>
+        <div class="split-bar" role="img" aria-label="Of about nine hours: roughly three and a half on the RAM pages and Checkpoint 3, about three and a half on the MIPS pages and the assignment's written and programming parts, and about two on the midterm.">
+          <div class="sb-hw" style="flex:3.5">RAM + Checkpoint 3</div>
+          <div class="sb-sw" style="flex:3.5">MIPS memory + assignment</div>
+          <div class="sb-mt" style="flex:2">Midterm</div>
+        </div>
+        <div class="split-legend"><span>~3.5 hrs</span><span>~3.5 hrs</span><span>~2 hrs</span></div>
+        <p><strong>Start Checkpoint 3 early.</strong> It is 32 copies of one small circuit plus some careful wiring, and careful wiring does not go well at the last minute. The software pages are shorter than usual this week, and the assignment is smaller than Week 7&rsquo;s, so that the midterm has room.</p>
+      </div>
+    </section>
+
+    <section id="sec-build">
+      <h2>What you build &mdash; and what you already own</h2>
+      <p>Two new tabs. Almost everything inside them comes from your file:</p>
+      <ul class="part-list">
+        <li><code>REGISTER_8BIT</code> <span>&times;32 &mdash; one inside every byte of RAM. <strong>Week 5.</strong> Used exactly as it is; do not modify it.</span></li>
+        <li><code>DECODER_4TO16</code> <span>&times;2 &mdash; one for rows, one for columns. <strong>Week 3</strong>, which told you it would be used for this.</span></li>
+        <li><code>MEM_8BIT</code> <span>&times;1 &mdash; the Memory Address Register. <strong>Week 5.</strong></span></li>
+        <li><code>RAM_BYTE</code> <span><strong>New.</strong> One register plus four gates and a buffer, so it only answers when its row and column are both selected.</span></li>
+        <li><code>RAM_16X16</code> <span><strong>New.</strong> The MAR, both decoders, and 32 bytes &mdash; designed for 256, built for 32.</span></li>
+      </ul>
+    </section>
+
+    <section id="sec-tracks">
+      <h2>The two tracks</h2>
+      <div class="tracks">
+        <div>
+          <h3>Hardware &mdash; <strong>Checkpoint 3</strong></h3>
+          <p>The addressable byte; two-dimensional decoding; the MAR; why 32 of 256; a shared output line that, unlike the ALU&rsquo;s, really is a bus. Verified with a ten-step table.</p>
+        </div>
+        <div>
+          <h3>Assembly &mdash; memory</h3>
+          <p><code>lw</code>, <code>sw</code>, <code>lb</code>, <code>lbu</code>, <code>sb</code>. Base plus offset. Word alignment. Which byte of a word comes first in MARS. Arrays, walked two ways. Strings as arrays of bytes.</p>
+        </div>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">The week&rsquo;s best single fact: the two tracks use the same number</div>
+        <p>When a MIPS program says <code>lw $t0, 8($s0)</code>, the address it computes is exactly the kind of number your RAM takes. Page 3 follows it the whole way:</p>
+        <p class="one-line"><code>a[2]</code> &rarr; <code>lw $t0, 8($s0)</code> &rarr; your ALU&rsquo;s ADD leg &rarr; your MAR &rarr; a row and a column &rarr; <strong>one AND gate</strong></p>
+      </div>
+    </section>
+
+    <section id="sec-path">
+      <h2>This week&rsquo;s learning path</h2>
+      <div class="callout">
+        <div class="callout__title">Pages 1 and 2 first. Page 3 does not have to wait for your circuit.</div>
+        <p>Read pages 1 and 2 and start Checkpoint 3. Page 3 depends on Weeks 5&ndash;7, not on this week&rsquo;s circuit, so if you want a break from wiring, read it while the build is in progress.</p>
+      </div>
+
+      <div class="spa-card-grid">
+        <div class="spa-card">
+          <div class="spa-card__number">Page 1</div>
+          <div class="spa-card__title">The Addressable Byte</div>
+          <div class="spa-card__time">~0.7 hr &nbsp;|&nbsp; Sections 8.1–8.3</div>
+          <div class="spa-card__desc">The gap from both ends. What you already own. Building <code>RAM_BYTE</code> in five steps, and what <code>reset</code> really does.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+        <div class="spa-card">
+          <div class="spa-card__number">Page 2</div>
+          <div class="spa-card__title">The RAM Matrix</div>
+          <div class="spa-card__time">~0.8 hr reading, ~2 hr building &nbsp;|&nbsp; Sections 8.4–8.7</div>
+          <div class="spa-card__desc">An address as a row and a column; why two decoders; the MAR; 256 by design, 32 by construction. <strong>Checkpoint 3.</strong></div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+        <div class="spa-card">
+          <div class="spa-card__number">Page 3</div>
+          <div class="spa-card__title">Load and Store</div>
+          <div class="spa-card__time">~1 hr &nbsp;|&nbsp; Sections 8.8–8.11</div>
+          <div class="spa-card__desc">The five memory instructions; base plus offset; bytes, sign and zero extension, and byte order; then one <code>lw</code> traced through your circuit.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+        <div class="spa-card">
+          <div class="spa-card__number">Page 4</div>
+          <div class="spa-card__title">Arrays and Strings</div>
+          <div class="spa-card__time">~1 hr &nbsp;|&nbsp; Sections 8.12–8.15</div>
+          <div class="spa-card__desc">An array as a base address and arithmetic; walking one by index and by pointer; strings as byte arrays; the end of Phase 2.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-midterm">
+      <h2>The midterm</h2>
+      <p>The midterm is this week and covers <strong>Weeks 1 through 8</strong> &mdash; everything from binary through this week&rsquo;s memory material, on both tracks. Your instructor will post its format and window separately. The fastest review is the self-checks on each week&rsquo;s pages and the verification tables on each hardware page.</p>
+    </section>
+
+    <section id="sec-tools">
+      <h2>Tools and reading</h2>
+      <ul>
+        <li><strong>Logisim Classic 2.7.1</strong> &mdash; your single course <code>.circ</code> file. Two new tabs; nothing from the Plexers, Arithmetic or Memory folders.</li>
+        <li><strong>MARS</strong> &mdash; the Data Segment pane in the Execute tab is this week&rsquo;s most useful view.</li>
+        <li><strong>Saylor CS301</strong> &mdash; log in at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 2: Instructions &mdash; Hardware Language</strong> for load/store and arrays, and <strong>Unit 6: The Memory Hierarchy</strong> for how memory is organised. Neither covers building RAM from your own decoders; pages 1 and 2 are the source for that.</li>
+      </ul>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 8, Orientation
+  </footer>
+</body>
+</html>

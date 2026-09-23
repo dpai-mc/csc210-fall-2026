@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w8-01">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 8: The Addressable Byte</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ---------- */
+    .byte-toggle { display: flex; gap: 3px; flex-wrap: wrap; }
+    .byte-toggle button {
+      font-family: var(--font-mono); font-size: var(--fs-md);
+      width: 2rem; height: 2.3rem; cursor: pointer;
+      border: 1px solid var(--color-border); border-radius: 4px;
+      background: var(--color-surface); color: var(--color-text-muted);
+    }
+    .byte-toggle button[aria-pressed="true"] { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .byte-label { font-size: var(--fs-xs); color: var(--color-text-muted); font-family: var(--font-mono); }
+
+    .pin-btn {
+      font-family: var(--font-mono); min-width: 4.2rem;
+      border: 1px solid var(--color-border); border-radius: var(--radius);
+      background: var(--color-surface); padding: var(--space-xs) var(--space-sm); cursor: pointer;
+    }
+    .pin-btn[aria-pressed="true"] { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .pin-row { display: flex; flex-wrap: wrap; gap: var(--space-sm); }
+
+    /* The three internal gate outputs, lit or dark. */
+    .gates { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-sm); margin: var(--space-md) 0; }
+    .gate-node {
+      border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm);
+      background: var(--color-surface); font-family: var(--font-mono); font-size: var(--fs-sm);
+    }
+    .gate-node__eq { color: var(--color-text-muted); font-size: var(--fs-xs); display: block; }
+    .gate-node__v { font-size: var(--fs-lg); font-weight: 700; color: var(--color-text-muted); }
+    .gate-node--on { border-color: var(--color-success); border-width: 2px; padding: calc(var(--space-sm) - 1px); }
+    .gate-node--on .gate-node__v { color: var(--color-success); }
+
+    .out-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
+    @media (max-width: 560px) { .out-grid { grid-template-columns: 1fr; } }
+    .out-box { border: 2px solid var(--color-primary); border-radius: var(--radius); padding: var(--space-md); background: var(--color-code-bg); }
+    .out-box__v { font-family: var(--font-mono); font-size: var(--fs-lg); color: var(--color-primary); overflow-wrap: anywhere; }
+    .out-box__v--E { color: var(--color-danger); }
+    .out-box__v--float { font-family: var(--font-sans); font-size: var(--fs-md); color: var(--color-danger); font-style: italic; }
+    .out-box__why { font-size: var(--fs-sm); margin-top: var(--space-xs); }
+
+    .build-steps { counter-reset: bs; list-style: none; padding: 0; }
+    .build-steps > li { counter-increment: bs; margin-bottom: var(--space-lg); }
+    .build-steps > li > strong::before { content: "Step " counter(bs) " \2014  "; color: var(--color-primary); }
+    .inv-table code { white-space: nowrap; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 8 &rsaquo; <span>Page 1 — The Addressable Byte</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>The Addressable Byte</h1>
+    <p><strong>Sections 8.1 – 8.3</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~0.7 hours</p>
+
+    <!-- ============================================================
+         8.1
+         ============================================================ -->
+    <section id="sec-8-1">
+      <h2>8.1 &nbsp; Four registers and a hundred numbers</h2>
+
+      <div class="callout callout--hook">
+        <div class="callout__title">Both halves of the course have run out of room</div>
+
+        <p><strong>What you have.</strong> A register that holds a byte and can let go of a shared wire. Decoders that turn an <em>n</em>-bit number into one selected line. A finished ALU. In MIPS, programs that compute, decide, loop and call procedures.</p>
+
+        <p><strong>What you cannot do.</strong> Keep more than a handful of values. The CPU you are building will have four working registers. MIPS has thirty-two, and a third of those are spoken for. Write <code>int scores[100];</code> in C and neither machine has anywhere to put it.</p>
+
+        <p>And there is a second, quieter gap. Every operand in every instruction you have written so far is a register <em>named in the source</em>: <code>$t0</code>, <code>$s1</code>. Nothing lets a program say &ldquo;the storage location whose number I just computed&rdquo;. An array needs exactly that &mdash; <code>scores[i]</code> is a place chosen at run time.</p>
+
+        <p><strong>What you can do by the end of this week.</strong> Build 256 bytes of addressable memory, of which you will populate 32, out of registers you already have, two decoders you already have, and one register to hold the address. And write MIPS that loads from and stores to memory, walks arrays and reads text.</p>
+      </div>
+
+      <p>Both halves turn out to need the same thing: <strong>a number that means a place.</strong> In hardware it is an address that lights up one byte. In MIPS it is a base register plus an offset. Page 3 shows they are literally the same number.</p>
+    </section>
+
+    <!-- ============================================================
+         8.2
+         ============================================================ -->
+    <section id="sec-8-2">
+      <h2>8.2 &nbsp; What you already own</h2>
+
+      <p>Checkpoint 3 is the largest circuit you have built so far, and most of it is already in your file:</p>
+
+      <div class="table-scroll">
+        <table class="pin-table inv-table">
+          <thead><tr><th>Component</th><th>How many</th><th>You built it in</th><th>Used here as</th></tr></thead>
+          <tbody>
+            <tr><td><code class="pin-table__name">REGISTER_8BIT</code></td><td>32</td><td><strong>Week 5</strong></td><td>the storage inside every byte</td></tr>
+            <tr><td><code class="pin-table__name">DECODER_4TO16</code></td><td>2</td><td><strong>Week 3</strong></td><td>row select and column select</td></tr>
+            <tr><td><code class="pin-table__name">MEM_8BIT</code></td><td>1</td><td><strong>Week 5</strong></td><td>the Memory Address Register</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>What is new is two tabs: <code>RAM_BYTE</code> on this page &mdash; one register with four gates and a buffer around it &mdash; and <code>RAM_16X16</code> on page 2, which is 32 copies of it, the two decoders and the address register, wired together.</p>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Do not modify your register</div>
+        <p>If you look at older notes for this circuit, you may find an instruction to add a controlled buffer to the output of your 8-bit register before building RAM. <strong>Yours already has it</strong> &mdash; it is the ninth buffer from Week 5, the one that looks redundant and is not. Adding another gives you a tenth. Use <code>REGISTER_8BIT</code> exactly as it is.</p>
+        <p>Step 5 below does add one controlled buffer &mdash; but in the new <code>RAM_BYTE</code> tab, <em>after</em> an instance of your register. Nothing inside <code>REGISTER_8BIT</code> changes.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         8.3
+         ============================================================ -->
+    <section id="sec-8-3">
+      <h2>8.3 &nbsp; The addressable byte</h2>
+
+      <p>A register stores a byte whenever its <code>s</code> is high and drives its output whenever its <code>e</code> is high. Put thirty-two of them side by side, run one <code>s</code> wire to all of them, and a single write stores the same byte thirty-two times. What each byte needs is a way to know <em>whether this particular write is meant for it</em>.</p>
+
+      <p>That is the whole job of <code>RAM_BYTE</code>. It gets two select lines from outside &mdash; <code>h</code> from the row it sits in and <code>v</code> from the column &mdash; and it passes <code>s</code> and <code>e</code> through to its register <strong>only when both are high</strong>. Five small steps build it.</p>
+
+      <ol class="build-steps">
+        <li>
+          <strong>Am I selected?</strong>
+          <p>One two-input AND: <code>sel = h AND v</code>. Page 2 arranges for exactly one byte in the whole RAM to have both lines high at once.</p>
+          <figure class="circuit-canvas">
+            <img class="circuit-canvas__img" src="images/ram-and-for-h-v.jpg" style="max-width:340px"
+                 alt="Two input pins labelled h and v feeding one two-input AND gate.">
+            <figcaption class="circuit-canvas__caption">The selector gate.</figcaption>
+          </figure>
+        </li>
+        <li>
+          <strong>Write only if selected.</strong>
+          <p>A second AND: <code>sel AND s</code>. The shared write line reaches every byte, and only the selected one lets it through.</p>
+          <figure class="circuit-canvas">
+            <img class="circuit-canvas__img" src="images/ram-and-h-v-set.jpg" style="max-width:420px"
+                 alt="The output of the h AND v gate feeding a second AND gate together with an input pin labelled s.">
+            <figcaption class="circuit-canvas__caption">Gating the write.</figcaption>
+          </figure>
+        </li>
+        <li>
+          <strong>Read only if selected.</strong>
+          <p>A third AND, from the same selector: <code>sel AND e</code>. Same idea for the read line.</p>
+          <figure class="circuit-canvas">
+            <img class="circuit-canvas__img" src="images/ram-and-h-v-set-enable.jpg" style="max-width:480px"
+                 alt="The h AND v output now fans out to two AND gates: one combined with s, the other combined with an input pin labelled e.">
+            <figcaption class="circuit-canvas__caption">Gating the read.</figcaption>
+          </figure>
+        </li>
+        <li>
+          <strong>Add <code>reset</code>.</strong>
+          <p>An OR after the write gate: <code>set = (sel AND s) OR reset</code>. When <code>reset</code> is high, this byte&rsquo;s register is written <em>whether or not it is selected</em>.</p>
+          <figure class="circuit-canvas">
+            <img class="circuit-canvas__img" src="images/ram-and-h-v-set-enable-reset.jpg" style="max-width:500px"
+                 alt="The same circuit with an OR gate added after the s AND gate; the OR's other input is a pin labelled RESET.">
+            <figcaption class="circuit-canvas__caption">The reset path.</figcaption>
+          </figure>
+        </li>
+        <li>
+          <strong>Wire in the register, and a buffer on its output.</strong>
+          <p><code>set</code> to the register&rsquo;s <code>s</code>; <code>sel AND e</code> to the register&rsquo;s <code>e</code> <em>and</em> to the control of one 8-bit controlled buffer on the register&rsquo;s <code>o</code>. The register&rsquo;s monitor output becomes this byte&rsquo;s <code>mem</code>.</p>
+          <figure class="circuit-canvas">
+            <img class="circuit-canvas__img zoomable" src="images/cpu-ram-byte.jpg"
+                 alt="The complete byte. The h AND v selector, the s and e gates and the reset OR feed a block labelled CPU REG 8. Its s input comes from the OR, its e input from the enable gate, and its i input from an 8-bit input pin. Its o output passes through a controlled buffer, also driven by the enable gate, to an 8-bit output pin labelled o. Its top output, labelled mem, goes to an output pin labelled Mem, which reads EEEEEEEE.">
+            <figcaption class="circuit-canvas__caption">The finished <code>RAM_BYTE</code>. The block labelled &ldquo;CPU REG 8&rdquo; is your <code>REGISTER_8BIT</code>. <strong>This figure labels the register&rsquo;s top pin <code>mem</code>; yours is called <code>reg</code> &mdash; do not rename it.</strong> The byte&rsquo;s own monitor output is the one called <code>mem</code>.</figcaption>
+          </figure>
+        </li>
+      </ol>
+
+      <h3>Three things this circuit does that are easy to get wrong</h3>
+
+      <div class="callout callout--warn">
+        <div class="callout__title"><code>reset</code> writes whatever is on <code>i</code>. It is not a &ldquo;clear&rdquo;.</div>
+        <p>The name suggests zeroing, and that is how you will usually use it. But look at the circuit: <code>reset</code> is ORed into the write line, so it <strong>writes <code>i</code> into this byte</strong>. On page 2, <code>reset</code> reaches all 32 bytes at once &mdash; so it is a broadcast write. Hold <code>i</code> at <code>00000000</code> and pulse it, and memory is cleared. Hold <code>i</code> at <code>11111111</code> and every byte fills with ones. Leave <code>i</code> at whatever you last typed, and that is what all 32 bytes now hold.</p>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">A new byte shows <code>EEEEEEEE</code>, and that is correct</div>
+        <p>Week 5 showed that a freshly placed <code>MEM_1BIT</code> reads <code>E</code> until it is first written. A <code>RAM_BYTE</code> is eight of them, and your 32-byte RAM is 256 of them. You will see a lot of red. Nothing is broken: write the byte, or pulse <code>reset</code> with <code>i = 00000000</code>, and it clears for good. That is the first thing to do with a new RAM.</p>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">The output buffer looks redundant, and stays</div>
+        <p>On paper, the buffer in step 5 does nothing. Your register&rsquo;s <code>o</code> already floats whenever its <code>e</code> is low, and its <code>e</code> is the same signal that controls the buffer. It is part of the RAM as Dave built and ran it in Logisim 2.7.1, and it stays &mdash; the same decision, and the same kind of decision, as the ninth buffer inside your register. That is a description of what has worked in this simulator, not a diagnosis of why.</p>
+      </div>
+
+      <h3>The interface &mdash; tab <code>RAM_BYTE</code></h3>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Position</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><code class="pin-table__name">h</code></td><td>1</td><td>in</td><td>left</td><td>row select</td></tr>
+            <tr><td><code class="pin-table__name">i</code></td><td>8</td><td>in</td><td>left</td><td>data in</td></tr>
+            <tr><td><code class="pin-table__name">v</code></td><td>1</td><td>in</td><td>left</td><td>column select</td></tr>
+            <tr><td><code class="pin-table__name">s</code></td><td>1</td><td>in</td><td>bottom</td><td>write &mdash; pull-down</td></tr>
+            <tr><td><code class="pin-table__name">e</code></td><td>1</td><td>in</td><td>bottom</td><td>read &mdash; pull-down</td></tr>
+            <tr><td><code class="pin-table__name">reset</code></td><td>1</td><td>in</td><td>right</td><td>write <code>i</code> regardless of selection &mdash; pull-down</td></tr>
+            <tr><td><code class="pin-table__name">o</code></td><td>8</td><td>out</td><td>right</td><td>data out &mdash; driven only when selected <em>and</em> <code>e</code> = 1</td></tr>
+            <tr><td><code class="pin-table__name">mem</code></td><td>8</td><td>out</td><td>top</td><td>the stored byte, always visible</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/cpu-reg-byte-appearance.jpg" style="max-width:260px"
+             alt="A square circuit appearance labelled CPU REG BYTE, with pins h, i and v down the left side, reset and o on the right, s and e along the bottom, and mem at the top.">
+        <figcaption class="circuit-canvas__caption">Redraw the appearance to something like this. You are about to place 32 of them, and a readable block is what makes that canvas possible to check.</figcaption>
+      </figure>
+
+      <!-- ========== WIDGET 1 — The RAM Byte Bench ========== -->
+      <div class="widget-card" id="w-byte">
+        <div class="widget-card__title">The RAM Byte Bench</div>
+        <div class="widget-card__subtitle">One <code>RAM_BYTE</code>, freshly placed. <code>s</code>, <code>e</code> and <code>reset</code> are levels, as in Logisim: while <code>s</code> is high and the byte is selected, it follows <code>i</code>.</div>
+
+        <div class="widget-input-row">
+          <div class="widget-input-group">
+            <label id="rb-pins-lbl">pins</label>
+            <div class="pin-row" id="rb-pins" role="group" aria-labelledby="rb-pins-lbl"></div>
+          </div>
+          <div class="widget-input-group">
+            <label id="rb-i-lbl">i</label>
+            <div class="byte-toggle" id="rb-i" role="group" aria-labelledby="rb-i-lbl"></div>
+          </div>
+        </div>
+
+        <div class="preset-row" role="group" aria-label="Presets">
+          <button type="button" class="preset-btn" data-p="write">write while selected</button>
+          <button type="button" class="preset-btn" data-p="nosel">write while NOT selected</button>
+          <button type="button" class="preset-btn" data-p="fill">reset with i = 11111111</button>
+          <button type="button" class="preset-btn" data-p="read">read it back</button>
+          <button type="button" class="preset-btn" data-p="fresh">fresh byte</button>
+        </div>
+
+        <div class="gates" id="rb-gates" aria-live="polite"></div>
+
+        <div class="out-grid">
+          <div class="out-box">
+            <div class="byte-label"><code>mem</code> &mdash; always visible</div>
+            <div class="out-box__v" id="rb-mem">&mdash;</div>
+          </div>
+          <div class="out-box" aria-live="polite">
+            <div class="byte-label"><code>o</code> &mdash; the bus side</div>
+            <div class="out-box__v" id="rb-o">&mdash;</div>
+            <div class="out-box__why" id="rb-o-why"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>Build <code>RAM_BYTE</code> now and test it on its own with the poke tool, the way the bench above does: select it, write it, deselect it, try to write it again, read it back. Page 2 places 32 of these and supplies their <code>h</code> and <code>v</code> from an 8-bit address.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 8, Page 1
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['mem'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.mem</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.mem) { return; }
+    var MEM = L.mem;
+
+    /* ============================================================
+       WIDGET 1 — The RAM Byte Bench
+       ============================================================
+       CSCLogic.mem.ramByte evaluates sel, set and en and the register
+       inside. The widget keeps the stored byte (null = never written,
+       shown as E) and re-evaluates on every change, because s and e are
+       levels: a byte with s held high keeps following i.
+
+       o has THREE states and the widget names each in words:
+         floating   not selected, or e = 0
+         driving E  selected, enabled, never written
+         a byte     selected, enabled, written */
+    var host = document.getElementById('w-byte');
+    if (!host) { return; }
+
+    var P = { h: 0, v: 0, s: 0, e: 0, reset: 0 };
+    var iv = 0, q = null, last = null;
+    var elPins = document.getElementById('rb-pins'), elI = document.getElementById('rb-i');
+    var elGates = document.getElementById('rb-gates');
+    var elMem = document.getElementById('rb-mem'), elO = document.getElementById('rb-o'), elWhy = document.getElementById('rb-o-why');
+
+    function b8(v) { var s = (v & 255).toString(2); while (s.length < 8) { s = '0' + s; } return s; }
+    function bits(v) { var o = [], k; for (k = 7; k >= 0; k--) { o.push((v >> k) & 1); } return o; }
+    function str(w) { return w.join(''); }
+
+    var pinBtns = {};
+    ['h', 'v', 's', 'e', 'reset'].forEach(function (p) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'pin-btn';
+      b.addEventListener('click', function () { P[p] = P[p] ? 0 : 1; evalAndPaint(); });
+      elPins.appendChild(b); pinBtns[p] = b;
+    });
+    var iBtns = [];
+    for (var k = 0; k < 8; k++) {
+      (function (k) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.addEventListener('click', function () { iv ^= (1 << (7 - k)); evalAndPaint(); });
+        elI.appendChild(b); iBtns.push(b);
+      }(k));
+    }
+
+    function evalAndPaint() {
+      last = MEM.ramByte(q, { h: P.h, v: P.v, i: bits(iv), s: P.s, e: P.e, reset: P.reset });
+      q = last.q;
+      paint();
+    }
+
+    function node(name, eq, v) {
+      return '<div class="gate-node' + (v ? ' gate-node--on' : '') + '"><span class="gate-node__eq">' + eq + '</span>' +
+             name + ' = <span class="gate-node__v">' + v + '</span></div>';
+    }
+
+    function paint() {
+      Object.keys(pinBtns).forEach(function (p) {
+        pinBtns[p].textContent = p + ' = ' + P[p];
+        pinBtns[p].setAttribute('aria-pressed', P[p] ? 'true' : 'false');
+      });
+      for (var k = 0; k < 8; k++) {
+        var on = (iv >> (7 - k)) & 1;
+        iBtns[k].textContent = on;
+        iBtns[k].setAttribute('aria-pressed', on ? 'true' : 'false');
+        iBtns[k].setAttribute('aria-label', 'i bit ' + (7 - k) + ', currently ' + on);
+      }
+      elGates.innerHTML =
+        node('sel', 'h AND v', last.sel) +
+        node('set', '(sel AND s) OR reset', last.set) +
+        node('en', 'sel AND e', last.en);
+
+      if (last.mem === null) { elMem.className = 'out-box__v out-box__v--E'; elMem.textContent = 'EEEEEEEE'; }
+      else { elMem.className = 'out-box__v'; elMem.textContent = str(last.mem); }
+
+      if (!last.en) {
+        elO.className = 'out-box__v out-box__v--float';
+        elO.textContent = 'xxxxxxxx — floating';
+        elWhy.textContent = !last.sel ? 'Not selected: the buffer is off, whatever e says. This byte is not driving the line at all — which is not the same as driving 00000000.'
+                                     : 'Selected, but e = 0: nothing is being read, so the buffer is off.';
+      } else if (last.unwritten) {
+        elO.className = 'out-box__v out-box__v--E';
+        elO.textContent = 'EEEEEEEE';
+        elWhy.textContent = 'Selected and enabled, so it IS driving — but this byte has never been written, so what it drives is E.';
+      } else {
+        elO.className = 'out-box__v';
+        elO.textContent = str(last.o);
+        elWhy.textContent = 'Selected and enabled: the stored byte is on the line.';
+      }
+    }
+
+    function set(p, i) { P = { h: p[0], v: p[1], s: p[2], e: p[3], reset: p[4] }; if (i !== undefined) { iv = i; } evalAndPaint(); }
+    host.querySelectorAll('.preset-btn').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var k = b.getAttribute('data-p');
+        if (k === 'fresh')  { q = null; set([0,0,0,0,0], 0); }
+        if (k === 'write')  { set([1,1,1,0,0], 0x3C); set([1,1,0,0,0]); }
+        if (k === 'nosel')  { set([1,0,1,0,0], 0x81); set([1,0,0,0,0]); }
+        if (k === 'fill')   { set([0,0,0,0,1], 0xFF); set([0,0,0,0,0]); }
+        if (k === 'read')   { set([1,1,0,1,0]); }
+      });
+    });
+
+    evalAndPaint();
+  })();
+  </script>
+</body>
+</html>
