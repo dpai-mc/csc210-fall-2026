@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w7-02">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 7: Deciding</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ---------- */
+    .byte-toggle { display: flex; gap: 3px; flex-wrap: wrap; }
+    .byte-toggle button {
+      font-family: var(--font-mono); font-size: var(--fs-md);
+      width: 2rem; height: 2.3rem; cursor: pointer;
+      border: 1px solid var(--color-border); border-radius: 4px;
+      background: var(--color-surface); color: var(--color-text-muted);
+    }
+    .byte-toggle button[aria-pressed="true"] { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .byte-label { font-size: var(--fs-xs); color: var(--color-text-muted); font-family: var(--font-mono); }
+
+    .demo-scale {
+      border: 2px dashed var(--color-warning); border-radius: var(--radius);
+      background: #fffbf0; padding: var(--space-sm) var(--space-md);
+      margin: var(--space-md) 0; font-size: var(--fs-sm);
+    }
+    .demo-scale strong { color: #8a5a00; }
+
+    /* Widget 2 — the pass ladder */
+    .pass-row { display: flex; align-items: center; gap: var(--space-sm); font-family: var(--font-mono); font-size: var(--fs-sm); padding: 2px 0; }
+    .pass-row__n { flex: 0 0 5.5rem; color: var(--color-text-muted); font-size: var(--fs-xs); }
+    .pass-row--final { font-weight: 700; color: var(--color-primary); }
+    .pass-row--mips { border-top: 1px solid var(--color-border); margin-top: var(--space-sm); padding-top: var(--space-sm); }
+
+    /* Widget 3 — the derivation */
+    .deriv { display: grid; gap: 4px; margin: var(--space-md) 0; font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .deriv > div { display: flex; gap: var(--space-md); align-items: baseline; padding: var(--space-xs) var(--space-sm); border-radius: 4px; background: var(--color-code-bg); }
+    .deriv .dv-lbl { flex: 0 0 13rem; font-family: var(--font-sans); font-size: var(--fs-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .03em; }
+    .deriv .dv-hi { background: #fff5eb; outline: 1px solid var(--color-accent); }
+
+    .reach-meter { margin-top: var(--space-md); }
+    .reach-meter__bar { position: relative; height: 12px; border-radius: 6px; background: var(--color-code-bg); border: 1px solid var(--color-border); }
+    .reach-meter__fill { position: absolute; top: 0; bottom: 0; background: var(--color-primary); border-radius: 6px; opacity: .35; }
+    .reach-meter__mark { position: absolute; top: -4px; width: 2px; height: 20px; background: var(--color-accent-hov); }
+    .reach-meter__ends { display: flex; justify-content: space-between; font-size: var(--fs-xs); color: var(--color-text-muted); font-family: var(--font-mono); }
+    .out-of-range { color: var(--color-danger); font-weight: 700; }
+
+    /* Widget 4 — expansion */
+    .expand-grid { display: grid; grid-template-columns: 1fr auto 1.3fr; gap: var(--space-md); align-items: start; margin: var(--space-md) 0; }
+    @media (max-width: 720px) { .expand-grid { grid-template-columns: 1fr; } .expand-grid .ex-arrow { display: none; } }
+    .ex-box { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
+    .ex-box h4 { margin: 0 0 var(--space-sm); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .ex-box code { display: block; font-size: var(--fs-md); }
+    .ex-real { font-family: var(--font-mono); font-size: var(--fs-sm); display: grid; gap: var(--space-xs); }
+    .ex-real > div { display: flex; gap: var(--space-sm); }
+    .ex-real .ex-n { color: var(--color-text-muted); flex: 0 0 1.2rem; }
+    .ex-arrow { font-size: var(--fs-xl); color: var(--color-text-muted); align-self: center; }
+
+    .alu-panel {
+      border: 2px solid var(--color-success); border-radius: var(--radius);
+      background: #f2fbf6; padding: var(--space-md); margin-top: var(--space-md);
+    }
+    .alu-panel__flag { font-family: var(--font-mono); font-size: var(--fs-lg); color: var(--color-success); font-weight: 700; }
+    .alu-panel--none { border-color: var(--color-border); background: var(--color-surface); }
+    .alu-panel--none .alu-panel__flag { color: var(--color-text-muted); }
+
+    .at-note { border-left: 3px solid var(--color-accent); padding-left: var(--space-md); margin: var(--space-md) 0; font-size: var(--fs-sm); }
+
+    .pseudo-table code { white-space: nowrap; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 7 &rsaquo; <span>Page 2 — Deciding</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Deciding</h1>
+    <p><strong>Sections 7.4 – 7.7</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1.8 hours</p>
+
+    <p>Your ALU is finished. The rest of this week is the other track &mdash; and it turns out to have been missing exactly the same thing.</p>
+
+    <!-- ============================================================
+         7.4 — sll / srl
+         ============================================================ -->
+    <section id="sec-7-4">
+      <h2>7.4 &nbsp; Two instructions left over from last week</h2>
+
+      <p>Before control flow, ten minutes to close Week 6. You built two shift legs and never met the instructions that use them.</p>
+
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Instruction</th><th>Meaning</th><th>Your leg</th></tr></thead>
+          <tbody>
+            <tr><td><code>sll $rd, $rt, shamt</code></td><td><code>$rd</code> = <code>$rt</code> shifted left by <code>shamt</code> places</td><td><code>SHIFT_LEFT</code></td></tr>
+            <tr><td><code>srl $rd, $rt, shamt</code></td><td><code>$rd</code> = <code>$rt</code> shifted right by <code>shamt</code> places</td><td><code>SHIFT_RIGHT</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Both are R-type, and both use a field you have seen in the instruction format and never had a use for: <strong><code>shamt</code></strong>, five bits, the shift amount. Five bits gives 0 to 31, which is exactly the range that makes sense for a 32-bit register.</p>
+
+      <p>They are also the fast way to multiply and divide by powers of two. <code>sll $t1, $t0, 3</code> multiplies by 8. A compiler will emit that rather than a multiply without being asked, because a shift is one of the cheapest things a processor can do and a multiply is one of the most expensive.</p>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">MIPS shifts by <code>shamt</code>. Your ALU shifts by one.</div>
+        <p><code>sll $t1, $t0, 5</code> moves every bit five places <strong>in a single instruction</strong>. Look at the leg you built: <code>SHIFT_LEFT</code> has an 8-bit input, a <code>shin</code> pin and an 8-bit output. <strong>There is no <code>shamt</code> input on it</strong>, and there is nowhere to put one &mdash; the wiring moves each bit exactly one position and that distance is built into the wires.</p>
+        <p>Real MIPS hardware uses a <strong>barrel shifter</strong>: a circuit that can shift by any amount in one pass, built from layers of multiplexers. It is considerably larger than what you built, and <strong>this course does not build one.</strong></p>
+        <p>So your machine could execute <code>sll $t1, $t0, 5</code> only by applying its shift leg five times, under something that counts. That is a real limitation of this design, not a simplification you will undo later &mdash; and it is worth knowing which of the two you are looking at whenever a course says "we'll do the simple version."</p>
+      </div>
+
+      <!-- ========== WIDGET 2 — The Shift Instruction Bench ========== -->
+      <div class="widget-card" id="w-shiftinstr">
+        <div class="widget-card__title">The Shift Instruction Bench</div>
+        <div class="widget-card__subtitle">One MIPS instruction, against however many passes your leg would need.</div>
+
+        <div class="demo-scale">
+          <strong>MIPS shifts by <code>shamt</code> in one instruction; your <code>SHIFT_LEFT</code> and <code>SHIFT_RIGHT</code> legs shift by one.</strong>
+          The two columns below reach the same answer. What differs is how many times the hardware has to run.
+        </div>
+
+        <div class="widget-input-row">
+          <div class="widget-input-group">
+            <label id="si-a-lbl">Value in <code>$rt</code></label>
+            <div class="byte-toggle" id="si-a" role="group" aria-labelledby="si-a-lbl"></div>
+          </div>
+          <div class="widget-input-group">
+            <label for="si-dir">Instruction</label>
+            <select id="si-dir">
+              <option value="sll">sll — shift left</option>
+              <option value="srl">srl — shift right</option>
+            </select>
+          </div>
+          <div class="widget-input-group">
+            <label for="si-shamt">shamt <span class="byte-label" id="si-shamt-read"></span></label>
+            <input type="range" id="si-shamt" min="0" max="7" value="3">
+          </div>
+        </div>
+
+        <div id="si-passes" aria-live="polite"></div>
+        <p class="byte-label" id="si-note"></p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         7.5 — the PC
+         ============================================================ -->
+    <section id="sec-7-5">
+      <h2>7.5 &nbsp; The register that decides what happens next</h2>
+
+      <p>Every program you have written so far runs straight down the page. There is a reason, and it is one register.</p>
+
+      <p>The <strong>program counter</strong> &mdash; the PC &mdash; holds the address of the instruction being executed. After each instruction the machine adds 4 to it, because every MIPS instruction is four bytes long, and fetches whatever is there next.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Straight-line execution is one line of behaviour</div>
+        <p style="font-family:var(--font-mono);font-size:var(--fs-md);text-align:center;margin:var(--space-md) 0">PC = PC + 4</p>
+        <p>That is the whole of it. A program with no control flow is a machine doing nothing but adding 4 to a register, over and over, and reading what it lands on.</p>
+        <p><strong>So every control-flow instruction in this week is a different way of writing some other value into the PC.</strong> A branch conditionally writes PC + 4 + something. A jump writes an address. A return writes back whatever was saved. There is no separate "control" mechanism hiding somewhere &mdash; deciding, looping and calling are all one register being written to.</p>
+      </div>
+
+      <p>You will build the PC as actual hardware in <strong>Week 13</strong>. It is a register &mdash; the same <code>REGISTER_8BIT</code> you built in Week 5, in the same file, with an adder wired to it. Knowing that now makes the rest of this page concrete rather than magical: when a branch "goes somewhere," a circuit you have already built is being loaded with a number.</p>
+    </section>
+
+    <!-- ============================================================
+         7.6 — beq / bne and offsets
+         ============================================================ -->
+    <section id="sec-7-6">
+      <h2>7.6 &nbsp; <code>beq</code>, <code>bne</code>, and counting in instructions</h2>
+
+      <p>MIPS has two instructions that compare two registers and conditionally change the PC:</p>
+
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Instruction</th><th>Opcode</th><th>Branches when</th></tr></thead>
+          <tbody>
+            <tr><td><code>beq $rs, $rt, label</code></td><td><code>000100</code></td><td><code>$rs</code> equals <code>$rt</code></td></tr>
+            <tr><td><code>bne $rs, $rt, label</code></td><td><code>000101</code></td><td><code>$rs</code> does not equal <code>$rt</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>A <strong>label</strong> is a name you put in front of an instruction. The assembler works out what address that instruction ended up at, and replaces the label with a number. Which number is the interesting part.</p>
+
+      <h3>The offset, and why it is not an address</h3>
+
+      <p>A branch is I-type, so it has a <strong>16-bit immediate field</strong> to carry its destination in. An address is 32 bits. Sixteen bits cannot hold one.</p>
+
+      <p>So a branch does not store where to go. It stores <strong>how far to move</strong>, relative to where it already is:</p>
+
+      <p style="font-family:var(--font-mono);font-size:var(--fs-md);text-align:center;margin:var(--space-lg) 0">target = PC + 4 + (offset &times; 4)</p>
+
+      <p>Two details in that formula are worth being deliberate about.</p>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Why <code>PC + 4</code> and not <code>PC</code></div>
+        <p>By the time the branch is acted on, the machine has already added 4 to the PC &mdash; that is the default behaviour from &sect;7.5, and it happens whether or not the branch is taken. The offset is measured from where the machine was <em>going</em> to go, not from the branch itself. An offset of 0 therefore means "carry on normally."</p>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Why <code>&times; 4</code> &mdash; and it buys four times the reach for nothing</div>
+        <p>Every MIPS instruction is four bytes and sits at an address that is a multiple of four. So a byte offset between two instructions is <em>always</em> a multiple of four, which means its <strong>bottom two bits are always zero</strong>.</p>
+        <p>Storing two bits that can never be anything but zero would waste two of the sixteen. So the field counts <strong>instructions</strong> instead of bytes, and the hardware multiplies by 4 when it uses the value. Same field, same instruction, <strong>four times the distance</strong>, and nothing given up &mdash; because the bits that were dropped carried no information.</p>
+        <p>This is worth noticing as a piece of engineering rather than as a rule to memorise. It is the same move as the ALU's shared carry and shift pins: find something the representation is spending bits on that it does not need, and get the bits back.</p>
+      </div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">The reach: &plusmn;32,767 instructions</div>
+        <p>The offset is a 16-bit two's-complement number, so it runs from <strong>&minus;32,768 to +32,767 instructions</strong>. Negative offsets branch backwards, which is how a loop works.</p>
+        <p>In bytes that is roughly &plusmn;128 KB &mdash; but <strong>quote the instruction figure, not the byte figure</strong>. The instruction count is what the encoding actually holds; the byte count is derived from it, and it is easy to get wrong by a factor of four in either direction.</p>
+        <p>If a branch target is further away than that, the assembler cannot encode it, and you need a jump instead. That is &sect;7.9.</p>
+      </div>
+
+      <!-- ========== WIDGET 3 — The Branch Bench ========== -->
+      <div class="widget-card" id="w-branch">
+        <div class="widget-card__title">The Branch Bench</div>
+        <div class="widget-card__subtitle">Put a branch at one address and its label at another, and watch the assembler's arithmetic.</div>
+
+        <div class="widget-input-row">
+          <div class="widget-input-group">
+            <label for="br-pc">Address of the branch</label>
+            <input type="text" id="br-pc" value="0x00400020" autocomplete="off">
+          </div>
+          <div class="widget-input-group">
+            <label for="br-t">Address of the label</label>
+            <input type="text" id="br-t" value="0x00400040" autocomplete="off">
+          </div>
+          <div class="widget-input-group">
+            <label for="br-op">Instruction</label>
+            <select id="br-op">
+              <option value="beq">beq $t0, $t1, label</option>
+              <option value="bne">bne $t0, $t1, label</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="preset-row">
+          <button class="preset-btn" type="button" data-brp="0x00400020,0x00400040">forwards</button>
+          <button class="preset-btn" type="button" data-brp="0x00400050,0x00400038">backwards — a loop</button>
+          <button class="preset-btn" type="button" data-brp="0x00400020,0x00400024">the next instruction</button>
+          <button class="preset-btn" type="button" data-brp="0x00400020,0x00600020">too far</button>
+        </div>
+
+        <div class="deriv" id="br-deriv" aria-live="polite"></div>
+
+        <p class="byte-label">The assembled instruction:</p>
+        <div class="field-strip" id="br-fields" style="display:flex;flex-wrap:wrap;gap:2px;font-family:var(--font-mono);font-size:var(--fs-xs)"></div>
+
+        <div class="reach-meter">
+          <div class="reach-meter__ends"><span>&minus;32,768</span><span>0</span><span>+32,767</span></div>
+          <div class="reach-meter__bar"><div class="reach-meter__fill" id="br-fill"></div><div class="reach-meter__mark" id="br-mark"></div></div>
+          <p class="byte-label" id="br-reach"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         7.7 — blt does not exist  ★
+         ============================================================ -->
+    <section id="sec-7-7">
+      <h2>7.7 &nbsp; <code>blt</code> does not exist</h2>
+
+      <p>You have two conditional branches: equal, and not equal. Now write this:</p>
+
+      <div class="asm" style="font-family:var(--font-mono);font-size:var(--fs-sm);background:var(--color-code-bg);border:1px solid var(--color-border);border-radius:var(--radius);padding:var(--space-md);margin:var(--space-md) 0;white-space:pre">if (a &lt; b) {
+    ...
+}</div>
+
+      <p>Equal and not-equal cannot express <em>less than</em>. And yet you will find <code>blt</code> in every MIPS reference, in the Fall 2025 course material, and in most textbooks, used exactly as though it were an instruction.</p>
+
+      <div class="callout callout--hook">
+        <div class="callout__title">It is not an instruction. The assembler writes two instructions for you.</div>
+        <div class="asm" style="font-family:var(--font-mono);font-size:var(--fs-sm);background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);padding:var(--space-md);margin:var(--space-md) 0;white-space:pre">you write:      blt $t0, $t1, target
+
+the machine     slt $at, $t0, $t1
+executes:       bne $at, $zero, target</div>
+        <p><code>slt</code> puts 1 in <code>$at</code> if <code>$t0</code> is less than <code>$t1</code>, and 0 otherwise. Then <code>bne</code> branches if that result is not zero. Two real instructions, and between them they do what one made-up instruction appeared to.</p>
+      </div>
+
+      <p>This is called a <strong>pseudo-instruction</strong> &mdash; something the assembler accepts and expands before anything reaches the processor. It is not a trick or a shortcut; it is one of the main jobs an assembler does.</p>
+
+      <h3>And now look at where the answer comes from</h3>
+
+      <p>You met <code>slt</code> last week, and you did not implement it. You did not need to &mdash; it was already there.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">One C comparison, two assembly instructions, one wire</div>
+        <p><code>slt</code> is answered by <strong><code>AL</code></strong> &mdash; the "A is larger" output of the comparator leg. That is the circuit you built in Week 6 out of eight chained <code>XOR_CMP_1BIT</code> instances, and wired into <code>ALU_8BIT</code> on page 1 of this week, where it runs continuously regardless of which opcode is selected.</p>
+        <p>So:</p>
+        <p style="text-align:center;margin:var(--space-md) 0"><code>if (a &lt; b)</code> &nbsp;&rarr;&nbsp; <code>slt</code> + <code>bne</code> &nbsp;&rarr;&nbsp; <strong>one bit coming out of an XOR cascade</strong></p>
+        <p><strong>That is the whole stack, in one example</strong>, and it is why the comparator was worth a whole page last week. A high-level conditional is not implemented by some separate comparison machinery. It is implemented by the thing you wired up on Tuesday.</p>
+      </div>
+
+      <div class="at-note">
+        <p><strong>Where <code>$at</code> came from.</strong> Week 5's register table lists <code>$at</code> as "reserved for the assembler" and did not say what for. This is what for: the assembler needs somewhere to put an intermediate result when it expands a pseudo-instruction into several real ones, and <code>$at</code> is the register set aside so that doing so never destroys anything of yours. <strong>Do not use <code>$at</code> in your own code</strong> &mdash; an expansion two lines later will overwrite it without warning.</p>
+      </div>
+
+      <h3>The ones you will actually use</h3>
+
+      <div class="table-scroll">
+        <table class="pin-table pseudo-table">
+          <thead><tr><th>You write</th><th>The machine executes</th><th>Answered by</th></tr></thead>
+          <tbody id="pseudo-rows"></tbody>
+        </table>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">You may use these. That is what they are for.</div>
+        <p>Now that you know what they expand to, use them. Working MIPS programmers write <code>blt</code> and <code>move</code>, and code written entirely in <code>slt</code> + <code>bne</code> pairs is harder to read for no gain.</p>
+        <p><strong>One exception, on this week's assignment:</strong> the comparison inside <code>gcd</code> must be written out as a hand-written <code>slt</code> plus branch. Once, so that the mechanism is something you have done rather than something you have read.</p>
+      </div>
+
+      <!-- ========== WIDGET 4 — What the Assembler Emits ========== -->
+      <div class="widget-card" id="w-expand">
+        <div class="widget-card__title">What the Assembler Emits</div>
+        <div class="widget-card__subtitle">Type a pseudo-instruction. See the real instructions, and the ALU output that answers it.</div>
+
+        <div class="widget-input-row">
+          <div class="widget-input-group">
+            <label for="ex-pick">Pick one</label>
+            <select id="ex-pick"></select>
+          </div>
+          <div class="widget-input-group" style="flex:1">
+            <label for="ex-text">…or type your own</label>
+            <input type="text" id="ex-text" value="blt $t0, $t1, loop" autocomplete="off" spellcheck="false">
+          </div>
+        </div>
+
+        <div class="expand-grid" aria-live="polite">
+          <div class="ex-box">
+            <h4>What you write</h4>
+            <code id="ex-src"></code>
+          </div>
+          <div class="ex-arrow" aria-hidden="true">&rarr;</div>
+          <div class="ex-box">
+            <h4>What the machine executes</h4>
+            <div class="ex-real" id="ex-real"></div>
+          </div>
+        </div>
+
+        <p class="byte-label" id="ex-why"></p>
+        <div id="ex-alu"></div>
+      </div>
+
+      <!-- ========== Self-check A ========== -->
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Six questions, not graded. The offset arithmetic is on the assignment, so get it wrong here instead.</div>
+        <div id="sc-body"></div>
+      </div>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>You can now write a conditional. Next page: pointing a branch backwards, which is a loop &mdash; and the jump instructions, which go where a branch cannot reach.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 7, Page 2
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['alu', 'mips', 'flow'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive parts of this page are not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing <code>' +
+      missing.join('</code>, <code>') + '</code>), so the widgets and the expansion table below have nothing to run on. ' +
+      'The written content is unaffected and still correct. <em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.alu || !L.mips || !L.flow) { return; }
+    var A = L.alu, M = L.mips, F = L.flow;
+
+    function str(w) { return w.join(''); }
+    function num(w) { var n = 0, i; for (i = 0; i < 8; i++) { n = (n << 1) | w[i]; } return n; }
+    function fromNum(v) { var o = [], i; v = v & 255; for (i = 7; i >= 0; i--) { o.push((v >> i) & 1); } return o; }
+    function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function hex(v, w) { var s = (v >>> 0).toString(16).toUpperCase(); while (s.length < (w || 8)) { s = '0' + s; } return '0x' + s; }
+
+    function byteToggle(el, word, onChange) {
+      el.innerHTML = '';
+      for (var i = 0; i < 8; i++) {
+        (function (i) {
+          var b = document.createElement('button');
+          b.type = 'button';
+          b.textContent = word[i];
+          b.setAttribute('aria-pressed', word[i] ? 'true' : 'false');
+          b.setAttribute('aria-label', 'bit ' + (7 - i) + ', currently ' + word[i]);
+          b.addEventListener('click', function () {
+            word[i] = word[i] ? 0 : 1;
+            b.textContent = word[i];
+            b.setAttribute('aria-pressed', word[i] ? 'true' : 'false');
+            b.setAttribute('aria-label', 'bit ' + (7 - i) + ', currently ' + word[i]);
+            onChange();
+          });
+          el.appendChild(b);
+        }(i));
+      }
+    }
+
+    /* ============================================================
+       WIDGET 2 — The Shift Instruction Bench
+       ============================================================
+       The two columns must agree, and they must take a visibly
+       different number of steps to agree. That difference IS the
+       section's content -- MIPS shifts by shamt, the student's leg
+       shifts by one -- so the pass ladder is rendered by actually
+       applying CSCLogic.alu.shiftLeft/shiftRight N times rather than
+       by computing the answer and drawing N rows around it. */
+    (function () {
+      var host = document.getElementById('w-shiftinstr');
+      if (!host) { return; }
+      var a = fromNum(0xB4);
+      var elA = document.getElementById('si-a'), elDir = document.getElementById('si-dir');
+      var elSh = document.getElementById('si-shamt'), elShRead = document.getElementById('si-shamt-read');
+      var elP = document.getElementById('si-passes'), elN = document.getElementById('si-note');
+
+      byteToggle(elA, a, render);
+      elDir.addEventListener('change', render);
+      elSh.addEventListener('input', render);
+
+      function render() {
+        var n = parseInt(elSh.value, 10);
+        var left = (elDir.value === 'sll');
+        elShRead.textContent = '= ' + n;
+
+        var cur = a.slice(), rows = '', i, r;
+        rows += '<div class="pass-row"><span class="pass-row__n">start</span><span>' + str(cur) + '</span></div>';
+        for (i = 1; i <= n; i++) {
+          r = left ? A.shiftLeft(cur, 0) : A.shiftRight(cur, 0);
+          cur = r.out;
+          rows += '<div class="pass-row' + (i === n ? ' pass-row--final' : '') + '">' +
+                  '<span class="pass-row__n">pass ' + i + '</span><span>' + str(cur) + '</span></div>';
+        }
+        if (n === 0) {
+          rows += '<div class="pass-row pass-row--final"><span class="pass-row__n">no passes</span><span>' + str(cur) + '</span></div>';
+        }
+        rows += '<div class="pass-row pass-row--mips pass-row--final"><span class="pass-row__n">' +
+                elDir.value + ' &times;' + n + '</span><span>' + str(cur) + '</span>' +
+                '<span class="byte-label">&nbsp; one MIPS instruction</span></div>';
+        elP.innerHTML = rows;
+
+        elN.textContent = (n === 0)
+          ? 'A shift of zero is a copy. Both sides agree trivially.'
+          : 'MIPS does this in one instruction. Your leg needs ' + n + ' pass' + (n === 1 ? '' : 'es') +
+            ' — and there is nothing in your circuit that counts them, which is what a barrel shifter would be for.';
+      }
+      render();
+    }());
+
+    /* ============================================================
+       WIDGET 3 — The Branch Bench
+       ============================================================
+       Every number here comes from CSCLogic.flow.branchOffset, which
+       returns the offset in INSTRUCTIONS. Do not compute a byte offset
+       anywhere in this widget and divide it for display -- the whole
+       point of the section is which of the two the encoding holds. */
+    (function () {
+      var host = document.getElementById('w-branch');
+      if (!host) { return; }
+      var elPc = document.getElementById('br-pc'), elT = document.getElementById('br-t');
+      var elOp = document.getElementById('br-op'), elD = document.getElementById('br-deriv');
+      var elF = document.getElementById('br-fields'), elFill = document.getElementById('br-fill');
+      var elMark = document.getElementById('br-mark'), elReach = document.getElementById('br-reach');
+
+      [elPc, elT].forEach(function (el) { el.addEventListener('input', render); });
+      elOp.addEventListener('change', render);
+      host.querySelectorAll('[data-brp]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var v = b.dataset.brp.split(',');
+          elPc.value = v[0]; elT.value = v[1]; render();
+        });
+      });
+
+      function parse(s) { var v = parseInt(String(s).trim(), 16); return isNaN(v) ? NaN : v >>> 0; }
+
+      function render() {
+        var pc = parse(elPc.value), t = parse(elT.value);
+        if (isNaN(pc) || isNaN(t)) {
+          elD.innerHTML = '<div><span class="dv-lbl">input</span><span>Enter both addresses in hex, e.g. 0x00400020</span></div>';
+          elF.innerHTML = ''; elReach.textContent = '';
+          return;
+        }
+        var r = F.branchOffset(pc, t);
+
+        var rows = [
+          ['branch is at', hex(pc)],
+          ['PC + 4', hex(pc + 4) + '   — the machine has already moved on'],
+          ['label is at', hex(t)],
+          ['difference in bytes', r.bytes + (r.bytes < 0 ? '   — backwards' : '')],
+          ['÷ 4 → instructions', r.words]
+        ];
+        elD.innerHTML = rows.map(function (row, i) {
+          return '<div' + (i === 4 ? ' class="dv-hi"' : '') + '><span class="dv-lbl">' + row[0] + '</span><span>' + esc(row[1]) + '</span></div>';
+        }).join('');
+
+        if (!r.aligned) {
+          elF.innerHTML = '<span class="out-of-range">An instruction address must be a multiple of 4.</span>';
+          elReach.innerHTML = '<span class="out-of-range">Not a valid instruction address.</span>';
+          elFill.style.width = '0'; elMark.style.left = '50%';
+          return;
+        }
+
+        if (r.fits) {
+          var enc = M.encode(elOp.value + ' $t0, $t1, ' + r.words);
+          elF.innerHTML = enc.ok
+            ? enc.fields.map(function (f) {
+                return '<div style="border:1px solid var(--color-border);border-radius:4px;padding:3px 8px;background:var(--color-surface);text-align:center">' +
+                       '<span style="display:block;color:var(--color-text-muted);font-size:10px;text-transform:uppercase">' + esc(f.name) + '</span>' + f.bits + '</div>';
+              }).join('')
+            : '<span class="out-of-range">' + esc(enc.error) + '</span>';
+        } else {
+          elF.innerHTML = '<span class="out-of-range">Cannot be encoded — ' + r.words +
+            ' instructions is outside the range a 16-bit offset can hold. The assembler would reject this, and you would need a jump.</span>';
+        }
+
+        var span = F.REACH.maxWords - F.REACH.minWords;
+        var frac = Math.max(0, Math.min(1, (r.words - F.REACH.minWords) / span));
+        elMark.style.left = (frac * 100) + '%';
+        elFill.style.left = '50%';
+        elFill.style.width = Math.abs(frac - 0.5) * 100 + '%';
+        if (frac < 0.5) { elFill.style.left = (frac * 100) + '%'; }
+
+        elReach.innerHTML = r.fits
+          ? 'Offset ' + r.words + ' of a possible &minus;32,768 to +32,767 instructions.'
+          : '<span class="out-of-range">Out of range: ' + r.words + ' instructions.</span>';
+      }
+      render();
+    }());
+
+    /* ============================================================
+       §7.7 — the pseudo-instruction table, rendered from the kernel
+       ============================================================
+       Not written out in the markup. Widget 4 renders from the same
+       CSCLogic.flow.PSEUDO, so the table and the widget cannot drift
+       apart -- which is the Fall 2025 failure Standards §8 exists to
+       prevent, in its original form: a reference sheet and a tool each
+       carrying their own copy. */
+    (function () {
+      var tb = document.getElementById('pseudo-rows');
+      if (!tb) { return; }
+      var order = ['blt', 'bgt', 'ble', 'bge', 'beqz', 'bnez', 'move', 'li', 'la'];
+      var sample = {
+        blt: 'blt $t0, $t1, target', bgt: 'bgt $t0, $t1, target',
+        ble: 'ble $t0, $t1, target', bge: 'bge $t0, $t1, target',
+        beqz: 'beqz $t0, target', bnez: 'bnez $t0, target',
+        move: 'move $t1, $t0', li: 'li $t0, 42', la: 'la $a0, msg'
+      };
+      tb.innerHTML = order.map(function (m) {
+        var r = F.expand(sample[m]);
+        if (!r.ok) { return ''; }
+        return '<tr><td><code>' + esc(sample[m]) + '</code></td>' +
+               '<td>' + r.real.map(function (x) { return '<code>' + esc(x) + '</code>'; }).join('<br>') + '</td>' +
+               '<td>' + esc(r.alu) + '</td></tr>';
+      }).join('');
+    }());
+
+    /* ============================================================
+       WIDGET 4 — What the Assembler Emits   ★
+       ============================================================ */
+    (function () {
+      var host = document.getElementById('w-expand');
+      if (!host) { return; }
+      var elPick = document.getElementById('ex-pick'), elText = document.getElementById('ex-text');
+      var elSrc = document.getElementById('ex-src'), elReal = document.getElementById('ex-real');
+      var elWhy = document.getElementById('ex-why'), elAlu = document.getElementById('ex-alu');
+
+      var samples = ['blt $t0, $t1, loop', 'bgt $s0, $s1, done', 'ble $t2, $t3, skip', 'bge $a0, $a1, ok',
+                     'beqz $t0, end', 'bnez $v0, again', 'move $s0, $a0', 'li $t0, 42', 'li $t0, 70000', 'la $a0, msg'];
+      samples.forEach(function (s) {
+        var o = document.createElement('option'); o.value = s; o.textContent = s; elPick.appendChild(o);
+      });
+      elPick.addEventListener('change', function () { elText.value = elPick.value; render(); });
+      elText.addEventListener('input', render);
+
+      function render() {
+        var r = F.expand(elText.value);
+        elSrc.textContent = elText.value;
+
+        if (!r.ok) {
+          elReal.innerHTML = '<div style="color:var(--color-danger)">' + esc(r.error) + '</div>';
+          elWhy.textContent = '';
+          elAlu.innerHTML = '';
+          return;
+        }
+
+        elReal.innerHTML = r.real.map(function (x, i) {
+          return '<div><span class="ex-n">' + (i + 1) + '</span><span>' + esc(x) + '</span></div>';
+        }).join('');
+
+        elWhy.textContent = r.why + (r.usesAt
+          ? '  The assembler uses $at for the intermediate result — which is exactly what $at is reserved for.'
+          : '');
+
+        /* The third panel. A comparison branch is answered by a FLAG,
+           not by the ALU's 8-bit output, and it is drawn in the same
+           green Week 6 used for the slt flag path so the connection is
+           visual rather than only stated. */
+        var isFlag = (r.alu === 'AL' || r.alu === 'EQ');
+        elAlu.innerHTML =
+          '<div class="alu-panel' + (isFlag ? '' : ' alu-panel--none') + '">' +
+            '<div class="byte-label">answered by</div>' +
+            '<div class="alu-panel__flag">' + esc(r.alu) + '</div>' +
+            '<p style="margin:var(--space-sm) 0 0;font-size:var(--fs-sm)">' +
+            (r.alu === 'AL'
+              ? 'The <strong>A-larger flag</strong> off the comparator leg — the eight chained <code>XOR_CMP_1BIT</code> instances you built in Week 6 and wired into <code>ALU_8BIT</code> on page 1. It is live continuously, whatever opcode is selected, which is why <code>slt</code> costs nothing extra.'
+              : r.alu === 'EQ'
+                ? 'The <strong>equal flag</strong> off the same comparator leg. <code>$zero</code> always reads 0, so comparing against it is a zero test.'
+                : 'This one is not a comparison — it is answered by the ALU’s ordinary 8-bit result from the ' + esc(r.alu) + '.') +
+            '</p>' +
+          '</div>';
+      }
+      elText.value = 'blt $t0, $t1, loop';
+      render();
+    }());
+
+    /* ============================================================
+       Self-check A
+       ============================================================ */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+
+      var Q = [
+        { q: 'A <code>beq</code> sits at <code>0x00400020</code> and its label is at <code>0x00400040</code>. What goes in the immediate field?',
+          opts: ['32', '8', '7', '28'],
+          correct: 2,
+          why: '(0x00400040 &minus; (0x00400020 + 4)) &divide; 4 = (64 &minus; 36) &divide; 4 = 7. The two traps are forgetting the +4 (which gives 8) and forgetting the &divide;4 (which gives 28).' },
+        { q: 'Why does a branch offset count instructions rather than bytes?',
+          opts: ['Because bytes would not fit in 16 bits either', 'Because instructions are 4-byte aligned, so the low two bits of a byte offset are always zero and would carry no information', 'Because the PC counts instructions', 'Because MIPS is a RISC design'],
+          correct: 1,
+          why: 'Storing two bits that can only be zero would waste them. Counting instructions instead buys four times the reach and gives up nothing — the dropped bits held no information.' },
+        { q: 'What does the assembler emit for <code>bge $s0, $s1, done</code>?',
+          opts: ['slt $at, $s0, $s1 &nbsp;/&nbsp; beq $at, $zero, done', 'slt $at, $s1, $s0 &nbsp;/&nbsp; bne $at, $zero, done', 'slt $at, $s0, $s1 &nbsp;/&nbsp; bne $at, $zero, done', 'a single bge instruction — it is real'],
+          correct: 0,
+          why: '"a at least b" is "not (a less than b)". Same <code>slt</code> as <code>blt</code>, with the branch inverted to <code>beq</code> — branch when the slt result IS zero.' },
+        { q: 'Which ALU output answers an <code>slt</code>?',
+          opts: ['The 8-bit result C', 'The carry out CO', 'The A-larger flag AL', 'The zero flag Z'],
+          correct: 2,
+          why: 'AL, off the comparator leg you chained together in Week 6. It is live regardless of opcode, which is why the comparison costs no extra ALU operation.' },
+        { q: 'A branch needs to reach a label 40,000 instructions away. What happens?',
+          opts: ['It works — 40,000 fits in 16 bits', 'The assembler cannot encode it; the code needs a jump instead', 'The offset wraps around', 'The assembler uses $at to extend the range'],
+          correct: 1,
+          why: 'The offset is 16-bit two’s complement: &minus;32,768 to +32,767 instructions. 40,000 is outside it. Jumps reach a 256 MB region and are §7.9.' },
+        { q: 'You write <code>move $t1, $t0</code>. What does the processor actually execute?',
+          opts: ['move $t1, $t0', 'add $t1, $t0, $zero', 'addi $t1, $t0, 0', 'or $t1, $t0, $t0'],
+          correct: 1,
+          why: 'Adding <code>$zero</code> changes nothing, so the sum is a copy. Week 6 taught you to write this form directly; the assembler accepts the shorter spelling and emits the same instruction.' }
+      ];
+
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p>' +
+          '<div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+
+      function answer(qi, oi) {
+        var item = Q[qi];
+        var okAns = (oi === item.correct);
+        var fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) {
+          el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false');
+        });
+      }
+
+      host.addEventListener('click', function (e) {
+        var t = e.target.closest('.quiz-option');
+        if (t) { answer(+t.dataset.q, +t.dataset.o); }
+      });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+
+  })();
+  </script>
+</body>
+</html>

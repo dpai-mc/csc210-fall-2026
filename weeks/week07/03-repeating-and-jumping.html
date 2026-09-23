@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w7-03">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 7: Repeating and Jumping</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ---------- */
+    .byte-label { font-size: var(--fs-xs); color: var(--color-text-muted); font-family: var(--font-mono); }
+
+    .asm {
+      font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.55;
+      background: var(--color-code-bg); border: 1px solid var(--color-border);
+      border-radius: var(--radius); padding: var(--space-md);
+      overflow-x: auto; white-space: pre; margin: var(--space-md) 0;
+    }
+    .asm .cm { color: var(--color-text-muted); }
+    .asm .lbl { color: var(--color-primary); font-weight: 700; }
+
+    /* Widget 5 — the loop bench */
+    .code-trace { display: grid; gap: 2px; font-family: var(--font-mono); font-size: var(--fs-sm); margin: var(--space-md) 0; }
+    .code-line {
+      display: grid; grid-template-columns: 7rem 1fr; gap: var(--space-md);
+      padding: var(--space-xs) var(--space-sm); border-radius: 4px; align-items: baseline;
+    }
+    .code-line__addr { color: var(--color-text-muted); font-size: var(--fs-xs); }
+    .code-line--pc { background: #fff5eb; outline: 2px solid var(--color-accent); }
+    .code-line--label { padding-top: var(--space-sm); }
+    .code-line--label .code-line__addr { visibility: hidden; }
+
+    .pc-strip {
+      display: flex; flex-wrap: wrap; gap: var(--space-md); align-items: baseline;
+      border: 1px solid var(--color-border); border-radius: var(--radius);
+      padding: var(--space-sm) var(--space-md); background: var(--color-surface);
+      font-family: var(--font-mono); font-size: var(--fs-sm); margin: var(--space-md) 0;
+    }
+    .pc-strip b { color: var(--color-primary); }
+    .pc-strip .pc-note { font-family: var(--font-sans); color: var(--color-text-muted); font-size: var(--fs-xs); }
+
+    .reg-strip { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: var(--space-sm) 0; }
+    .reg-chip {
+      font-family: var(--font-mono); font-size: var(--fs-sm);
+      border: 1px solid var(--color-border); border-radius: var(--radius);
+      padding: 2px var(--space-sm); background: var(--color-surface);
+    }
+    .reg-chip--changed { border-color: var(--color-accent); background: #fff5eb; font-weight: 700; }
+
+    .demo-scale {
+      border: 2px dashed var(--color-warning); border-radius: var(--radius);
+      background: #fffbf0; padding: var(--space-sm) var(--space-md);
+      margin: var(--space-md) 0; font-size: var(--fs-sm);
+    }
+    .demo-scale strong { color: #8a5a00; }
+
+    /* Widget 6 — jump field */
+    .deriv { display: grid; gap: 4px; margin: var(--space-md) 0; font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .deriv > div { display: flex; gap: var(--space-md); align-items: baseline; padding: var(--space-xs) var(--space-sm); border-radius: 4px; background: var(--color-code-bg); }
+    .deriv .dv-lbl { flex: 0 0 13rem; font-family: var(--font-sans); font-size: var(--fs-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .03em; }
+    .deriv .dv-hi { background: #fff5eb; outline: 1px solid var(--color-accent); }
+    .out-of-range { color: var(--color-danger); font-weight: 700; }
+
+    .bitsplit { display: flex; flex-wrap: wrap; gap: 2px; font-family: var(--font-mono); font-size: var(--fs-xs); margin: var(--space-sm) 0; }
+    .bitsplit > div { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px var(--space-sm); background: var(--color-surface); text-align: center; }
+    .bitsplit .bs-name { display: block; color: var(--color-text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
+    .bitsplit .bs-drop { opacity: .45; text-decoration: line-through; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 7 &rsaquo; <span>Page 3 — Repeating and Jumping</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Repeating and Jumping</h1>
+    <p><strong>Sections 7.8 – 7.9</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1.4 hours</p>
+
+    <!-- ============================================================
+         7.8 — loops
+         ============================================================ -->
+    <section id="sec-7-8">
+      <h2>7.8 &nbsp; A loop is a branch pointing backwards</h2>
+
+      <p>You have everything you need for a loop and may not have noticed. A branch offset is a two's-complement number, so it can be negative &mdash; and a negative offset sends the PC <em>back</em> to an instruction that has already run.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">There is no loop instruction, and there does not need to be</div>
+        <p>An <code>if</code> and a <code>while</code> are the same machinery. The only difference is <strong>which direction the branch points</strong>: forward to skip over something, backward to do something again.</p>
+        <p>Every loop construct in every language you have used &mdash; <code>while</code>, <code>for</code>, <code>do-while</code>, <code>foreach</code> &mdash; compiles down to a label and a conditional branch. The variety exists for the programmer's benefit; the machine has one mechanism.</p>
+      </div>
+
+      <h3>The three shapes</h3>
+
+      <p>They differ only in where the test sits relative to the body.</p>
+
+      <h4>While &mdash; test first, body may never run</h4>
+
+      <div class="asm"><span class="lbl">loop:</span>   slt   $at, $t0, $t1      <span class="cm"># is counter &lt; limit?</span>
+        beq   $at, $zero, done   <span class="cm"># if not, leave</span>
+        <span class="cm"># ... body ...</span>
+        addi  $t0, $t0, 1        <span class="cm"># advance</span>
+        j     loop               <span class="cm"># unconditionally go back</span>
+<span class="lbl">done:</span></div>
+
+      <p>Note the shape: the conditional branch <em>exits</em> the loop and the unconditional jump <em>continues</em> it. That reads backwards the first time you see it, and it is the standard arrangement &mdash; the test is written as "get out if finished" rather than "go round if not finished," which keeps the body in one straight run.</p>
+
+      <h4>Do-while &mdash; test last, body always runs once</h4>
+
+      <div class="asm"><span class="lbl">loop:</span>   <span class="cm"># ... body ...</span>
+        addi  $t0, $t0, 1
+        slt   $at, $t0, $t1
+        bne   $at, $zero, loop   <span class="cm"># go round again if still less</span></div>
+
+      <p>Shorter, and one instruction cheaper per iteration &mdash; no unconditional jump is needed, because the conditional branch is already at the bottom. This is the shape a compiler will produce when it can prove the body runs at least once.</p>
+
+      <h4>For &mdash; a while loop with the bookkeeping gathered up</h4>
+
+      <p>A <code>for</code> loop is not a separate mechanism at all. Its three parts &mdash; initialise, test, advance &mdash; are the same three pieces as the while loop, written in one line in the source and scattered in the same places in the assembly. There is nothing new to learn here, which is itself worth saying.</p>
+
+      <!-- ========== WIDGET 5 — The Loop Bench ========== -->
+      <div class="widget-card" id="w-loop">
+        <div class="widget-card__title">The Loop Bench</div>
+        <div class="widget-card__subtitle">Step through, and watch the PC. It only ever does two things: add 4, or take the offset.</div>
+
+        <div class="demo-scale">
+          <strong>Four instructions here; your own loops will be longer.</strong>
+          What changes with length is the number of body instructions and the size of the offset. The mechanism &mdash; a label, a conditional branch, and a PC that is either incremented or overwritten &mdash; is identical at any length.
+        </div>
+
+        <div class="tab-navigation" id="lp-tabs" role="tablist"></div>
+
+        <div class="code-trace" id="lp-code" aria-live="polite"></div>
+
+        <div class="pc-strip">
+          <span>PC = <b id="lp-pc">—</b></span>
+          <span class="pc-note" id="lp-why"></span>
+        </div>
+
+        <div class="reg-strip" id="lp-regs"></div>
+
+        <div class="step-nav">
+          <button class="widget-btn widget-btn--outline widget-btn--small" type="button" id="lp-reset">Restart</button>
+          <button class="widget-btn widget-btn--primary widget-btn--small" type="button" id="lp-step">Step &rarr;</button>
+          <button class="widget-btn widget-btn--outline widget-btn--small" type="button" id="lp-run">Run to the end</button>
+        </div>
+
+        <p class="byte-label" id="lp-status"></p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         7.9 — jumps
+         ============================================================ -->
+    <section id="sec-7-9">
+      <h2>7.9 &nbsp; Jumps: going further, and coming back</h2>
+
+      <p>A branch is conditional and it is limited to about 32,000 instructions in either direction. Two situations need something else: going somewhere unconditionally, and going somewhere <em>far</em>.</p>
+
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Instruction</th><th>Type</th><th>Field</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><code>j target</code></td><td>J</td><td>opcode <code>000010</code></td><td>PC &larr; target</td></tr>
+            <tr><td><code>jal target</code></td><td>J</td><td>opcode <code>000011</code></td><td><code>$ra</code> &larr; the next instruction's address, then PC &larr; target</td></tr>
+            <tr><td><code>jr $rs</code></td><td>R</td><td>funct <code>001000</code></td><td>PC &larr; the address held in <code>$rs</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th></th><th>Branch</th><th>Jump</th></tr></thead>
+          <tbody>
+            <tr><td><strong>When</strong></td><td>conditional — only if the comparison holds</td><td>unconditional — always</td></tr>
+            <tr><td><strong>How far</strong></td><td>&plusmn;32,767 instructions</td><td>anywhere in a 256 MB region, or anywhere at all via a register</td></tr>
+            <tr><td><strong>Address</strong></td><td>relative to the PC</td><td>absolute (J-type) or from a register (<code>jr</code>)</td></tr>
+            <tr><td><strong>Format</strong></td><td>I-type, 16-bit offset</td><td>J-type 26-bit field, or R-type</td></tr>
+            <tr><td><strong>Used for</strong></td><td>ifs, loops</td><td>calls, returns, long jumps</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>The 26-bit field, and why a jump is still not unlimited</h3>
+
+      <p>A J-type instruction spends 6 bits on the opcode, leaving <strong>26</strong> for the destination. An address is 32 bits. Six are missing, and each one is missing for a different reason:</p>
+
+      <ul>
+        <li><strong>The bottom two</strong> are dropped for the same reason as in a branch &mdash; instructions are four-byte aligned, so those bits are always zero and carry no information. The field holds a <em>word</em> address.</li>
+        <li><strong>The top four</strong> are not stored at all. At run time the machine takes them from the PC.</li>
+      </ul>
+
+      <p style="font-family:var(--font-mono);font-size:var(--fs-md);text-align:center;margin:var(--space-lg) 0">PC = ((PC + 4) &amp; 0xF0000000) | (field &lt;&lt; 2)</p>
+
+      <div class="callout callout--note">
+        <div class="callout__title">The <code>&lt;&lt; 2</code> is part of the formula, not a footnote</div>
+        <p>It is the step that turns the stored word address back into a byte address, and leaving it out is the most common way to get a hand-worked jump calculation wrong. The concatenation and the shift are one operation.</p>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Borrowing the top four bits is what makes a jump a 256 MB jump</div>
+        <p>Twenty-six bits of word address is 2²⁶ instructions, which is 2²⁸ bytes &mdash; <strong>256 MB</strong>. A jump can reach anywhere inside the 256 MB region it is already in, and cannot reach outside it at all.</p>
+        <p>Your programs will never notice, because everything you write sits in one region. But this is the reason <code>jr</code> exists as well: a register holds a full 32-bit address, so a jump through a register goes anywhere, at the cost of having to get the address into a register first.</p>
+      </div>
+
+      <h3><code>jal</code> and the return address</h3>
+
+      <p><code>jal</code> does two things in one instruction: it saves where to come back to, and then it goes. The saving is what makes a procedure call possible &mdash; a plain <code>j</code> into a procedure would arrive with no way of getting back.</p>
+
+      <div class="asm">        jal   fib          <span class="cm"># $ra ← address of the NEXT instruction; PC ← fib</span>
+        add   $s1, $v0, $zero
+
+<span class="lbl">fib:</span>    <span class="cm"># ... compute ...</span>
+        jr    $ra          <span class="cm"># PC ← $ra — back to the add above</span></div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">One caveat, stated once</div>
+        <p>On real MIPS hardware with delay slots, <code>jal</code> saves <code>PC + 8</code>. MARS runs with delayed branching turned <strong>off</strong> by default, so it saves <code>PC + 4</code> &mdash; the address of the instruction immediately after the <code>jal</code>. <strong>That is what this course means throughout</strong>, and it is what the assignment expects.</p>
+        <p>Delay slots are a real feature of the architecture and a distraction here. If you turn delayed branching on in MARS, your programs will behave differently; don't.</p>
+      </div>
+
+      <div class="callout">
+        <div class="callout__title">Two instructions that exist and are not in this course</div>
+        <p><code>jalr</code> jumps to an address in a register <em>and</em> saves a return address &mdash; what you would use for a jump table or a function pointer. <code>bltz</code> and <code>bgez</code> branch on the sign of a single register, and are encoded unusually: they share one opcode and are told apart by the <code>rt</code> field, which is the only place in MIPS where that field is not a register number.</p>
+        <p>Both are named here so that meeting them in a reference is not a surprise. Neither is taught, neither is on any assessment, and you do not need either one.</p>
+      </div>
+
+      <!-- ========== WIDGET 6 — The Jump Field Calculator ========== -->
+      <div class="widget-card" id="w-jump">
+        <div class="widget-card__title">The Jump Field Calculator</div>
+        <div class="widget-card__subtitle">A target address in, a 26-bit field out — and back again.</div>
+
+        <div class="widget-input-row">
+          <div class="widget-input-group">
+            <label for="jp-pc">Address of the jump</label>
+            <input type="text" id="jp-pc" value="0x00400100" autocomplete="off">
+          </div>
+          <div class="widget-input-group">
+            <label for="jp-t">Target address</label>
+            <input type="text" id="jp-t" value="0x00400240" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="preset-row">
+          <button class="preset-btn" type="button" data-jp="0x00400100,0x00400240">a normal call</button>
+          <button class="preset-btn" type="button" data-jp="0x00400100,0x004FFFFC">far, still in region</button>
+          <button class="preset-btn" type="button" data-jp="0x00400100,0x10000000">out of region</button>
+          <button class="preset-btn" type="button" data-jp="0x00400100,0x00400102">not aligned</button>
+        </div>
+
+        <div class="deriv" id="jp-deriv" aria-live="polite"></div>
+
+        <p class="byte-label">The 32-bit target, split by what happens to each part:</p>
+        <div class="bitsplit" id="jp-split"></div>
+
+        <p class="byte-label">And back: <code>((PC + 4) &amp; 0xF0000000) | (field &lt;&lt; 2)</code></p>
+        <div class="deriv" id="jp-back"></div>
+      </div>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>Your programs can now decide and repeat, and can jump to a procedure and get back. One thing is still missing, and it is the thing that makes procedures usable rather than fragile: somewhere to put values that must survive a call.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 7, Page 3
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['flow'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive parts of this page are not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.flow</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.flow) { return; }
+    var F = L.flow;
+
+    function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function hex(v, w) { var s = (v >>> 0).toString(16).toUpperCase(); while (s.length < (w || 8)) { s = '0' + s; } return '0x' + s; }
+    function parseHex(s) { var v = parseInt(String(s).trim(), 16); return isNaN(v) ? NaN : v >>> 0; }
+
+    /* ============================================================
+       WIDGET 5 — The Loop Bench
+       ============================================================
+       A tiny interpreter, deliberately. The widget's claim is that the
+       PC only ever does two things -- add 4, or take an offset -- so
+       the step function computes the next PC explicitly from those two
+       cases rather than walking an index. Seeing "PC = PC + 4" and
+       "PC = PC + 4 + offset*4" in the running commentary is the point.
+
+       Base address 0x00400000 to match where MARS loads .text. */
+    (function () {
+      var host = document.getElementById('w-loop');
+      if (!host) { return; }
+
+      var BASE = 0x00400000;
+
+      /* Each program: lines of { text, label?, exec(state) -> {branch: offsetWords} | null }
+         Registers are plain numbers; $at is modelled because the slt
+         expansions on page 2 put it there. */
+      var PROGRAMS = {
+        'while': {
+          name: 'while',
+          blurb: 'Test at the top. The conditional branch leaves the loop; the jump continues it.',
+          lines: [
+            { label: 'loop:' },
+            { text: 'slt  $at, $t0, $t1', exec: function (s) { s.at = (s.t0 < s.t1) ? 1 : 0; return null; } },
+            { text: 'beq  $at, $zero, done', br: function (s) { return s.at === 0 ? 3 : null; } },
+            { text: 'add  $t2, $t2, $t0', exec: function (s) { s.t2 += s.t0; return null; } },
+            { text: 'addi $t0, $t0, 1', exec: function (s) { s.t0 += 1; return null; } },
+            { text: 'j    loop', jmpTo: 'loop:' },
+            { label: 'done:' },
+            { text: 'li   $v0, 10', exec: function () { return null; }, halt: true }
+          ]
+        },
+        'do-while': {
+          name: 'do-while',
+          blurb: 'Test at the bottom. The body always runs once, and no unconditional jump is needed.',
+          lines: [
+            { label: 'loop:' },
+            { text: 'add  $t2, $t2, $t0', exec: function (s) { s.t2 += s.t0; return null; } },
+            { text: 'addi $t0, $t0, 1', exec: function (s) { s.t0 += 1; return null; } },
+            { text: 'slt  $at, $t0, $t1', exec: function (s) { s.at = (s.t0 < s.t1) ? 1 : 0; return null; } },
+            { text: 'bne  $at, $zero, loop', br: function (s) { return s.at !== 0 ? -4 : null; } },
+            { text: 'li   $v0, 10', exec: function () { return null; }, halt: true }
+          ]
+        }
+      };
+
+      var which = 'while', state, pc, steps, done;
+      var elTabs = document.getElementById('lp-tabs'), elCode = document.getElementById('lp-code');
+      var elPc = document.getElementById('lp-pc'), elWhy = document.getElementById('lp-why');
+      var elRegs = document.getElementById('lp-regs'), elStatus = document.getElementById('lp-status');
+
+      Object.keys(PROGRAMS).forEach(function (k) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'tab-button'; b.textContent = PROGRAMS[k].name;
+        b.setAttribute('role', 'tab');
+        b.addEventListener('click', function () { which = k; reset(); });
+        elTabs.appendChild(b);
+      });
+
+      /* Addresses are assigned to executable lines only; a label is not
+         an instruction and occupies no address. */
+      function addrs() {
+        var p = PROGRAMS[which], out = [], n = 0, i;
+        for (i = 0; i < p.lines.length; i++) {
+          if (p.lines[i].label) { out.push(null); }
+          else { out.push(BASE + n * 4); n++; }
+        }
+        return out;
+      }
+
+      function reset() {
+        state = { t0: 1, t1: 4, t2: 0, at: 0 };
+        pc = BASE; steps = 0; done = false;
+        render('Ready. $t0 counts, $t1 is the limit, $t2 accumulates.');
+      }
+
+      function indexOfPc(a) { for (var i = 0; i < a.length; i++) { if (a[i] === pc) { return i; } } return -1; }
+
+      function step() {
+        if (done) { return; }
+        var p = PROGRAMS[which], a = addrs(), i = indexOfPc(a);
+        if (i === -1) { done = true; render('PC left the program.'); return; }
+        var ln = p.lines[i], why, changed = null;
+
+        if (ln.halt) { done = true; render('Program ends.'); return; }
+
+        if (ln.br) {
+          var off = ln.br(state);
+          if (off === null) {
+            pc = pc + 4;
+            why = 'branch not taken → PC = PC + 4';
+          } else {
+            pc = F.branchTarget(pc, off);
+            why = 'branch taken → PC = PC + 4 + (' + off + ' × 4)';
+          }
+        } else if (ln.jmpTo) {
+          /* Resolve the label to the address of the first EXECUTABLE
+             line after it. A label is not an instruction and occupies
+             no address of its own, so this has to be looked up -- and
+             looking it up is exactly what the assembler does. */
+          var li, lj, found = null;
+          for (li = 0; li < p.lines.length; li++) {
+            if (p.lines[li].label === ln.jmpTo) {
+              for (lj = li + 1; lj < p.lines.length; lj++) {
+                if (a[lj] !== null) { found = a[lj]; break; }
+              }
+              break;
+            }
+          }
+          pc = (found === null) ? pc + 4 : found;
+          why = 'unconditional jump \u2192 PC = ' + hex(pc) + ', where the label resolved to';
+        } else {
+          changed = ln.exec(state);
+          pc = pc + 4;
+          why = 'PC = PC + 4';
+        }
+        steps++;
+        render(why);
+      }
+
+      function render(why) {
+        var p = PROGRAMS[which], a = addrs();
+        elCode.innerHTML = p.lines.map(function (ln, i) {
+          if (ln.label) {
+            return '<div class="code-line code-line--label"><span class="code-line__addr"></span>' +
+                   '<span style="color:var(--color-primary);font-weight:700">' + esc(ln.label) + '</span></div>';
+          }
+          var isPc = (a[i] === pc && !done);
+          return '<div class="code-line' + (isPc ? ' code-line--pc' : '') + '">' +
+                 '<span class="code-line__addr">' + hex(a[i]) + '</span>' +
+                 '<span>' + esc(ln.text) + '</span></div>';
+        }).join('');
+
+        elPc.textContent = done ? '— halted —' : hex(pc);
+        elWhy.textContent = why || '';
+        elRegs.innerHTML = ['t0', 't1', 't2', 'at'].map(function (r) {
+          return '<span class="reg-chip">$' + r + ' = ' + state[r] + '</span>';
+        }).join('');
+        elStatus.textContent = p.blurb + '  (' + steps + ' instruction' + (steps === 1 ? '' : 's') + ' executed)';
+      }
+
+      document.getElementById('lp-step').addEventListener('click', step);
+      document.getElementById('lp-reset').addEventListener('click', reset);
+      document.getElementById('lp-run').addEventListener('click', function () {
+        var guard = 0;
+        while (!done && guard < 200) { step(); guard++; }
+      });
+
+      reset();
+    }());
+
+    /* ============================================================
+       WIDGET 6 — The Jump Field Calculator
+       ============================================================
+       Every number from CSCLogic.flow. The out-of-region preset exists
+       because the 256 MB limit is otherwise just a number on a page --
+       students never hit it in their own programs. */
+    (function () {
+      var host = document.getElementById('w-jump');
+      if (!host) { return; }
+      var elPc = document.getElementById('jp-pc'), elT = document.getElementById('jp-t');
+      var elD = document.getElementById('jp-deriv'), elS = document.getElementById('jp-split');
+      var elB = document.getElementById('jp-back');
+
+      [elPc, elT].forEach(function (el) { el.addEventListener('input', render); });
+      host.querySelectorAll('[data-jp]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var v = b.dataset.jp.split(',');
+          elPc.value = v[0]; elT.value = v[1]; render();
+        });
+      });
+
+      function row(lbl, val, hi) {
+        return '<div' + (hi ? ' class="dv-hi"' : '') + '><span class="dv-lbl">' + lbl + '</span><span>' + val + '</span></div>';
+      }
+
+      function render() {
+        var pc = parseHex(elPc.value), t = parseHex(elT.value);
+        if (isNaN(pc) || isNaN(t)) {
+          elD.innerHTML = row('input', 'Enter both addresses in hex, e.g. 0x00400100');
+          elS.innerHTML = ''; elB.innerHTML = '';
+          return;
+        }
+        var r = F.jumpField(t, pc);
+
+        var rows = row('jump is at', hex(pc)) +
+                   row('target', hex(t)) +
+                   row('target ÷ 4 (drop the low 2 bits)', hex(t >>> 2)) +
+                   row('keep the low 26 bits', hex(r.field) + '  →  ' + r.bits, true);
+        if (!r.aligned) {
+          rows += row('aligned?', '<span class="out-of-range">no — an instruction address must be a multiple of 4</span>');
+        }
+        if (!r.sameRegion) {
+          rows += row('same 256 MB region?', '<span class="out-of-range">no — top 4 bits of the target are ' +
+                      hex((t & 0xF0000000) >>> 0) + ', the jump’s region is ' + hex(((pc + 4) & 0xF0000000) >>> 0) +
+                      '. A J-type jump cannot reach this. You would need jr through a register.</span>');
+        }
+        elD.innerHTML = rows;
+
+        var bits = (t >>> 0).toString(2);
+        while (bits.length < 32) { bits = '0' + bits; }
+        elS.innerHTML =
+          '<div class="bs-drop"><span class="bs-name">top 4 — taken from the PC</span>' + bits.slice(0, 4) + '</div>' +
+          '<div><span class="bs-name">26 stored in the instruction</span>' + bits.slice(4, 30) + '</div>' +
+          '<div class="bs-drop"><span class="bs-name">low 2 — always zero</span>' + bits.slice(30) + '</div>';
+
+        var back = F.jumpTarget(pc, r.field);
+        elB.innerHTML =
+          row('(PC + 4) &amp; 0xF0000000', hex(((pc + 4) & 0xF0000000) >>> 0)) +
+          row('field &lt;&lt; 2', hex((r.field << 2) >>> 0)) +
+          row('OR them', hex(back) + (back === t ? '  — back to the target' :
+              '  <span class="out-of-range">— NOT the target. This jump cannot reach it.</span>'), true);
+      }
+      render();
+    }());
+
+  })();
+  </script>
+</body>
+</html>

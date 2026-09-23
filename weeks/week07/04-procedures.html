@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w7-04">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 7: Procedures</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ---------- */
+    .byte-label { font-size: var(--fs-xs); color: var(--color-text-muted); font-family: var(--font-mono); }
+
+    .asm {
+      font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.55;
+      background: var(--color-code-bg); border: 1px solid var(--color-border);
+      border-radius: var(--radius); padding: var(--space-md);
+      overflow-x: auto; white-space: pre; margin: var(--space-md) 0;
+    }
+    .asm .cm { color: var(--color-text-muted); }
+    .asm .lbl { color: var(--color-primary); font-weight: 700; }
+    .asm .hl { background: #fff5eb; }
+
+    .conv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin: var(--space-md) 0; }
+    @media (max-width: 640px) { .conv-grid { grid-template-columns: 1fr; } }
+    .conv-grid > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
+    .conv-grid h4 { margin: 0 0 var(--space-xs); }
+    .conv-grid--caller { border-left: 4px solid var(--color-accent); }
+    .conv-grid--callee { border-left: 4px solid var(--color-primary); }
+
+    /* Widget 7 — the stack */
+    .stackwrap { display: grid; grid-template-columns: 1.25fr 1fr; gap: var(--space-md); margin: var(--space-md) 0; }
+    @media (max-width: 720px) { .stackwrap { grid-template-columns: 1fr; } }
+
+    .stack-col { border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); padding: var(--space-sm); }
+    .stack-head { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); margin-bottom: var(--space-sm); }
+    .stack-cells { display: grid; gap: 2px; font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .stack-cell {
+      display: grid; grid-template-columns: 7rem 1fr 2rem; gap: var(--space-sm); align-items: center;
+      padding: var(--space-xs) var(--space-sm); border-radius: 4px; border: 1px solid transparent;
+    }
+    .stack-cell__addr { color: var(--color-text-muted); font-size: var(--fs-xs); }
+    .stack-cell--free { color: var(--color-text-muted); opacity: .45; }
+    .stack-cell--used { background: var(--color-code-bg); border-color: var(--color-border); }
+    .stack-cell--new { border-color: var(--color-accent); background: #fff5eb; font-weight: 700; }
+    .stack-cell--sp { outline: 2px solid var(--color-primary); }
+    .stack-cell__sp { color: var(--color-primary); font-weight: 700; }
+
+    .frame-label { font-size: var(--fs-xs); color: var(--color-primary); font-weight: 700; padding-left: 7.5rem; }
+
+    .regs-col .reg-line { display: flex; justify-content: space-between; gap: var(--space-sm); font-family: var(--font-mono); font-size: var(--fs-sm); padding: 3px 0; border-bottom: 1px solid var(--color-border); }
+    .regs-col .reg-line:last-child { border-bottom: none; }
+    .regs-col .reg-line--danger { color: var(--color-danger); font-weight: 700; }
+
+    .narration { border-left: 3px solid var(--color-accent); padding: var(--space-sm) var(--space-md); background: #fff8f1; border-radius: 0 var(--radius) var(--radius) 0; margin: var(--space-md) 0; }
+    .narration strong { color: var(--color-accent-hov); }
+
+    .depth-chip { display: inline-block; font-family: var(--font-mono); font-size: var(--fs-sm); border: 1px solid var(--color-border); border-radius: 999px; padding: 2px var(--space-sm); background: var(--color-surface); }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 7 &rsaquo; <span>Page 4 — Procedures</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Procedures</h1>
+    <p><strong>Sections 7.10 – 7.13</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1.9 hours</p>
+
+    <!-- ============================================================
+         7.10 — the stack
+         ============================================================ -->
+    <section id="sec-7-10">
+      <h2>7.10 &nbsp; The stack, and the problem it solves</h2>
+
+      <p>You can call a procedure with <code>jal</code> and return with <code>jr $ra</code>. Try to use that twice and it falls apart immediately.</p>
+
+      <div class="asm"><span class="lbl">outer:</span>  jal   inner        <span class="cm"># $ra ← back into outer</span>
+        <span class="cm"># ...</span>
+        jr    $ra          <span class="cm"># ← where does this go?</span>
+
+<span class="lbl">inner:</span>  jr    $ra</div>
+
+      <div class="callout callout--hook">
+        <div class="callout__title">There is one <code>$ra</code>, and the second <code>jal</code> destroys the first one</div>
+        <p>When <code>outer</code> was called, <code>$ra</code> was set to the address to return to. Then <code>outer</code> calls <code>inner</code>, and that <code>jal</code> <strong>overwrites <code>$ra</code></strong> with the address inside <code>outer</code>. The way back out of <code>outer</code> is simply gone.</p>
+        <p>The same applies to any register: <code>inner</code> has no idea what <code>outer</code> was keeping in <code>$t0</code>, and will happily use it.</p>
+        <p><strong>So a procedure needs somewhere to put values that must survive a call.</strong> Not a fixed address &mdash; a procedure can be called from anywhere, twice over, or by itself, and a fixed address would be overwritten by the second call exactly as <code>$ra</code> was.</p>
+      </div>
+
+      <h3>What the stack is</h3>
+
+      <p>A region of memory, and one register &mdash; <strong><code>$sp</code></strong>, the stack pointer &mdash; holding the address of the top of it. That is all.</p>
+
+      <div class="callout callout--note">
+        <div class="callout__title">It grows downward, so allocating is subtraction</div>
+        <p><code>$sp</code> starts high and moves <em>down</em> as things are pushed. To make room for three words:</p>
+        <div class="asm">addi  $sp, $sp, -12       <span class="cm"># 3 words × 4 bytes</span></div>
+        <p>and to give it back:</p>
+        <div class="asm">addi  $sp, $sp, 12</div>
+        <p>The downward direction is a convention, not a necessity &mdash; it exists so that the stack and the heap can grow towards each other from opposite ends of memory and neither has to be given a fixed size in advance.</p>
+        <p>You will meet <code>sw</code> and <code>lw</code> properly in Week 8. For now: <code>sw $ra, 4($sp)</code> stores <code>$ra</code> at four bytes above where <code>$sp</code> points, and <code>lw</code> reads it back.</p>
+      </div>
+
+      <p>Every word on the stack is four bytes, and every offset from <code>$sp</code> is a multiple of four. A procedure's chunk of the stack is called its <strong>frame</strong>.</p>
+    </section>
+
+    <!-- ============================================================
+         7.11 — the calling convention
+         ============================================================ -->
+    <section id="sec-7-11">
+      <h2>7.11 &nbsp; The calling convention</h2>
+
+      <p>Nothing in the hardware enforces any of what follows. These are <em>agreements</em> &mdash; between you and the assembler, between your code and library code, between two procedures written by different people. A convention everyone follows is what makes separately written code fit together.</p>
+
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Registers</th><th>Used for</th><th>Who guarantees it survives a call</th></tr></thead>
+          <tbody>
+            <tr><td><code>$a0</code>–<code>$a3</code></td><td>arguments in</td><td>nobody — assume they are destroyed</td></tr>
+            <tr><td><code>$v0</code>–<code>$v1</code></td><td>results out</td><td>nobody</td></tr>
+            <tr><td><code>$ra</code></td><td>return address</td><td><strong>the callee</strong>, if it calls anything</td></tr>
+            <tr><td><code>$t0</code>–<code>$t9</code></td><td>scratch</td><td><strong>the caller</strong> — save them yourself if you need them</td></tr>
+            <tr><td><code>$s0</code>–<code>$s7</code></td><td>values worth keeping</td><td><strong>the callee</strong> — restore them before returning</td></tr>
+            <tr><td><code>$sp</code></td><td>stack pointer</td><td><strong>the callee</strong>, always, without exception</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Caller-saved and callee-saved sound alike and mean opposite things</div>
+        <div class="conv-grid">
+          <div class="conv-grid--caller">
+            <h4>Caller-saved — <code>$t0</code>–<code>$t9</code></h4>
+            <p><strong>The caller</strong> saves these if it cares about them. A procedure may use <code>$t</code> registers freely and leave them in any state.</p>
+            <p class="byte-label">"I am about to call something, so anything I have in a $t is at risk."</p>
+          </div>
+          <div class="conv-grid--callee">
+            <h4>Callee-saved — <code>$s0</code>–<code>$s7</code></h4>
+            <p><strong>The procedure being called</strong> saves these if it wants to use them, and restores them before returning. A caller can rely on an <code>$s</code> register surviving.</p>
+            <p class="byte-label">"If I use an $s, I have to put it back the way I found it."</p>
+          </div>
+        </div>
+        <p>The word "saved" in both names refers to <em>who does the saving</em>, not to whether the value is safe. That is the whole confusion, and it is worth re-reading the table above with that in mind.</p>
+      </div>
+
+      <h3>The rule that decides what actually goes in a frame</h3>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Save what you would otherwise destroy</div>
+        <p>Not "always save <code>$ra</code>." Not "always allocate a frame." Work through it:</p>
+        <ul>
+          <li><strong>Does this procedure call anything?</strong> If yes, <code>jal</code> will overwrite <code>$ra</code>, so save it.</li>
+          <li><strong>Does it use any <code>$s</code> register?</strong> If yes, save that one, because the caller is entitled to get it back.</li>
+          <li><strong>Does it need an argument to survive a call it makes?</strong> If yes, save that too &mdash; <code>$a0</code> is not protected by anybody.</li>
+          <li><strong>Otherwise?</strong> It needs no frame at all.</li>
+        </ul>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">A leaf procedure using only <code>$t</code> registers needs no stack frame</div>
+        <p>A <strong>leaf</strong> procedure is one that calls nothing. It cannot lose <code>$ra</code>, because nothing overwrites it. If it also confines itself to <code>$t</code> registers, it destroys nothing anyone is relying on &mdash; so it needs no prologue, no epilogue, and no stack at all. It is just <code>jr $ra</code> at the end.</p>
+        <p><strong>Three of the four procedures on this week's assignment are in this category.</strong> Recognising that is part of knowing the convention, not an exception to it &mdash; a procedure that allocates a frame it does not need is not being careful, it is being wrong in a way that happens not to break.</p>
+      </div>
+
+      <h3>The shape of a procedure that does need a frame</h3>
+
+      <div class="asm"><span class="cm"># Example: a procedure that calls something and uses $s0</span>
+<span class="lbl">example:</span>
+        <span class="cm"># Prologue — save what we would otherwise destroy</span>
+        addi  $sp, $sp, -12      <span class="cm"># room for 3 words</span>
+        sw    $ra, 8($sp)        <span class="cm"># we call out, so $ra is at risk</span>
+        sw    $s0, 4($sp)        <span class="cm"># we use $s0, so the caller's must be kept</span>
+        sw    $a0, 0($sp)        <span class="cm"># we need our argument after the call</span>
+
+        <span class="cm"># Body</span>
+        jal   something
+        lw    $a0, 0($sp)        <span class="cm"># our argument, back again</span>
+
+        <span class="cm"># Epilogue — restore in REVERSE order</span>
+        lw    $a0, 0($sp)
+        lw    $s0, 4($sp)
+        lw    $ra, 8($sp)
+        addi  $sp, $sp, 12       <span class="cm"># $sp back exactly where it was</span>
+        jr    $ra</div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Two rules that account for most broken procedures</div>
+        <p><strong>Restore in the reverse order of saving.</strong> Not because the machine requires it &mdash; the offsets are explicit, so any order works &mdash; but because reading a prologue and epilogue as mirror images is how you spot a missing one.</p>
+        <p><strong><code>$sp</code> must come back to exactly where it started.</strong> If a procedure returns with <code>$sp</code> four bytes low, nothing fails immediately. The caller's own <code>lw</code> offsets then read the wrong words, it restores garbage into <code>$ra</code>, and <code>jr $ra</code> jumps somewhere arbitrary. <strong>The symptom appears in the caller, long after the mistake.</strong> That is why this one is worth being rigid about.</p>
+      </div>
+
+      <!-- ========== WIDGET 7 — The Stack Visualiser ========== -->
+      <div class="widget-card" id="w-stack">
+        <div class="widget-card__title">The Stack Visualiser</div>
+        <div class="widget-card__subtitle">Step through a call chain, then through a recursion, and notice that nothing changes between them.</div>
+
+        <div class="tab-navigation" id="st-tabs" role="tablist"></div>
+
+        <div class="stackwrap">
+          <div class="stack-col">
+            <div class="stack-head">Stack — grows downward</div>
+            <div class="stack-cells" id="st-cells" aria-live="polite"></div>
+          </div>
+          <div class="stack-col regs-col">
+            <div class="stack-head">Registers</div>
+            <div id="st-regs"></div>
+            <div style="margin-top:var(--space-md)">
+              <span class="depth-chip" id="st-depth"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="narration" id="st-narr"></div>
+
+        <div class="step-nav">
+          <button class="widget-btn widget-btn--outline widget-btn--small" type="button" id="st-reset">Restart</button>
+          <button class="widget-btn widget-btn--outline widget-btn--small" type="button" id="st-prev">&larr; Back</button>
+          <button class="widget-btn widget-btn--primary widget-btn--small" type="button" id="st-next">Step &rarr;</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         7.12 — recursion
+         ============================================================ -->
+    <section id="sec-7-12">
+      <h2>7.12 &nbsp; When a procedure calls itself</h2>
+
+      <p>Factorial, in any language you know:</p>
+
+      <div class="asm">fact(n) = 1              if n = 0
+        = n × fact(n-1)  otherwise</div>
+
+      <p>And in MIPS, with the multiplication left as a comment for a reason we will come to:</p>
+
+      <div class="asm"><span class="lbl">fact:</span>
+        <span class="cm"># base case: if n == 0, return 1</span>
+        bne   $a0, $zero, recurse
+        li    $v0, 1
+        jr    $ra
+
+<span class="lbl">recurse:</span>
+        addi  $sp, $sp, -8       <span class="cm"># frame: $ra and our own n</span>
+        sw    $ra, 4($sp)
+        sw    $a0, 0($sp)
+
+        addi  $a0, $a0, -1       <span class="cm"># n - 1</span>
+        jal   fact               <span class="cm"># ← calls ITSELF. $ra and $a0 now belong to the new call</span>
+
+        lw    $a0, 0($sp)        <span class="cm"># our n, back from our own frame</span>
+        lw    $ra, 4($sp)
+        addi  $sp, $sp, 8
+
+        <span class="cm"># $v0 = $a0 × $v0   ← the one thing this machine cannot do</span>
+        jr    $ra</div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Recursion needs no new mechanism whatsoever</div>
+        <p>Look at what is in that procedure. <code>jal</code>, <code>$ra</code>, a prologue, an epilogue, <code>jr $ra</code>. <strong>Every one of them is from &sect;7.11</strong>, doing exactly what it did there.</p>
+        <p>The only thing that is different is that the procedure being called happens to be this one. The hardware cannot tell &mdash; a <code>jal</code> to your own label is an ordinary <code>jal</code>. What makes recursion work is that <strong>each call gets its own frame</strong>, so each call's <code>n</code> and <code>$ra</code> are stored somewhere no other call will touch.</p>
+        <p>That is the answer to "how does it remember where it was" and it is not mysterious: the stack remembers, one frame per call, because <code>$sp</code> moved down before each one.</p>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Why the multiply is a comment</div>
+        <p>Your ALU has seven operations and none of them multiplies. MIPS has <code>mult</code>, and MARS will run it &mdash; but the machine you are building could not, and this course has not taught it.</p>
+        <p>So <code>fact</code> is here as a <strong>teaching example</strong>, to show the frames. <strong>It is not on the assignment</strong>, and the optional bonus there uses a recursive <em>sum</em>, which needs only addition.</p>
+      </div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">A stack overflow is not a mysterious failure</div>
+        <p>Call <code>fact</code> with a negative argument and the base case is never reached. Each call subtracts 8 from <code>$sp</code>, forever, and eventually <code>$sp</code> points below the region the operating system gave the stack. The next <code>sw</code> writes somewhere it is not allowed to and the program dies.</p>
+        <p>That is the whole of a stack overflow: <strong><code>$sp</code> walking off the end of its region.</strong> Switch the visualiser above to recursion mode and watch <code>$sp</code> descend &mdash; there is nothing stopping it but the base case.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         7.13 — synthesis
+         ============================================================ -->
+    <section id="sec-7-13">
+      <h2>7.13 &nbsp; Both halves could finally choose</h2>
+
+      <p>This week opened with a claim: the hardware and the software were missing the same thing. Take stock.</p>
+
+      <div class="conv-grid">
+        <div>
+          <h4>Hardware</h4>
+          <p>A 3-bit opcode into a decoder, seven enable blocks, an OR combine. <strong><code>ALU_8BIT</code> is finished</strong>, and it does not change again between here and Week 17.</p>
+        </div>
+        <div>
+          <h4>Software</h4>
+          <p>Branches, loops, jumps, calls, returns, a stack and a calling convention. Your programs can decide, repeat, and call &mdash; including calling themselves.</p>
+        </div>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">One idea, two places</div>
+        <p>Both halves of the week were the same thing: <strong>something that selects.</strong> A decoder raising one of eight lines, and a branch writing one of two values into the PC. Different circuits, same job &mdash; and it is why this course teaches the two tracks side by side instead of finishing one before starting the other.</p>
+      </div>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Week 8, and it is a heavy one</div>
+        <p><strong>Hardware:</strong> the RAM matrix &mdash; 16&times;16, addressed by two of the 4&times;16 decoders you built in Week 3, with the memory address register. Logisim Checkpoint 3.</p>
+        <p><strong>Software:</strong> <code>lw</code> and <code>sw</code> properly, and arrays in memory &mdash; where the offset arithmetic from this week starts being used for addresses rather than branch targets.</p>
+        <p><strong>And the Midterm Exam</strong>, covering Weeks 1&ndash;8 &mdash; all of Phase 1 and all of Phase 2. Everything from "a byte can mean anything" to the machine you have just finished the ALU of.</p>
+        <p>Start Week 8 early.</p>
+      </div>
+
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 7, Page 4
+  </footer>
+
+  <script>
+  /* ============================================================
+     WIDGET 7 — The Stack Visualiser
+     ============================================================
+     No dependency on shared/logic.js: this page renders nothing from
+     the kernel, so loading it would add a dependency that can only
+     break the page. Same reasoning as Week 6's pages 4 and the
+     assignment.
+
+     The two modes are deliberately driven by ONE renderer over one
+     step format. That is the section's claim made structural: if
+     recursion needed a different mechanism, this widget would need a
+     different renderer, and it does not.
+     ============================================================ */
+  (function () {
+    'use strict';
+
+    var host = document.getElementById('w-stack');
+    if (!host) { return; }
+
+    var TOP = 0x7FFFEFFC;          /* where MARS starts $sp */
+    function hex(v) { var s = (v >>> 0).toString(16).toUpperCase(); while (s.length < 8) { s = '0' + s; } return '0x' + s; }
+    function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+    /* A step is { sp, cells, regs, depth, narr, danger? }.
+       cells is a list of { off, what, frame } written relative to TOP,
+       lowest address last -- i.e. in the order they appear on screen,
+       high address at the top, which is how a downward-growing stack
+       is conventionally drawn. */
+    function callChain() {
+      var s = [];
+      s.push({ sp: TOP, cells: [], regs: { '$ra': '—', '$a0': '8', '$v0': '—' }, depth: 0,
+        narr: '<strong>main</strong> is about to call <code>sum_and_fib</code> with $a0 = 8. Nothing is on the stack.' });
+      s.push({ sp: TOP, cells: [], regs: { '$ra': '0x00400014', '$a0': '8', '$v0': '—' }, depth: 1,
+        narr: '<code>jal sum_and_fib</code> — <strong>$ra now holds the address back into main.</strong> Still nothing on the stack, and $ra is the only copy of that address.' });
+      s.push({ sp: TOP - 8, cells: [], regs: { '$ra': '0x00400014', '$a0': '8', '$v0': '—' }, depth: 1,
+        narr: '<code>addi $sp, $sp, -8</code> — the prologue makes room for two words. Nothing has been written yet; $sp has just moved.' });
+      s.push({ sp: TOP - 8, cells: [{ off: 4, what: '$ra = 0x00400014', frame: 'sum_and_fib', isNew: true }],
+        regs: { '$ra': '0x00400014', '$a0': '8', '$v0': '—' }, depth: 1,
+        narr: '<code>sw $ra, 4($sp)</code> — the way back into main is now safe in memory. <strong>This is the save that matters</strong>, and the next step is why.' });
+      s.push({ sp: TOP - 8, cells: [{ off: 4, what: '$ra = 0x00400014', frame: 'sum_and_fib' }, { off: 0, what: '$a0 = 8', frame: 'sum_and_fib', isNew: true }],
+        regs: { '$ra': '0x00400014', '$a0': '8', '$v0': '—' }, depth: 1,
+        narr: '<code>sw $a0, 0($sp)</code> — the argument too. <code>sum_and_fib</code> needs its 8 again <em>after</em> the first call, and nobody protects $a0.' });
+      s.push({ sp: TOP - 8, cells: [{ off: 4, what: '$ra = 0x00400014', frame: 'sum_and_fib' }, { off: 0, what: '$a0 = 8', frame: 'sum_and_fib' }],
+        regs: { '$ra': '0x0040003C', '$a0': '8', '$v0': '—' }, depth: 2, danger: '$ra',
+        narr: '<code>jal sum_1_to_n</code> — <strong>$ra has just been overwritten.</strong> The address back into main is gone from the register. It is on the stack, which is the only reason this program still works.' });
+      s.push({ sp: TOP - 8, cells: [{ off: 4, what: '$ra = 0x00400014', frame: 'sum_and_fib' }, { off: 0, what: '$a0 = 8', frame: 'sum_and_fib' }],
+        regs: { '$ra': '0x0040003C', '$a0': '8', '$v0': '36' }, depth: 1,
+        narr: '<code>sum_1_to_n</code> returned 36 in $v0. It is a leaf using only $t registers, so it allocated no frame at all — and needed none.' });
+      s.push({ sp: TOP - 8, cells: [{ off: 4, what: '$ra = 0x00400014', frame: 'sum_and_fib' }, { off: 0, what: '$a0 = 8', frame: 'sum_and_fib' }],
+        regs: { '$ra': '0x0040003C', '$a0': '8', '$v0': '36' }, depth: 1,
+        narr: '<code>lw $a0, 0($sp)</code> — the 8 is read back out of the frame, ready for the second call.' });
+      s.push({ sp: TOP - 8, cells: [{ off: 4, what: '$ra = 0x00400014', frame: 'sum_and_fib' }, { off: 0, what: '$a0 = 8', frame: 'sum_and_fib' }],
+        regs: { '$ra': '0x00400050', '$a0': '8', '$v0': '21' }, depth: 1,
+        narr: '<code>jal fib</code> ran and returned 21. $ra was overwritten again, and again it did not matter.' });
+      s.push({ sp: TOP - 8, cells: [{ off: 4, what: '$ra = 0x00400014', frame: 'sum_and_fib' }, { off: 0, what: '$a0 = 8', frame: 'sum_and_fib' }],
+        regs: { '$ra': '0x00400014', '$a0': '8', '$v0': '57' }, depth: 1,
+        narr: '<code>lw $ra, 4($sp)</code> — the epilogue restores the way back into main. $v0 holds 36 + 21 = 57.' });
+      s.push({ sp: TOP, cells: [], regs: { '$ra': '0x00400014', '$a0': '8', '$v0': '57' }, depth: 1,
+        narr: '<code>addi $sp, $sp, 8</code> — the frame is given back and <strong>$sp is exactly where it started</strong>. That is the rule, and here is what it looks like when it is kept.' });
+      s.push({ sp: TOP, cells: [], regs: { '$ra': '0x00400014', '$a0': '8', '$v0': '57' }, depth: 0,
+        narr: '<code>jr $ra</code> — back in main, with 57 in $v0 and the stack exactly as it was found.' });
+      return s;
+    }
+
+    function recursion() {
+      var s = [], i, cells = [];
+      s.push({ sp: TOP, cells: [], regs: { '$a0': '4', '$ra': 'into main', '$v0': '—' }, depth: 0,
+        narr: '<code>jal fact</code> with $a0 = 4. Watch the frames, and watch that nothing new happens — this is §7.11’s mechanism, unchanged.' });
+
+      var sp = TOP;
+      for (i = 4; i >= 1; i--) {
+        sp -= 8;
+        cells = cells.concat([
+          { off: sp + 4, abs: true, what: '$ra', frame: 'fact(' + i + ')', isNew: true },
+          { off: sp, abs: true, what: '$a0 = ' + i, frame: 'fact(' + i + ')', isNew: true }
+        ]);
+        s.push({ sp: sp, cells: cells.slice(), regs: { '$a0': String(i - 1), '$ra': 'into fact', '$v0': '—' }, depth: 5 - i,
+          narr: 'fact(' + i + ') saves its $ra and its own n = ' + i + ', decrements $a0 to ' + (i - 1) +
+                ', and calls itself. <strong>Its n is now safe in its own frame</strong>, where the next call cannot reach it.' });
+      }
+
+      s.push({ sp: sp, cells: cells.slice(), regs: { '$a0': '0', '$ra': 'into fact', '$v0': '1' }, depth: 5,
+        narr: '<strong>Base case.</strong> $a0 is 0, so fact returns 1 without allocating anything — it is a leaf on this one call. Now four frames unwind.' });
+
+      for (i = 1; i <= 4; i++) {
+        cells = cells.slice(0, cells.length - 2);
+        sp += 8;
+        var val = [1, 1, 2, 6, 24][i];
+        s.push({ sp: sp, cells: cells.slice(), regs: { '$a0': String(i), '$ra': i === 4 ? 'into main' : 'into fact', '$v0': String(val) }, depth: 5 - i,
+          narr: 'fact(' + i + ') reads its own n = ' + i + ' back out of its frame, gives the frame back, and would multiply it by $v0 — giving ' +
+                val + '. <strong>Its n survived because it had its own four bytes.</strong>' });
+      }
+      s[s.length - 1].narr += ' Back in main. $sp is where it started.';
+      return s;
+    }
+
+    var MODES = { 'call chain': callChain(), 'recursion': recursion() };
+    var which = 'call chain', at = 0;
+
+    var elTabs = document.getElementById('st-tabs'), elCells = document.getElementById('st-cells');
+    var elRegs = document.getElementById('st-regs'), elNarr = document.getElementById('st-narr');
+    var elDepth = document.getElementById('st-depth');
+
+    Object.keys(MODES).forEach(function (k) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'tab-button'; b.textContent = k;
+      b.setAttribute('role', 'tab');
+      b.addEventListener('click', function () { which = k; at = 0; render(); });
+      elTabs.appendChild(b);
+    });
+
+    function render() {
+      var steps = MODES[which], st = steps[at];
+
+      /* Draw eight words from just above $sp downward, so the pointer
+         is always visible with context on both sides. */
+      var rows = [], base = TOP, addr;
+      for (addr = base; addr >= st.sp - 12; addr -= 4) {
+        var cell = null, k;
+        for (k = 0; k < st.cells.length; k++) {
+          var c = st.cells[k];
+          var cAddr = c.abs ? c.off : (st.sp + c.off);
+          if (cAddr === addr) { cell = c; break; }
+        }
+        var cls = 'stack-cell ' + (cell ? (cell.isNew ? 'stack-cell--new' : 'stack-cell--used') : 'stack-cell--free');
+        if (addr === st.sp) { cls += ' stack-cell--sp'; }
+        rows.push('<div class="' + cls + '">' +
+          '<span class="stack-cell__addr">' + hex(addr) + '</span>' +
+          '<span>' + (cell ? esc(cell.what) + ' <span class="byte-label">' + esc(cell.frame) + '</span>' : '—') + '</span>' +
+          '<span class="stack-cell__sp">' + (addr === st.sp ? '$sp' : '') + '</span>' +
+        '</div>');
+      }
+      elCells.innerHTML = rows.join('');
+
+      elRegs.innerHTML = Object.keys(st.regs).map(function (r) {
+        var danger = (st.danger === r);
+        return '<div class="reg-line' + (danger ? ' reg-line--danger' : '') + '"><span>' + r + '</span><span>' + esc(st.regs[r]) + '</span></div>';
+      }).join('') + '<div class="reg-line"><span>$sp</span><span>' + hex(st.sp) + '</span></div>';
+
+      elDepth.textContent = 'call depth: ' + st.depth + (which === 'recursion' ? '   ·   frames: ' + (st.cells.length / 2) : '');
+      elNarr.innerHTML = st.narr;
+
+      document.getElementById('st-prev').disabled = (at === 0);
+      document.getElementById('st-next').disabled = (at >= steps.length - 1);
+    }
+
+    document.getElementById('st-next').addEventListener('click', function () {
+      if (at < MODES[which].length - 1) { at++; render(); }
+    });
+    document.getElementById('st-prev').addEventListener('click', function () {
+      if (at > 0) { at--; render(); }
+    });
+    document.getElementById('st-reset').addEventListener('click', function () { at = 0; render(); });
+
+    render();
+  })();
+  </script>
+</body>
+</html>

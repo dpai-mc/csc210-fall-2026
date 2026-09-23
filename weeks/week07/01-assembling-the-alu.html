@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w7-01">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 7: Assembling the ALU</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ---------- */
+    .byte-toggle { display: flex; gap: 3px; flex-wrap: wrap; }
+    .byte-toggle button {
+      font-family: var(--font-mono); font-size: var(--fs-md);
+      width: 2rem; height: 2.3rem; cursor: pointer;
+      border: 1px solid var(--color-border); border-radius: 4px;
+      background: var(--color-surface); color: var(--color-text-muted);
+    }
+    .byte-toggle button[aria-pressed="true"] { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .byte-label { font-size: var(--fs-xs); color: var(--color-text-muted); font-family: var(--font-mono); }
+
+    .opbit {
+      font-family: var(--font-mono); min-width: 3.1rem;
+      border: 1px solid var(--color-border); border-radius: var(--radius);
+      background: var(--color-surface); padding: var(--space-xs) var(--space-sm); cursor: pointer;
+    }
+    .opbit[aria-pressed="true"] { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .opcode-row { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
+
+    /* The decoder strip — eight lines, one lit, and output 7 visibly
+       wired to nothing. */
+    .dec-strip { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; margin: var(--space-md) 0; }
+    .dec-out { text-align: center; font-family: var(--font-mono); font-size: var(--fs-xs);
+               border: 1px solid var(--color-border); border-radius: 4px; padding: var(--space-xs) 2px; background: var(--color-surface); }
+    .dec-out__n { display: block; color: var(--color-text-muted); font-size: 10px; }
+    .dec-out__v { display: block; font-size: var(--fs-md); color: var(--color-text-muted); }
+    .dec-out--hi { border-color: var(--color-accent); border-width: 2px; background: #fff5eb; }
+    .dec-out--hi .dec-out__v { color: var(--color-accent-hov); font-weight: 700; }
+    .dec-out--nc { border-style: dashed; opacity: .75; }
+    .dec-out--nc .dec-out__n { color: var(--color-danger); }
+
+    /* The seven leg rows: leg result → enable block → what it asserts */
+    .asm-rows { display: grid; gap: 3px; margin: var(--space-md) 0; }
+    .asm-row {
+      display: grid; grid-template-columns: 6.5rem 1fr 3.2rem 1fr;
+      gap: var(--space-sm); align-items: center;
+      border: 1px solid var(--color-border); border-radius: var(--radius);
+      padding: var(--space-xs) var(--space-sm); background: var(--color-surface);
+      font-family: var(--font-mono); font-size: var(--fs-sm);
+    }
+    @media (max-width: 640px) { .asm-row { grid-template-columns: 5rem 1fr; } .asm-row .ar-e, .asm-row .ar-out { grid-column: 2; } }
+    .asm-row--on { border-color: var(--color-accent); border-width: 2px; padding: calc(var(--space-xs) - 1px) calc(var(--space-sm) - 1px); }
+    .asm-row__name { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .asm-row--on .asm-row__name { color: var(--color-accent-hov); font-weight: 700; }
+    .ar-e { text-align: center; font-size: var(--fs-xs); color: var(--color-text-muted); }
+    .ar-out { color: var(--color-text-muted); }
+    .asm-row--on .ar-out { color: var(--color-primary); font-weight: 700; }
+
+    .or-combine {
+      margin-top: var(--space-md); border: 2px solid var(--color-primary);
+      border-radius: var(--radius); padding: var(--space-md); background: var(--color-code-bg);
+    }
+    .or-combine__val { font-family: var(--font-mono); font-size: var(--fs-lg); color: var(--color-primary); }
+    .or-combine__float { font-family: var(--font-sans); font-size: var(--fs-md); color: var(--color-danger); font-style: italic; }
+
+    .flag-row { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin-top: var(--space-sm); }
+    .flag-pill { font-family: var(--font-mono); font-size: var(--fs-sm);
+      border: 1px solid var(--color-border); border-radius: 999px;
+      padding: 2px var(--space-sm); background: var(--color-surface); color: var(--color-text-muted); }
+    .flag-pill--on { border-color: var(--color-success); color: var(--color-success); font-weight: 700; }
+    .flag-pill--na { opacity: .5; }
+
+    .inv-table code { white-space: nowrap; }
+    .wire-steps { counter-reset: ws; list-style: none; padding: 0; }
+    .wire-steps > li {
+      counter-increment: ws; position: relative; padding-left: 2.6rem;
+      margin-bottom: var(--space-md); border-left: 2px solid var(--color-border); padding-bottom: var(--space-sm);
+    }
+    .wire-steps > li::before {
+      content: counter(ws); position: absolute; left: .55rem; top: -2px;
+      width: 1.5rem; height: 1.5rem; line-height: 1.5rem; text-align: center;
+      background: var(--color-primary); color: #fff; border-radius: 50%;
+      font-size: var(--fs-xs); font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 7 &rsaquo; <span>Page 1 — Assembling the ALU</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Assembling the ALU</h1>
+    <p><strong>Sections 7.1 – 7.3</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~0.8 hours reading, ~1.2 hours building</p>
+
+    <!-- ============================================================
+         7.1 — the gap
+         ============================================================ -->
+    <section id="sec-7-1">
+      <h2>7.1 &nbsp; Seven answers and no way to ask for one</h2>
+
+      <div class="callout callout--hook">
+        <div class="callout__title">Both halves of this course are missing the same thing, and it is not obvious that they are</div>
+
+        <p><strong>On the hardware side:</strong> you have seven operation legs, a comparator and a zero function. All of them compute, all the time, correctly. And there is no mechanism to pick one. You have been selecting by hand all week &mdash; looking at whichever leg you wanted.</p>
+
+        <p><strong>On the software side:</strong> your program runs straight down the page. Every instruction executes, in order, exactly once. It cannot skip an instruction, cannot go back to one, and cannot call a procedure and return. It has no <code>if</code>, no <code>while</code> and no functions.</p>
+
+        <p>Those look like two unrelated gaps. They are the same gap. <strong>Nothing chooses.</strong></p>
+
+        <p><strong>By the end of this week:</strong> a 3-bit opcode selects one of seven answers out of your ALU, and your programs branch, loop, call and return. Both are solved by the same idea arriving in two different places, which is the clearest argument this course has for why the two tracks run side by side instead of one after the other.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         7.2 — the inventory
+         ============================================================ -->
+    <section id="sec-7-2">
+      <h2>7.2 &nbsp; Everything you need is already in your file</h2>
+
+      <p>Open the <code>.circ</code> file you have been adding to since Week 2 and look at the tab list. Here is everything this checkpoint needs:</p>
+
+      <div class="table-scroll">
+        <table class="pin-table inv-table">
+          <thead><tr><th>Component</th><th>How many</th><th>You built it in</th></tr></thead>
+          <tbody>
+            <tr><td><code class="pin-table__name">DECODER_3TO8</code></td><td>1</td><td><strong>Week 3</strong></td></tr>
+            <tr><td><code class="pin-table__name">ENABLE_8BIT</code></td><td>7</td><td><strong>Week 5</strong></td></tr>
+            <tr><td><code>ADDER_8BIT</code></td><td>1</td><td>Week 3</td></tr>
+            <tr><td><code>SHIFT_RIGHT</code>, <code>SHIFT_LEFT</code></td><td>1 each</td><td>Week 6</td></tr>
+            <tr><td><code>NOT_8BIT</code>, <code>AND_8BIT</code>, <code>OR_8BIT</code></td><td>1 each</td><td>Week 6</td></tr>
+            <tr><td><code>XOR_CMP_8BIT</code>, <code>IS_ZERO</code></td><td>1 each</td><td>Week 6</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Nothing new is built this week</div>
+        <p>Checkpoint 2b is <strong>one new tab</strong>, and everything inside it is either an instance of a circuit you already own or ordinary wiring. You will not build a decoder &mdash; you built three of them in Week 3, and one of them is exactly the size this needs. You will not build an output stage &mdash; <code>ENABLE_8BIT</code> was Checkpoint 1, and you need seven copies of it.</p>
+        <p>This is what Standards &sect;4's <em>circuits are components, not disposable exercises</em> has been arranging since Week 3. It is the third week running that you open your file and find the hard part already sitting there, and it is the most complete version of that payoff the course will produce.</p>
+        <p>It also means <strong>this checkpoint is about an hour of work.</strong> Do not budget the week by habit &mdash; the hardware is short and the software is long, which is the reverse of every week since Week 3.</p>
+      </div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">If a component is missing or wrong, fix it now</div>
+        <p>The flip side of instantiating everything: a circuit with a quiet fault in it is about to be wired into something with nine pins and seven parallel paths, where finding it is much harder. If your Week 6 comparator was never quite right, this is the last comfortable moment to deal with it.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         7.3 — assembling
+         ============================================================ -->
+    <section id="sec-7-3">
+      <h2>7.3 &nbsp; Assembling <code>ALU_8BIT</code></h2>
+
+      <p>Create one new tab, <code>ALU_8BIT</code>. This is the interface the rest of the course will wire into, so the pin names matter exactly:</p>
+
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><code class="pin-table__name">A</code></td><td>8</td><td>in</td><td>first operand</td></tr>
+            <tr><td><code class="pin-table__name">B</code></td><td>8</td><td>in</td><td>second operand</td></tr>
+            <tr><td><code class="pin-table__name">opcode</code></td><td>3</td><td>in</td><td>which operation — A is the top bit, B the middle, C the bottom</td></tr>
+            <tr><td><code class="pin-table__name">CI</code></td><td>1</td><td>in</td><td>carry in / shift in. Set this pin's pull behaviour to <strong>pull-down</strong></td></tr>
+            <tr><td><code class="pin-table__name">C</code></td><td>8</td><td>out</td><td>the result</td></tr>
+            <tr><td><code class="pin-table__name">CO</code></td><td>1</td><td>out</td><td>carry out / shift out</td></tr>
+            <tr><td><code class="pin-table__name">AL</code></td><td>1</td><td>out</td><td>A is greater than B — always live</td></tr>
+            <tr><td><code class="pin-table__name">EQ</code></td><td>1</td><td>out</td><td>A equals B — always live</td></tr>
+            <tr><td><code class="pin-table__name">Z</code></td><td>1</td><td>out</td><td>the result is all zeros</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/alu-circuit-diagram-internal.png"
+             alt="The internal structure of the ALU: the A and B inputs fan out to all seven operation circuits in parallel, each operation's output passes through an 8-bit enable block, and all seven enable outputs combine into the single 8-bit result, with the zero function attached to that final output.">
+        <figcaption class="circuit-canvas__caption">The shape you are wiring. Inputs fan out to everything; each leg's output passes an enable block; the enable outputs combine into one result.</figcaption>
+      </figure>
+
+      <h3>The wiring, in five steps</h3>
+
+      <ol class="wire-steps">
+        <li>
+          <strong><code>A</code>, <code>B</code> and <code>CI</code> fan out to every leg.</strong>
+          <p>Not to the selected one &mdash; to <em>all</em> of them. This is the claim from Week 6 becoming visible in your own circuit: all seven operations run continuously. Splitters and tunnels will keep this readable; a tunnel named <code>A</code> saves eight wires crossing the canvas.</p>
+        </li>
+        <li>
+          <strong><code>opcode</code> into your <code>DECODER_3TO8</code>.</strong>
+          <p>Output 0 to the adder's enable, 1 to shift right, 2 to shift left, 3 to NOT, 4 to AND, 5 to OR, 6 to XOR. <strong>Output 7 connects to nothing.</strong> Leave it visibly unconnected rather than tidying it away &mdash; it is the honest answer to what an undefined opcode does, and you will be asked about it.</p>
+        </li>
+        <li>
+          <strong>One <code>ENABLE_8BIT</code> on each leg's output.</strong>
+          <p>Its <code>e</code> pin comes from that leg's decoder line. Six of the seven are switched off at any moment, and a switched-off enable block asserts <code>00000000</code>.</p>
+        </li>
+        <li>
+          <strong>OR the seven 8-bit outputs together into <code>C</code>.</strong>
+          <p>Six zeros and one answer. OR them and you get the answer. Bit by bit: seven OR gates, or a tree of them.</p>
+        </li>
+        <li>
+          <strong><code>CO</code>, then the flags.</strong>
+          <p>Three legs produce a carry-or-shift-out bit: the adder, shift right and shift left. AND each one with <em>its own</em> decoder line, then OR the three results into <code>CO</code> &mdash; so only the selected leg's bit gets through. <code>AL</code> and <code>EQ</code> come straight from the comparator leg, and <code>Z</code> from <code>IS_ZERO</code> watching <code>C</code>.</p>
+        </li>
+      </ol>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/alu-adder-shr-shl-carry-out.png"
+             alt="Detail of the carry-out path: the adder and the two shift circuits each have their carry-or-shift-out bit ANDed with that operation's enable line, and the results combined, so only the selected operation's bit reaches the ALU's carry-out pin.">
+        <figcaption class="circuit-canvas__caption">Step 5's carry path. Each of the three legs that produces a bit has it gated by that leg's own enable line.</figcaption>
+      </figure>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/alu-not-and-or-xor.png"
+             alt="Detail of the output stage for the NOT, AND, OR and XOR operations, each showing its 8-bit result passing through an 8-bit enable block driven by one decoder line.">
+        <figcaption class="circuit-canvas__caption">The four bitwise legs and their enable blocks. The same pattern repeats on all seven.</figcaption>
+      </figure>
+
+      <!-- ===== DELIVERABLE 3: the repeated aside ===== -->
+      <div class="callout callout--warn">
+        <div class="callout__title">Check yourself before step 4: you are ORing, not sharing</div>
+        <p>You are about to connect seven 8-bit outputs to the same place. Page 1 of last week said that is <strong>not a bus</strong>, and here is what that means in the wiring in front of you.</p>
+        <p>Six enable blocks are asserting <code>00000000</code> and one is asserting an answer. <strong>No device has to let go of anything, because no device is contending.</strong> Zero is the identity for OR, so six zeros and one value OR to that value.</p>
+        <p>If you find yourself reaching for a controlled buffer on these seven paths &mdash; stop. The buffers you need are already inside <code>ENABLE_8BIT</code>, where Week 5 put them. Adding more on the outside is how this circuit gets subtly wrong, and the wrongness will not show up until Week 10, when you wire a real bus and carry the wrong model into it.</p>
+      </div>
+
+      <!-- ========== WIDGET 1 — The Assembly Bench ========== -->
+      <div class="widget-card" id="w-assembly">
+        <div class="widget-card__title">The Assembly Bench</div>
+        <div class="widget-card__subtitle">The same seven legs as last week, with the selection mechanism you are about to wire made visible.</div>
+
+        <div class="widget-input-row">
+          <div class="widget-input-group">
+            <label id="ab-a-lbl">A</label>
+            <div class="byte-toggle" id="ab-a" role="group" aria-labelledby="ab-a-lbl"></div>
+          </div>
+          <div class="widget-input-group">
+            <label id="ab-b-lbl">B</label>
+            <div class="byte-toggle" id="ab-b" role="group" aria-labelledby="ab-b-lbl"></div>
+          </div>
+          <div class="widget-input-group">
+            <label id="ab-op-lbl">opcode</label>
+            <div class="opcode-row" id="ab-op" role="group" aria-labelledby="ab-op-lbl"></div>
+          </div>
+          <div class="widget-input-group">
+            <label for="ab-ci">CI</label>
+            <button class="opbit" id="ab-ci" type="button" aria-pressed="false">CI = 0</button>
+          </div>
+        </div>
+
+        <p class="byte-label"><code>DECODER_3TO8</code> — exactly one output high:</p>
+        <div class="dec-strip" id="ab-dec" aria-live="polite"></div>
+
+        <p class="byte-label">Each leg &rarr; its <code>ENABLE_8BIT</code> &rarr; what that block is asserting:</p>
+        <div class="asm-rows" id="ab-rows"></div>
+
+        <div class="or-combine">
+          <div class="byte-label">the seven asserted bytes, ORed &rarr; <code>C</code></div>
+          <div aria-live="polite">
+            <div id="ab-out" class="or-combine__val">&mdash;</div>
+            <div class="flag-row" id="ab-flags"></div>
+          </div>
+        </div>
+
+        <p class="byte-label" id="ab-hint" style="margin-top:var(--space-sm)"></p>
+      </div>
+
+      <h3>Verify all eight opcodes before you submit</h3>
+
+      <p>Set <code>A = 11001010</code>, <code>B = 10110110</code>, <code>CI = 0</code>, and step the opcode through all eight values. Screenshot each.</p>
+
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>opcode</th><th>operation</th><th><code>C</code></th><th><code>CO</code></th><th><code>AL</code></th><th><code>EQ</code></th><th><code>Z</code></th></tr></thead>
+          <tbody>
+            <tr><td><code>000</code></td><td>ADD</td><td><code>10000000</code></td><td>1</td><td>1</td><td>0</td><td>0</td></tr>
+            <tr><td><code>001</code></td><td>SHIFT RIGHT</td><td><code>01100101</code></td><td>0</td><td>1</td><td>0</td><td>0</td></tr>
+            <tr><td><code>010</code></td><td>SHIFT LEFT</td><td><code>10010100</code></td><td>1</td><td>1</td><td>0</td><td>0</td></tr>
+            <tr><td><code>011</code></td><td>NOT</td><td><code>00110101</code></td><td>0</td><td>1</td><td>0</td><td>0</td></tr>
+            <tr><td><code>100</code></td><td>AND</td><td><code>10000010</code></td><td>0</td><td>1</td><td>0</td><td>0</td></tr>
+            <tr><td><code>101</code></td><td>OR</td><td><code>11111110</code></td><td>0</td><td>1</td><td>0</td><td>0</td></tr>
+            <tr><td><code>110</code></td><td>XOR</td><td><code>01111100</code></td><td>0</td><td>1</td><td>0</td><td>0</td></tr>
+            <tr><td><code>111</code></td><td><em>unassigned</em></td><td><em>nothing driving</em></td><td>0</td><td>1</td><td>0</td><td>&mdash;</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Read down the <code>AL</code> column</div>
+        <p>It is 1 in every row, including <code>111</code>. The comparator does not care which opcode is selected &mdash; it is wired straight to the output pin, not through an enable block, and it computes continuously.</p>
+        <p><strong>If your <code>AL</code> changes as you step the opcode, you have put the comparator behind an enable block and it needs to come out.</strong> That is the single most likely wiring error in this checkpoint, and it is invisible until Week 7's branch instructions need a flag that is live at the moment they ask.</p>
+      </div>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/revised-alu-circuit-appearance.png"
+             alt="The finished ALU circuit appearance: an 8-bit A input and 8-bit B input on the left, three separate opcode bits labelled A, B and C, a carry-in pin, and on the right the 8-bit result output C together with the carry-out, A-larger, equal and zero flag pins.">
+        <figcaption class="circuit-canvas__caption">Redraw the circuit appearance to something like this. <strong>This is the component Week 10 wires into the register file</strong>, so it is worth making legible now.</figcaption>
+      </figure>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p><strong>The ALU is finished.</strong> Every arithmetic and logical operation your CPU will ever perform now lives in one component with nine pins, and nothing about it changes between here and Week 17 &mdash; it gets wired to other things, but it does not get rebuilt.</p>
+      <p>The rest of this week is the other track, and it is the longer half.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 7, Page 1
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['alu'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.alu</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.alu) { return; }
+    var A = L.alu;
+
+    function str(w) { return w.join(''); }
+    function num(w) { var n = 0, i; for (i = 0; i < 8; i++) { n = (n << 1) | w[i]; } return n; }
+    function fromNum(v) { var o = [], i; v = v & 255; for (i = 7; i >= 0; i--) { o.push((v >> i) & 1); } return o; }
+
+    /* ============================================================
+       WIDGET 1 — The Assembly Bench
+       ============================================================
+       Week 6's ALU Bench with the selection mechanism exposed. The
+       results come from the SAME CSCLogic.alu.evaluate, so the two
+       pages cannot disagree about what the machine does.
+
+       The decoder line is computed by CSCLogic.decode -- the Week 3
+       function, written as an AND of input polarities rather than as an
+       array index, because that is the construction the student wired.
+       A lookup would give the right answer and demonstrate nothing.
+
+       THE ONE SUBTLE THING THIS WIDGET HAS TO GET RIGHT. On opcode 111
+       every enable block asserts 00000000 and the OR gives 00000000 --
+       and C still reads "nothing driving", because no block is ENABLED.
+       Those are two different states and the widget shows both at once:
+       the rows show zeros being asserted by disabled blocks, and the
+       output says nothing is driving. A student who conflates them has
+       the Week 5 bus model still running. */
+    var host = document.getElementById('w-assembly');
+    if (!host) { return; }
+
+    var a = fromNum(0xCA), b = fromNum(0xB6), cin = 0, op = 0;
+    var elA = document.getElementById('ab-a'), elB = document.getElementById('ab-b');
+    var elOp = document.getElementById('ab-op'), elCi = document.getElementById('ab-ci');
+    var elDec = document.getElementById('ab-dec'), elRows = document.getElementById('ab-rows');
+    var elOut = document.getElementById('ab-out'), elFlags = document.getElementById('ab-flags');
+    var elHint = document.getElementById('ab-hint');
+
+    function byteToggle(el, word) {
+      el.innerHTML = '';
+      for (var i = 0; i < 8; i++) {
+        (function (i) {
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = word[i];
+          btn.setAttribute('aria-pressed', word[i] ? 'true' : 'false');
+          btn.setAttribute('aria-label', 'bit ' + (7 - i) + ', currently ' + word[i]);
+          btn.addEventListener('click', function () {
+            word[i] = word[i] ? 0 : 1;
+            btn.textContent = word[i];
+            btn.setAttribute('aria-pressed', word[i] ? 'true' : 'false');
+            btn.setAttribute('aria-label', 'bit ' + (7 - i) + ', currently ' + word[i]);
+            render();
+          });
+          el.appendChild(btn);
+        }(i));
+      }
+    }
+    byteToggle(elA, a); byteToggle(elB, b);
+
+    var opBtns = [];
+    ['A', 'B', 'C'].forEach(function (nm, idx) {
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'opbit';
+      btn.setAttribute('aria-pressed', 'false');
+      btn.addEventListener('click', function () { op ^= (1 << (2 - idx)); render(); });
+      opBtns.push({ btn: btn, nm: nm, idx: idx });
+      elOp.appendChild(btn);
+    });
+    var opName = document.createElement('span');
+    opName.style.cssText = 'font-weight:700;margin-left:.5rem';
+    elOp.appendChild(opName);
+
+    elCi.addEventListener('click', function () { cin = cin ? 0 : 1; render(); });
+
+    function render() {
+      var r = A.evaluate(op, a, b, cin);
+
+      opBtns.forEach(function (o) {
+        var on = (op >> (2 - o.idx)) & 1;
+        o.btn.textContent = o.nm + ' = ' + on;
+        o.btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+      opName.textContent = r.selected.bits + (r.selected.name ? ' — ' + r.selected.name : ' — unassigned');
+      elCi.textContent = 'CI = ' + cin;
+      elCi.setAttribute('aria-pressed', cin ? 'true' : 'false');
+
+      /* The decoder, computed the way the student's circuit computes it:
+         CSCLogic.decode takes sel bits LSB-first. */
+      var lines = L.decode([op & 1, (op >> 1) & 1, (op >> 2) & 1]);
+      elDec.innerHTML = lines.map(function (v, i) {
+        var nc = (i === 7);
+        return '<div class="dec-out' + (v ? ' dec-out--hi' : '') + (nc ? ' dec-out--nc' : '') + '">' +
+               '<span class="dec-out__n">out ' + i + (nc ? '<br>n/c' : '') + '</span>' +
+               '<span class="dec-out__v">' + v + '</span></div>';
+      }).join('');
+
+      elRows.innerHTML = A.OPS.filter(function (o) { return o.name; }).map(function (o) {
+        var leg = r.legs[o.name];
+        var enabled = lines[o.code] === 1;
+        /* A disabled ENABLE_8BIT asserts 00000000 -- a VALUE, not
+           nothing. That distinction is the point of the row. */
+        var asserted = enabled ? str(leg.out) : '00000000';
+        return '<div class="asm-row' + (enabled ? ' asm-row--on' : '') + '">' +
+                 '<span class="asm-row__name">' + o.name + '</span>' +
+                 '<span>' + str(leg.out) + '</span>' +
+                 '<span class="ar-e">e=' + (enabled ? 1 : 0) + '</span>' +
+                 '<span class="ar-out">' + asserted + '</span>' +
+               '</div>';
+      }).join('');
+
+      if (r.out === null) {
+        elOut.className = 'or-combine__float';
+        elOut.textContent = '— nothing driving —';
+      } else {
+        elOut.className = 'or-combine__val';
+        elOut.textContent = str(r.out) + '   (' + num(r.out) + ' unsigned)';
+      }
+
+      function pill(label, val) {
+        if (val === null) { return '<span class="flag-pill flag-pill--na">' + label + ' = —</span>'; }
+        return '<span class="flag-pill' + (val ? ' flag-pill--on' : '') + '">' + label + ' = ' + val + '</span>';
+      }
+      elFlags.innerHTML = pill('CO', r.cout) + pill('AL', r.al) + pill('EQ', r.eq) + pill('Z', r.z);
+
+      elHint.textContent = (r.out === null)
+        ? 'Decoder output 7 goes nowhere, so no enable block is switched on. Every block above is asserting 00000000 — but that is six disabled blocks, not a result. Nothing is driving C at all, which is a different state from C being zero.'
+        : 'Six blocks are asserting 00000000 and one is asserting its leg. OR them together and you get that leg. Notice AL does not change as you step the opcode.';
+    }
+
+    render();
+  })();
+  </script>
+</body>
+</html>

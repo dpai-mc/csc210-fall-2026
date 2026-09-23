@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w7-00">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 7 Orientation: Selection, From Both Ends</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .part-list { list-style: none; padding: 0; margin: var(--space-md) 0; }
+    .part-list li {
+      display: flex; flex-wrap: wrap; align-items: baseline;
+      gap: var(--space-sm); padding: var(--space-sm) 0;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .part-list li:last-child { border-bottom: none; }
+    .part-list code { font-weight: 700; color: var(--color-primary); flex: 0 0 auto; }
+    .part-list span { color: var(--color-text-muted); font-size: var(--fs-sm); }
+
+    .tracks { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin: var(--space-md) 0; }
+    .tracks > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
+    .tracks h3 { margin-top: 0; }
+    @media (max-width: 640px) { .tracks { grid-template-columns: 1fr; } }
+
+    /* The hours split — this week's shape is the message. */
+    .split-bar { display: flex; height: 2.2rem; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--color-border); margin: var(--space-sm) 0; }
+    .split-bar > div { display: flex; align-items: center; justify-content: center; font-size: var(--fs-sm); font-weight: 700; color: #fff; }
+    .split-bar .sb-hw { background: var(--color-primary); }
+    .split-bar .sb-sw { background: var(--color-accent); }
+    .split-legend { display: flex; justify-content: space-between; font-size: var(--fs-xs); color: var(--color-text-muted); }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 7 &rsaquo; <span>Orientation</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Week 7 — Selection, From Both Ends</h1>
+    <p><strong>Finishing the ALU, and MIPS control flow</strong> &nbsp;|&nbsp; <strong>09/28 – 10/04</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~9 hours</p>
+
+    <!-- ============================================================
+         A — the gap
+         ============================================================ -->
+    <section id="sec-gap">
+      <div class="callout callout--hook">
+        <div class="callout__title">Both halves of this course are missing the same thing</div>
+
+        <p><strong>Your hardware:</strong> nine circuits that transform bytes &mdash; add, shift either way, invert, combine bitwise, compare, test for zero. All of them compute, all the time, correctly. And <strong>nothing picks one.</strong> You have been reading the leg you wanted by hand.</p>
+
+        <p><strong>Your software:</strong> a program that runs straight down the page. Every instruction executes, in order, exactly once. It cannot skip an instruction, cannot go back to one, and cannot call a procedure and come back. No <code>if</code>, no <code>while</code>, no functions.</p>
+
+        <p>Those look like two unrelated gaps. <strong>They are the same gap.</strong> Nothing chooses.</p>
+
+        <p><strong>By the end of this week</strong> a 3-bit opcode selects one of seven answers out of a finished ALU, and your programs branch, loop, call procedures and return &mdash; including calling themselves.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         B — the shape of the week
+         ============================================================ -->
+    <section id="sec-shape">
+      <h2>This week is the opposite shape to every week since Week 3</h2>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">One hour of hardware, six of software. Do not budget by habit.</div>
+
+        <div class="split-bar" role="img" aria-label="Roughly one hour of the week is Logisim work and about six hours is MIPS assembly, with the remainder reading and the assignment.">
+          <div class="sb-hw" style="flex:2">Checkpoint 2b</div>
+          <div class="sb-sw" style="flex:7">MIPS control flow</div>
+        </div>
+        <div class="split-legend"><span>~2 hrs</span><span>~7 hrs</span></div>
+
+        <p>Weeks 3 through 6 were hardware-heavy and you have probably settled into a rhythm around that. <strong>This week inverts it.</strong> The checkpoint is short — and the software side is the densest material in the course, and the part the Week 8 midterm leans on hardest.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         C — the inventory payoff
+         ============================================================ -->
+    <section id="sec-build">
+      <h2>What you build: nothing</h2>
+
+      <p>Open the <code>.circ</code> file you have been adding to since Week 2. Everything Checkpoint 2b needs is already in it.</p>
+
+      <ul class="part-list">
+        <li><code>DECODER_3TO8</code> <span>The opcode decoder. <strong>You built it in Week 3</strong>, alongside the 2&times;4 and the 4&times;16.</span></li>
+        <li><code>ENABLE_8BIT</code> <span>The output stage &mdash; you need seven copies. <strong>You built it in Week 5</strong>, as part of Checkpoint 1.</span></li>
+        <li><code>ADDER_8BIT</code> <span>Week 3.</span></li>
+        <li><code>SHIFT_LEFT</code>, <code>SHIFT_RIGHT</code>, <code>NOT_8BIT</code>, <code>AND_8BIT</code>, <code>OR_8BIT</code>, <code>XOR_CMP_8BIT</code>, <code>IS_ZERO</code> <span>Week 6.</span></li>
+      </ul>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Checkpoint 2b is one new tab, and everything in it is a part you already own</div>
+        <p>You will not build a decoder this week. You built three of them in Week 3, and one of them is exactly the size this needs. You will not build an output stage &mdash; <code>ENABLE_8BIT</code> was Checkpoint 1.</p>
+        <p>All that is new is <strong>wiring</strong>: instantiate, connect, name the result <code>ALU_8BIT</code>.</p>
+        <p>This is what Standards &sect;4's rule &mdash; <em>circuits are components for the final project, not disposable exercises</em> &mdash; has been arranging since Week 3, and this is the fullest version of the payoff the course produces. Three weeks running, you have opened your file and found the hard part waiting.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         D — the two tracks
+         ============================================================ -->
+    <section id="sec-tracks">
+      <h2>The two tracks</h2>
+
+      <div class="tracks">
+        <div>
+          <h3>Hardware — <strong>Checkpoint 2b</strong></h3>
+          <p>Assemble <code>ALU_8BIT</code>: the opcode decoder, seven enable blocks, an OR combine, the carry gating and the three flags. Verify all eight opcodes.</p>
+          <p class="byte-label" style="font-family:var(--font-sans)">After this, the ALU does not change again for the rest of the course. It gets wired to things; it does not get rebuilt.</p>
+        </div>
+        <div>
+          <h3>Assembly — control flow</h3>
+          <p>The program counter. <code>beq</code> and <code>bne</code>, and the arithmetic that turns a label into an offset. Loops. <code>j</code>, <code>jal</code>, <code>jr</code>. The stack, the calling convention, and recursion.</p>
+          <p class="byte-label" style="font-family:var(--font-sans)">Plus <code>sll</code> and <code>srl</code>, which close out the shift legs you built last week.</p>
+        </div>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">The week's best single fact: <code>blt</code> is not an instruction</div>
+        <p>MIPS has exactly two conditional branches that compare registers: equal, and not equal. <code>blt</code>, <code>bgt</code>, <code>ble</code>, <code>bge</code> &mdash; which you will find in every reference and every textbook &mdash; are expanded by the assembler into <code>slt</code> plus a branch.</p>
+        <p>And <code>slt</code> is answered by the <strong><code>AL</code> flag</strong> off the comparator you chained together in Week 6.</p>
+        <p style="text-align:center;margin:var(--space-md) 0"><code>if (a &lt; b)</code> &nbsp;&rarr;&nbsp; <code>slt</code> + <code>bne</code> &nbsp;&rarr;&nbsp; <strong>one wire out of an XOR cascade</strong></p>
+        <p>That is a high-level language construct traced all the way down to gates you personally wired, and it is the clearest moment in the course where both halves meet. Page 3 is built on it.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         E — learning path
+         ============================================================ -->
+    <section id="sec-path">
+      <h2>This week's learning path</h2>
+
+      <div class="callout">
+        <div class="callout__title">Hardware first &mdash; and this time because it is quick</div>
+        <p>Get Checkpoint 2b done in the first sitting. It is about an hour and it clears the deck, and page 3's central argument depends on the comparator being wired into a finished ALU that you have seen working.</p>
+      </div>
+
+      <div class="spa-card-grid">
+        <div class="spa-card">
+          <div class="spa-card__number">Page 1</div>
+          <div class="spa-card__title">Assembling the ALU</div>
+          <div class="spa-card__time">~0.8 hr reading, ~1.2 hr building &nbsp;|&nbsp; Sections 7.1–7.3</div>
+          <div class="spa-card__desc">The gap, from both ends. The inventory of parts you already own. Then the five wiring steps and an eight-opcode verification table. <strong>Checkpoint 2b.</strong></div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+
+        <div class="spa-card">
+          <div class="spa-card__number">Page 2</div>
+          <div class="spa-card__title">Deciding</div>
+          <div class="spa-card__time">~1.8 hours &nbsp;|&nbsp; Sections 7.4–7.7</div>
+          <div class="spa-card__desc"><code>sll</code> and <code>srl</code>, closing out Week 6. The program counter, and why straight-line execution is one line of behaviour. Branch offsets, and the arithmetic you will be examined on. Then what the assembler actually emits.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+
+        <div class="spa-card">
+          <div class="spa-card__number">Page 3</div>
+          <div class="spa-card__title">Repeating and Jumping</div>
+          <div class="spa-card__time">~1.4 hours &nbsp;|&nbsp; Sections 7.8–7.9</div>
+          <div class="spa-card__desc">A loop is a branch pointing backwards. The three loop shapes, all built from one mechanism. Then jumps — how a 26-bit field reaches a 256 MB region, and why <code>jal</code> makes procedures possible.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+
+        <div class="spa-card">
+          <div class="spa-card__number">Page 4</div>
+          <div class="spa-card__title">Procedures</div>
+          <div class="spa-card__time">~1.9 hours &nbsp;|&nbsp; Sections 7.10–7.13</div>
+          <div class="spa-card__desc">The stack, and the problem it solves — which is that there is only one <code>$ra</code>. The calling convention, and the rule that decides what actually goes in a frame. Then recursion, which needs no new mechanism at all.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+
+        <div class="spa-card">
+          <div class="spa-card__number">Assignment 7</div>
+          <div class="spa-card__title">Selection, From Both Ends</div>
+          <div class="spa-card__time">~1.5 hours &nbsp;|&nbsp; 100 points + 3 bonus</div>
+          <div class="spa-card__desc">Checkpoint 2b, five written questions, seven address-arithmetic and expansion problems, and a MARS program with four procedures. An optional recursive extension for bonus.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         F — tools
+         ============================================================ -->
+    <section id="sec-tools">
+      <h2>Your tools this week</h2>
+
+      <div class="tool-card">
+        <div class="tool-card__icon" aria-hidden="true">&#128295;</div>
+        <div>
+          <div class="tool-card__name">Logisim — one new tab, no new components</div>
+          <div class="tool-card__desc">Same <code>CSC210_YourName.circ</code>. If a Week 6 leg was never quite right, deal with it before you assemble — a fault is much harder to find once seven parallel paths share an output.</div>
+        </div>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-card__icon" aria-hidden="true">&#128187;</div>
+        <div>
+          <div class="tool-card__name">MARS — and leave delayed branching off</div>
+          <div class="tool-card__desc"><code>.data</code> first, then <code>.text</code>, <strong>no <code>main:</code> label and no <code>.globl main</code></strong>, as always. One new setting to be aware of: MARS has a "delayed branching" option that is <strong>off by default</strong>. Leave it off — with it on, the instruction after every branch and jump executes before the jump takes effect, and nothing in this course accounts for that.</div>
+        </div>
+      </div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Two registers to leave alone</div>
+        <p><strong><code>$at</code></strong> — the assembler uses it as scratch space when it expands a pseudo-instruction. Page 2 explains this properly. Write to it yourself and an expansion two lines later will overwrite it without warning.</p>
+        <p><strong><code>$sp</code></strong> — the stack pointer. Change it only in a matched pair, subtracting at the start of a procedure and adding the same amount back before returning. A procedure that returns with <code>$sp</code> in the wrong place breaks its <em>caller</em>, which is a miserable thing to debug.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         G — progression
+         ============================================================ -->
+    <section id="sec-progression">
+      <h2>Where Week 7 fits</h2>
+
+      <div class="progression">
+        <div class="progression__item completed">
+          <div class="progression__label">Week 3 &mdash; Computation</div>
+          <div class="progression__detail">Adders and decoders. The 3&times;8 you built there is instantiated this week.</div>
+        </div>
+        <div class="progression__item completed">
+          <div class="progression__label">Week 5 &mdash; The Register, and the Language</div>
+          <div class="progression__detail"><code>ENABLE_8BIT</code>, needed seven times this week. And <code>$at</code>, finally explained.</div>
+        </div>
+        <div class="progression__item completed">
+          <div class="progression__label">Week 6 &mdash; The ALU, and the Words for It</div>
+          <div class="progression__detail">Nine legs, and the comparator whose <code>AL</code> flag page 3 is built on.</div>
+        </div>
+        <div class="progression__item active">
+          <div class="progression__label">Week 7 &mdash; Selection, From Both Ends</div>
+          <div class="progression__detail">The ALU finished, and programs that decide, repeat and call. Checkpoint 2b.</div>
+        </div>
+        <div class="progression__item">
+          <div class="progression__label">Week 8 &mdash; Memory, at scale &nbsp;<em>(and the Midterm)</em></div>
+          <div class="progression__detail">The 16&times;16 RAM matrix and the MAR. <code>lw</code>, <code>sw</code>, arrays. <strong>Midterm over Weeks 1&ndash;8.</strong></div>
+        </div>
+        <div class="progression__item">
+          <div class="progression__label">Weeks 10&ndash;13 &mdash; The machine around it</div>
+          <div class="progression__detail">The ALU wired to a register file, a control unit generating the opcode you set by hand this week, and the program counter built as real hardware.</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 7 Orientation
+  </footer>
+
+</body>
+</html>

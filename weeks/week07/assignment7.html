@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w7-assign">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Assignment 7: Selection, From Both Ends</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .q-block { border-left: 3px solid var(--color-border); padding-left: var(--space-md); margin: var(--space-lg) 0; }
+    .q-num { font-weight: 700; color: var(--color-primary); }
+    .q-pts { font-size: var(--fs-sm); color: var(--color-text-muted); }
+
+    .ans { margin-top: var(--space-sm); }
+    .ans__input {
+      display: block; width: 100%; box-sizing: border-box;
+      min-height: 5.2em; resize: vertical;
+      font-family: var(--font-sans); font-size: var(--fs-sm); line-height: 1.55;
+      color: var(--color-text); background: var(--color-surface);
+      border: 1px solid var(--color-border); border-radius: var(--radius);
+      padding: var(--space-sm);
+    }
+    .ans__input:focus { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+    .ans--short .ans__input { min-height: 2.6em; font-family: var(--font-mono); letter-spacing: .04em; }
+    .ans__print { display: none; }
+
+    .field-slot { display: inline-flex; flex-direction: column; margin: 0 var(--space-sm) var(--space-sm) 0; }
+    .field-slot b { font-size: var(--fs-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .04em; }
+    .field-slot input {
+      font-family: var(--font-mono); font-size: var(--fs-sm);
+      border: 1px solid var(--color-border); border-radius: 4px;
+      padding: var(--space-xs) var(--space-sm); background: var(--color-surface); min-width: 10rem;
+    }
+    .field-row { display: flex; flex-wrap: wrap; align-items: flex-end; }
+
+    .cover-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-md); margin: var(--space-md) 0; }
+    .cover-grid > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
+    .cover-grid label { display: block; font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); margin-bottom: var(--space-xs); }
+    .cover-grid input { width: 100%; box-sizing: border-box; font-size: var(--fs-base); padding: var(--space-xs) var(--space-sm); border: 1px solid var(--color-border); border-radius: 4px; }
+
+    .asm {
+      font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.55;
+      background: var(--color-code-bg); border: 1px solid var(--color-border);
+      border-radius: var(--radius); padding: var(--space-md);
+      overflow-x: auto; white-space: pre; margin: var(--space-md) 0;
+    }
+    .asm .cm { color: var(--color-text-muted); }
+
+    .regtable { width: 100%; border-collapse: collapse; margin: var(--space-md) 0; font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .regtable th, .regtable td { text-align: left; padding: var(--space-xs) var(--space-sm); border-bottom: 1px solid var(--color-border); }
+    .regtable th { background: var(--color-code-bg); font-family: var(--font-sans); }
+
+    .bonus-block { border: 2px dashed var(--color-success); border-radius: var(--radius); background: #f2fbf6; padding: var(--space-md); margin: var(--space-lg) 0; }
+    .bonus-block h3 { margin-top: 0; color: var(--color-success); }
+
+    .submit-row { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: var(--space-lg) 0; }
+
+    @media print {
+      .sp-header, .sp-footer { display: none; }
+      .q-block { break-inside: avoid; }
+      body { background: #fff; }
+      .ans__input { display: none; }
+      .ans__print {
+        display: block; white-space: pre-wrap; word-break: break-word;
+        border: 1px solid #999; border-radius: 3px;
+        padding: 6px 8px; min-height: 4em; font-size: 10.5pt; line-height: 1.5;
+      }
+      .ans--short .ans__print { min-height: 1.8em; font-family: var(--font-mono); }
+      .field-slot input { border-bottom: 1px solid #999; }
+      .no-print { display: none !important; }
+      body.print-bc main > *:not(#submit-cover):not(#part-b):not(#part-c) { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 7 &rsaquo; <span>Assignment 7</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Assignment 7 — Selection, From Both Ends</h1>
+    <p><span class="points-badge">100 points</span> &nbsp;+ up to 3 bonus &nbsp;|&nbsp; Week 7 &nbsp;|&nbsp; Logisim Checkpoint 2b + MIPS control flow</p>
+
+    <section id="overview">
+      <h2>What you submit</h2>
+
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Part</th><th>What it is</th><th>How</th><th>Points</th></tr></thead>
+          <tbody>
+            <tr><td><strong>A</strong></td><td>Logisim Checkpoint 2b — the assembled ALU</td><td><code>.circ</code> file + 8 screenshots</td><td>35</td></tr>
+            <tr><td><strong>B</strong></td><td>Five written questions</td><td>filled in below, printed to PDF</td><td>15</td></tr>
+            <tr><td><strong>C</strong></td><td>Address arithmetic and assembler expansion</td><td>filled in below, same PDF</td><td>20</td></tr>
+            <tr><td><strong>D</strong></td><td>A MARS program — four procedures</td><td><code>lastname_firstname_week7.asm</code></td><td>30</td></tr>
+            <tr><td colspan="3"><em>optional bonus — a recursive procedure</em></td><td><em>+3</em></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Nothing you type on this page is saved anywhere</div>
+        <p>There is no storage behind these boxes. Close the tab or reload and <strong>your typing is gone.</strong> Print to PDF before you leave, and if you are working across two sittings, draft your answers elsewhere and paste them in.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART A
+         ============================================================ -->
+    <section id="part-a">
+      <h2>Part A &mdash; Logisim Checkpoint 2b <span class="q-pts">(35 points)</span></h2>
+
+      <p>Assemble your nine Week 6 circuits into one working <code>ALU_8BIT</code>.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Nothing new is built</div>
+        <p>Every component this checkpoint needs is already in your file: <code>DECODER_3TO8</code> from <strong>Week 3</strong>, <code>ENABLE_8BIT</code> from <strong>Week 5</strong> (you need seven instances), and the nine legs from <strong>Week 6</strong>. All that is new is wiring.</p>
+        <p><strong>Do not rebuild the decoder</strong>, and do not rebuild the enable block. If either is instantiated from a fresh copy rather than from the tab you already have, that is marked down — the point of the exercise is that the parts fit.</p>
+      </div>
+
+      <h3>The interface &mdash; these pin names are exact</h3>
+
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><code class="pin-table__name">A</code></td><td>8</td><td>in</td><td>first operand</td></tr>
+            <tr><td><code class="pin-table__name">B</code></td><td>8</td><td>in</td><td>second operand</td></tr>
+            <tr><td><code class="pin-table__name">opcode</code></td><td>3</td><td>in</td><td>A top, B middle, C bottom</td></tr>
+            <tr><td><code class="pin-table__name">CI</code></td><td>1</td><td>in</td><td>carry in / shift in — set pull behaviour to <strong>pull-down</strong></td></tr>
+            <tr><td><code class="pin-table__name">C</code></td><td>8</td><td>out</td><td>the result</td></tr>
+            <tr><td><code class="pin-table__name">CO</code></td><td>1</td><td>out</td><td>carry out / shift out</td></tr>
+            <tr><td><code class="pin-table__name">AL</code></td><td>1</td><td>out</td><td>A greater than B — always live</td></tr>
+            <tr><td><code class="pin-table__name">EQ</code></td><td>1</td><td>out</td><td>A equals B — always live</td></tr>
+            <tr><td><code class="pin-table__name">Z</code></td><td>1</td><td>out</td><td>result is all zeros</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Points</h3>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Criterion</th><th>Points</th></tr></thead>
+          <tbody>
+            <tr><td><code>ALU_8BIT</code> tab present with all nine pins named exactly</td><td>8</td></tr>
+            <tr><td><code>DECODER_3TO8</code> <strong>instantiated</strong> from Week 3, not rebuilt</td><td>4</td></tr>
+            <tr><td>Seven <code>ENABLE_8BIT</code> instances, one per leg, each driven by its own decoder line</td><td>7</td></tr>
+            <tr><td>The seven enable outputs ORed correctly into <code>C</code></td><td>5</td></tr>
+            <tr><td><code>CO</code> gated per leg — each carry/shift-out ANDed with its own enable line</td><td>4</td></tr>
+            <tr><td>Three flags wired; <strong><code>AL</code> and <code>EQ</code> taken straight from the comparator, not through an enable block</strong></td><td>4</td></tr>
+            <tr><td>Decoder output 7 left connected to nothing</td><td>2</td></tr>
+            <tr><td>Single-file compliance and exact naming</td><td>1</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Verify all eight opcodes and screenshot each</h3>
+
+      <p>Set <code>A = 11001010</code>, <code>B = 10110110</code>, <code>CI = 0</code>.</p>
+
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>opcode</th><th>operation</th><th><code>C</code></th><th><code>CO</code></th><th><code>AL</code></th><th><code>EQ</code></th><th><code>Z</code></th></tr></thead>
+          <tbody>
+            <tr><td><code>000</code></td><td>ADD</td><td><code>10000000</code></td><td>1</td><td>1</td><td>0</td><td>0</td></tr>
+            <tr><td><code>001</code></td><td>SHIFT RIGHT</td><td><code>01100101</code></td><td>0</td><td>1</td><td>0</td><td>0</td></tr>
+            <tr><td><code>010</code></td><td>SHIFT LEFT</td><td><code>10010100</code></td><td>1</td><td>1</td><td>0</td><td>0</td></tr>
+            <tr><td><code>011</code></td><td>NOT</td><td><code>00110101</code></td><td>0</td><td>1</td><td>0</td><td>0</td></tr>
+            <tr><td><code>100</code></td><td>AND</td><td><code>10000010</code></td><td>0</td><td>1</td><td>0</td><td>0</td></tr>
+            <tr><td><code>101</code></td><td>OR</td><td><code>11111110</code></td><td>0</td><td>1</td><td>0</td><td>0</td></tr>
+            <tr><td><code>110</code></td><td>XOR</td><td><code>01111100</code></td><td>0</td><td>1</td><td>0</td><td>0</td></tr>
+            <tr><td><code>111</code></td><td><em>unassigned</em></td><td><em>nothing driving</em></td><td>0</td><td>1</td><td>0</td><td>&mdash;</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Read down the <code>AL</code> column before you submit</div>
+        <p>It is 1 in every row, <code>111</code> included. <strong>If your <code>AL</code> changes as you step the opcode, the comparator is behind an enable block and needs to come out.</strong> That is the single most likely error in this checkpoint, and it costs 4 points here and a great deal of confusion in Week 10.</p>
+      </div>
+
+      <h3>Submission checklist</h3>
+      <ul class="lab-checklist">
+        <li>All circuits are contained within this single <code>.circ</code> file — no external file links</li>
+        <li><code>ALU_8BIT</code> present, nine pins named exactly as above</li>
+        <li><code>DECODER_3TO8</code> and <code>ENABLE_8BIT</code> instantiated from the tabs you already had</li>
+        <li>Decoder output 7 visibly unconnected</li>
+        <li><code>AL</code> and <code>EQ</code> not routed through any enable block</li>
+        <li>Eight screenshots, one per opcode, at the values above</li>
+      </ul>
+    </section>
+
+    <!-- ============================================================
+         PART B
+         ============================================================ -->
+    <section id="part-b">
+      <h2>Part B &mdash; Written <span class="q-pts">(15 points, 3 each)</span></h2>
+
+      <div class="q-block">
+        <p><span class="q-num">1.</span> <span class="q-pts">(3 points)</span> Checkpoint 2b introduced no new component. <strong>Name the three circuits you instantiated</strong> and the week each one was originally built in.</p>
+        <div class="ans">
+          <label class="sr-only" for="b1">Your answer to Part B question 1</label>
+          <textarea class="ans__input" id="b1" rows="3"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">2.</span> <span class="q-pts">(3 points)</span> With opcode <code>111</code> selected on your assembled ALU, what appears on <code>C</code>, and <strong>why is that different from <code>C</code> showing <code>00000000</code>?</strong></p>
+        <div class="ans">
+          <label class="sr-only" for="b2">Your answer to Part B question 2</label>
+          <textarea class="ans__input" id="b2" rows="4"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">3.</span> <span class="q-pts">(3 points)</span> A branch offset is counted in instructions, not bytes. Explain <strong>what would be wasted</strong> if it counted bytes, and what effect that choice has on how far a branch can reach.</p>
+        <div class="ans">
+          <label class="sr-only" for="b3">Your answer to Part B question 3</label>
+          <textarea class="ans__input" id="b3" rows="4"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">4.</span> <span class="q-pts">(3 points)</span> <code>blt</code> is not a MIPS instruction. Write the <strong>two real instructions</strong> the assembler emits for <code>blt $t0, $t1, loop</code>, and name the <strong>ALU output</strong> that answers the comparison.</p>
+        <div class="ans">
+          <label class="sr-only" for="b4">Your answer to Part B question 4</label>
+          <textarea class="ans__input" id="b4" rows="4"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">5.</span> <span class="q-pts">(3 points)</span> A procedure must restore <code>$sp</code> to its original value before <code>jr $ra</code>. Describe <strong>specifically what goes wrong in the caller</strong> if it does not — not just "the stack breaks."</p>
+        <div class="ans">
+          <label class="sr-only" for="b5">Your answer to Part B question 5</label>
+          <textarea class="ans__input" id="b5" rows="4"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART C
+         ============================================================ -->
+    <section id="part-c">
+      <h2>Part C &mdash; Address arithmetic and expansion <span class="q-pts">(20 points)</span></h2>
+
+      <p>Show the offset or field, not just the final address. Addresses in hex, fields in binary.</p>
+
+      <div class="q-block">
+        <p><span class="q-num">1.</span> <span class="q-pts">(3 points)</span> A <code>beq</code> sits at <code>0x00400020</code>. Its label is at <code>0x00400040</code>.</p>
+        <div class="field-row">
+          <div class="field-slot"><b><label for="c1-off">offset, in instructions</label></b><input type="text" id="c1-off" autocomplete="off"></div>
+          <div class="field-slot"><b><label for="c1-bits">the 16-bit field</label></b><input type="text" id="c1-bits" autocomplete="off"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">2.</span> <span class="q-pts">(3 points)</span> A <code>bne</code> sits at <code>0x00400050</code>. Its label is at <code>0x00400038</code> — a <strong>backward</strong> branch.</p>
+        <div class="field-row">
+          <div class="field-slot"><b><label for="c2-off">offset, in instructions</label></b><input type="text" id="c2-off" autocomplete="off"></div>
+          <div class="field-slot"><b><label for="c2-bits">the 16-bit field</label></b><input type="text" id="c2-bits" autocomplete="off"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">3.</span> <span class="q-pts">(3 points)</span> State the reach of a conditional branch <strong>in instructions</strong> and <strong>in bytes</strong>, and say which of the two the encoding produces directly.</p>
+        <div class="ans ans--short">
+          <label class="sr-only" for="c3">Question 3</label>
+          <textarea class="ans__input" id="c3" rows="2"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">4.</span> <span class="q-pts">(3 points)</span> Expand <code>bge $s0, $s1, done</code> into the real instructions the assembler emits.</p>
+        <div class="ans ans--short">
+          <label class="sr-only" for="c4">Question 4</label>
+          <textarea class="ans__input" id="c4" rows="2"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">5.</span> <span class="q-pts">(3 points)</span> Expand <code>ble $t2, $t3, skip</code>.</p>
+        <div class="ans ans--short">
+          <label class="sr-only" for="c5">Question 5</label>
+          <textarea class="ans__input" id="c5" rows="2"></textarea>
+          <div class="ans__print" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">6.</span> <span class="q-pts">(3 points)</span> A <code>j</code> sits at <code>0x00400100</code> and targets <code>0x00400240</code>. Give the <strong>26-bit field</strong>, in hex and in binary.</p>
+        <div class="field-row">
+          <div class="field-slot"><b><label for="c6-hex">field, hex</label></b><input type="text" id="c6-hex" autocomplete="off"></div>
+          <div class="field-slot"><b><label for="c6-bin">field, binary</label></b><input type="text" id="c6-bin" autocomplete="off"></div>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">7.</span> <span class="q-pts">(2 points)</span> A <code>jal fib</code> executes at address <code>0x0040001C</code>. What is in <code>$ra</code> immediately afterwards?</p>
+        <div class="field-row">
+          <div class="field-slot"><b><label for="c7">$ra</label></b><input type="text" id="c7" autocomplete="off"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART D
+         ============================================================ -->
+    <section id="part-d">
+      <h2>Part D &mdash; A MARS program <span class="q-pts">(30 points)</span></h2>
+
+      <p>Submit as <code>lastname_firstname_week7.asm</code>. <strong>This is a separate file upload</strong> — do not paste it into the PDF.</p>
+
+      <div class="asm">        .data
+n:      .word  10
+fibn:   .word  12
+ga:     .word  48
+gb:     .word  18
+combo:  .word  8</div>
+
+      <h3>Four procedures</h3>
+
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Procedure</th><th>Takes / returns</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><code>sum_1_to_n</code></td><td><code>$a0</code> = N &rarr; <code>$v0</code></td><td>1 + 2 + … + N, with a loop</td></tr>
+            <tr><td><code>fib</code></td><td><code>$a0</code> = N &rarr; <code>$v0</code></td><td>the Nth Fibonacci number, iteratively. F₀ = 0, F₁ = 1</td></tr>
+            <tr><td><code>gcd</code></td><td><code>$a0</code>, <code>$a1</code> &rarr; <code>$v0</code></td><td>greatest common divisor, <strong>by repeated subtraction</strong></td></tr>
+            <tr><td><code>sum_and_fib</code></td><td><code>$a0</code> = N &rarr; <code>$v0</code></td><td><code>sum_1_to_n(N) + fib(N)</code> — <strong>it calls the other two</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Call all four from the top level, in the order above, with <code>n</code>, <code>fibn</code>, <code>ga</code>/<code>gb</code> and <code>combo</code>, leaving the results in <code>$s0</code>, <code>$s1</code>, <code>$s2</code>, <code>$s3</code>. Then exit cleanly.</p>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Three requirements that carry most of the marks</div>
+
+        <p><strong>1. <code>sum_and_fib</code> needs a stack frame; the other three do not.</strong> It calls two procedures, so <code>jal</code> destroys its <code>$ra</code>, and it needs its argument again after the first call. The other three are leaves that use only <code>$t</code> registers — they need no prologue, no epilogue and no stack at all. <strong>Do not give them frames they do not need</strong>, and be ready to say why in one line of comment on each.</p>
+
+        <p><strong>2. <code>gcd</code>'s comparison must be a hand-written <code>slt</code> plus branch.</strong> Not <code>blt</code>, not <code>bgt</code>. Once in the program, written out, so the mechanism is something you have done. Pseudo-instructions are fine everywhere else.</p>
+
+        <p><strong>3. No <code>mult</code>, <code>div</code>, <code>mfhi</code>, <code>mflo</code> or <code>lui</code>.</strong> Everything above can be done with addition and subtraction — which is also true of the ALU you just finished, and that is not a coincidence.</p>
+      </div>
+
+      <h3>Program requirements</h3>
+      <ul>
+        <li><code>.data</code> first, then <code>.text</code>. <strong>No <code>main:</code> label and no <code>.globl main</code>.</strong></li>
+        <li>Leave MARS's delayed branching <strong>off</strong> (it is off by default).</li>
+        <li>A comment header with your name and a one-line description.</li>
+        <li>Each procedure preceded by a comment block: what it takes, what it returns, and <strong>whether it needs a frame and why</strong>.</li>
+        <li>A comment on every instruction saying what it does.</li>
+      </ul>
+
+      <h3>Check your work against this</h3>
+
+      <div class="table-scroll">
+        <table class="regtable">
+          <thead><tr><th>Register</th><th>Value</th><th>From</th></tr></thead>
+          <tbody>
+            <tr><td>$s0</td><td>55</td><td><code>sum_1_to_n(10)</code></td></tr>
+            <tr><td>$s1</td><td>144</td><td><code>fib(12)</code></td></tr>
+            <tr><td>$s2</td><td>6</td><td><code>gcd(48, 18)</code></td></tr>
+            <tr><td>$s3</td><td>57</td><td><code>sum_and_fib(8)</code> = 36 + 21</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Rubric (30 points)</h3>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Criterion</th><th>Points</th></tr></thead>
+          <tbody>
+            <tr><td><code>sum_1_to_n</code> correct</td><td>5</td></tr>
+            <tr><td><code>fib</code> correct</td><td>5</td></tr>
+            <tr><td><code>gcd</code> correct (3 of these for the hand-written <code>slt</code> + branch)</td><td>6</td></tr>
+            <tr><td><code>sum_and_fib</code> correct (4 of these for correct frame discipline — <code>$ra</code> and <code>$a0</code> saved and restored, <code>$sp</code> returned)</td><td>8</td></tr>
+            <tr><td>Program structure and convention</td><td>3</td></tr>
+            <tr><td>Comments, including the per-procedure frame justification</td><td>3</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="q-pts"><strong>Deductions:</strong> &minus;5 if the program does not assemble and run in MARS. &minus;2 if a <code>main:</code> label or <code>.globl main</code> is present. &minus;2 per prohibited instruction used.</p>
+
+      <!-- ===== BONUS ===== -->
+      <div class="bonus-block">
+        <h3>Optional bonus &mdash; <code>sum_rec</code> <span class="q-pts">(up to +3)</span></h3>
+        <p>Write a <strong>recursive</strong> version of <code>sum_1_to_n</code>: <code>sum_rec(N) = N + sum_rec(N-1)</code>, with <code>sum_rec(0) = 0</code>. Call it with <code>$a0 = 10</code> and leave the result in <code>$s4</code>; it should be 55, the same as <code>$s0</code>.</p>
+        <p>It must save <code>$ra</code> <em>and</em> <code>$a0</code> in each call's own frame — page 4 &sect;7.12 walks through exactly this shape with factorial.</p>
+        <p><strong>This is genuinely optional.</strong> Recursion is taught this week but not required, and attempting this cannot lose you points — an incorrect <code>sum_rec</code> is simply worth zero bonus.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Totals
+         ============================================================ -->
+    <section id="totals">
+      <h2>Points and outcomes</h2>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Part</th><th>Points</th><th>Assesses</th></tr></thead>
+          <tbody>
+            <tr><td>A — Checkpoint 2b</td><td>35</td><td>SLO1</td></tr>
+            <tr><td>B — Written</td><td>15</td><td>SLO1, SLO2</td></tr>
+            <tr><td>C — Address arithmetic and expansion</td><td>20</td><td>SLO2</td></tr>
+            <tr><td>D — MARS program</td><td>30</td><td>SLO3</td></tr>
+            <tr class="rubric-total"><td><strong>Total</strong></td><td><strong>100</strong></td><td></td></tr>
+            <tr><td><em>Bonus — <code>sum_rec</code></em></td><td><em>+3</em></td><td><em>SLO3</em></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="submit-cover">
+      <h2>Your name, for the PDF</h2>
+      <p class="q-pts">Not graded. It is here so the PDF that lands in the gradebook can be told apart from thirty others.</p>
+      <div class="cover-grid">
+        <div>
+          <label for="cv-name">Name</label>
+          <input type="text" id="cv-name" autocomplete="name">
+        </div>
+        <div>
+          <label for="cv-date">Date</label>
+          <input type="text" id="cv-date" autocomplete="off">
+        </div>
+      </div>
+    </section>
+
+    <div class="submit-row no-print">
+      <button class="widget-btn widget-btn--primary" type="button" id="print-bc">Print Parts B and C to PDF</button>
+      <button class="widget-btn widget-btn--outline" type="button" id="print-page">Print the whole handout</button>
+    </div>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Assignment 7
+  </footer>
+
+  <script>
+  /* ============================================================
+     Parts B and C — fill in, then print to PDF
+     ============================================================
+     No dependency on shared/logic.js. This page renders no generated
+     tables, so there is nothing to guard — and keeping the submission
+     flow free of that dependency means a stale kernel on the server can
+     never stop a student printing their answers.
+
+     No storage of any kind, per Course Standards. The page says so
+     plainly in the overview rather than pretending otherwise.
+     ============================================================ */
+  (function () {
+    'use strict';
+
+    var textareas = document.querySelectorAll('.ans__input');
+
+    /* A textarea prints only what is scrolled into view, so a long
+       answer would be silently cut off in the PDF. Every one carries a
+       mirror div that is invisible on screen and takes over on paper. */
+    function mirror() {
+      Array.prototype.forEach.call(textareas, function (t) {
+        var out = t.parentNode.querySelector('.ans__print');
+        if (out) { out.textContent = t.value; }
+      });
+    }
+
+    function grow(t) {
+      t.style.height = 'auto';
+      t.style.height = (t.scrollHeight + 2) + 'px';
+    }
+    Array.prototype.forEach.call(textareas, function (t) {
+      t.addEventListener('input', function () { grow(t); });
+    });
+
+    var btn = document.getElementById('print-bc');
+    if (btn) {
+      btn.addEventListener('click', function () {
+        mirror();
+        document.body.classList.add('print-bc');
+        window.print();
+      });
+    }
+
+    /* Printing is not navigation, so Standards §5 is not engaged. */
+    var full = document.getElementById('print-page');
+    if (full) {
+      full.addEventListener('click', function () {
+        mirror();
+        document.body.classList.remove('print-bc');
+        window.print();
+      });
+    }
+
+    if (window.matchMedia) {
+      var mq = window.matchMedia('print');
+      var onChange = function (e) {
+        if (e.matches) { mirror(); } else { document.body.classList.remove('print-bc'); }
+      };
+      if (mq.addEventListener) { mq.addEventListener('change', onChange); }
+      else if (mq.addListener) { mq.addListener(onChange); }
+    }
+  })();
+  </script>
+</body>
+</html>
