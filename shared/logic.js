@@ -1630,6 +1630,415 @@
     return { ok: true, mnemonic: op.m, format: 'I', fields: fields, text: text };
   }
 
+  /* ============================================================
+     WEEK 8 -- Memory: the RAM matrix and MIPS load/store (CSCLogic.mem)
+     ============================================================
+     Added 2026-09-23.
+
+     WHY THIS IS IN THE SHARED KERNEL. Standards Section 8's test is two
+     or more files. Five need it: the RAM Byte Bench (01-the-ram-byte),
+     the RAM Matrix Bench (02-the-matrix), the Memory Bench
+     (03-load-and-store), the Array Walker (04-arrays) and the Week 8
+     test suite, which recomputes every worked value on the assignment.
+
+     NAMING DISCIPLINE. Every top-level name in this block starts with
+     `mem` or `MEM_`. Week 6 lost 42 assertions to an unprefixed
+     evaluate() shadowing CSCLogic.evaluate; the prefix is what makes
+     that structurally impossible rather than a matter of care.
+
+     WHAT THE HARDWARE HALF MODELS -- the student's Checkpoint 3, as Dave
+     built it in Fall 2025 (circuits-ram-summary.html and its figures):
+
+       RAM_BYTE   one REGISTER_8BIT plus the selection logic:
+                    sel = h AND v
+                    set = (sel AND s) OR reset
+                    en  = sel AND e
+                  pins h, v, i, s, e, reset -> o, mem
+       RAM_16X16  a MAR (one MEM_8BIT), two DECODER_4TO16, and 32
+                  RAM_BYTE instances in rows 0 and 1.
+                  address high nibble -> row decoder -> h
+                  address low nibble  -> column decoder -> v
+
+     THREE LOAD-BEARING BEHAVIOURS, in the same category as srSettle's
+     non-convergence, busResolve's contested bus and alu.evaluate's
+     floating opcode 111. week08-spa.test.js asserts all three.
+
+       1. An address in rows 2-15 selects NOTHING, so a read returns
+          o: null (floating), never 0. Designing for 256 bytes and
+          populating 32 is the week's honest engineering constraint, and
+          what an unpopulated address does is the proof of it.
+
+       2. A byte that has never been written reads back as null ('E' on
+          a Logisim probe), not 0. Week 5 taught that a fresh MEM_1BIT
+          shows E until first written; 32 bytes of RAM show 32 of them,
+          and `reset` with i = 00000000 is how a student clears them.
+
+       3. `reset` WRITES WHATEVER IS ON i INTO EVERY BYTE. It is ORed into
+          each byte's set line, so it is not a clear -- it is a broadcast
+          write. With i = 00000000 it clears; with i = 11111111 it fills.
+          Modelling it as "clear to zero" would teach the name rather than
+          the circuit.
+
+     WHAT THE SOFTWARE HALF MODELS -- MIPS as MARS runs it. Two facts
+     here correct the Fall 2025 page:
+
+       - MARS is LITTLE-ENDIAN. The byte at the lowest address of a word
+         is its least significant byte. Fall 2025 taught "MIPS is
+         big-endian" and built an Endianness Explorer on it, which gives
+         the wrong answer for every question a student then checks in
+         MARS. MIPS the architecture is bi-endian; MARS is little-endian
+         and that is what students see. Verified in MARS 4.5,
+         2026-09-23: .word 0x0A0B0C0D, lbu 0(addr) -> 0x0D.
+       - lw and sw require a word-aligned address. MARS raises a runtime
+         exception ("fetch address not aligned on word boundary") rather
+         than loading anything.
+     ============================================================ */
+
+  var MEM_GEOMETRY = {
+    rows: 16, cols: 16,
+    addressable: 256,
+    populatedRows: 2,
+    populated: 32,
+    dataBase: 0x10010000,   // MARS .data segment start
+    textBase: 0x00400000    // MARS .text segment start
+  };
+
+  /* Where an 8-bit RAM address lands in the matrix.
+     High nibble = row (drives h), low nibble = column (drives v). */
+  function memSplit(address) {
+    var a = address & 255;
+    var row = (a >> 4) & 15, col = a & 15;
+    return {
+      address: a,
+      row: row,
+      col: col,
+      rowBits: intToWord(row, 4),     // MSB-first, for display
+      colBits: intToWord(col, 4),
+      index: a,                       // row * 16 + col, which IS the address
+      populated: row < MEM_GEOMETRY.populatedRows
+    };
+  }
+
+  /* Gate budget for decoding `addrBits` address bits into bytes, one way
+     or two. The Learning Progression's first version of this argument
+     counted only the decoders and left out the AND gate every byte needs
+     to combine its row and column lines -- it is in the student's
+     RAM_BYTE, and it is 256 of the total. Counted honestly the two-
+     decoder design still wins by more than three to one. */
+  function memDecodeCost(addrBits, bytesWired) {
+    var n = addrBits, half = n / 2;
+    var bytes = (bytesWired === undefined) ? (1 << n) : bytesWired;
+    var one = {
+      andGates: 1 << n, andInputs: n, notGates: n,
+      gateInputs: (1 << n) * n,
+      selectLines: 1 << n
+    };
+    var two = {
+      decoderAnds: 2 * (1 << half), decoderAndInputs: half, notGates: n,
+      perByteAnds: bytes,
+      gateInputs: 2 * (1 << half) * half + bytes * 2,
+      selectLines: 2 * (1 << half)
+    };
+    return { one: one, two: two };
+  }
+
+  /* RAM_BYTE, one evaluation.
+       q     the stored byte, MSB-first bits, or null if never written
+       ctrl  { h, v, i: [8 bits], s, e, reset }
+     Returns { sel, set, en, q, mem, o, driving }.
+       mem  the monitor output -- always the stored byte (null = E)
+       o    the bus port -- the stored byte when en = 1, else null */
+  function memRamByte(q, ctrl) {
+    var sel = (ctrl.h && ctrl.v) ? 1 : 0;
+    var set = ((sel && ctrl.s) || ctrl.reset) ? 1 : 0;
+    var en  = (sel && ctrl.e) ? 1 : 0;
+    var next = q ? q.slice() : null;
+    if (set) { next = memWord(ctrl.i, 1, q || [0,0,0,0,0,0,0,0]).q; }
+    var drives = en === 1 && next !== null;
+    return {
+      sel: sel, set: set, en: en,
+      q: next,
+      mem: next ? next.slice() : null,
+      /* An enabled byte that has never been written is driving E, not
+         floating. Kept distinct from `driving: false` so the widget can
+         say which. */
+      o: drives ? next.slice() : null,
+      driving: en === 1,
+      unwritten: next === null
+    };
+  }
+
+  /* RAM_16X16 with its MAR. A stateful object, because the circuit is.
+       step({ address, sa, i, s, e, reset })   all fields optional
+     Order within one step matches the circuit: the MAR is a transparent
+     latch, so while sa = 1 the decoders see the NEW address before any
+     set pulse lands. That is exactly why the address must not change
+     while s is high -- and the model reproduces the hazard rather than
+     hiding it. */
+  function memRam() {
+    var bytes = [], i;
+    for (i = 0; i < MEM_GEOMETRY.populated; i++) { bytes.push(null); }
+    var st = { mar: null, bytes: bytes };
+
+    function step(c) {
+      c = c || {};
+      var iv = (c.i === undefined) ? 0 : (c.i & 255);
+      var iBits = intToWord(iv, 8);
+      if (c.sa) { st.mar = (c.address === undefined ? 0 : c.address) & 255; }
+
+      var rowLines = null, colLines = null, where = null;
+      if (st.mar !== null) {
+        where = memSplit(st.mar);
+        /* decode() is LSB-first and built as an AND of polarities --
+           the Week 3 construction, not an index lookup. */
+        rowLines = decode(intToBits(where.row, 4));
+        colLines = decode(intToBits(where.col, 4));
+      }
+
+      var wrote = [], drivers = [], selected = null, r, k, res;
+      for (r = 0; r < MEM_GEOMETRY.populatedRows; r++) {
+        for (k = 0; k < MEM_GEOMETRY.cols; k++) {
+          var idx = r * 16 + k;
+          res = memRamByte(st.bytes[idx], {
+            h: rowLines ? rowLines[r] : 0,
+            v: colLines ? colLines[k] : 0,
+            i: iBits, s: c.s ? 1 : 0, e: c.e ? 1 : 0, reset: c.reset ? 1 : 0
+          });
+          if (res.set) { wrote.push(idx); }
+          if (res.sel) { selected = idx; }
+          st.bytes[idx] = res.q;
+          /* An enabled, never-written byte drives E. busResolve needs an
+             array to copy, so E travels as a marked one. */
+          drivers.push({ driving: res.driving, bits: res.o ? res.o : ['E','E','E','E','E','E','E','E'] });
+        }
+      }
+      var bus = busResolve(drivers);
+      var o = null, oState = 'float';
+      if (bus.state === 'driven') {
+        if (bus.bits[0] === 'E') { oState = 'E'; }
+        else { o = wordToInt(bus.bits); oState = 'driven'; }
+      } else if (bus.state === 'conflict') {
+        oState = 'conflict';   // unreachable with one-hot decoding; asserted in the suite
+      }
+      return {
+        mar: st.mar,
+        where: where,
+        rowLines: rowLines,
+        colLines: colLines,
+        selected: selected,            // populated byte index, or null
+        wrote: wrote,
+        o: o,
+        oState: oState                 // 'driven' | 'float' | 'E' | 'conflict'
+      };
+    }
+
+    function peek(index) {
+      var q = st.bytes[index];
+      return q === null || q === undefined ? null : wordToInt(q);
+    }
+
+    return { step: step, peek: peek, state: st };
+  }
+
+  /* ---------- MIPS side ---------- */
+
+  function memSext16(v) { v = v & 0xFFFF; return (v & 0x8000) ? v - 0x10000 : v; }
+
+  /* The effective address of a base + offset access.
+     Returns { address, offsetFits } -- the offset must fit a signed 16-bit
+     immediate, because it IS the immediate field of the I-type word. */
+  function memEffective(base, offset) {
+    var fits = offset >= -32768 && offset <= 32767;
+    return { address: ((base >>> 0) + offset) >>> 0, offsetFits: fits };
+  }
+
+  function memAligned(address, size) { return ((address >>> 0) % size) === 0; }
+
+  /* A loaded byte widened to 32 bits, the lb / lbu pair.
+     Same pair Week 6 taught for immediates: sign-extend or zero-extend. */
+  function memExtendByte(b, signed) {
+    b = b & 255;
+    if (signed && (b & 0x80)) { return (b | 0xFFFFFF00) >>> 0; }
+    return b;
+  }
+
+  /* Little-endian, as MARS stores it. */
+  function memWordToBytes(v) {
+    v = v >>> 0;
+    return [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255];
+  }
+  function memBytesToWord(b) {
+    return ((b[0] & 255) | ((b[1] & 255) << 8) | ((b[2] & 255) << 16) | ((b[3] & 255) << 24)) >>> 0;
+  }
+
+  /* The five load/store instructions, as Week 8 teaches them. lw and sw
+     are ALSO in CSCLogic.mips.i (Week 5 encoded them); lb, lbu and sb
+     are deliberately NOT added there -- that table renders on published
+     Week 5 pages, and adding rows to it changes pages students have
+     already worked through. Pending Dave's ruling (Week 8 spec, Open
+     Decision 2). */
+  var MEM_LOADSTORE = [
+    { m: 'lw',  opcode: '100011', size: 4, dir: 'load',  ext: null,   week: 8, syntax: 'lw $rt, offset($rs)',  desc: 'load the 4-byte word at rs + offset into rt' },
+    { m: 'sw',  opcode: '101011', size: 4, dir: 'store', ext: null,   week: 8, syntax: 'sw $rt, offset($rs)',  desc: 'store all 4 bytes of rt at rs + offset' },
+    { m: 'lb',  opcode: '100000', size: 1, dir: 'load',  ext: 'sign', week: 8, syntax: 'lb $rt, offset($rs)',  desc: 'load one byte, SIGN-extended to 32 bits' },
+    { m: 'lbu', opcode: '100100', size: 1, dir: 'load',  ext: 'zero', week: 8, syntax: 'lbu $rt, offset($rs)', desc: 'load one byte, ZERO-extended to 32 bits' },
+    { m: 'sb',  opcode: '101000', size: 1, dir: 'store', ext: null,   week: 8, syntax: 'sb $rt, offset($rs)',  desc: 'store the low byte of rt at rs + offset' }
+  ];
+
+  /* ---------- A small MIPS machine, for the two Week 8 widgets ----------
+     Enough MIPS to run the programs Week 8 shows, and no more. It is not
+     an assembler: it runs source lines one at a time and reports each
+     step, which is what the Memory Bench and the Array Walker display.
+
+     Data directives: .word .byte .space .asciiz (with automatic word
+     alignment for .word, as MARS does). Text: la li move lw sw lb lbu sb
+     add addi sub and or slt sll srl beq bne j.
+
+     Every result that appears on a page is ALSO checked against real
+     MARS output in week08-spa.test.js -- the expected values there came
+     from running MARS 4.5, not from this interpreter. */
+  function memReg(tok) {
+    var r = regByName((tok || '').trim());
+    return r ? r.n : -1;
+  }
+
+  function memParseNum(s) {
+    s = String(s).trim();
+    if (/^'.'$/.test(s)) { return s.charCodeAt(1); }
+    if (/^-?0x[0-9a-f]+$/i.test(s)) { return s[0] === '-' ? -parseInt(s.slice(1), 16) : parseInt(s, 16); }
+    if (/^-?\d+$/.test(s)) { return parseInt(s, 10); }
+    return NaN;
+  }
+
+  function memMachine(source) {
+    var lines = String(source).split('\n');
+    var data = {}, labels = {}, dataLabels = {};
+    var text = [];
+    var seg = 'text', dp = MEM_GEOMETRY.dataBase, errors = [];
+    var mem = {};   // byte address -> value (0..255)
+
+    function putByte(a, v) { mem[a >>> 0] = v & 255; }
+    function getByte(a) { var v = mem[a >>> 0]; return v === undefined ? 0 : v; }
+
+    lines.forEach(function (raw, ln) {
+      var line = raw.replace(/#.*$/, '');
+      var m;
+      if (/^\s*\.data\b/.test(line)) { seg = 'data'; return; }
+      if (/^\s*\.text\b/.test(line)) { seg = 'text'; return; }
+      var lab = null;
+      m = /^\s*([A-Za-z_][\w]*)\s*:(.*)$/.exec(line);
+      if (m) { lab = m[1]; line = m[2]; }
+      if (seg === 'data') {
+        m = /^\s*\.(word|byte|space|asciiz)\s+(.*)$/.exec(line);
+        if (m && m[1] === 'word') { dp = (dp + 3) & ~3; }
+        if (lab) { dataLabels[lab] = dp >>> 0; }
+        if (!m) { return; }
+        if (m[1] === 'word') {
+          m[2].split(',').forEach(function (t) {
+            var b = memWordToBytes(memParseNum(t));
+            for (var q = 0; q < 4; q++) { putByte(dp + q, b[q]); }
+            dp += 4;
+          });
+        } else if (m[1] === 'byte') {
+          m[2].split(',').forEach(function (t) { putByte(dp, memParseNum(t)); dp += 1; });
+        } else if (m[1] === 'space') {
+          var n = memParseNum(m[2]);
+          for (var q = 0; q < n; q++) { putByte(dp + q, 0); }
+          dp += n;
+        } else if (m[1] === 'asciiz') {
+          var sm = /"((?:[^"\\]|\\.)*)"/.exec(m[2]);
+          var s = sm ? sm[1].replace(/\\n/g, '\n') : '';
+          for (var c = 0; c < s.length; c++) { putByte(dp++, s.charCodeAt(c)); }
+          putByte(dp++, 0);
+        }
+        return;
+      }
+      if (lab) { labels[lab] = text.length; }
+      if (line.trim() === '') { return; }
+      text.push({ src: raw.replace(/\s+$/, ''), code: line.trim(), line: ln });
+    });
+
+    var R = [], k;
+    for (k = 0; k < 32; k++) { R.push(0); }
+    R[28] = 0x10008000; R[29] = 0x7FFFEFFC;
+    var pc = 0, steps = 0, halted = false;
+
+    function w32(v) { return v | 0; }
+    function setR(n, v) { if (n !== 0) { R[n] = w32(v); } }
+    function addrOf(tok) {
+      var m = /^(-?(?:0x[0-9a-f]+|\d+))?\s*\(\s*(\$\w+)\s*\)$/i.exec(tok.trim());
+      if (m) { return { ea: ((R[memReg(m[2])] >>> 0) + (m[1] ? memParseNum(m[1]) : 0)) >>> 0, base: m[2], off: m[1] ? memParseNum(m[1]) : 0 }; }
+      if (dataLabels.hasOwnProperty(tok.trim())) { return { ea: dataLabels[tok.trim()], label: tok.trim() }; }
+      return null;
+    }
+
+    function step() {
+      if (halted || pc >= text.length) { halted = true; return { halted: true }; }
+      var ins = text[pc], parts, op, a, ea, rec = { index: pc, src: ins.src, line: ins.line };
+      parts = ins.code.replace(/,/g, ' , ').split(/\s+/).filter(Boolean);
+      op = parts[0].toLowerCase();
+      var args = ins.code.slice(parts[0].length).split(',').map(function (t) { return t.trim(); });
+      var next = pc + 1;
+      function need(ok) { if (!ok) { throw new Error('cannot run: ' + ins.code); } }
+      switch (op) {
+        case 'la':   a = dataLabels[args[1]]; need(a !== undefined); setR(memReg(args[0]), a); rec.wrote = args[0]; break;
+        case 'li':   setR(memReg(args[0]), memParseNum(args[1])); rec.wrote = args[0]; break;
+        case 'move': setR(memReg(args[0]), R[memReg(args[1])]); rec.wrote = args[0]; break;
+        case 'add':  setR(memReg(args[0]), R[memReg(args[1])] + R[memReg(args[2])]); rec.wrote = args[0]; break;
+        case 'sub':  setR(memReg(args[0]), R[memReg(args[1])] - R[memReg(args[2])]); rec.wrote = args[0]; break;
+        case 'and':  setR(memReg(args[0]), R[memReg(args[1])] & R[memReg(args[2])]); rec.wrote = args[0]; break;
+        case 'or':   setR(memReg(args[0]), R[memReg(args[1])] | R[memReg(args[2])]); rec.wrote = args[0]; break;
+        case 'slt':  setR(memReg(args[0]), R[memReg(args[1])] < R[memReg(args[2])] ? 1 : 0); rec.wrote = args[0]; break;
+        case 'addi': setR(memReg(args[0]), R[memReg(args[1])] + memParseNum(args[2])); rec.wrote = args[0]; break;
+        case 'sll':  setR(memReg(args[0]), R[memReg(args[1])] << memParseNum(args[2])); rec.wrote = args[0]; break;
+        case 'srl':  setR(memReg(args[0]), R[memReg(args[1])] >>> memParseNum(args[2])); rec.wrote = args[0]; break;
+        case 'beq':  if (R[memReg(args[0])] === R[memReg(args[1])]) { need(labels[args[2]] !== undefined); next = labels[args[2]]; rec.taken = true; } else { rec.taken = false; } break;
+        case 'bne':  if (R[memReg(args[0])] !== R[memReg(args[1])]) { need(labels[args[2]] !== undefined); next = labels[args[2]]; rec.taken = true; } else { rec.taken = false; } break;
+        case 'j':    need(labels[args[0]] !== undefined); next = labels[args[0]]; rec.taken = true; break;
+        case 'lw': case 'sw': case 'lb': case 'lbu': case 'sb':
+          a = addrOf(args[1]); need(a); ea = a.ea;
+          rec.ea = ea; rec.mem = op;
+          var size = (op === 'lw' || op === 'sw') ? 4 : 1;
+          if (!memAligned(ea, size)) {
+            halted = true;
+            rec.fault = 'address not aligned on word boundary';
+            return rec;
+          }
+          if (op === 'lw') { setR(memReg(args[0]), memBytesToWord([getByte(ea), getByte(ea + 1), getByte(ea + 2), getByte(ea + 3)])); rec.wrote = args[0]; }
+          else if (op === 'lb')  { setR(memReg(args[0]), memExtendByte(getByte(ea), true)); rec.wrote = args[0]; }
+          else if (op === 'lbu') { setR(memReg(args[0]), memExtendByte(getByte(ea), false)); rec.wrote = args[0]; }
+          else if (op === 'sw') { var b = memWordToBytes(R[memReg(args[0])]); for (var q = 0; q < 4; q++) { putByte(ea + q, b[q]); } }
+          else if (op === 'sb') { putByte(ea, R[memReg(args[0])] & 255); }
+          rec.size = size;
+          break;
+        case 'syscall': halted = true; rec.halted = true; break;
+        default: throw new Error('not supported by the Week 8 machine: ' + op);
+      }
+      pc = next; steps++;
+      if (pc >= text.length) { halted = true; }
+      return rec;
+    }
+
+    function run(limit) {
+      limit = limit || 10000;
+      var n = 0, r;
+      while (!halted && n < limit) { r = step(); n++; if (r && r.fault) { return r; } }
+      return { halted: halted, steps: n };
+    }
+
+    return {
+      step: step, run: run,
+      reg: function (name) { var n = typeof name === 'number' ? name : memReg(name); return R[n]; },
+      byte: getByte,
+      word: function (a) { return memBytesToWord([getByte(a), getByte(a + 1), getByte(a + 2), getByte(a + 3)]) | 0; },
+      label: function (l) { return dataLabels[l]; },
+      labels: dataLabels,
+      text: text,
+      pc: function () { return pc; },
+      halted: function () { return halted; }
+    };
+  }
+
   /* ---------- Export ---------- */
 
   root.CSCLogic = {
@@ -1691,6 +2100,24 @@
       cmp8: cmp8,
       isZero: isZero,
       evaluate: aluEvaluate
+    },
+
+    /* Week 8 additions -- the RAM matrix, and MIPS memory as MARS runs
+       it. Every name is mem-prefixed; see the block comment. */
+    mem: {
+      GEOMETRY: MEM_GEOMETRY,
+      LOADSTORE: MEM_LOADSTORE,
+      split: memSplit,
+      decodeCost: memDecodeCost,
+      ramByte: memRamByte,
+      ram: memRam,
+      effective: memEffective,
+      aligned: memAligned,
+      sext16: memSext16,
+      extendByte: memExtendByte,
+      wordToBytes: memWordToBytes,
+      bytesToWord: memBytesToWord,
+      machine: memMachine
     },
 
     /* Week 7 additions -- control-flow address arithmetic and the
