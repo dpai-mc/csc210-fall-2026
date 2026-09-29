@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="lab-07">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210L — Lab 7: Which Way Is Less?</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ----------
+       .lab-*, .scope-table, .logisim-steps, .callout--*, .points-badge,
+       .pin-table, .table-scroll and the checklist components all live
+       in shared/style.css.
+
+       .live-tag, .obs-table and .bench-sketch are carried here as copies
+       of lab-06's, not promoted. Promoting them means editing published
+       pages, and past content is never modified (Dave, 2026-09-15).
+       Consolidate forward only: a new page carries its own copy.
+
+       This page loads no shared kernel and has no widget. The
+       interactive part of this lab is the bench the student builds in
+       Logisim and the program they write in MARS; a simulated
+       comparator on the page would fill in the observation sheet. */
+
+    /* Learning-page titles. Named, never linked -- Course Standards §5. */
+    cite { font-style: normal; font-weight: 600; color: var(--color-text); }
+
+    .live-tag {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: var(--fs-xs);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      padding: 2px var(--space-sm);
+      border-radius: 999px;
+      vertical-align: middle;
+      margin-left: var(--space-sm);
+    }
+    .live-tag--together { background: var(--color-success); color: #fff; }
+    .live-tag--solo     { background: var(--color-danger, #b3261e); color: #fff; }
+
+    .obs-table { width: 100%; border-collapse: collapse; margin: var(--space-md) 0; }
+    .obs-table th, .obs-table td {
+      border: 1px solid var(--color-border);
+      padding: var(--space-sm);
+      text-align: left;
+      vertical-align: top;
+      font-size: var(--fs-sm);
+    }
+    .obs-table th { background: var(--color-code-bg); font-weight: 700; }
+    .obs-table td.fill {
+      background: var(--color-code-bg);
+      min-width: 44px;
+      height: 46px;
+    }
+    .obs-table td.fill--wide { min-width: 110px; }
+    .obs-table td.given { font-family: var(--font-mono); white-space: nowrap; }
+    .obs-table caption {
+      caption-side: top;
+      text-align: left;
+      font-weight: 700;
+      padding-bottom: var(--space-sm);
+    }
+
+    .bench-sketch { width: 100%; max-width: 640px; height: auto; display: block; margin: var(--space-md) auto; }
+    .bench-sketch .wire { stroke: var(--color-text); stroke-width: 3; fill: none; }
+    .bench-sketch .box  { fill: var(--color-surface); stroke: var(--color-text); stroke-width: 2; }
+    .bench-sketch .det  { fill: var(--color-code-bg); stroke: var(--color-text-muted); stroke-width: 2; stroke-dasharray: 5 3; }
+    .bench-sketch .stub { stroke: var(--color-text-muted); stroke-width: 2; fill: none; }
+    .bench-sketch .lbl  { font-family: var(--font-mono); font-size: 14px; fill: var(--color-text); }
+    .bench-sketch .lbl--sm { font-size: 11px; fill: var(--color-text-muted); }
+
+    @media print {
+      .sp-header, .sp-footer, .no-print { display: none; }
+      .lab-step, .obs-table, .lab-verify { break-inside: avoid; }
+      .table-scroll { overflow: visible; }
+      .obs-table code { font-size: inherit; }
+      .obs-table th, .obs-table td { font-size: 9px; padding: 3px; }
+      .obs-table td.fill, .obs-table td.fill--wide { min-width: 0; }
+      .obs-table td.given { white-space: normal; }
+      a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== Header ==================== -->
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210L — Computer Organization &amp; Architecture Lab</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Lab 7 &rsaquo; <span>Which Way Is Less?</span>
+    </nav>
+  </header>
+
+  <!-- ==================== Main ==================== -->
+  <main class="sp-main sp-main--full">
+
+    <h1>Lab 7 — Which Way Is Less? Branch Conditions, Two Readings, and a Stack You Can Watch</h1>
+
+    <div class="lab-meta">
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Lab Session</span>
+        <span class="lab-meta__value">Tuesday, Sep 29, 2026</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">In-Class Time</span>
+        <span class="lab-meta__value">90 minutes &mdash; 35 Logisim, 55 MARS</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Format</span>
+        <span class="lab-meta__value">Live on Zoom</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Today's build</span>
+        <span class="lab-meta__value"><code>BRANCH_BENCH</code></span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Assignment</span>
+        <span class="lab-meta__value">Completion Check 7 &mdash; 10 pts</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Due</span>
+        <span class="lab-meta__value lab-meta__value--due">Sun, Oct 4 &middot; 11:59 PM</span>
+      </div>
+    </div>
+
+    <div class="callout callout--aha">
+      <div class="callout__title">What This Session Is, and What It Is Not</div>
+      <p><strong>This lab does not assemble the ALU, and it does not write the assignment's procedures.</strong> Checkpoint 2b and the four procedures of Part D are Assignment 7, built from the assignment page on your own time. The build steps, the test values and the check table are there, not here.</p>
+      <p><strong>What we build here is an instrument and a program that nothing grades.</strong> <code>BRANCH_BENCH</code> takes one of your Week 6 comparators and turns its two flags into an answer for every branch you can write &mdash; real or pseudo. Then, in MARS, you write a small procedure pair of your own, watch the program counter jump and the stack move, and break the calling convention twice on purpose to see what each rule is protecting.</p>
+    </div>
+
+    <div class="callout callout--hook">
+      <div class="callout__title">The Question Today Answers</div>
+      <p><strong>What you have:</strong> A comparator from Week 6 with two outputs, <code>al</code> and <code>eq</code>. This week's learning pages say those two wires are where every MIPS comparison ends up: <code>blt</code> becomes <code>slt</code> plus a branch, and <code>slt</code> is answered by the comparator.</p>
+      <p><strong>What you cannot do yet:</strong> Say, for any pair of bytes, which of the six comparison branches would be taken &mdash; and whether your comparator and MIPS would agree about it. Last week you found that the adder has two readings of every byte and computes only one. <em>Is the comparator any different?</em></p>
+      <p><strong>What you can do after today:</strong> Read a branch condition straight off two flags, know exactly which pairs of numbers your comparator and MIPS disagree on and why, and point at the stack in MARS and say what each saved word is for.</p>
+    </div>
+
+    <!-- ============================================================
+         Outcomes
+         ============================================================ -->
+    <section id="sec-outcomes">
+      <h2>What You Will Be Able to Do</h2>
+
+      <ol>
+        <li><strong>Build a test bench</strong> that turns a comparator's two flags into the answer for all six comparison branches.</li>
+        <li><strong>Measure the comparator against MIPS</strong> on six pairs, and find the pairs where they disagree.</li>
+        <li><strong>Design a two-gate fix</strong> that makes an unsigned comparator answer a signed question.</li>
+        <li><strong>Write a leaf and a non-leaf procedure to a specification</strong>, and read the program counter, <code>$ra</code> and the stack as the program runs.</li>
+        <li><strong>Break the calling convention on purpose</strong> and say which rule each break violated.</li>
+      </ol>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">CS301 Reference</div>
+        <p>Branches, procedure calls and the stack are covered in Saylor CS301 <strong>Unit 2: Instructions — Hardware Language</strong>. Log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> and open Unit 2 as supporting reading.</p>
+        <p>What CS301 does not do is have you put your own comparator next to a MIPS processor and count the pairs on which they disagree. That part is this session's own.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Before you arrive
+         ============================================================ -->
+    <section id="sec-before">
+      <h2>Before You Arrive</h2>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Bring <code>XOR_CMP_8BIT</code> Working</div>
+        <p>Today's bench <strong>instantiates</strong> your Week 6 <code>XOR_CMP_8BIT</code> twice. It was due with Assignment 6, so you should have it. It does <strong>not</strong> need your assembled <code>ALU_8BIT</code> &mdash; that is this week's assignment and you may not have finished it, which is fine.</p>
+        <p><strong>If your comparator is not working, come anyway and come early.</strong> Ten minutes before the session with someone looking at your file beats an hour alone.</p>
+      </div>
+
+      <p><strong>Read section 7.7 of <cite>Deciding</cite></strong> (&ldquo;<code>blt</code> does not exist&rdquo;) and section 7.11 of <cite>Procedures</cite> (the calling convention), both in this week's Canvas module. Today is those two sections with your hands on them. The pages are named rather than linked, because each learning page is embedded in its own Canvas page; you open them from the module list.</p>
+
+      <p><strong>Bring your <code>CSC210_YourName.circ</code> file</strong> and have <strong>MARS</strong> open. Today adds one tab to the file and one <code>.asm</code> to your folder.</p>
+
+      <p><strong>Print this page, or have it open on a second screen.</strong> The observation sheet is what you submit, and you fill it in as you go.</p>
+    </section>
+
+    <!-- ============================================================
+         Scope
+         ============================================================ -->
+    <section id="sec-scope">
+      <h2>What Is Here, and What Is on the Assignment</h2>
+
+      <p>The two do not overlap, and that is deliberate. Assignment 7 grades your ALU, your arithmetic and your four procedures. This session uses one Week 6 component and one small program of your own, and measures what they do.</p>
+
+      <div class="table-scroll">
+      <table class="scope-table">
+        <thead>
+          <tr><th>Work</th><th>Where it happens</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Checkpoint 2b &mdash; assembling <code>ALU_8BIT</code></td>
+            <td class="scope-solo">Assignment 7 Part A &mdash; not here</td>
+            <td>Pin names, wiring steps, the eight-opcode table and the checklist are all on that page. Today does not open <code>ALU_8BIT</code>.</td>
+          </tr>
+          <tr>
+            <td><strong><code>BRANCH_BENCH</code></strong></td>
+            <td class="scope-lab"><strong>Built here, and only here</strong></td>
+            <td>One comparator, a handful of gates, six branch outputs, and a signed fix. Not on any assignment, not on any checkpoint, not in your CPU.</td>
+          </tr>
+          <tr>
+            <td>Six pairs, compared two ways</td>
+            <td class="scope-lab">Here</td>
+            <td>The values are chosen to be different from every value on the assignment, so today is practice rather than a preview of answers.</td>
+          </tr>
+          <tr>
+            <td>Written reasoning; offsets, fields and expansions</td>
+            <td class="scope-solo">Assignment 7 Parts B and C</td>
+            <td>Today touches the same ideas &mdash; you will read one branch offset off your own program &mdash; but none of today's questions is one of those, and nothing you write here is collected there.</td>
+          </tr>
+          <tr>
+            <td>MARS: the four assignment procedures</td>
+            <td class="scope-solo">Assignment 7 Part D</td>
+            <td>Different procedures, with their own specification and check table.</td>
+          </tr>
+          <tr>
+            <td>MARS: <code>classify</code> and <code>report</code>, two breaks, three questions</td>
+            <td class="scope-lab">Here</td>
+            <td>You get a specification, not code. The questions are about the bench you built this morning and the stack you watched. You submit the <code>.asm</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Part 1 — File check
+         ============================================================ -->
+    <section id="sec-part-1">
+      <h2>Part 1 — File Check <span class="points-badge">~5 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <p>Open <code>CSC210_YourName.circ</code>. Confirm everything from Labs 1 through 6 is still a tab in this one file, and that <code>XOR_CMP_8BIT</code> is among them.</p>
+
+      <div class="lab-step">
+        <div class="lab-step__num">1</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Sixty-second comparator check</div>
+          <p>Open <code>XOR_CMP_8BIT</code>. Put <code>00000110</code> on <code>a</code> and <code>00000100</code> on <code>b</code>: <code>al</code> should read 1 and <code>eq</code> 0. Swap them: <code>al</code> 0, <code>eq</code> 0. Make them equal: <code>al</code> 0, <code>eq</code> 1. If any of the three is wrong, fix the comparator before building on it &mdash; everything today reads those two wires.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">2</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Create today's tab</div>
+          <p><strong>Project &rarr; Add Circuit&hellip;</strong>, named exactly:</p>
+          <pre><code>BRANCH_BENCH</code></pre>
+          <p>Like <code>BUS_DEMO</code> and <code>ARITH_BENCH</code>, this is a test bench, not a component. Nothing instantiates it.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Part 2 — Build the bench
+         ============================================================ -->
+    <section id="sec-part-2">
+      <h2>Part 2 — Build <code>BRANCH_BENCH</code> <span class="points-badge">~12 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <p>Two bytes in. Two flags from your comparator. Six outputs, one per comparison branch, each reading 1 exactly when that branch would be taken for <code>a</code> and <code>b</code>.</p>
+
+      <svg class="bench-sketch" viewBox="0 0 640 260" role="img" aria-labelledby="bench-title bench-desc">
+        <title id="bench-title">BRANCH_BENCH: one comparator, and gates that turn its two flags into six branch answers</title>
+        <desc id="bench-desc">Two 8-bit input pins, a and b, on the left, feed an XOR_CMP_8BIT instance. Its two flag outputs, al and eq, run right into a dashed box labelled condition gates, which produces six 1-bit outputs on the right named blt, bgt, ble, bge, beq and bne. Below, a second path takes a and b through a dashed box labelled sign fix into a second XOR_CMP_8BIT, whose output leads to a seventh output named sblt.</desc>
+
+        <text class="lbl" x="14" y="64">a</text>
+        <text class="lbl" x="14" y="104">b</text>
+        <line class="wire" x1="30" y1="60" x2="170" y2="60"></line>
+        <line class="wire" x1="30" y1="100" x2="170" y2="100"></line>
+
+        <rect class="box" x="170" y="40" width="150" height="80" rx="4"></rect>
+        <text class="lbl" x="245" y="76" text-anchor="middle">XOR_CMP_8BIT</text>
+        <text class="lbl lbl--sm" x="245" y="98" text-anchor="middle">al &#183; eq</text>
+
+        <line class="wire" x1="320" y1="64" x2="380" y2="64"></line>
+        <line class="wire" x1="320" y1="96" x2="380" y2="96"></line>
+        <text class="lbl lbl--sm" x="330" y="58">al</text>
+        <text class="lbl lbl--sm" x="330" y="112">eq</text>
+
+        <rect class="det" x="380" y="20" width="140" height="130" rx="4"></rect>
+        <text class="lbl lbl--sm" x="450" y="88" text-anchor="middle">condition gates</text>
+
+        <line class="stub" x1="520" y1="32" x2="580" y2="32"></line><text class="lbl" x="586" y="36">blt</text>
+        <line class="stub" x1="520" y1="54" x2="580" y2="54"></line><text class="lbl" x="586" y="58">bgt</text>
+        <line class="stub" x1="520" y1="76" x2="580" y2="76"></line><text class="lbl" x="586" y="80">ble</text>
+        <line class="stub" x1="520" y1="98" x2="580" y2="98"></line><text class="lbl" x="586" y="102">bge</text>
+        <line class="stub" x1="520" y1="120" x2="580" y2="120"></line><text class="lbl" x="586" y="124">beq</text>
+        <line class="stub" x1="520" y1="142" x2="580" y2="142"></line><text class="lbl" x="586" y="146">bne</text>
+
+        <line class="stub" x1="60" y1="60" x2="60" y2="200"></line>
+        <line class="stub" x1="90" y1="100" x2="90" y2="222"></line>
+        <line class="stub" x1="60" y1="200" x2="110" y2="200"></line>
+        <line class="stub" x1="90" y1="222" x2="110" y2="222"></line>
+        <rect class="det" x="110" y="186" width="90" height="50" rx="4"></rect>
+        <text class="lbl lbl--sm" x="155" y="215" text-anchor="middle">sign fix</text>
+        <line class="stub" x1="200" y1="211" x2="250" y2="211"></line>
+        <rect class="box" x="250" y="186" width="150" height="50" rx="4"></rect>
+        <text class="lbl" x="325" y="216" text-anchor="middle">XOR_CMP_8BIT</text>
+        <line class="stub" x1="400" y1="211" x2="580" y2="211"></line>
+        <text class="lbl" x="586" y="215">sblt</text>
+      </svg>
+
+      <ol class="logisim-steps">
+          <li>Add two <strong>8-bit input pins</strong>, <code>a</code> and <code>b</code>, on the left. On each, add <strong>two probes</strong>: one with <strong>Radix</strong> set to <strong>unsigned decimal</strong>, one to <strong>signed decimal</strong> &mdash; as on last week's bench.</li>
+          <li>Place <strong>one <code>XOR_CMP_8BIT</code> instance</strong> from the project pane. <code>a</code> into its <code>a</code>, <code>b</code> into its <code>b</code>. Leave its <code>xor</code> output unconnected; today uses only the two flags.</li>
+          <li>Add six <strong>1-bit output pins</strong>, named exactly <code>blt</code>, <code>bgt</code>, <code>ble</code>, <code>bge</code>, <code>beq</code> and <code>bne</code>. Each will read 1 when that branch, with <code>a</code> as its first register and <code>b</code> as its second, would be taken.</li>
+        </ol>
+
+      <h3>The condition gates &mdash; you design these</h3>
+
+      <p>Your comparator gives you two facts: <code>al</code> says <em>a is larger than b</em>, and <code>eq</code> says <em>a equals b</em>. Every one of the six conditions is a statement about those two facts. Write each as a sentence first &mdash; &ldquo;a is less than b exactly when a is not larger <em>and</em> &hellip;&rdquo; &mdash; then turn the sentences into gates.</p>
+
+      <div class="lab-step">
+        <div class="lab-step__num">3</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Six outputs from two wires</div>
+          <p>Two of the six need no gate at all &mdash; they are one of the flags, straight through. The other four each need <strong>one gate</strong> from the Gates folder. Work out all six on the observation sheet's design table before you place anything.</p>
+        </div>
+      </div>
+
+      <details class="lab-troubleshoot">
+        <summary>Stuck on <code>blt</code>? Open this after you have tried.</summary>
+        <p>If <code>a</code> is not larger than <code>b</code>, and <code>a</code> is not equal to <code>b</code>, there is only one possibility left. You want a 1 when <em>both</em> flags are 0, and there is a single gate whose truth table is exactly that.</p>
+        <p>The learning page puts it the other way round: <code>slt $at, $t0, $t1</code> asks the comparator whether <code>$t1</code> is larger than <code>$t0</code> &mdash; the same flag with the operands swapped. Your gate and the page's swap give the same answer. You will test that claim in Part 4.</p>
+      </details>
+
+      <div class="lab-verify">
+        <div class="lab-verify__title">Verify before going on &mdash; two minutes</div>
+        <ol>
+          <li><code>a</code> = <code>00000111</code>, <code>b</code> = <code>00000111</code>. Exactly three outputs read 1: <code>ble</code>, <code>bge</code> and <code>beq</code>.</li>
+          <li><code>a</code> = <code>00000001</code>, <code>b</code> = <code>00001000</code>. Exactly three outputs read 1, and <code>blt</code> is one of them.</li>
+        </ol>
+        <p>If more than three outputs light for any pair, two of your conditions overlap where they should not &mdash; check the sentence you wrote for each.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Part 3 — Measure
+         ============================================================ -->
+    <section id="sec-part-3">
+      <h2>Part 3 — Six Pairs, Bench Against MIPS <span class="points-badge">~8 min</span><span class="live-tag live-tag--solo">Your own, then compare</span></h2>
+
+      <p>For each row of the observation sheet, set <code>a</code> and <code>b</code> and record <code>al</code>, <code>eq</code> and your bench's <code>blt</code>. Then fill in the last column yourself, by thinking rather than by poking: <strong>would MIPS's <code>blt</code> branch?</strong> MIPS compares registers as <strong>signed</strong> two's-complement numbers, so use the signed reading of each byte.</p>
+
+      <p>The inputs are given with both of their readings so you do not have to convert them. <strong>Do all six rows before looking for a pattern.</strong></p>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Compare With the Room &mdash; before you poke row 4</div>
+        <p><code>a</code> = <code>11111110</code>, <code>b</code> = <code>00000011</code>. <strong>Will your bench's <code>blt</code> read 1?</strong> Everybody answers yes or no, out loud or in the chat, before anyone sets the pins. Then set them.</p>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">4</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Find the rule</div>
+          <p>Mark every row where your bench's <code>blt</code> and MIPS's <code>blt</code> disagree. Then finish this sentence on the observation sheet: <em>my comparator and MIPS disagree exactly when &hellip;</em> Look at bit 7 of <code>a</code> and bit 7 of <code>b</code> on the rows you marked, and on the rows you did not.</p>
+          <p>Then one more: <strong>which reading of the bytes is your comparator actually using?</strong> Your probes will tell you.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Part 4 — Fix it, then break it
+         ============================================================ -->
+    <section id="sec-part-4">
+      <h2>Part 4 — Fix It, Then Break It <span class="points-badge">~10 min</span><span class="live-tag live-tag--solo">Your own, then compare</span></h2>
+
+      <p>Your comparator is not wrong. It answers the question it was built to answer. The trouble is that MIPS's <code>slt</code> asks a different one &mdash; and the difference only shows on some pairs. Here is a fix that costs two gates and a second comparator, and that you design.</p>
+
+      <div class="lab-step">
+        <div class="lab-step__num">5</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Make an unsigned comparator answer a signed question</div>
+          <p>Look again at your marked rows. On every row where the comparator was wrong, it was wrong for the same reason, and the reason lives entirely in <strong>one bit of each operand</strong>. Something done to those two bits &mdash; the same thing to each &mdash; before the comparator sees them makes it right on every row.</p>
+          <p>Build it: splitters on <code>a</code> and <code>b</code>, your change on the two bits, the bytes merged back, and a <strong>second <code>XOR_CMP_8BIT</code> instance</strong> fed with the changed bytes. From its <code>al</code> and your original <code>eq</code>, make one more 1-bit output named <code>sblt</code>, the same way you made <code>blt</code>.</p>
+          <p>Run all six rows again and record <code>sblt</code>. It should agree with MIPS on every one.</p>
+        </div>
+      </div>
+
+      <details class="lab-troubleshoot">
+        <summary>Stuck on the sign fix? Open this after you have tried.</summary>
+        <p>In an unsigned byte, bit 7 set means <em>large</em>. In a signed byte, bit 7 set means <em>negative</em> &mdash; the smallest numbers there are. The comparator's ordering is right about bits 6 to 0 in both readings; it only has bit 7 backwards. So turn bit 7 around on both operands &mdash; one NOT gate each &mdash; and the order the comparator computes becomes the signed order.</p>
+      </details>
+
+      <div class="lab-step">
+        <div class="lab-step__num">A</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Break it: swap the operands</div>
+          <p>Swap the two wires into your first comparator, so that <code>b</code> goes into its <code>a</code> and <code>a</code> into its <code>b</code>. Run <strong>row 1</strong> and <strong>row 3</strong> again and record all six branch outputs.</p>
+          <p><strong>Which outputs changed, and which did not?</strong> Record which ones traded places with each other. Then put the wires back.</p>
+          <p>In MIPS, <code>slt $at, $t0, $t1</code> and <code>slt $at, $t1, $t0</code> differ by nothing but this. It is the most common single error in hand-written comparisons, and it assembles without complaint.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Part 5 — MARS
+         ============================================================ -->
+    <section id="sec-part-5">
+      <h2>Part 5 — MARS: Watch the PC Jump and the Stack Move <span class="points-badge">~55 min</span><span class="live-tag live-tag--solo">Together, then your own</span></h2>
+
+      <p>The session turns ninety degrees. Your bench answers <em>whether</em> a branch would be taken; MARS will show you <em>what taking it does</em> &mdash; a new value written into the program counter &mdash; and what a procedure call does to <code>$ra</code> and to the stack.</p>
+
+      <h3>Write a program &mdash; the specification, not the code</h3>
+
+      <div class="callout callout--hook">
+        <div class="callout__title">Your Program</div>
+        <p>Write a MIPS program, in one file named <code>lab07_yourname.asm</code>, with two procedures and a top level:</p>
+        <ol>
+          <li><strong><code>classify</code></strong> &mdash; takes <code>$a0</code> and <code>$a1</code>, returns in <code>$v0</code>: <strong>&minus;1</strong> if <code>$a0</code> is less than <code>$a1</code>, <strong>0</strong> if they are equal, <strong>1</strong> if <code>$a0</code> is greater. It is a <strong>leaf</strong>. It compares with <strong><code>slt</code> and <code>beq</code>/<code>bne</code> only</strong> &mdash; no <code>blt</code>, <code>bgt</code> or the rest of that family &mdash; and its <strong>first <code>slt</code> writes <code>$t0</code></strong>. It may use <code>$t0</code>, <code>$t1</code> and <code>$v0</code>, and nothing else.</li>
+          <li><strong><code>report</code></strong> &mdash; takes <code>$a0</code> and <code>$a1</code>, calls <code>classify</code>, and prints one line: the first number, a space, one character (<code>&lt;</code>, <code>=</code> or <code>&gt;</code>), a space, the second number, and a newline. Because it calls another procedure <em>and</em> needs its arguments after that call, it needs a <strong>stack frame</strong>: save <code>$ra</code>, <code>$a0</code> and <code>$a1</code> on entry, restore them before returning, and return <code>$sp</code> to where it started.</li>
+          <li><strong>The top level</strong> calls <code>report</code> six times, with the six pairs from your observation sheet <em>as signed numbers</em> &mdash; the first pair is 45 and 18 &mdash; then exits cleanly.</li>
+        </ol>
+        <p><strong>Constraints:</strong> <code>.data</code> first (it may be empty), then <code>.text</code>, no <code>main:</code> label and no <code>.globl main</code>. Leave MARS's delayed branching off (it is off by default). Pseudo-instructions other than the <code>blt</code> family are permitted. <strong>Comment every executable line</strong>, and put a comment block above each procedure saying whether it needs a frame and why.</p>
+      </div>
+
+      <p>It is thirty-five to forty-five instructions. The part that needs thought is <code>report</code>'s frame &mdash; how many words, which offsets, and which order to restore them in.</p>
+
+      <h3>What you need to know to write it</h3>
+
+      <div class="table-scroll">
+      <table class="pin-table">
+        <thead>
+          <tr><th>To do this</th><th>Write</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Load a small constant, positive or negative</td><td><code>li $a0, -16</code></td><td>a pseudo-instruction; fine for these values</td></tr>
+          <tr><td>Set if less than</td><td><code>slt $t0, $a0, $a1</code></td><td><code>$t0 = 1</code> if <code>$a0 &lt; $a1</code>, signed; else 0</td></tr>
+          <tr><td>Branch if not equal / equal</td><td><code>bne $t0, $zero, label</code></td><td><code>beq</code> is the same shape</td></tr>
+          <tr><td>Call a procedure</td><td><code>jal report</code></td><td>writes the return address into <code>$ra</code></td></tr>
+          <tr><td>Return</td><td><code>jr $ra</code></td><td></td></tr>
+          <tr><td>Make room for three words</td><td><code>addi $sp, $sp, -12</code></td><td>the stack grows <em>down</em></td></tr>
+          <tr><td>Save and restore a word</td><td><code>sw $ra, 8($sp)</code> &middot; <code>lw $ra, 8($sp)</code></td><td>offset from the current <code>$sp</code></td></tr>
+          <tr><td>Copy a register</td><td><code>move $t2, $v0</code></td><td>a pseudo-instruction</td></tr>
+          <tr><td>Print the integer in <code>$a0</code></td><td><code>li $v0, 1</code> then <code>syscall</code></td><td>service 1</td></tr>
+          <tr><td>Print the character in <code>$a0</code></td><td><code>li $v0, 11</code> then <code>syscall</code></td><td>service 11. <code>&lt;</code> is 60, <code>=</code> 61, <code>&gt;</code> 62, space 32, newline 10</td></tr>
+          <tr><td>Exit</td><td><code>li $v0, 10</code> then <code>syscall</code></td><td>service 10</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Printing Uses <code>$a0</code> and <code>$v0</code></div>
+        <p>Every print puts its argument in <code>$a0</code> and its service number in <code>$v0</code>. So <code>report</code> destroys its own first argument the moment it prints anything, and destroys <code>classify</code>'s answer the moment it sets up a print. Decide where each value lives <em>before</em> you write the prints.</p>
+      </div>
+
+      <h3>Run it, and watch</h3>
+
+      <ol class="logisim-steps">
+          <li><strong>Assemble</strong> (F3) and <strong>run</strong> (F5). You should get six lines. Check each against the MIPS column of your observation sheet.</li>
+          <li>Reset (F12). In the <strong>Text Segment</strong> pane, tick the <strong>Bkpt</strong> box on your <em>first</em> <code>jal report</code>, and run to it.</li>
+          <li>Record the <strong>address</strong> of that <code>jal</code> (the Address column), and <code>$sp</code>. Step once (F7). Record <code>pc</code> and <code>$ra</code>.</li>
+          <li>Step through <code>report</code>'s prologue &mdash; the stack adjustment and the three stores. Record <code>$sp</code> again. In the <strong>Data Segment</strong> pane, choose <strong>current $sp</strong> from the drop-down and find your three saved words. Record which address holds which.</li>
+          <li>Keep stepping into <code>classify</code>. Find its first <code>beq</code> or <code>bne</code> in the Text Segment pane and record its address, the address of the label it branches to, and the <strong>low four hex digits of its Code column</strong> &mdash; that is the 16-bit offset field.</li>
+        </ol>
+
+      <h3>Two breaks &mdash; run each, record it, undo it</h3>
+
+      <div class="lab-step">
+        <div class="lab-step__num">B</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Forget to save <code>$ra</code></div>
+          <p>In <code>report</code>, comment out the one line that saves <code>$ra</code> and the one line that restores it. Nothing else. Before running, vote: <strong>how many lines will print?</strong></p>
+          <p>Run it. When you have seen enough, press <strong>Stop</strong>. Record what printed, and &mdash; stepping from the start if you need to &mdash; the address that <code>report</code>'s <code>jr $ra</code> jumped to. Then uncomment both lines.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">C</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Keep an argument in a <code>$t</code> register</div>
+          <p>In <code>report</code>, instead of saving <code>$a0</code> on the stack, copy it into <code>$t0</code> before the <code>jal classify</code>, and print the first number from <code>$t0</code> afterwards. Leave the frame otherwise as it was.</p>
+          <p>It assembles. Run it and record the six lines. Then put it back.</p>
+        </div>
+      </div>
+
+      <h3>Three questions &mdash; answer them in the comments of your <code>.asm</code></h3>
+
+      <p>These are the point of the exercise.</p>
+
+      <div class="lab-step">
+        <div class="lab-step__num">Q1</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Your comparator against MIPS</div>
+          <p>Your program printed MIPS's answer for all six pairs. On which rows did your bench's <code>blt</code> disagree with it, and which of your two bench outputs &mdash; <code>blt</code> or <code>sblt</code> &mdash; agreed with MIPS on every row?</p>
+          <p>Then one sentence: <strong>which reading of a byte does your Week 6 comparator compute, and which does MIPS's <code>slt</code> compute?</strong></p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">Q2</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Where did <code>jr $ra</code> go?</div>
+          <p>Using the addresses you recorded, say what <code>$ra</code> held when break B's <code>report</code> reached <code>jr $ra</code>, which instruction that address belongs to, and why the first line printed correctly but the second never did.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">Q3</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">What were those numbers?</div>
+          <p>Break C printed wrong first numbers. Say exactly what each of them was &mdash; where it came from in <code>classify</code> &mdash; and name the rule of the calling convention that break violated. Then say where a value that must survive a call is allowed to live.</p>
+        </div>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">If You Finish Early</div>
+        <p>Write <code>countdown</code>: it takes <code>$a0 = n</code>, prints <code>n</code> and a space, calls itself with <code>n &minus; 1</code> if <code>n</code> is greater than 0, and then prints <code>n</code> and a space <em>again</em> before returning. Call it once from the top level with 3. Predict the output before you run it.</p>
+        <p>Then set a breakpoint on the line that prints the second time, and read <code>$sp</code> the first time it stops. How many frames are on the stack at that moment, and what does each one hold? This is not graded; recursion is the same <code>jal</code>, <code>$ra</code> and frame you just wrote, applied to a procedure that happens to call itself.</p>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">The Two Halves, Joined</div>
+        <p>This morning you found that your comparator, like last week's adder, sees one reading of a byte &mdash; and that on the pairs where the sign bits differ, that reading gives the opposite answer from MIPS. Two NOT gates fixed it.</p>
+        <p><strong>MIPS has the same choice to make, and makes it per instruction.</strong> The <code>slt</code> you used this afternoon is the signed question. MIPS also has an unsigned one, which is not on this course's list; your Week 6 comparator, on its own, is that one. Deciding which question your CPU's comparisons ask is a design decision, and now you know what it costs in gates.</p>
+      </div>
+
+      <p><strong>Two resources worth bookmarking:</strong> <a href="https://github.com/dpetersanderson/MARS" target="_blank" rel="noopener">the MARS repository</a>, and <a href="https://www.youtube.com/playlist?list=PLZ9NgFYEMxp5cLlPZ25zOD6zjnKKPv06p" target="_blank" rel="noopener">Amell Peralta's MIPS assembly playlist</a>, whose conventions this course follows.</p>
+    </section>
+
+    <!-- ============================================================
+         Observation sheet
+         ============================================================ -->
+    <section id="sec-observations">
+      <h2>Observation Sheet</h2>
+
+      <p>Fill this in as you go &mdash; it is what Completion Check 7 collects. <strong>Write what your bench and MARS showed, not what you expected.</strong> If your circuit disagrees with the person next to you, find out which of you is wired differently; that is worth more than any explanation.</p>
+
+      <p class="no-print" style="font-size:var(--fs-sm);color:var(--color-text-muted);">On a narrow screen the tables scroll sideways. On paper they print at full width.</p>
+
+      <table class="obs-table" id="obs-design">
+        <caption>Part 2, step 3 — the condition gates, designed before you build</caption>
+        <thead>
+          <tr><th>Output</th><th>In words, from <code>al</code> and <code>eq</code></th><th>Gate (or &ldquo;wire&rdquo;)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>blt</code></td><td class="fill fill--wide"></td><td class="fill"></td></tr>
+          <tr><td><code>bgt</code></td><td class="fill fill--wide"></td><td class="fill"></td></tr>
+          <tr><td><code>ble</code></td><td class="fill fill--wide"></td><td class="fill"></td></tr>
+          <tr><td><code>bge</code></td><td class="fill fill--wide"></td><td class="fill"></td></tr>
+          <tr><td><code>beq</code></td><td class="fill fill--wide"></td><td class="fill"></td></tr>
+          <tr><td><code>bne</code></td><td class="fill fill--wide"></td><td class="fill"></td></tr>
+        </tbody>
+      </table>
+
+      <div class="table-scroll">
+      <table class="obs-table" id="obs-pairs">
+        <caption>Parts 3 and 4 — six pairs, bench against MIPS</caption>
+        <thead>
+          <tr>
+            <th>Row</th><th><code>a</code> (unsigned / signed)</th><th><code>b</code> (unsigned / signed)</th>
+            <th><code>al</code></th><th><code>eq</code></th><th>bench <code>blt</code></th>
+            <th>MIPS <code>blt</code> branches?</th><th>Disagree?</th><th><code>sblt</code></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td class="given">00101101 (45 / 45)</td><td class="given">00010010 (18 / 18)</td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>2</td><td class="given">00010010 (18 / 18)</td><td class="given">00101101 (45 / 45)</td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>3</td><td class="given">01010101 (85 / 85)</td><td class="given">01010101 (85 / 85)</td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>4</td><td class="given">11111110 (254 / &minus;2)</td><td class="given">00000011 (3 / 3)</td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>5</td><td class="given">00000011 (3 / 3)</td><td class="given">11111110 (254 / &minus;2)</td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>6</td><td class="given">11110000 (240 / &minus;16)</td><td class="given">10110000 (176 / &minus;80)</td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <table class="obs-table" id="obs-rule">
+        <caption>Parts 3 and 4 — what you found</caption>
+        <thead>
+          <tr><th>Question</th><th>Your answer</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Row 4, before the pins: your yes/no, and how the room split</td><td class="fill fill--wide"></td></tr>
+          <tr><td>My comparator and MIPS disagree exactly when&hellip;</td><td class="fill fill--wide"></td></tr>
+          <tr><td>The reading my comparator uses is&hellip;</td><td class="fill fill--wide"></td></tr>
+          <tr><td>The sign fix: what I did to which bits</td><td class="fill fill--wide"></td></tr>
+          <tr><td>Break A: which outputs traded places, and which did not change</td><td class="fill fill--wide"></td></tr>
+        </tbody>
+      </table>
+
+      <table class="obs-table" id="obs-mars">
+        <caption>Part 5 — what MARS showed</caption>
+        <thead>
+          <tr><th>Reading</th><th>Value</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Address of the first <code>jal report</code></td><td class="fill fill--wide"></td></tr>
+          <tr><td><code>pc</code> and <code>$ra</code> immediately after it executes</td><td class="fill fill--wide"></td></tr>
+          <tr><td><code>$sp</code> before the call, and after <code>report</code>'s prologue</td><td class="fill fill--wide"></td></tr>
+          <tr><td>Which address holds <code>$ra</code>, <code>$a0</code>, <code>$a1</code></td><td class="fill fill--wide"></td></tr>
+          <tr><td><code>classify</code>'s first branch: its address, its label's address, the 16-bit field</td><td class="fill fill--wide"></td></tr>
+          <tr><td>That field as an offset in instructions, and the target it gives by <code>PC + 4 + 4 &times; offset</code></td><td class="fill fill--wide"></td></tr>
+          <tr><td>Break B: what printed, your vote, and where <code>jr $ra</code> went</td><td class="fill fill--wide"></td></tr>
+          <tr><td>Break C: the six lines that printed</td><td class="fill fill--wide"></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============================================================
+         Assignment
+         ============================================================ -->
+    <section id="sec-assignment">
+      <h2>Assignment: Completion Check 7</h2>
+
+      <div class="lab-meta">
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Points</span>
+          <span class="lab-meta__value">10</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Due</span>
+          <span class="lab-meta__value lab-meta__value--due">Sunday, Oct 4, 2026 &middot; 11:59 PM</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Submit via</span>
+          <span class="lab-meta__value">Canvas &mdash; Lab 7 Completion Check</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Assesses</span>
+          <span class="lab-meta__value">CSLO 1, CSLO 3</span>
+        </div>
+      </div>
+
+      <p>This is a CSC210L grade and it collects <strong>nothing that Assignment 7 collects</strong>. Your ALU and your four procedures are graded there; <code>BRANCH_BENCH</code> and <code>lab07_yourname.asm</code> are graded here and nowhere else. Nothing in CSC210 depends on your attendance in this room.</p>
+
+      <h3>What to Submit</h3>
+
+      <ol>
+        <li><strong>Your <code>.circ</code> file.</strong> Only the <code>BRANCH_BENCH</code> tab is looked at for this check.</li>
+        <li><strong><code>lab07_yourname.asm</code></strong> &mdash; the actual file, not a screenshot. It should run correctly as submitted, with both breaks undone, and your three answers in the comments.</li>
+        <li><strong>Your observation sheet</strong> &mdash; a photo of the printout, or the same tables typed up. Neatness is not graded.</li>
+      </ol>
+
+      <h3>Grading Rubric</h3>
+
+      <table>
+        <thead>
+          <tr><th>Criterion</th><th>Points</th><th>Full credit requires</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>BRANCH_BENCH</code> built and working</td>
+            <td>3</td>
+            <td>A tab named exactly <code>BRANCH_BENCH</code>: two instances of your own <code>XOR_CMP_8BIT</code>; outputs <code>blt</code>, <code>bgt</code>, <code>ble</code>, <code>bge</code>, <code>beq</code>, <code>bne</code> and <code>sblt</code>, from gates. Wiring and Gates components only.</td>
+          </tr>
+          <tr>
+            <td>Observation sheet, Parts 2&ndash;4</td>
+            <td>3</td>
+            <td>The design table, all six rows, the rule, the sign fix and break A, filled from what your bench showed. Being wrong costs nothing here; leaving it blank does.</td>
+          </tr>
+          <tr>
+            <td>Observation sheet, Part 5</td>
+            <td>2</td>
+            <td>The MARS readings and both breaks recorded.</td>
+          </tr>
+          <tr>
+            <td>Your program, and the three answers</td>
+            <td>2</td>
+            <td>A program you wrote that meets the specification, prints six correct lines as submitted, and has every executable line commented and each procedure's frame justified; Q1, Q2 and Q3 answered in the comments.</td>
+          </tr>
+          <tr class="rubric-total">
+            <td>Total</td>
+            <td>10</td>
+            <td>&nbsp;</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p style="font-size:var(--fs-sm);color:var(--color-text-muted);"><strong>CSLO alignment.</strong> Supports <strong>CSLO&nbsp;1</strong> (describe the organization and architecture of a computer system) through the bench and its measurements, and <strong>CSLO&nbsp;3</strong> (use appropriate tools to write and test assembly language programs) through the MARS program and its breaks. The graded SLO evidence for this material is Assignment 7 in the lecture course; nothing in CSC210 depends on your attendance here.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">If You Could Not Finish</div>
+        <p><code>BRANCH_BENCH</code> is about fifteen minutes on your own once your comparator works, and the six rows are five minutes of poking. The program is the longer part; everything it needs is in the table above and in section 7.11 of <cite>Procedures</cite>.</p>
+        <p>This is a <strong>finish-on-your-own</strong> lab by design. Leave with the bench done and <code>classify</code> written, and the rest is under an hour.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Checklist
+         ============================================================ -->
+    <section id="sec-checklist">
+      <h2>Pre-Submission Checklist</h2>
+
+      <p>Two minutes before you upload. Check an item only after you have actually verified it.</p>
+
+      <div class="widget-card" id="widget-checklist">
+        <div class="widget-card__title">Pre-Submission Checklist</div>
+        <div class="widget-card__subtitle">Nothing here is saved &mdash; it is a thinking prompt, not a record.</div>
+
+        <ul class="lab-checklist" id="ck-list">
+          <li>
+            <input type="checkbox" id="ck-1">
+            <label for="ck-1">My file has a tab named exactly <code>BRANCH_BENCH</code>.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-2">
+            <label for="ck-2">It uses <strong>instances</strong> of my own <code>XOR_CMP_8BIT</code> (two) &mdash; not copies of its insides, and nothing from Plexers, Arithmetic or Memory.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-3">
+            <label for="ck-3">Outputs <code>blt</code>, <code>bgt</code>, <code>ble</code>, <code>bge</code>, <code>beq</code>, <code>bne</code> and <code>sblt</code> are all present and named exactly, and exactly three of the first six light for any pair.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-4">
+            <label for="ck-4"><code>sblt</code> agrees with MIPS on all six rows.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-5">
+            <label for="ck-5">I ran break A and put the comparator's wires back afterwards.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-6">
+            <label for="ck-6">My program's <code>.data</code> comes first, then <code>.text</code>, with no <code>main:</code> label and no <code>.globl main</code>.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-7">
+            <label for="ck-7"><code>classify</code> uses <code>slt</code> with <code>beq</code>/<code>bne</code> only, and needs no frame; <code>report</code> saves and restores <code>$ra</code>, <code>$a0</code> and <code>$a1</code> and returns <code>$sp</code> to where it started.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-8">
+            <label for="ck-8">The submitted program prints six correct lines &mdash; both breaks are undone.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-9">
+            <label for="ck-9">The Part 5 table and both breaks are recorded on my observation sheet.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-10">
+            <label for="ck-10">Q1, Q2 and Q3 are answered in the comments, and I am uploading the <code>.asm</code> <strong>file</strong>, not a screenshot of it.</label>
+          </li>
+        </ul>
+
+        <div class="checklist-status" id="ck-status" role="status" aria-live="polite">0 of 10 verified</div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         What comes next
+         ============================================================ -->
+    <section id="sec-next">
+      <h2>What Comes Next</h2>
+
+      <p>Today you turned two flags into every branch there is, found that the comparator &mdash; like the adder &mdash; answers one reading of a byte and not the other, and watched a procedure call leave its return address and its saved registers on a stack you could point at.</p>
+
+      <p>Next week both halves need somewhere to keep more than a handful of values. The lecture course builds the RAM; the lab becomes the control unit for it, by hand, and moves a byte between memory and a register one signal at a time. The midterm is next week too, so the session will keep its last ten minutes for questions.</p>
+
+      <div class="progression">
+        <div class="progression__item completed">
+          <div class="progression__label">Lab 5 &mdash; Moving a Byte</div>
+          <div class="progression__detail">Two registers, one wire &mdash; <code>BUS_DEMO</code></div>
+        </div>
+        <div class="progression__item completed">
+          <div class="progression__label">Lab 6 &mdash; One Answer, Two Readings</div>
+          <div class="progression__detail">When the adder's answer can be trusted &mdash; <code>ARITH_BENCH</code></div>
+        </div>
+        <div class="progression__item active">
+          <div class="progression__label">Lab 7 &mdash; Which Way Is Less?</div>
+          <div class="progression__detail">Branch conditions and the stack &mdash; <code>BRANCH_BENCH</code></div>
+        </div>
+        <div class="progression__item">
+          <div class="progression__label">Lab 8 &mdash; Being the Control Unit</div>
+          <div class="progression__detail">Load and store, by hand</div>
+        </div>
+      </div>
+
+      <p>Bring your file on Tuesday.</p>
+    </section>
+
+  </main>
+
+  <!-- ==================== Footer ==================== -->
+  <footer class="sp-footer">
+    CSC210L — Computer Organization &amp; Architecture Lab &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <!-- ==================== Scripts ==================== -->
+  <script>
+  /* ============================================================
+     Pre-Submission Checklist
+     ============================================================
+     A count, and nothing more. No persistence, deliberately --
+     this is a thinking prompt at submission time, not a record.
+     No shared kernel is loaded: an on-page comparator would fill
+     in the observation sheet for the student.
+     ============================================================ */
+  (function () {
+    'use strict';
+
+    var boxes = document.querySelectorAll('#ck-list input[type="checkbox"]');
+    var total = boxes.length;
+
+    function update() {
+      var count = 0, i;
+      for (i = 0; i < boxes.length; i++) {
+        if (boxes[i].checked) { count++; boxes[i].parentNode.classList.add('checked'); }
+        else { boxes[i].parentNode.classList.remove('checked'); }
+      }
+      var status = document.getElementById('ck-status');
+      if (count === total) {
+        status.className = 'checklist-status checklist-status--ready';
+        status.innerHTML = '&#10004; All ' + total + ' verified &mdash; you are ready to submit.';
+      } else {
+        status.className = 'checklist-status';
+        status.textContent = count + ' of ' + total + ' verified';
+      }
+    }
+
+    Array.prototype.forEach.call(boxes, function (b) {
+      b.addEventListener('change', update);
+    });
+  })();
+  </script>
+
+</body>
+</html>

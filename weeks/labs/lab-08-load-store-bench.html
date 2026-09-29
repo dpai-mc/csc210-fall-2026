@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="lab-08">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210L — Lab 8: Being the Control Unit</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ----------
+       .lab-*, .scope-table, .logisim-steps, .callout--*, .points-badge,
+       .pin-table, .table-scroll and the checklist components all live
+       in shared/style.css.
+
+       .live-tag, .obs-table and .bench-sketch are carried here as copies
+       of lab-06's, not promoted. Promoting them means editing published
+       pages, and past content is never modified (Dave, 2026-09-15).
+       Consolidate forward only: a new page carries its own copy.
+
+       This page loads no shared kernel and has no widget. The
+       interactive part of this lab is the bench the student builds in
+       Logisim and the program they write in MARS; a simulated RAM on
+       the page would fill in the observation sheet. */
+
+    /* Learning-page titles. Named, never linked -- Course Standards §5. */
+    cite { font-style: normal; font-weight: 600; color: var(--color-text); }
+
+    .live-tag {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: var(--fs-xs);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      padding: 2px var(--space-sm);
+      border-radius: 999px;
+      vertical-align: middle;
+      margin-left: var(--space-sm);
+    }
+    .live-tag--together { background: var(--color-success); color: #fff; }
+    .live-tag--solo     { background: var(--color-danger, #b3261e); color: #fff; }
+
+    .obs-table { width: 100%; border-collapse: collapse; margin: var(--space-md) 0; }
+    .obs-table th, .obs-table td {
+      border: 1px solid var(--color-border);
+      padding: var(--space-sm);
+      text-align: left;
+      vertical-align: top;
+      font-size: var(--fs-sm);
+    }
+    .obs-table th { background: var(--color-code-bg); font-weight: 700; }
+    .obs-table td.fill {
+      background: var(--color-code-bg);
+      min-width: 64px;
+      height: 46px;
+    }
+    .obs-table td.fill--wide { min-width: 110px; }
+    .obs-table td.fill--tall { height: 120px; }
+    .obs-table td.given { font-family: var(--font-mono); white-space: nowrap; }
+    .obs-table caption {
+      caption-side: top;
+      text-align: left;
+      font-weight: 700;
+      padding-bottom: var(--space-sm);
+    }
+
+    .bench-sketch { width: 100%; max-width: 640px; height: auto; display: block; margin: var(--space-md) auto; }
+    .bench-sketch .wire { stroke: var(--color-text); stroke-width: 3; fill: none; }
+    .bench-sketch .box  { fill: var(--color-surface); stroke: var(--color-text); stroke-width: 2; }
+    .bench-sketch .det  { fill: var(--color-code-bg); stroke: var(--color-text-muted); stroke-width: 2; stroke-dasharray: 5 3; }
+    .bench-sketch .stub { stroke: var(--color-text-muted); stroke-width: 2; fill: none; }
+    .bench-sketch .lbl  { font-family: var(--font-mono); font-size: 14px; fill: var(--color-text); }
+    .bench-sketch .lbl--sm { font-size: 11px; fill: var(--color-text-muted); }
+
+    @media print {
+      .sp-header, .sp-footer, .no-print { display: none; }
+      .lab-step, .obs-table, .lab-verify { break-inside: avoid; }
+      .table-scroll { overflow: visible; }
+      .obs-table code { font-size: inherit; }
+      .obs-table th, .obs-table td { font-size: 9px; padding: 3px; }
+      .obs-table td.fill, .obs-table td.fill--wide { min-width: 0; }
+      .obs-table td.given { white-space: normal; }
+      a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== Header ==================== -->
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210L — Computer Organization &amp; Architecture Lab</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Lab 8 &rsaquo; <span>Being the Control Unit</span>
+    </nav>
+  </header>
+
+  <!-- ==================== Main ==================== -->
+  <main class="sp-main sp-main--full">
+
+    <h1>Lab 8 — Being the Control Unit: Load, Store, and the Four Bytes of a Word</h1>
+
+    <div class="lab-meta">
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Lab Session</span>
+        <span class="lab-meta__value">Tuesday, Oct 6, 2026</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">In-Class Time</span>
+        <span class="lab-meta__value">90 minutes &mdash; 40 Logisim, 35 MARS, 10 midterm questions</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Format</span>
+        <span class="lab-meta__value">Live on Zoom</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Today's build</span>
+        <span class="lab-meta__value"><code>LOAD_STORE_BENCH</code></span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Assignment</span>
+        <span class="lab-meta__value">Completion Check 8 &mdash; 10 pts</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Due</span>
+        <span class="lab-meta__value lab-meta__value--due">Sun, Oct 11 &middot; 11:59 PM</span>
+      </div>
+    </div>
+
+    <div class="callout callout--aha">
+      <div class="callout__title">What This Session Is, and What It Is Not</div>
+      <p><strong>This lab does not build the RAM.</strong> <code>RAM_BYTE</code>, <code>RAM_16X16</code> and the MAR are Checkpoint 3 &mdash; Assignment 8 Part A, built from the assignment page and the week's learning pages on your own time. The wiring, the ten-step verification table and the checklist are there, not here.</p>
+      <p><strong>What we build here is the thing around the RAM that nothing grades yet.</strong> <code>LOAD_STORE_BENCH</code> puts your RAM on a shared wire with one of your registers, and <em>you</em> are the control unit: you raise and lower every signal that a <code>lw</code> or <code>sw</code> would raise and lower, in order, by hand. Then you get the order wrong on purpose, three ways. In MARS, you take one 32-bit word apart into its four bytes and read each of them two ways.</p>
+    </div>
+
+    <div class="callout callout--hook">
+      <div class="callout__title">The Question Today Answers</div>
+      <p><strong>What you have:</strong> A RAM that stores a byte at an address, and a register that can put a byte on a wire and take one off it. Section 8.11 of <cite>Load and Store</cite> says that a <code>lw</code> is an address into the MAR, a read enable, and a register capturing what comes out.</p>
+      <p><strong>What you cannot do yet:</strong> Make a byte actually travel between the two. Your RAM's verification table drives its pins directly; nothing has ever put a byte into memory <em>from a register</em>, or taken one out <em>into</em> one. And nothing has shown you what happens when those signals come in the wrong order.</p>
+      <p><strong>What you can do after today:</strong> Write the control sequence for a load and a store yourself, say how many signal changes each one costs, recognise three ways it goes wrong &mdash; and say which of the four bytes in a MIPS word your machine would fetch first.</p>
+    </div>
+
+    <!-- ============================================================
+         Outcomes
+         ============================================================ -->
+    <section id="sec-outcomes">
+      <h2>What You Will Be Able to Do</h2>
+
+      <ol>
+        <li><strong>Build a test bench</strong> that joins your RAM, one of your registers and an input device on one shared bus.</li>
+        <li><strong>Act as the control unit</strong> for a store, a load, and a memory-to-memory copy, writing each control sequence yourself.</li>
+        <li><strong>Break the sequence on purpose</strong> three ways and say what each one did to memory or to the bus.</li>
+        <li><strong>Write a MIPS program to a specification</strong> that takes one word apart into its bytes, reads each byte signed and unsigned, and finds out which end of the word comes first.</li>
+      </ol>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">CS301 Reference</div>
+        <p>Load and store instructions are covered in Saylor CS301 <strong>Unit 2: Instructions — Hardware Language</strong>, and memory organisation in <strong>Unit 6: The Memory Hierarchy</strong>. Log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> and open either as supporting reading.</p>
+        <p>What CS301 does not do is have you drive a load through your own RAM one signal at a time. That part is this session's own.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Before you arrive
+         ============================================================ -->
+    <section id="sec-before">
+      <h2>Before You Arrive</h2>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Bring What You Have of Checkpoint 3 &mdash; Ideally <code>RAM_16X16</code></div>
+        <p>Today's bench <strong>instantiates</strong> your <code>RAM_16X16</code> once and your Week 5 <code>REGISTER_8BIT</code> once. It is midterm week and the lab is on Tuesday, so you may not have the whole RAM yet. That is planned for:</p>
+        <ul>
+          <li><strong>If <code>RAM_16X16</code> passes its verification table</strong>, use it. Everything today works.</li>
+          <li><strong>If you only have <code>RAM_BYTE</code></strong>, use one instance of it with <code>h</code> and <code>v</code> both tied to a constant 1. It behaves as a one-byte memory with no address. Parts 3 and 4 work, except the two steps marked <em>needs addresses</em>, which you watch on the shared screen and then run at home once your RAM is done.</li>
+          <li><strong>If you have neither</strong>, come anyway and come early, and spend the Logisim half on <code>RAM_BYTE</code>.</li>
+        </ul>
+      </div>
+
+      <p><strong>Read sections 8.9 to 8.11 of <cite>Load and Store</cite></strong> in this week's Canvas module &mdash; base plus offset, the three byte instructions and which end comes first, and what <code>lw</code> does to your circuit. Today is that last section with your hands on the switches. The page is named rather than linked, because each learning page is embedded in its own Canvas page; you open it from the module list.</p>
+
+      <p><strong>Bring your <code>CSC210_YourName.circ</code> file</strong> and have <strong>MARS</strong> open. Today adds one tab to the file and one <code>.asm</code> to your folder.</p>
+
+      <p><strong>Print this page, or have it open on a second screen.</strong> The observation sheet is what you submit, and you fill it in as you go.</p>
+    </section>
+
+    <!-- ============================================================
+         Scope
+         ============================================================ -->
+    <section id="sec-scope">
+      <h2>What Is Here, and What Is on the Assignment</h2>
+
+      <p>The two do not overlap, and that is deliberate. Assignment 8 grades the RAM, your address arithmetic and an array program. This session uses the RAM and measures what it takes to operate it.</p>
+
+      <div class="table-scroll">
+      <table class="scope-table">
+        <thead>
+          <tr><th>Work</th><th>Where it happens</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Checkpoint 3 &mdash; <code>RAM_BYTE</code>, <code>RAM_16X16</code>, the MAR</td>
+            <td class="scope-solo">Assignment 8 Part A &mdash; not here</td>
+            <td>Pin names, wiring, the ten-step verification table and the checklist are all on that page. Today uses the finished RAM and assumes it works.</td>
+          </tr>
+          <tr>
+            <td><strong><code>LOAD_STORE_BENCH</code></strong></td>
+            <td class="scope-lab"><strong>Built here, and only here</strong></td>
+            <td>Your RAM, one register and an input device on one bus, with you driving the control lines. Not on any assignment, not on any checkpoint.</td>
+          </tr>
+          <tr>
+            <td>Load, store and copy sequences, and three breaks</td>
+            <td class="scope-lab">Here</td>
+            <td>The addresses and bytes are chosen to be different from every value on the assignment.</td>
+          </tr>
+          <tr>
+            <td>Written reasoning and address arithmetic</td>
+            <td class="scope-solo">Assignment 8 Parts B and C</td>
+            <td>Today practises the same ideas &mdash; bytes in a word, <code>lb</code> against <code>lbu</code> &mdash; on different values and from a different direction. None of today's questions is one of those, and nothing you write here is collected there.</td>
+          </tr>
+          <tr>
+            <td>MARS: the array program</td>
+            <td class="scope-solo">Assignment 8 Part D</td>
+            <td>A different program from today's, with its own data and check table.</td>
+          </tr>
+          <tr>
+            <td>MARS: one word, four bytes, two readings each</td>
+            <td class="scope-lab">Here</td>
+            <td>You get a specification, not code. The questions are about the bench you drove this morning. You submit the <code>.asm</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Part 1 — File check
+         ============================================================ -->
+    <section id="sec-part-1">
+      <h2>Part 1 — File Check <span class="points-badge">~5 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <p>Open <code>CSC210_YourName.circ</code>. Confirm everything from Labs 1 through 7 is still a tab in this one file, and that <code>REGISTER_8BIT</code> and your RAM are among them.</p>
+
+      <div class="lab-step">
+        <div class="lab-step__num">1</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Sixty-second RAM check</div>
+          <p>Open <code>RAM_16X16</code>. With <code>e</code> at 0, its <code>o</code> must read <code>xxxxxxxx</code> &mdash; floating, not <code>00000000</code>. Raise <code>e</code> at any populated address and <code>o</code> shows a byte (or <code>EEEEEEEE</code>, if that byte has never been written &mdash; which is correct). If <code>o</code> reads zeros with <code>e</code> at 0, the RAM's output buffer is missing, and today the RAM and your register will fight over the bus.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">2</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Create today's tab</div>
+          <p><strong>Project &rarr; Add Circuit&hellip;</strong>, named exactly:</p>
+          <pre><code>LOAD_STORE_BENCH</code></pre>
+          <p>A test bench, like <code>BUS_DEMO</code> in Lab 5 &mdash; and it is <code>BUS_DEMO</code>'s direct descendant. Keep it: in Week 12 the RAM joins the CPU's bus exactly the way it joins this one.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Part 2 — Build the bench
+         ============================================================ -->
+    <section id="sec-part-2">
+      <h2>Part 2 — Build <code>LOAD_STORE_BENCH</code> <span class="points-badge">~12 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <p>One shared 8-bit wire. Three things that can drive it: your RAM, one register, and an input device standing in for anything that supplies a value. Two things that listen to it: the RAM and the register.</p>
+
+      <svg class="bench-sketch" viewBox="0 0 640 280" role="img" aria-labelledby="bench-title bench-desc">
+        <title id="bench-title">LOAD_STORE_BENCH: a RAM, a register and an input device on one bus</title>
+        <desc id="bench-desc">A single horizontal 8-bit wire, the bus, runs across the top of the sketch to an output pin named bus on the right. Below it sit three boxes. On the left, an 8-bit input pin named key passes through a box marked with a question mark, switched by a pin named ke, and on to the bus. In the middle, a RAM_16X16 instance takes the address and sa pins from below, its data input i comes down from the bus, its output o goes up onto the bus, and its s, e and reset inputs come from pins named ms, me and mreset. On the right, a REGISTER_8BIT instance labelled R1 takes its i from the bus, drives the bus from its o, has control pins r1s and r1e, and sends its reg output to an output pin named r1reg.</desc>
+
+        <line class="wire" x1="40" y1="40" x2="590" y2="40"></line>
+        <text class="lbl" x="596" y="44">bus</text>
+        <text class="lbl lbl--sm" x="250" y="30">the bus &mdash; one shared 8-bit wire</text>
+
+        <!-- key device -->
+        <text class="lbl" x="20" y="164">key</text>
+        <line class="wire" x1="56" y1="160" x2="90" y2="160"></line>
+        <rect class="det" x="90" y="140" width="80" height="40" rx="4"></rect>
+        <text class="lbl" x="130" y="165" text-anchor="middle">?</text>
+        <line class="wire" x1="130" y1="140" x2="130" y2="40"></line>
+        <line class="stub" x1="130" y1="180" x2="130" y2="220"></line>
+        <text class="lbl lbl--sm" x="130" y="236" text-anchor="middle">ke</text>
+
+        <!-- RAM -->
+        <rect class="box" x="220" y="100" width="170" height="100" rx="4"></rect>
+        <text class="lbl" x="305" y="146" text-anchor="middle">RAM_16X16</text>
+        <text class="lbl lbl--sm" x="305" y="166" text-anchor="middle">i &#8595;   o &#8593;</text>
+        <line class="wire" x1="270" y1="100" x2="270" y2="40"></line>
+        <line class="wire" x1="340" y1="100" x2="340" y2="40"></line>
+        <line class="stub" x1="240" y1="200" x2="240" y2="240"></line>
+        <line class="stub" x1="275" y1="200" x2="275" y2="240"></line>
+        <line class="stub" x1="310" y1="200" x2="310" y2="240"></line>
+        <line class="stub" x1="340" y1="200" x2="340" y2="240"></line>
+        <line class="stub" x1="370" y1="200" x2="370" y2="240"></line>
+        <text class="lbl lbl--sm" x="240" y="256" text-anchor="middle">address</text>
+        <text class="lbl lbl--sm" x="282" y="272" text-anchor="middle">sa</text>
+        <text class="lbl lbl--sm" x="310" y="256" text-anchor="middle">ms</text>
+        <text class="lbl lbl--sm" x="340" y="272" text-anchor="middle">me</text>
+        <text class="lbl lbl--sm" x="376" y="256" text-anchor="middle">mreset</text>
+
+        <!-- R1 -->
+        <rect class="box" x="440" y="100" width="130" height="100" rx="4"></rect>
+        <text class="lbl" x="505" y="140" text-anchor="middle">R1</text>
+        <text class="lbl lbl--sm" x="505" y="160" text-anchor="middle">REGISTER_8BIT</text>
+        <line class="wire" x1="475" y1="100" x2="475" y2="40"></line>
+        <line class="wire" x1="535" y1="100" x2="535" y2="40"></line>
+        <line class="stub" x1="480" y1="200" x2="480" y2="240"></line>
+        <line class="stub" x1="530" y1="200" x2="530" y2="240"></line>
+        <text class="lbl lbl--sm" x="480" y="256" text-anchor="middle">r1s</text>
+        <text class="lbl lbl--sm" x="530" y="256" text-anchor="middle">r1e</text>
+        <line class="stub" x1="570" y1="150" x2="600" y2="150"></line>
+        <text class="lbl" x="596" y="176">r1reg</text>
+      </svg>
+
+      <ol class="logisim-steps">
+          <li>Draw the <strong>bus</strong>: one 8-bit wire across the top of the tab, ending at an 8-bit <strong>output pin</strong> named <code>bus</code>.</li>
+          <li>Place <strong>one <code>RAM_16X16</code> instance</strong> (or your one-byte stand-in &mdash; see <em>Before You Arrive</em>). Its <code>i</code> comes <strong>from</strong> the bus and its <code>o</code> goes <strong>onto</strong> the bus. Give it input pins <code>address</code> (8 bits) and <code>sa</code>, and 1-bit input pins <code>ms</code>, <code>me</code> and <code>mreset</code> on its <code>s</code>, <code>e</code> and <code>reset</code>.</li>
+          <li>Place <strong>one <code>REGISTER_8BIT</code> instance</strong> and label it <em>R1</em> with a text object. Its <code>i</code> from the bus, its <code>o</code> onto the bus, control pins <code>r1s</code> and <code>r1e</code>, and its <code>reg</code> to an 8-bit output pin named <code>r1reg</code>.</li>
+          <li>Add an 8-bit input pin named <code>key</code>. It is going onto the bus as well &mdash; and before you wire it, answer the question in step 3.</li>
+        </ol>
+
+      <div class="lab-step">
+        <div class="lab-step__num">3</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">The third driver</div>
+          <p><code>key</code> is a third device that drives the bus. The RAM and R1 can each stop driving it. <strong>What does <code>key</code> need, and from which Logisim folder?</strong> Add it, with a 1-bit control pin named <code>ke</code>, so that <code>key</code> reaches the bus only while <code>ke</code> is 1.</p>
+          <p>Section 8.6 of <cite>The RAM Matrix</cite> says the RAM's output must be able to let go because it will one day share a wire with registers. This is that day, in miniature.</p>
+        </div>
+      </div>
+
+      <div class="lab-verify">
+        <div class="lab-verify__title">Verify before going on &mdash; two minutes</div>
+        <ol>
+          <li>Every control pin at 0: <code>bus</code> reads <code>xxxxxxxx</code>. Nothing is driving it, and that is correct.</li>
+          <li><code>key</code> = <code>00000000</code>, <code>ke</code> = 1, pulse <code>mreset</code>, <code>ke</code> = 0. Every populated byte in the RAM is now <code>00000000</code> &mdash; the RAM's broadcast write took its value from the bus.</li>
+        </ol>
+        <p>If <code>bus</code> shows a value in step 1, one of the three drivers has no way of letting go.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Part 3 — Be the control unit
+         ============================================================ -->
+    <section id="sec-part-3">
+      <h2>Part 3 — Be the Control Unit <span class="points-badge">~12 min</span><span class="live-tag live-tag--solo">Your own, then compare</span></h2>
+
+      <p>You are about to do by hand what the control unit you build in Week 11 will do for every memory instruction. Two rules you already know carry the whole of it:</p>
+      <ul>
+        <li><strong>Address first.</strong> The MAR is set and released before anything is written.</li>
+        <li><strong>Set nested inside enable</strong> &mdash; Week 5's rule. Whoever is driving the bus starts before the listener's <code>s</code> rises, and stops after it falls.</li>
+      </ul>
+
+      <p>Here is one sequence, given in full. You write the rest.</p>
+
+      <div class="lab-step">
+        <div class="lab-step__num">4</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Store from the keyboard &mdash; given</div>
+          <p>Put <code>01000111</code> into byte 3 (address <code>00000011</code>):</p>
+          <ol>
+            <li><code>address</code> = <code>00000011</code>; pulse <code>sa</code>.</li>
+            <li><code>key</code> = <code>01000111</code>; <code>ke</code> = 1.</li>
+            <li>Pulse <code>ms</code>.</li>
+            <li><code>ke</code> = 0.</li>
+          </ol>
+          <p>Now use the same shape to put <code>11010010</code> into byte 20 (address <code>00010100</code> &mdash; row 1, column 4).</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">5</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Load &mdash; you write it</div>
+          <p>Bring byte 20 into R1. <strong>Write the sequence on the observation sheet first</strong>, one signal change per line, then run it. <code>r1reg</code> should read <code>11010010</code>.</p>
+          <p>This is <code>lbu $t0, 20($zero)</code>, if R1 were <code>$t0</code> and addresses started at zero.</p>
+        </div>
+      </div>
+
+      <details class="lab-troubleshoot">
+        <summary>Stuck on the load? Open this after you have tried.</summary>
+        <p>It is the store turned round. The address goes in the same way. Then the RAM is the driver instead of <code>key</code> &mdash; so its enable plays the part <code>ke</code> played &mdash; and R1 is the listener instead of the RAM, so R1's set plays the part <code>ms</code> played.</p>
+      </details>
+
+      <div class="lab-step">
+        <div class="lab-step__num">6</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Copy memory to memory &mdash; you write it</div>
+          <p>Copy byte 3 into byte 30 (address <code>00011110</code>), using R1 as the only place the byte can rest on the way. Write the sequence first, then run it.</p>
+          <p>Check it <strong>without disturbing R1</strong>: set the MAR to byte 30, raise <code>me</code>, read <code>bus</code>, lower <code>me</code>. You should see <code>01000111</code>, and <code>r1reg</code> should still hold it too.</p>
+          <p>In MIPS this is two instructions: a load, then a store.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">7</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Count</div>
+          <p>Count the signal changes in your load and in your store &mdash; every pin that changes value is one, including setting <code>address</code>. Record both counts. You need them for the MARS questions.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Part 4 — Break it
+         ============================================================ -->
+    <section id="sec-part-4">
+      <h2>Part 4 — Get the Order Wrong On Purpose <span class="points-badge">~10 min</span><span class="live-tag live-tag--solo">Your own, then compare</span></h2>
+
+      <p>Nobody gets the order wrong for points, which is why it only happens if there is a session for it. Three breaks, each recovered from before the next. R1 should still hold <code>01000111</code> from Part 3.</p>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Compare With the Room &mdash; before break A</div>
+        <p>Read break A below, then, before anyone runs it: <strong>how many bytes of memory will have changed when it is over?</strong> Everybody answers with a number, out loud or in the chat, and we count.</p>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">A</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Move the MAR during a write <em>(needs addresses)</em></div>
+          <p>Start storing R1 into byte 30 again: <code>address</code> = <code>00011110</code>, pulse <code>sa</code>, <code>r1e</code> = 1, <code>ms</code> = 1. Now, <strong>with <code>ms</code> still high</strong>, set <code>address</code> = <code>00000100</code> and pulse <code>sa</code>. Then <code>ms</code> = 0, <code>r1e</code> = 0.</p>
+          <p>Read bytes 30 and 4 back the way you checked byte 30 in Part 3. <strong>Record what each holds, and what byte 4 held before.</strong></p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">B</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Leave the RAM talking</div>
+          <p>Set the MAR to byte 20 and raise <code>me</code>, as if starting a load &mdash; and then forget to lower it. Now begin a store from the keyboard: <code>key</code> = <code>00001111</code>, <code>ke</code> = 1.</p>
+          <p><strong>Record what <code>bus</code> reads, character for character.</strong> Do not pulse <code>ms</code>. Then <code>ke</code> = 0 and <code>me</code> = 0.</p>
+          <p>Compare it with the two-driver experiment at the end of Lab 5. Which bits of the bus show a value, and why those?</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">C</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Load from memory that is not there <em>(needs addresses)</em></div>
+          <p><code>address</code> = <code>00110000</code> &mdash; row 3, which your RAM does not populate. Pulse <code>sa</code>, raise <code>me</code>, and record <code>bus</code>. Now pulse <code>r1s</code> anyway, as a load would, and record <code>r1reg</code>. Lower <code>me</code>.</p>
+          <p>Whatever R1 shows now, it is not <code>01000111</code> any more, and it is not a byte that came from memory. Say in one sentence what it is.</p>
+        </div>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">A Description, Not a Diagnosis</div>
+        <p>Breaks B and C ask Logisim to do things no working circuit does &mdash; two drivers on one wire, and a register set from a wire nothing is driving. Record what <em>your</em> Logisim shows. If yours differs from the person next to you, check both circuits before you decide one of them is wrong; the tool has its own behaviour here, and the useful finding is that the circuit gave you no trustworthy byte.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Part 5 — MARS
+         ============================================================ -->
+    <section id="sec-part-5">
+      <h2>Part 5 — MARS: One Word, Four Bytes, Two Readings <span class="points-badge">~35 min</span><span class="live-tag live-tag--solo">Together, then your own</span></h2>
+
+      <p>Your bench moves one byte per load. A MIPS <code>lw</code> moves four, and <code>lb</code> and <code>lbu</code> move one and then have to decide what to put in the other 24 bits of the register. You are about to take one word apart and watch both happen.</p>
+
+      <h3>Write a program &mdash; the specification, not the code</h3>
+
+      <div class="callout callout--hook">
+        <div class="callout__title">Your Program</div>
+        <p>Write a MIPS program, in one file named <code>lab08_yourname.asm</code>, that does the following in order, printing each number on its own line (or, in step 3, two to a line):</p>
+        <ol>
+          <li><strong>Declare one word</strong> in <code>.data</code>, labelled <code>quad</code>, whose four bytes &mdash; from the lowest address to the highest &mdash; are <code>0x7F</code>, <code>0x80</code>, <code>0xF0</code>, <code>0x12</code>. Write it as <strong>a single <code>.word</code> in hex</strong>. Work out the order of the hex digits yourself, then check it in the Data Segment pane before going on.</li>
+          <li><strong>Load the whole word</strong> with <code>lw</code> and print it as a decimal integer.</li>
+          <li><strong>Walk its four bytes</strong> in a loop, from the lowest address up. For each one, print what <code>lb</code> gives, a space, what <code>lbu</code> gives, and a newline.</li>
+          <li><strong>Overwrite one byte</strong>: store <code>0x41</code> into the byte at the <em>highest</em> of the four addresses with <code>sb</code>. <strong>Before you run this step</strong>, write in a comment the value you expect the whole word to have now, in hex. Then load the word again and print it.</li>
+          <li><strong>Load a word from address 0</strong> &mdash; <code>lw $t3, 0($zero)</code>. Then exit cleanly.</li>
+        </ol>
+        <p><strong>Constraints:</strong> <code>.data</code> first, then <code>.text</code>, no <code>main:</code> label and no <code>.globl main</code>. The loop takes its addresses from <code>la</code> plus a counter &mdash; do not type four separate loads. Only instructions this course has taught: no <code>mult</code>, <code>div</code>, <code>mfhi</code>, <code>mflo</code> or <code>lui</code>. <strong>Comment every executable line.</strong></p>
+      </div>
+
+      <p>It is twenty-five to thirty-five instructions. The only part that needs real thought is step 1 &mdash; and if you get it wrong, step 3 will tell you.</p>
+
+      <h3>What you need to know to write it</h3>
+
+      <div class="table-scroll">
+      <table class="pin-table">
+        <thead>
+          <tr><th>To do this</th><th>Write</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Get the address of a label</td><td><code>la $s0, quad</code></td><td>a pseudo-instruction; MARS expands it</td></tr>
+          <tr><td>Load a word, a signed byte, an unsigned byte</td><td><code>lw $t1, 0($s0)</code> &middot; <code>lb</code> &middot; <code>lbu</code></td><td>same shape: offset, then base register in brackets</td></tr>
+          <tr><td>Store the low byte of a register</td><td><code>sb $t2, 0($s1)</code></td><td>the other 24 bits of <code>$t2</code> are ignored</td></tr>
+          <tr><td>Add a register or a constant to an address</td><td><code>add $t1, $s0, $t0</code> &middot; <code>addi</code></td><td>byte addresses: one byte is one address</td></tr>
+          <tr><td>Load a small constant</td><td><code>li $t2, 0x41</code></td><td></td></tr>
+          <tr><td>Print the integer in <code>$a0</code></td><td><code>li $v0, 1</code> then <code>syscall</code></td><td>service 1</td></tr>
+          <tr><td>Print the character in <code>$a0</code></td><td><code>li $v0, 11</code> then <code>syscall</code></td><td>service 11. Space is 32, newline 10</td></tr>
+          <tr><td>Exit</td><td><code>li $v0, 10</code> then <code>syscall</code></td><td>service 10</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <ol class="logisim-steps">
+          <li><strong>Assemble</strong> (F3) and <strong>run</strong> (F5). Copy the output lines onto the observation sheet.</li>
+          <li><strong>When MARS stops at step 5, do not fix anything yet.</strong> Copy its message, word for word, into a comment beside that line.</li>
+          <li>Comment out the load from address 0, re-assemble, and run again. The program should now reach the exit.</li>
+        </ol>
+
+      <p>The file you submit is the version that runs to the end, with the address-0 load still there as a comment and MARS's message beside it.</p>
+
+      <h3>Three questions &mdash; answer them in the comments of your <code>.asm</code></h3>
+
+      <p>These are the point of the exercise. They are about the bench, not about MIPS.</p>
+
+      <div class="lab-step">
+        <div class="lab-step__num">Q1</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">What a <code>lw</code> would cost your machine</div>
+          <p>Your bench's RAM moves one byte per load, at the number of signal changes you counted in Part 3. How many of your loads would the <code>lw</code> in step 2 take, and how many signal changes in total?</p>
+          <p>Then, reading your step 3 output: <strong>which byte, as a hex value, would your very first load bring back</strong> if the word started at the address you gave the MAR?</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">Q2</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Where the other 24 bits come from</div>
+          <p>Take the byte <code>0xF0</code>. Say what <code>lb</code> put in the upper 24 bits of the register and where it got them, and what <code>lbu</code> put there.</p>
+          <p>Your R1 is 8 bits wide and has no upper bits at all. <strong>Which of the two instructions is your bench's load most like, and why?</strong> What would your machine need that it does not have, to do the other one?</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">Q3</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Memory that is not there, twice</div>
+          <p>Break C and step 5 both asked a machine for memory it does not have. Say what each machine did: what your bench's bus and R1 showed, and what MARS did.</p>
+          <p>Then one sentence: <strong>if you were debugging a program, which of those two behaviours would you rather have, and why?</strong></p>
+        </div>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">If You Finish Early</div>
+        <p>Add a sixth step: load a word from <code>quad</code> plus 1 &mdash; one byte past the start. Record what MARS says, and decide whether it is the same complaint as step 5 or a different one. Then work out, from your bench, why a machine that moves one byte at a time would never need to make that complaint at all.</p>
+        <p>This is not graded.</p>
+      </div>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">The Two Halves, Joined</div>
+        <p>This morning a load was seven-odd signal changes that you made with your own hands, in an order that mattered, and that broke three different ways when the order was wrong. This afternoon a load was one line of text.</p>
+        <p><strong>The line of text did not make the signals go away.</strong> It made them someone else's job. In Week 11 you build the someone else: a control unit that raises and lowers <code>sa</code>, <code>me</code> and a register's <code>s</code> in exactly the order you just worked out &mdash; and in Week 12 the RAM joins your CPU's bus the way it joined this bench.</p>
+      </div>
+
+      <p><strong>Two resources worth bookmarking:</strong> <a href="https://github.com/dpetersanderson/MARS" target="_blank" rel="noopener">the MARS repository</a>, and <a href="https://www.youtube.com/playlist?list=PLZ9NgFYEMxp5cLlPZ25zOD6zjnKKPv06p" target="_blank" rel="noopener">Amell Peralta's MIPS assembly playlist</a>, whose conventions this course follows.</p>
+    </section>
+
+    <!-- ============================================================
+         Midterm questions
+         ============================================================ -->
+    <section id="sec-midterm">
+      <h2>Last Ten Minutes — Midterm Questions <span class="points-badge">~10 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <p>The midterm this week covers Weeks 1 through 8. The session's last ten minutes are yours: bring any question from any week. If the room is quiet, we walk back down the ladder &mdash; from a <code>lw</code>, to the MAR and two decoders, to a register, to a latch, to a gate &mdash; which is the same walk the whole first half of the course has been.</p>
+    </section>
+
+    <!-- ============================================================
+         Observation sheet
+         ============================================================ -->
+    <section id="sec-observations">
+      <h2>Observation Sheet</h2>
+
+      <p>Fill this in as you go &mdash; it is what Completion Check 8 collects. <strong>Write what your bench and MARS showed, not what you expected.</strong></p>
+
+      <table class="obs-table" id="obs-sequences">
+        <caption>Part 3 — your control sequences, one signal change per line</caption>
+        <thead>
+          <tr><th>Operation</th><th>Your sequence</th><th>Signal changes</th><th>What you checked, and what it read</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Store <code>11010010</code> into byte 20 from <code>key</code></td><td class="fill fill--wide fill--tall"></td><td class="fill"></td><td class="fill fill--wide"></td></tr>
+          <tr><td>Load byte 20 into R1</td><td class="fill fill--wide fill--tall"></td><td class="fill"></td><td class="fill fill--wide"></td></tr>
+          <tr><td>Copy byte 3 to byte 30 through R1</td><td class="fill fill--wide fill--tall"></td><td class="fill"></td><td class="fill fill--wide"></td></tr>
+        </tbody>
+      </table>
+
+      <table class="obs-table" id="obs-break">
+        <caption>Part 4 — the three breaks</caption>
+        <thead>
+          <tr><th>Break</th><th>What you saw</th><th>Why, in one sentence</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Before A: your number, and how the room split</td><td class="fill fill--wide"></td><td class="fill fill--wide"></td></tr>
+          <tr><td><strong>A</strong> &mdash; byte 30 and byte 4 afterwards, and byte 4 before</td><td class="fill fill--wide"></td><td class="fill fill--wide"></td></tr>
+          <tr><td><strong>B</strong> &mdash; <code>bus</code>, character for character</td><td class="fill fill--wide"></td><td class="fill fill--wide"></td></tr>
+          <tr><td><strong>C</strong> &mdash; <code>bus</code>, then <code>r1reg</code> after the <code>r1s</code> pulse</td><td class="fill fill--wide"></td><td class="fill fill--wide"></td></tr>
+        </tbody>
+      </table>
+
+      <div class="table-scroll">
+      <table class="obs-table" id="obs-mars">
+        <caption>Part 5 — what MARS printed</caption>
+        <thead>
+          <tr><th>Step</th><th>Your <code>.word</code>, or the output</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1 &mdash; the <code>.word</code> you declared</td><td class="fill fill--wide"></td><td class="fill fill--wide"></td></tr>
+          <tr><td>2 &mdash; the whole word, in decimal</td><td class="fill fill--wide"></td><td class="fill fill--wide"></td></tr>
+          <tr><td>3 &mdash; lowest byte: <code>lb</code>, <code>lbu</code></td><td class="fill fill--wide"></td><td class="fill fill--wide"></td></tr>
+          <tr><td>3 &mdash; next byte</td><td class="fill fill--wide"></td><td class="fill fill--wide"></td></tr>
+          <tr><td>3 &mdash; next byte</td><td class="fill fill--wide"></td><td class="fill fill--wide"></td></tr>
+          <tr><td>3 &mdash; highest byte</td><td class="fill fill--wide"></td><td class="fill fill--wide"></td></tr>
+          <tr><td>4 &mdash; your prediction (hex), and what printed</td><td class="fill fill--wide"></td><td class="fill fill--wide"></td></tr>
+          <tr><td>5 &mdash; MARS's message</td><td class="fill fill--wide"></td><td class="fill fill--wide"></td></tr>
+        </tbody>
+      </table>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Assignment
+         ============================================================ -->
+    <section id="sec-assignment">
+      <h2>Assignment: Completion Check 8</h2>
+
+      <div class="lab-meta">
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Points</span>
+          <span class="lab-meta__value">10</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Due</span>
+          <span class="lab-meta__value lab-meta__value--due">Sunday, Oct 11, 2026 &middot; 11:59 PM</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Submit via</span>
+          <span class="lab-meta__value">Canvas &mdash; Lab 8 Completion Check</span>
+        </div>
+        <div class="lab-meta__item">
+          <span class="lab-meta__label">Assesses</span>
+          <span class="lab-meta__value">CSLO 1, CSLO 3</span>
+        </div>
+      </div>
+
+      <p>This is a CSC210L grade and it collects <strong>nothing that Assignment 8 collects</strong>. Your RAM and your array program are graded there; <code>LOAD_STORE_BENCH</code> and <code>lab08_yourname.asm</code> are graded here and nowhere else. Nothing in CSC210 depends on your attendance in this room.</p>
+
+      <h3>What to Submit</h3>
+
+      <ol>
+        <li><strong>Your <code>.circ</code> file.</strong> Only the <code>LOAD_STORE_BENCH</code> tab is looked at for this check.</li>
+        <li><strong><code>lab08_yourname.asm</code></strong> &mdash; the actual file, not a screenshot. It should run to the exit as submitted, with the address-0 load commented out and MARS's message beside it, your step 4 prediction in a comment, and your three answers in the comments.</li>
+        <li><strong>Your observation sheet</strong> &mdash; a photo of the printout, or the same tables typed up. Neatness is not graded.</li>
+      </ol>
+
+      <h3>Grading Rubric</h3>
+
+      <table>
+        <thead>
+          <tr><th>Criterion</th><th>Points</th><th>Full credit requires</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>LOAD_STORE_BENCH</code> built and working</td>
+            <td>3</td>
+            <td>A tab named exactly <code>LOAD_STORE_BENCH</code>: an instance of your own RAM (<code>RAM_16X16</code>, or the one-byte <code>RAM_BYTE</code> stand-in) and of your own <code>REGISTER_8BIT</code>, with <code>key</code> able to let go of the bus; pins named as on this page. Wiring and Gates components only.</td>
+          </tr>
+          <tr>
+            <td>Observation sheet, Part 3</td>
+            <td>3</td>
+            <td>Your three sequences written out, the two counts, and what each check read. Being wrong costs nothing here; leaving it blank does.</td>
+          </tr>
+          <tr>
+            <td>Observation sheet, Part 4</td>
+            <td>2</td>
+            <td>The breaks attempted (or, for a one-byte stand-in, the two that need addresses recorded from the shared screen), each with a one-sentence reason.</td>
+          </tr>
+          <tr>
+            <td>Your program, and the three answers</td>
+            <td>2</td>
+            <td>A program you wrote that meets the specification and runs to the exit as submitted, every executable line commented, the step 4 prediction and MARS's step 5 message in comments; Q1, Q2 and Q3 answered in the comments.</td>
+          </tr>
+          <tr class="rubric-total">
+            <td>Total</td>
+            <td>10</td>
+            <td>&nbsp;</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p style="font-size:var(--fs-sm);color:var(--color-text-muted);"><strong>CSLO alignment.</strong> Supports <strong>CSLO&nbsp;1</strong> (describe the organization and architecture of a computer system) through the bench and its control sequences, and <strong>CSLO&nbsp;3</strong> (use appropriate tools to write and test assembly language programs) through the MARS program. The graded SLO evidence for this material is Assignment 8 in the lecture course; nothing in CSC210 depends on your attendance here.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">If You Could Not Finish</div>
+        <p>This is a <strong>finish-on-your-own</strong> lab, in a midterm week, by design. Once your RAM passes its verification table, <code>LOAD_STORE_BENCH</code> is fifteen minutes of wiring and Parts 3 and 4 are fifteen minutes of switches. The program is shorter than it looks.</p>
+        <p>If your RAM is what is blocking you, that is the first thing to sort out &mdash; Assignment 8 needs it too, and it is worth most of that assignment's points.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Checklist
+         ============================================================ -->
+    <section id="sec-checklist">
+      <h2>Pre-Submission Checklist</h2>
+
+      <p>Two minutes before you upload. Check an item only after you have actually verified it.</p>
+
+      <div class="widget-card" id="widget-checklist">
+        <div class="widget-card__title">Pre-Submission Checklist</div>
+        <div class="widget-card__subtitle">Nothing here is saved &mdash; it is a thinking prompt, not a record.</div>
+
+        <ul class="lab-checklist" id="ck-list">
+          <li>
+            <input type="checkbox" id="ck-1">
+            <label for="ck-1">My file has a tab named exactly <code>LOAD_STORE_BENCH</code>.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-2">
+            <label for="ck-2">It uses <strong>instances</strong> of my own RAM and my own <code>REGISTER_8BIT</code> &mdash; nothing rebuilt, nothing modified, and nothing from Plexers, Arithmetic or Memory.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-3">
+            <label for="ck-3">With every control pin at 0, <code>bus</code> reads <code>xxxxxxxx</code> &mdash; <code>key</code> goes through a buffer controlled by <code>ke</code>.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-4">
+            <label for="ck-4">My load, store and copy sequences are written out on the observation sheet, with the two counts.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-5">
+            <label for="ck-5">I ran (or watched) all three breaks and recorded each one.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-6">
+            <label for="ck-6">My program's <code>.data</code> comes first, then <code>.text</code>, with no <code>main:</code> label and no <code>.globl main</code>.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-7">
+            <label for="ck-7">My <code>.word</code> puts <code>0x7F</code> at the lowest address &mdash; I checked it in the Data Segment pane.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-8">
+            <label for="ck-8">The byte walk is a loop, and my step 4 prediction was written before I ran it.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-9">
+            <label for="ck-9">MARS's step 5 message is copied into a comment, and the submitted file runs all the way to the exit.</label>
+          </li>
+          <li>
+            <input type="checkbox" id="ck-10">
+            <label for="ck-10">Q1, Q2 and Q3 are answered in the comments, and I am uploading the <code>.asm</code> <strong>file</strong>, not a screenshot of it.</label>
+          </li>
+        </ul>
+
+        <div class="checklist-status" id="ck-status" role="status" aria-live="polite">0 of 10 verified</div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         What comes next
+         ============================================================ -->
+    <section id="sec-next">
+      <h2>What Comes Next</h2>
+
+      <p>Today you were the control unit for a memory that you built, found out what three wrong orders do to it, and took a MIPS word apart into the bytes your own machine would fetch one at a time.</p>
+
+      <p>That closes Phase 2. From Week 9 the parts you own start becoming one machine: the lecture course brings program and data into the same memory, and the lab traces a single instruction through every box you have built so far &mdash; and checks that every one of them is still a tab in one file.</p>
+
+      <div class="progression">
+        <div class="progression__item completed">
+          <div class="progression__label">Lab 6 &mdash; One Answer, Two Readings</div>
+          <div class="progression__detail">When the adder's answer can be trusted &mdash; <code>ARITH_BENCH</code></div>
+        </div>
+        <div class="progression__item completed">
+          <div class="progression__label">Lab 7 &mdash; Which Way Is Less?</div>
+          <div class="progression__detail">Branch conditions and the stack &mdash; <code>BRANCH_BENCH</code></div>
+        </div>
+        <div class="progression__item active">
+          <div class="progression__label">Lab 8 &mdash; Being the Control Unit</div>
+          <div class="progression__detail">Load and store, by hand &mdash; <code>LOAD_STORE_BENCH</code></div>
+        </div>
+        <div class="progression__item">
+          <div class="progression__label">Lab 9 &mdash; Fetch, Decode, Execute</div>
+          <div class="progression__detail">One instruction, every box &mdash; and one file</div>
+        </div>
+      </div>
+
+      <p>Good luck on the midterm. Bring your file on Tuesday.</p>
+    </section>
+
+  </main>
+
+  <!-- ==================== Footer ==================== -->
+  <footer class="sp-footer">
+    CSC210L — Computer Organization &amp; Architecture Lab &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <!-- ==================== Scripts ==================== -->
+  <script>
+  /* ============================================================
+     Pre-Submission Checklist
+     ============================================================
+     A count, and nothing more. No persistence, deliberately --
+     this is a thinking prompt at submission time, not a record.
+     No shared kernel is loaded: an on-page RAM would fill in the
+     observation sheet for the student.
+     ============================================================ */
+  (function () {
+    'use strict';
+
+    var boxes = document.querySelectorAll('#ck-list input[type="checkbox"]');
+    var total = boxes.length;
+
+    function update() {
+      var count = 0, i;
+      for (i = 0; i < boxes.length; i++) {
+        if (boxes[i].checked) { count++; boxes[i].parentNode.classList.add('checked'); }
+        else { boxes[i].parentNode.classList.remove('checked'); }
+      }
+      var status = document.getElementById('ck-status');
+      if (count === total) {
+        status.className = 'checklist-status checklist-status--ready';
+        status.innerHTML = '&#10004; All ' + total + ' verified &mdash; you are ready to submit.';
+      } else {
+        status.className = 'checklist-status';
+        status.textContent = count + ' of ' + total + ' verified';
+      }
+    }
+
+    Array.prototype.forEach.call(boxes, function (b) {
+      b.addEventListener('change', update);
+    });
+  })();
+  </script>
+
+</body>
+</html>
