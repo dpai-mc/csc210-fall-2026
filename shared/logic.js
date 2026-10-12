@@ -1631,6 +1631,367 @@
   }
 
   /* ============================================================
+     WEEK 9 -- The multi-cycle MIPS datapath (CSCLogic.cycle)
+     ============================================================
+     Added 2026-10-05.
+
+     WHAT THIS MODELS. The multi-cycle MIPS implementation from
+     Patterson & Hennessy: ONE memory holding both instructions and
+     data (the Von Neumann arrangement), ONE ALU, and five internal
+     registers the programmer never names -- IR, MDR, A, B, ALUOut --
+     beside the PC and the register file. Each instruction takes 3, 4
+     or 5 clock cycles, and every cycle is a short list of register
+     transfers.
+
+     WHY MULTI-CYCLE AND NOT SINGLE-CYCLE (Dave, 2026-10-05). The
+     single-cycle MIPS datapath has separate instruction and data
+     memories, which is the Harvard arrangement -- the wrong picture for
+     a Von Neumann week -- and has no IR or MDR. The multi-cycle one is
+     a stored-program machine with one memory, and its cycles ARE the
+     fetch-decode-execute steps.
+
+     HONEST DIFFERENCES, carried into the pages:
+       * Textbook MIPS has no MAR. A multiplexer chooses whether the
+         memory address comes from the PC or from ALUOut. The course
+         machine has a real MAR (Week 8). Nothing here invents one.
+       * A, B, ALUOut and MDR have no write enable in this design; they
+         load every cycle and only matter for the next one. PC, IR, the
+         register file and memory DO have enables (PCWrite, IRWrite,
+         RegWrite, MemWrite) -- the same idea as the s line on the
+         student's REGISTER_8BIT. `signals` lists the enables and memory
+         controls asserted; multiplexer selects are Week 11 material and
+         are deliberately not listed.
+       * bne is modelled as beq with the condition inverted. Textbook
+         figures show beq; the hardware change is one gate.
+       * addi is modelled the standard way (address-style EX, then
+         write rt). It is not in the textbook's original state diagram.
+       * syscall is fetched and decoded, then the machine stops: control
+         passes to the system, which this course does not model.
+
+     Instruction words are REAL encodings (built with mips.encode), held
+     little-endian in the same byte memory as the data, so the IR shows
+     exactly what MARS's Text Segment shows. Fields are read from the IR's
+     bits, not from the source text.
+
+     NAMING. Every helper is cyc-prefixed or lives inside the cycle
+     namespace (the Week 6 shadowing rule).
+     ============================================================ */
+
+  var CYC_TEXT_BASE = 0x00400000;
+  var CYC_DATA_BASE = 0x10010000;
+
+  var CYC_PHASES = {
+    1: 'Instruction fetch',
+    2: 'Decode and register fetch',
+    3: 'Execute',
+    4: 'Memory access or completion',
+    5: 'Write-back'
+  };
+
+  /* Cycles per instruction class in this machine. Derived from the
+     transfers below and asserted against them in the test suite. */
+  var CYC_COUNTS = { R: 4, addi: 4, lw: 5, sw: 4, beq: 3, bne: 3, j: 3 };
+
+  var CYC_FUNCT = { '100000': 'add', '100010': 'sub', '100100': 'and', '100101': 'or', '101010': 'slt', '001100': 'syscall' };
+  var CYC_OPC = { '001000': 'addi', '100011': 'lw', '101011': 'sw', '000100': 'beq', '000101': 'bne', '000010': 'j' };
+
+  function cycHex(v) {
+    var s = (v >>> 0).toString(16).toUpperCase();
+    while (s.length < 8) { s = '0' + s; }
+    return '0x' + s;
+  }
+
+  function cycBits(v) {
+    var s = (v >>> 0).toString(2);
+    while (s.length < 32) { s = '0' + s; }
+    return s;
+  }
+
+  function cycSext16(v) { v = v & 0xFFFF; return (v & 0x8000) ? v - 0x10000 : v; }
+
+  function cycAlu(op, a, b) {
+    a = a | 0; b = b | 0;
+    switch (op) {
+      case 'add': return (a + b) | 0;
+      case 'sub': return (a - b) | 0;
+      case 'and': return a & b;
+      case 'or':  return a | b;
+      case 'slt': return a < b ? 1 : 0;
+    }
+    throw new Error('cycle: no ALU operation ' + op);
+  }
+
+  /* Field view of a 32-bit instruction word, read from its bits. */
+  function cycFields(word) {
+    var b = cycBits(word), opc = b.slice(0, 6);
+    var f = {
+      opcode: opc,
+      rs: parseInt(b.slice(6, 11), 2),
+      rt: parseInt(b.slice(11, 16), 2),
+      rd: parseInt(b.slice(16, 21), 2),
+      funct: b.slice(26, 32),
+      imm: cycSext16(parseInt(b.slice(16, 32), 2)),
+      target: parseInt(b.slice(6, 32), 2)
+    };
+    if (opc === '000000') { f.kind = CYC_FUNCT[f.funct] || null; f.cls = f.kind === 'syscall' ? 'syscall' : 'R'; }
+    else { f.kind = CYC_OPC[opc] || null; f.cls = f.kind; }
+    return f;
+  }
+
+  /* A two-pass assembler for the subset this machine runs. Labels in
+     branches and jumps are resolved to the encoded field, then
+     mips.encode builds the word -- one encoder for the whole course. */
+  function cycAssemble(source, textBase) {
+    var lines = String(source).split('\n');
+    var seg = 'text', text = [], data = [], labels = {}, dataLabels = {};
+    var tp = textBase, dp = CYC_DATA_BASE, i, m;
+    lines.forEach(function (raw) {
+      var line = raw.replace(/#.*$/, '');
+      if (/^\s*\.data\b/.test(line)) { seg = 'data'; return; }
+      if (/^\s*\.text\b/.test(line)) { seg = 'text'; return; }
+      m = /^\s*([A-Za-z_]\w*)\s*:(.*)$/.exec(line);
+      var lab = m ? m[1] : null;
+      if (m) { line = m[2]; }
+      if (seg === 'data') {
+        if (lab) { dataLabels[lab] = dp; }
+        m = /^\s*\.word\s+(.*)$/.exec(line);
+        if (m) { m[1].split(',').forEach(function (t) { data.push({ addr: dp, value: parseInt(t.trim(), 10) | 0 }); dp += 4; }); }
+        return;
+      }
+      if (lab) { labels[lab] = tp; }
+      if (line.trim() === '') { return; }
+      text.push({ addr: tp, src: line.trim() });
+      tp += 4;
+    });
+    for (i = 0; i < text.length; i++) {
+      var t = text[i], src = t.src, mm;
+      mm = /^(beq|bne)\s+([^,]+),\s*([^,]+),\s*([A-Za-z_]\w*)$/.exec(src);
+      if (mm) {
+        if (labels[mm[4]] === undefined) { throw new Error('cycle: unknown label ' + mm[4]); }
+        src = mm[1] + ' ' + mm[2] + ', ' + mm[3] + ', ' + ((labels[mm[4]] - (t.addr + 4)) / 4);
+      }
+      mm = /^j\s+([A-Za-z_]\w*)$/.exec(src);
+      if (mm) {
+        if (labels[mm[1]] === undefined) { throw new Error('cycle: unknown label ' + mm[1]); }
+        src = 'j ' + ((labels[mm[1]] >>> 2) & 0x3FFFFFF);
+      }
+      if (src === 'syscall') { t.word = 0x0000000C; continue; }
+      var e = mipsEncode(src);
+      if (!e.ok) { throw new Error('cycle: cannot encode "' + t.src + '": ' + e.error); }
+      t.word = parseInt(e.bits, 2) | 0;
+    }
+    return { text: text, data: data, labels: labels, dataLabels: dataLabels };
+  }
+
+  /* The machine. opts.textBase lets a page place the first instruction
+     where MARS would (e.g. after a two-word `la`); opts.regs presets
+     registers by name. */
+  function cycMachine(source, opts) {
+    opts = opts || {};
+    var prog = cycAssemble(source, opts.textBase === undefined ? CYC_TEXT_BASE : opts.textBase);
+    var mem = {};
+    function putWord(a, v) { var bs = memWordToBytes(v); for (var q = 0; q < 4; q++) { mem[(a + q) >>> 0] = bs[q]; } }
+    function getWord(a) {
+      var bs = [], q;
+      for (q = 0; q < 4; q++) { var x = mem[(a + q) >>> 0]; bs.push(x === undefined ? 0 : x); }
+      return memBytesToWord(bs) | 0;
+    }
+    prog.text.forEach(function (t) { putWord(t.addr, t.word); });
+    prog.data.forEach(function (d) { putWord(d.addr, d.value); });
+
+    var R = [], k;
+    for (k = 0; k < 32; k++) { R.push(0); }
+    R[28] = 0x10008000; R[29] = 0x7FFFEFFC;
+    if (opts.regs) {
+      Object.keys(opts.regs).forEach(function (name) {
+        var r = regByName(name);
+        if (!r) { throw new Error('cycle: no register ' + name); }
+        if (r.n !== 0) { R[r.n] = opts.regs[name] | 0; }
+      });
+    }
+
+    var S = {
+      PC: prog.text.length ? prog.text[0].addr : (opts.textBase || CYC_TEXT_BASE),
+      IR: 0, MDR: 0, A: 0, B: 0, ALUOut: 0
+    };
+    var phase = 1, cycles = 0, instructions = 0, halted = false, f = null, current = null;
+    var history = [];
+
+    function rn(n) { return regByNumber(n).name; }
+    function setR(n, v) { if (n !== 0) { R[n] = v | 0; } }
+    function srcAt(addr) {
+      for (var i = 0; i < prog.text.length; i++) { if (prog.text[i].addr === addr) { return prog.text[i].src; } }
+      return null;
+    }
+
+    function stepCycle() {
+      if (halted) { return { halted: true }; }
+      var rec = { cycle: cycles + 1, phase: phase, phaseName: CYC_PHASES[phase], rtl: [], writes: [], signals: [], active: [], done: false };
+      var t, a;
+      if (phase === 1) {
+        current = { addr: S.PC, src: srcAt(S.PC) };
+        S.IR = getWord(S.PC);
+        a = S.PC;
+        S.PC = (S.PC + 4) | 0;
+        rec.rtl = ['IR ← Memory[PC]', 'PC ← PC + 4'];
+        rec.writes = ['IR', 'PC'];
+        rec.signals = ['MemRead', 'IRWrite', 'PCWrite', 'ALU: add'];
+        rec.active = ['pc', 'mem', 'ir', 'alu'];
+        rec.addr = a;
+        f = null;
+        phase = 2;
+      } else if (phase === 2) {
+        f = cycFields(S.IR);
+        current.fields = f;
+        S.A = R[f.rs]; S.B = R[f.rt];
+        S.ALUOut = (S.PC + (f.imm << 2)) | 0;
+        rec.rtl = ['A ← Reg[rs] (' + rn(f.rs) + ')', 'B ← Reg[rt] (' + rn(f.rt) + ')', 'ALUOut ← PC + (offset × 4)'];
+        rec.writes = ['A', 'B', 'ALUOut'];
+        rec.signals = ['ALU: add'];
+        rec.active = ['ir', 'regs', 'a', 'b', 'alu', 'aluout'];
+        if (f.cls === 'syscall') {
+          rec.rtl = ['Decode: syscall', 'Control passes to the system; the machine stops here'];
+          rec.writes = []; rec.signals = []; rec.active = ['ir'];
+          rec.done = true; halted = true;
+        } else if (!f.cls || (f.cls === 'R' && !f.kind)) {
+          throw new Error('cycle: the IR holds ' + cycHex(S.IR) + ', which this machine does not implement');
+        }
+        phase = 3;
+      } else if (phase === 3) {
+        if (f.cls === 'R') {
+          S.ALUOut = cycAlu(f.kind, S.A, S.B);
+          rec.rtl = ['ALUOut ← A ' + f.kind + ' B'];
+          rec.writes = ['ALUOut']; rec.signals = ['ALU: ' + f.kind];
+          rec.active = ['a', 'b', 'alu', 'aluout'];
+          phase = 4;
+        } else if (f.cls === 'lw' || f.cls === 'sw' || f.cls === 'addi') {
+          S.ALUOut = (S.A + f.imm) | 0;
+          rec.rtl = ['ALUOut ← A + ' + f.imm + (f.cls === 'addi' ? ' (the immediate)' : ' (the offset)')];
+          rec.writes = ['ALUOut']; rec.signals = ['ALU: add'];
+          rec.active = ['a', 'ir', 'alu', 'aluout'];
+          phase = 4;
+        } else if (f.cls === 'beq' || f.cls === 'bne') {
+          var equal = (S.A | 0) === (S.B | 0);
+          var take = f.cls === 'beq' ? equal : !equal;
+          rec.rtl = ['Compare: A − B is ' + (equal ? 'zero' : 'not zero'), take ? 'PC ← ALUOut (branch taken)' : 'PC unchanged (branch not taken)'];
+          if (take) { S.PC = S.ALUOut; rec.writes = ['PC']; }
+          rec.signals = ['ALU: sub', 'PCWriteCond'];
+          rec.active = ['a', 'b', 'alu'].concat(take ? ['aluout', 'pc'] : []);
+          rec.taken = take;
+          rec.done = true; phase = 1;
+        } else if (f.cls === 'j') {
+          S.PC = ((S.PC & 0xF0000000) | (f.target << 2)) | 0;
+          rec.rtl = ['PC ← (top 4 bits of PC) | (target × 4)'];
+          rec.writes = ['PC']; rec.signals = ['PCWrite'];
+          rec.active = ['ir', 'pc'];
+          rec.done = true; phase = 1;
+        }
+      } else if (phase === 4) {
+        if (f.cls === 'R') {
+          setR(f.rd, S.ALUOut);
+          rec.rtl = ['Reg[rd] (' + rn(f.rd) + ') ← ALUOut'];
+          rec.writes = [rn(f.rd)]; rec.signals = ['RegWrite'];
+          rec.active = ['aluout', 'regs'];
+          rec.done = true; phase = 1;
+        } else if (f.cls === 'addi') {
+          setR(f.rt, S.ALUOut);
+          rec.rtl = ['Reg[rt] (' + rn(f.rt) + ') ← ALUOut'];
+          rec.writes = [rn(f.rt)]; rec.signals = ['RegWrite'];
+          rec.active = ['aluout', 'regs'];
+          rec.done = true; phase = 1;
+        } else if (f.cls === 'lw') {
+          if ((S.ALUOut & 3) !== 0) { throw new Error('cycle: lw address ' + cycHex(S.ALUOut) + ' is not word-aligned'); }
+          S.MDR = getWord(S.ALUOut);
+          rec.rtl = ['MDR ← Memory[ALUOut]'];
+          rec.writes = ['MDR']; rec.signals = ['MemRead'];
+          rec.active = ['aluout', 'mem', 'mdr'];
+          rec.addr = S.ALUOut;
+          phase = 5;
+        } else if (f.cls === 'sw') {
+          if ((S.ALUOut & 3) !== 0) { throw new Error('cycle: sw address ' + cycHex(S.ALUOut) + ' is not word-aligned'); }
+          putWord(S.ALUOut, S.B);
+          rec.rtl = ['Memory[ALUOut] ← B'];
+          rec.writes = ['Memory[' + cycHex(S.ALUOut) + ']']; rec.signals = ['MemWrite'];
+          rec.active = ['aluout', 'b', 'mem'];
+          rec.addr = S.ALUOut;
+          rec.done = true; phase = 1;
+        }
+      } else if (phase === 5) {
+        setR(f.rt, S.MDR);
+        rec.rtl = ['Reg[rt] (' + rn(f.rt) + ') ← MDR'];
+        rec.writes = [rn(f.rt)]; rec.signals = ['RegWrite'];
+        rec.active = ['mdr', 'regs'];
+        rec.done = true; phase = 1;
+      }
+      cycles++;
+      rec.instruction = current ? { addr: current.addr, src: current.src } : null;
+      rec.cls = f ? f.cls : null;
+      if (rec.done) { instructions += (f && f.cls === 'syscall') ? 0 : 1; }
+      rec.state = snapshot();
+      history.push(rec);
+      return rec;
+    }
+
+    function stepInstruction() {
+      var r, out = [];
+      do { r = stepCycle(); if (r.halted && !r.cycle) { break; } out.push(r); } while (!r.done && !halted);
+      return out;
+    }
+
+    function run(limit) {
+      limit = limit || 100000;
+      var n = 0;
+      while (!halted && n < limit) { stepCycle(); n++; }
+      return { halted: halted, cycles: cycles, instructions: instructions };
+    }
+
+    function snapshot() {
+      return { PC: S.PC, IR: S.IR, MDR: S.MDR, A: S.A, B: S.B, ALUOut: S.ALUOut, regs: R.slice() };
+    }
+
+    return {
+      program: prog,
+      stepCycle: stepCycle,
+      stepInstruction: stepInstruction,
+      run: run,
+      state: snapshot,
+      reg: function (name) { var r = typeof name === 'number' ? { n: name } : regByName(name); return R[r.n]; },
+      word: getWord,
+      phase: function () { return phase; },
+      cycles: function () { return cycles; },
+      instructions: function () { return instructions; },
+      halted: function () { return halted; },
+      history: history
+    };
+  }
+
+  /* The cycle-by-cycle shape of one instruction class, for the tables on
+     pages 2 and 3. Generated by running a one-instruction program through
+     the machine, so the table can never disagree with the stepper. */
+  function cycProfile(cls) {
+    var SRC = {
+      R:    'add $t2, $t0, $t1',
+      addi: 'addi $t0, $t0, 1',
+      lw:   'lw $t2, 0($s0)',
+      sw:   'sw $t2, 0($s0)',
+      beq:  'beq $t0, $t1, next\nnext: add $t0, $t0, $t0',
+      bne:  'bne $t0, $t1, next\nnext: add $t0, $t0, $t0',
+      j:    'j next\nnext: add $t0, $t0, $t0'
+    };
+    if (!SRC[cls]) { throw new Error('cycle: no class ' + cls); }
+    var mm = cycMachine('.data\nx: .word 0\n.text\n' + SRC[cls], { regs: { '$s0': CYC_DATA_BASE } });
+    return mm.stepInstruction().map(function (r) {
+      var rtl = r.rtl.map(function (x) {
+        return x.replace(/\s\(\$\w+\)/g, '').replace(/A \+ -?\d+ \(the (offset|immediate)\)/, 'A + $1');
+      });
+      if ((cls === 'beq' || cls === 'bne') && r.phase === 3) {
+        rtl = [cls === 'beq' ? 'If A = B: PC \u2190 ALUOut' : 'If A \u2260 B: PC \u2190 ALUOut'];
+      }
+      return { cycle: r.cycle, phase: r.phase, phaseName: r.phaseName, rtl: rtl, signals: r.signals.slice() };
+    });
+  }
+
+  /* ============================================================
      WEEK 8 -- Memory: the RAM matrix and MIPS load/store (CSCLogic.mem)
      ============================================================
      Added 2026-09-23.
@@ -2118,6 +2479,20 @@
       wordToBytes: memWordToBytes,
       bytesToWord: memBytesToWord,
       machine: memMachine
+    },
+
+    /* Week 9 additions -- the multi-cycle MIPS datapath. Every helper
+       is cyc-prefixed; see the block comment. */
+    cycle: {
+      TEXT_BASE: CYC_TEXT_BASE,
+      DATA_BASE: CYC_DATA_BASE,
+      PHASES: CYC_PHASES,
+      COUNTS: CYC_COUNTS,
+      fields: cycFields,
+      assemble: cycAssemble,
+      machine: cycMachine,
+      profile: cycProfile,
+      hex: cycHex
     },
 
     /* Week 7 additions -- control-flow address arithmetic and the
