@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w9-00">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 9 Orientation: The Loop That Runs Everything</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .split-bar { display: flex; height: 2.2rem; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--color-border); margin: var(--space-sm) 0; }
+    .split-bar > div { display: flex; align-items: center; justify-content: center; font-size: var(--fs-xs); font-weight: 700; color: #fff; text-align: center; padding: 0 2px; overflow: hidden; }
+    .split-bar .sb-w9 { background: var(--color-primary); }
+    .split-bar .sb-a9 { background: var(--color-accent-hov); }
+    .split-bar .sb-mt { background: var(--color-success); }
+    .split-legend { display: flex; justify-content: space-between; font-size: var(--fs-xs); color: var(--color-text-muted); gap: var(--space-sm); }
+    .due { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin: var(--space-md) 0; }
+    .due > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
+    .due h3 { margin-top: 0; }
+    @media (max-width: 640px) { .due { grid-template-columns: 1fr; } }
+    .one-line { text-align: center; margin: var(--space-md) 0; font-family: var(--font-mono); overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 9 &rsaquo; <span>Orientation</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Week 9 — The Loop That Runs Everything</h1>
+    <p><strong>The stored-program machine and the fetch-decode-execute cycle</strong> &nbsp;|&nbsp; <strong>10/12 – 10/18</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~4.25 hours, plus finishing the midterm</p>
+
+    <section id="sec-gap">
+      <div class="callout callout--hook">
+        <div class="callout__title">For eight weeks you have built the parts of a computer. You have also been running them.</div>
+        <p>A register, an ALU, a RAM and its address register are in your file. But every byte that moved between them moved because <strong>you</strong> raised an <code>s</code> or an <code>e</code> line by hand. You have been the control unit.</p>
+        <p>This week opens Phase 3 by asking what a real processor does in your place: where it finds its instructions, and how it turns each one into a sequence of things the hardware does, one clock cycle at a time.</p>
+        <p class="one-line">fetch &rarr; decode &rarr; execute &rarr; fetch &rarr; &hellip;</p>
+      </div>
+    </section>
+
+    <section id="sec-shape">
+      <h2>A light week, on purpose</h2>
+      <div class="callout callout--warn">
+        <div class="callout__title">The midterm closes this week</div>
+        <div class="split-bar" role="img" aria-label="Of about six and a quarter hours this week: about three and a half hours on the orientation and the three Week 9 pages, about three quarters of an hour on Assignment 9, and about two hours on the midterm if you have not finished it yet.">
+          <div class="sb-w9" style="flex:3.5">Week 9 pages</div>
+          <div class="sb-a9" style="flex:0.75">A9</div>
+          <div class="sb-mt" style="flex:2">Midterm</div>
+        </div>
+        <div class="split-legend"><span>~3.5 hrs</span><span>~0.75 hr</span><span>~2 hrs</span></div>
+        <p>Week 9 has three pages instead of four, no Logisim checkpoint, and a short auto-graded assignment, so the midterm has room. <strong>If you have not finished the midterm, finish it first.</strong> Assignment 9 is worth 25 points; the midterm is worth 100.</p>
+      </div>
+
+      <div class="due">
+        <div>
+          <h3>Midterm &mdash; Weeks 1&ndash;8</h3>
+          <p>100 points, Canvas, no time limit, two attempts with your higher score kept. <strong>Due Sunday 10/18, 11:59 pm.</strong></p>
+        </div>
+        <div>
+          <h3>Assignment 9 &mdash; Canvas quiz</h3>
+          <p>25 points, 10 questions on this week&rsquo;s three pages, every one auto-graded. No time limit, two attempts, higher score kept. <strong>Due Sunday 10/18, 11:59 pm.</strong></p>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-path">
+      <h2>This week&rsquo;s learning path</h2>
+      <p>Read the pages in order; each one uses the program the one before it introduced.</p>
+
+      <div class="spa-card-grid">
+        <div class="spa-card">
+          <div class="spa-card__number">Page 1</div>
+          <div class="spa-card__title">The Stored Program</div>
+          <div class="spa-card__time">~1 hr &nbsp;|&nbsp; Sections 9.1–9.4</div>
+          <div class="spa-card__desc">One memory for program and data. Why every instruction is just a number &mdash; and why the integer 0 is also an instruction. What decides which is which.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+        <div class="spa-card">
+          <div class="spa-card__number">Page 2</div>
+          <div class="spa-card__title">Fetch, Decode, Execute</div>
+          <div class="spa-card__time">~1.5 hr &nbsp;|&nbsp; Sections 9.5–9.8</div>
+          <div class="spa-card__desc">The loop, on a real MIPS processor. Five steps, the registers a program never sees, and a stepper that runs page 1&rsquo;s program one clock cycle at a time.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+        <div class="spa-card">
+          <div class="spa-card__number">Page 3</div>
+          <div class="spa-card__title">Datapath and Control</div>
+          <div class="spa-card__time">~45 min &nbsp;|&nbsp; Sections 9.9–9.12</div>
+          <div class="spa-card__desc">The parts that hold and move values, and the part that decides when. Why every control line is an <code>s</code> or <code>e</code> you have already wired. The map of Phase 3.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-machine">
+      <h2>Which machine, and why</h2>
+      <p>This week traces <strong>MIPS</strong> &mdash; the processor whose programs you have been writing in MARS &mdash; rather than the CPU you are building. It is a real design, it runs exactly the instructions you know, and every address and value on these pages matches what MARS shows you. Page 3 ends by setting it beside your CPU: the same loop, at a smaller size. Your CPU&rsquo;s own instruction format comes later in the term.</p>
+    </section>
+
+    <section id="sec-tools">
+      <h2>Tools and reading</h2>
+      <ul>
+        <li><strong>MARS</strong> &mdash; optional this week, but worth it: assemble page 1&rsquo;s program and look at the Text Segment and Data Segment panes side by side.</li>
+        <li><strong>Logisim</strong> &mdash; not needed this week.</li>
+        <li><strong>Saylor CS301</strong> &mdash; log in at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 5: Designing a Processor</strong>, which builds MIPS datapaths. It is supplementary; the three pages are complete without it.</li>
+      </ul>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 9, Orientation
+  </footer>
+</body>
+</html>

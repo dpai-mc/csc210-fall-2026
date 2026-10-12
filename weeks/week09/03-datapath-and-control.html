@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w9-03">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 9: Datapath and Control</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ---------- */
+    .sig-table td, .sig-table th { text-align: center; vertical-align: top; }
+    .sig-table td:first-child, .sig-table th:first-child { text-align: left; white-space: nowrap; }
+    .chip { display: inline-block; font-family: var(--font-mono); font-size: var(--fs-xs); border: 1px solid var(--color-primary); color: var(--color-primary); border-radius: 4px; padding: 1px 5px; margin: 1px; background: var(--color-surface); white-space: nowrap; }
+    .chip--alu { border-style: dashed; color: var(--color-text-muted); border-color: var(--color-border); }
+    .none { color: var(--color-text-muted); }
+    .vs-table td:first-child { font-weight: 700; }
+    .map { list-style: none; padding: 0; margin: var(--space-md) 0; }
+    .map li { border: 1px solid var(--color-border); border-left: 4px solid var(--color-primary); border-radius: var(--radius); background: var(--color-surface); padding: var(--space-sm) var(--space-md); margin-bottom: var(--space-sm); }
+    .map b { color: var(--color-primary); }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 9 &rsaquo; <span>Page 3 — Datapath and Control</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Datapath and Control</h1>
+    <p><strong>Sections 9.9 – 9.12</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~45 minutes</p>
+
+    <!-- ============================================================
+         9.9
+         ============================================================ -->
+    <section id="sec-9-9">
+      <h2>9.9 &nbsp; Two kinds of hardware</h2>
+
+      <p>Look again at the figure on page 2. Every block in it &mdash; the PC, memory, the IR and MDR, the registers, A and B, the ALU, ALUOut &mdash; and every wire between them holds a value or carries one. Together they are the <strong>datapath</strong>: the part of the processor that values travel through.</p>
+
+      <p>What the figure does not show is the thing that made the stepper do something different in each cycle. In cycle 1 the IR took a new value and in cycle 2 it did not. In cycle 4 of a <code>lw</code> memory was read, and in cycle 4 of a <code>sw</code> it was written. Something chose. That something is the <strong>control path</strong>, or <strong>control unit</strong>: a circuit that reads the instruction&rsquo;s opcode and knows which cycle it is in, and from those two things drives a set of control lines into the datapath.</p>
+
+      <p>Here are the lines it raises for four instructions, cycle by cycle. These are the same signals the stepper showed, produced by the same model:</p>
+
+      <div class="table-scroll">
+        <table class="sig-table" id="sig-table">
+          <thead><tr><th>Instruction</th><th>Cycle 1</th><th>Cycle 2</th><th>Cycle 3</th><th>Cycle 4</th><th>Cycle 5</th></tr></thead>
+          <tbody id="sig-body"><tr><td colspan="6"><em>Loading the table&hellip;</em></td></tr></tbody>
+        </table>
+      </div>
+
+      <p>Solid boxes are write enables and memory controls; dashed boxes say which operation the control unit asks the ALU for. Several things you do not see are also control lines &mdash; the selector that chooses memory&rsquo;s address, and the ones that choose each ALU input &mdash; and Week 11 adds them to this table.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">You have built every one of these</div>
+        <p><code>PCWrite</code> and <code>IRWrite</code> are each the <code>s</code> line on a register &mdash; the same line you raised by hand on <code>REGISTER_8BIT</code> in Week 5. <code>RegWrite</code> becomes the <code>s</code> line of whichever register the instruction names, with a decoder choosing which (Week 10). <code>MemWrite</code> is the <code>s</code> on your RAM in Week 8, and <code>MemRead</code> its <code>e</code>. The dashed &ldquo;ALU&rdquo; boxes do the job of the opcode pins on your Week 7 ALU. (MIPS&rsquo;s ALU has a subtract operation; yours subtracts with <code>NOT</code> and the carry-in, as Week 6 showed. Same request, different wiring.) <code>PCWriteCond</code> is the only new idea: write the PC only if the comparison says so, which is how a branch decides.</p>
+        <p>The control unit&rsquo;s whole job is to raise the right <code>s</code> and <code>e</code> lines in the right cycles. That is the job you have been doing with a mouse.</p>
+      </div>
+
+      <p>The control unit is itself just a circuit. Its inputs are the opcode bits from the IR and a count of which cycle this is; its outputs are the lines in the table. Week 11 builds one for your machine.</p>
+    </section>
+
+    <!-- ============================================================
+         9.10
+         ============================================================ -->
+    <section id="sec-9-10">
+      <h2>9.10 &nbsp; Why one ALU, and why the IR and MDR</h2>
+
+      <p>The multi-cycle machine makes two choices that only make sense together.</p>
+
+      <p><strong>It reuses one ALU for three jobs.</strong> In cycle 1 the ALU computes <code>PC + 4</code>. In cycle 2 it computes a branch target. In cycle 3 it computes the instruction&rsquo;s actual result or address. One adder can do all three because they happen in different cycles. Your machine will do the same: one ALU, and the control unit deciding what it adds in each step.</p>
+
+      <p><strong>It reuses one memory twice in a <code>lw</code>.</strong> Cycle 1 reads the instruction from memory; cycle 4 reads the data. Because the second read replaces memory&rsquo;s output, the instruction has to be copied somewhere first &mdash; the IR &mdash; or the machine would forget what it was doing halfway through. The loaded data needs somewhere to wait for the next cycle too &mdash; the MDR. <strong>The IR and MDR are the price of having one memory</strong>, and one memory is the von Neumann idea from page 1.</p>
+
+      <p>There is another way to build MIPS. A <strong>single-cycle</strong> design does a whole instruction in one long clock cycle, so nothing can be reused within it: it needs a separate instruction memory and data memory, and separate adders for <code>PC + 4</code> and the branch target alongside the ALU. Fewer cycles, more hardware, and two memories. Week 11 sets the two designs side by side.</p>
+    </section>
+
+    <!-- ============================================================
+         9.11
+         ============================================================ -->
+    <section id="sec-9-11">
+      <h2>9.11 &nbsp; Same loop, different size</h2>
+
+      <p>You traced MIPS because it is the processor whose programs you write. The CPU you are building runs the same loop &mdash; fetch the word the PC points at, decode it, do it, move on &mdash; at a smaller scale and with some different choices:</p>
+
+      <div class="table-scroll">
+        <table class="vs-table">
+          <thead><tr><th></th><th>MIPS, multi-cycle</th><th>Your CPU</th></tr></thead>
+          <tbody>
+            <tr><td>Data width</td><td>32 bits</td><td>8 bits</td></tr>
+            <tr><td>Memory</td><td>32-bit addresses</td><td>8-bit addresses: 256 bytes by design, 32 built (Week 8)</td></tr>
+            <tr><td>Registers a program uses</td><td>32, <code>$zero</code> to <code>$ra</code></td><td>four, R0 to R3</td></tr>
+            <tr><td>Where the memory address is held</td><td>the PC or ALUOut, chosen by a selector</td><td>a real MAR, which you built in Week 8</td></tr>
+            <tr><td>The instruction being executed</td><td>held in an IR</td><td>held in an IR</td></tr>
+            <tr><td>Instruction format</td><td>32-bit R, I and J formats (Week 5)</td><td>its own, smaller format, introduced later this term</td></tr>
+            <tr><td>Control unit</td><td>designed by MIPS&rsquo;s engineers</td><td>designed and built by you, Weeks 11&ndash;13</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>None of those differences change the loop. They change how many bits move at once and who wires the control.</p>
+    </section>
+
+    <!-- ============================================================
+         9.12
+         ============================================================ -->
+    <section id="sec-9-12">
+      <h2>9.12 &nbsp; The map of Phase 3</h2>
+
+      <p>Phase 2 gave you the parts. Phase 3 connects them, and this week was the plan:</p>
+
+      <ul class="map">
+        <li><b>Week 10 &mdash; the register file.</b> Four registers your program can name, with decoders choosing which one supplies each ALU operand and which one takes the result. <strong>Checkpoint 4.</strong></li>
+        <li><b>Week 11 &mdash; the control unit.</b> The circuit that turns an opcode and a step count into the lines in &sect;9.9&rsquo;s table; and single-cycle against multi-cycle. <strong>Checkpoint 5.</strong></li>
+        <li><b>Week 12 &mdash; memory and the outside world.</b> The memory bus, input and output, and what <code>syscall</code> really does. <strong>Quiz 2</strong> covers Weeks 9&ndash;12, including this week.</li>
+        <li><b>Week 13 &mdash; the complete datapath.</b> PC, IR, control, ALU and registers wired into one machine that runs its first instructions. <strong>Checkpoint 6.</strong></li>
+      </ul>
+
+      <div class="callout callout--hook">
+        <div class="callout__title">The idea to keep</div>
+        <p>A computer is a datapath that holds and moves values, a control unit that decides each cycle which values move, and a program counter pointing into a memory full of numbers. Fetch, decode, execute, repeat. Every program you have ever run, in any language, is that loop.</p>
+      </div>
+
+      <!-- ========== Self-check C ========== -->
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Three questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+
+      <p>For datapath and control in a second voice, log into your Saylor CS301 account at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 5: Designing a Processor</strong>. CS301 does not connect MIPS&rsquo;s control lines to the <code>s</code> and <code>e</code> lines on your own circuits; this page is the source for that.</p>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>That is Week 9. Assignment 9 is a short Canvas quiz on these three pages; the midterm closes the same day. Both are due Sunday, October 18, at 11:59 pm.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 9, Page 3
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['cycle'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.cycle</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.cycle) { return; }
+    var CY = L.cycle;
+    function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+    /* ---------- The control-signal table, from the model ---------- */
+    (function () {
+      var body = document.getElementById('sig-body');
+      if (!body) { return; }
+      var ROWS = [['R', '<code>add</code>'], ['lw', '<code>lw</code>'], ['sw', '<code>sw</code>'], ['beq', '<code>beq</code>']];
+      body.innerHTML = ROWS.map(function (row) {
+        var p = CY.profile(row[0]);
+        var cells = [1, 2, 3, 4, 5].map(function (c) {
+          var step = p.filter(function (s) { return s.cycle === c; })[0];
+          if (!step) { return '<td class="none">&mdash;</td>'; }
+          return '<td>' + step.signals.map(function (sg) {
+            var alu = sg.indexOf('ALU:') === 0;
+            return '<span class="chip' + (alu ? ' chip--alu' : '') + '">' + esc(alu ? sg.replace('ALU: ', 'ALU ') : sg) + '</span>';
+          }).join(' ') + '</td>';
+        }).join('');
+        return '<tr><td>' + row[1] + '</td>' + cells + '</tr>';
+      }).join('');
+    }());
+
+    /* ---------- Self-check C ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+        { q: 'Which of these is part of the <strong>control path</strong>, not the datapath?',
+          opts: ['The register file', 'ALUOut', 'The circuit that decides which register&rsquo;s write line goes high this cycle', 'The wire from memory to the IR'],
+          correct: 2,
+          why: 'The others hold or carry values. Deciding which of them changes, and when, is control.' },
+        { q: 'Why can the multi-cycle machine use a single ALU both to add 4 to the PC and to compute an add instruction&rsquo;s result?',
+          opts: ['Because the ALU has two adders inside it', 'Because the two additions happen in different clock cycles', 'Because PC + 4 is computed by memory', 'It cannot; it needs a second ALU'],
+          correct: 1,
+          why: 'PC + 4 happens in cycle 1 and the result in cycle 3. A single-cycle design cannot reuse it that way, which is why it needs extra adders.' },
+        { q: 'Which control signal plays the role of the <code>s</code> line on the IR?',
+          opts: ['MemRead', 'IRWrite', 'PCWriteCond', 'RegWrite'],
+          correct: 1,
+          why: 'IRWrite lets the IR take a new value. It is high in cycle 1 only, so the instruction stays put while memory is reused.' }
+      ];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p>' +
+          '<div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi];
+        var okAns = (oi === item.correct);
+        var fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) {
+          el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false');
+        });
+      }
+      host.addEventListener('click', function (e) {
+        var t = e.target.closest('.quiz-option');
+        if (t) { answer(+t.dataset.q, +t.dataset.o); }
+      });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+  })();
+  </script>
+</body>
+</html>

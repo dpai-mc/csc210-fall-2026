@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w9-02">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 9: Fetch, Decode, Execute</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ---------- */
+    .asm {
+      font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.55;
+      background: var(--color-code-bg); border: 1px solid var(--color-border);
+      border-radius: var(--radius); padding: var(--space-md); margin: var(--space-md) 0;
+      overflow-x: auto; white-space: pre;
+    }
+    .asm .cm { color: var(--color-text-muted); }
+
+    /* The datapath figure. Scrolls inside its own box on a phone. */
+    .dp-wrap { overflow-x: auto; margin: var(--space-md) 0; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); }
+    .dp { display: block; width: 100%; min-width: 600px; height: auto; font-family: var(--font-sans); }
+    .dp .blk rect, .dp .blk polygon { fill: #f4f7fa; stroke: #8a99a8; stroke-width: 1.5; }
+    .dp .blk text { fill: var(--color-text); font-size: 15px; font-weight: 700; text-anchor: middle; }
+    .dp .blk text.sub { font-size: 11px; font-weight: 400; fill: var(--color-text-muted); }
+    .dp .blk--hidden rect { stroke-dasharray: 5 3; }
+    .dp .wire { fill: none; stroke: #9aa7b3; stroke-width: 2; }
+    .dp .lbl { font-size: 11px; fill: var(--color-text-muted); }
+    .dp .on rect, .dp .on polygon { fill: #fff1e0; stroke: var(--color-accent-hov); stroke-width: 3; }
+    .dp .wire.on { stroke: var(--color-accent-hov); stroke-width: 4; }
+    .dp-key { font-size: var(--fs-xs); color: var(--color-text-muted); margin: var(--space-xs) var(--space-sm) var(--space-sm); }
+
+    .phase-tag { display: inline-block; font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #fff; background: var(--color-primary); border-radius: 999px; padding: 2px 10px; }
+    .cycle-table td:first-child { white-space: nowrap; font-weight: 700; }
+    .cls-table td { vertical-align: top; }
+    .cls-table ul { margin: 0; padding-left: 1.1rem; }
+    .cls-table .n { font-weight: 700; color: var(--color-primary); text-align: center; }
+
+    /* Stepper */
+    .listing { font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.5; background: var(--color-code-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) 0; margin: var(--space-sm) 0; overflow-x: auto; }
+    .listing__ln { white-space: pre; padding: 0 var(--space-md); border-left: 4px solid transparent; }
+    .listing__ln--cur { background: #fff5eb; border-left-color: var(--color-accent); font-weight: 700; }
+    .listing__addr { color: var(--color-text-muted); }
+    .ctl-row { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: var(--space-sm) 0; }
+    .now { border: 2px solid var(--color-primary); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-code-bg); margin: var(--space-sm) 0; }
+    .now__head { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; margin-bottom: var(--space-xs); }
+    .now__rtl { font-family: var(--font-mono); font-size: var(--fs-sm); margin: var(--space-xs) 0; padding-left: 1.2rem; }
+    .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+    .chip { font-family: var(--font-mono); font-size: var(--fs-xs); border: 1px solid var(--color-primary); color: var(--color-primary); border-radius: 4px; padding: 1px 6px; background: var(--color-surface); }
+    .chip--none { border-style: dashed; color: var(--color-text-muted); border-color: var(--color-border); }
+    .regs { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-xs); margin: var(--space-sm) 0; }
+    .reg { border: 1px solid var(--color-border); border-radius: 4px; padding: var(--space-xs) var(--space-sm); background: var(--color-surface); font-family: var(--font-mono); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+    .reg b { color: var(--color-primary); }
+    .reg small { display: block; color: var(--color-text-muted); font-family: var(--font-sans); font-size: 11px; }
+    .reg--changed { border-color: var(--color-success); background: #f0faf4; }
+    .grp-title { font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); margin: var(--space-sm) 0 0; }
+    .counters { display: flex; flex-wrap: wrap; gap: var(--space-md); font-size: var(--fs-sm); margin: var(--space-xs) 0; }
+    .counters b { font-family: var(--font-mono); color: var(--color-primary); }
+    .walk-status { font-size: var(--fs-sm); margin: var(--space-xs) 0; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 9 &rsaquo; <span>Page 2 — Fetch, Decode, Execute</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Fetch, Decode, Execute</h1>
+    <p><strong>Sections 9.5 – 9.8</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1.5 hours</p>
+
+    <!-- ============================================================
+         9.5
+         ============================================================ -->
+    <section id="sec-9-5">
+      <h2>9.5 &nbsp; The loop</h2>
+
+      <p>Page 1 ended on one rule: a word in memory is an instruction because the PC pointed at it. Everything a processor does follows from repeating three steps on whatever word that is.</p>
+
+      <ol>
+        <li><strong>Fetch.</strong> Read the word at the address in the PC, and advance the PC to the next instruction.</li>
+        <li><strong>Decode.</strong> Work out what the word asks for: which operation, which registers, which constant.</li>
+        <li><strong>Execute.</strong> Do it &mdash; compute, read or write memory, or change the PC.</li>
+      </ol>
+
+      <p>Then fetch again. There is no step 4 and no point at which the machine stops to think. A program is a list of words; running it is this loop, applied to each in turn, with branches and jumps doing nothing more mysterious than writing a different number into the PC during step 3. You worked out that number yourself in Week 7.</p>
+
+      <p>Three steps is the outline. To see what a real processor does inside each one, we need a real processor.</p>
+    </section>
+
+    <!-- ============================================================
+         9.6
+         ============================================================ -->
+    <section id="sec-9-6">
+      <h2>9.6 &nbsp; A real machine to watch</h2>
+
+      <p>The machine on this page is the <strong>multi-cycle MIPS datapath</strong>, the textbook design from Patterson and Hennessy. It runs the same MIPS instructions you have been writing in MARS, and it was chosen for one reason: it is a stored-program machine in the sense of page 1. It has <strong>one memory</strong>, holding both the program and its data, and <strong>one ALU</strong>, and it takes several clock cycles per instruction so that each step of the loop gets a cycle of its own.</p>
+
+      <div class="dp-wrap">
+        <svg class="dp" id="dp" viewBox="0 0 920 390" role="img" aria-labelledby="dp-title dp-desc">
+          <title id="dp-title">The multi-cycle MIPS datapath</title>
+          <desc id="dp-desc">Left to right: the PC feeds an address selector, which feeds one Memory holding instructions and data. Memory's output goes to the IR (instruction register) and to the MDR (memory data register). The IR supplies register numbers to the register file; the MDR supplies a value to be written. The register file's two outputs go into holding registers A and B, which feed the one ALU. The ALU's result goes into ALUOut. ALUOut feeds back along the bottom to the register file, to the address selector and to the PC. The ALU also writes PC plus 4 back to the PC along the top. B also runs along the bottom to Memory, as the value a store writes.</desc>
+
+          <!-- wires (drawn first, under the blocks) -->
+          <path class="wire" id="w-alu-pc"     d="M735 100 V30 H50 V150"/>
+          <path class="wire" id="w-pc-mux"     d="M80 175 H104"/>
+          <path class="wire" id="w-mux-mem"    d="M128 175 H150"/>
+          <path class="wire" id="w-mem-ir"     d="M280 90 H320"/>
+          <path class="wire" id="w-mem-mdr"    d="M280 235 H320"/>
+          <path class="wire" id="w-ir-regs"    d="M400 90 H425 V110 H450"/>
+          <path class="wire" id="w-mdr-regs"   d="M400 235 H425 V250 H450"/>
+          <path class="wire" id="w-regs-a"     d="M570 130 H610"/>
+          <path class="wire" id="w-regs-b"     d="M570 230 H610"/>
+          <path class="wire" id="w-a-alu"      d="M660 130 H700"/>
+          <path class="wire" id="w-b-alu"      d="M660 230 H700"/>
+          <path class="wire" id="w-alu-aluout" d="M770 190 H810"/>
+          <path class="wire" id="w-aluout-bus" d="M850 215 V330 H50"/>
+          <path class="wire" id="w-aluout-mux" d="M116 330 V208"/>
+          <path class="wire" id="w-aluout-regs" d="M510 330 V280"/>
+          <path class="wire" id="w-aluout-pc"  d="M50 330 V200"/>
+          <path class="wire" id="w-b-mem"      d="M635 250 V365 H138 V265 H150"/>
+
+          <text class="lbl" x="392" y="24">PC + 4, or a jump target, written back to the PC</text>
+          <text class="lbl" x="404" y="104">rs, rt</text>
+          <text class="lbl" x="620" y="325">ALUOut: a result, an address, or a branch target</text>
+          <text class="lbl" x="300" y="380">B: the value a store writes to memory</text>
+
+          <!-- blocks -->
+          <g class="blk" id="b-pc"><rect x="20" y="150" width="60" height="50" rx="4"/><text x="50" y="181">PC</text></g>
+          <g class="blk" id="b-mux"><polygon points="104,140 128,152 128,198 104,210"/><text class="sub" x="116" y="230">addr</text></g>
+          <g class="blk" id="b-mem"><rect x="150" y="60" width="130" height="230" rx="4"/><text x="215" y="170">Memory</text><text class="sub" x="215" y="190">instructions</text><text class="sub" x="215" y="205">and data</text></g>
+          <g class="blk blk--hidden" id="b-ir"><rect x="320" y="60" width="80" height="60" rx="4"/><text x="360" y="96">IR</text></g>
+          <g class="blk blk--hidden" id="b-mdr"><rect x="320" y="210" width="80" height="50" rx="4"/><text x="360" y="241">MDR</text></g>
+          <g class="blk" id="b-regs"><rect x="450" y="80" width="120" height="200" rx="4"/><text x="510" y="175">Registers</text><text class="sub" x="510" y="195">$zero &hellip; $ra</text></g>
+          <g class="blk blk--hidden" id="b-a"><rect x="610" y="110" width="50" height="40" rx="4"/><text x="635" y="136">A</text></g>
+          <g class="blk blk--hidden" id="b-b"><rect x="610" y="210" width="50" height="40" rx="4"/><text x="635" y="236">B</text></g>
+          <g class="blk" id="b-alu"><polygon points="700,100 770,140 770,240 700,280 700,215 718,190 700,165"/><text x="744" y="196">ALU</text></g>
+          <g class="blk blk--hidden" id="b-aluout"><rect x="810" y="165" width="80" height="50" rx="4"/><text x="850" y="196">ALUOut</text></g>
+        </svg>
+        <p class="dp-key">Dashed outlines: registers a MIPS program cannot name. Solid: things your code can see &mdash; the PC (through branches and jumps), the 32 registers, and memory.</p>
+      </div>
+
+      <p>Most of this you already own, at a smaller size:</p>
+      <ul>
+        <li><strong>PC</strong> &mdash; a register holding the address of the next instruction. Week 7 wrote numbers into it with branches and jumps.</li>
+        <li><strong>Memory</strong> &mdash; one memory, byte-addressed, little-endian, the same one MARS shows you. Program at <code>0x00400000</code>, data at <code>0x10010000</code>. Week 8 built a small version of it.</li>
+        <li><strong>Registers</strong> &mdash; <code>$zero</code> through <code>$ra</code>. Read two at once, write one. Week 10 builds a register file for your machine.</li>
+        <li><strong>ALU</strong> &mdash; one ALU, used for every addition in the machine, including the ones the program never asked for. You built one in Weeks 6 and 7.</li>
+      </ul>
+
+      <p>Five registers are new, and no MIPS instruction can name any of them. They exist because the work is spread across several cycles and something has to hold each cycle's result for the next one:</p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Register</th><th>Holds</th><th>Why it has to exist</th></tr></thead>
+          <tbody>
+            <tr><td><strong>IR</strong> &mdash; instruction register</td><td>the instruction being executed</td><td>memory is about to be used again, for data; the instruction must survive that</td></tr>
+            <tr><td><strong>MDR</strong> &mdash; memory data register</td><td>a word just read from memory</td><td>holds a loaded value for one cycle until the register file can take it</td></tr>
+            <tr><td><strong>A</strong> and <strong>B</strong></td><td>the two register values the instruction reads</td><td>the ALU's inputs, held steady while it works</td></tr>
+            <tr><td><strong>ALUOut</strong></td><td>the ALU's last result</td><td>a sum, an address or a branch target, kept for the next cycle</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Where is the MAR?</div>
+        <p>Many textbooks list a <strong>memory address register</strong> among a CPU's parts, and you built one in Week 8. This MIPS design does not have one. The small selector marked <em>addr</em> chooses, each cycle, whether memory's address comes from the PC (to fetch an instruction) or from ALUOut (to load or store data), and the PC and ALUOut hold their values steady for as long as memory needs them. Same job, done by registers the machine needed anyway. Your machine does it with a real MAR; both are honest designs.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         9.7
+         ============================================================ -->
+    <section id="sec-9-7">
+      <h2>9.7 &nbsp; Five steps, one per clock cycle</h2>
+
+      <p>On this machine the loop's three steps become up to five clock cycles. In each cycle a few registers take new values; the arrows below are <strong>register transfers</strong>, read &ldquo;gets&rdquo;. The first two cycles are identical for every instruction, because until the instruction has been decoded the machine does not know what it is.</p>
+
+      <div class="table-scroll">
+        <table class="cycle-table">
+          <thead><tr><th>Cycle</th><th>Step</th><th>What happens</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Fetch</td><td><code>IR &larr; Memory[PC]</code> and <code>PC &larr; PC + 4</code>. Memory reads the word the PC points at into the IR. At the same time the ALU adds 4 to the PC, so the PC already points at the next instruction.</td></tr>
+            <tr><td>2</td><td>Decode</td><td>The control unit reads the IR's opcode. <code>A</code> and <code>B</code> take the registers named by the <code>rs</code> and <code>rt</code> fields. The ALU, which has nothing else to do, computes <code>PC + offset &times; 4</code> into ALUOut in case this is a branch.</td></tr>
+            <tr><td>3</td><td>Execute</td><td>Depends on the instruction: an R-type operation on A and B; base plus offset for a load or store; the comparison that finishes a branch; or the new PC for a jump.</td></tr>
+            <tr><td>4</td><td>Memory or completion</td><td>A load reads memory into the MDR; a store writes B to memory; an R-type or <code>addi</code> writes its result to a register and is finished.</td></tr>
+            <tr><td>5</td><td>Write-back</td><td>Only a load gets here: the register file takes the MDR.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Two details in cycle 2 are worth stopping on. The branch target is computed for <em>every</em> instruction, including the ones that are not branches; the ALU is idle that cycle, so guessing costs nothing, and a branch that needs it finishes a cycle sooner. And <code>A</code> and <code>B</code> take <code>rs</code> and <code>rt</code> before the machine knows whether the instruction uses them. Reading a register you do not need is harmless; reading it a cycle late would cost a cycle.</p>
+
+      <p>Here is every instruction class you write, cycle by cycle. This table is produced by running each instruction through the same model as the stepper below, so the two cannot disagree.</p>
+
+      <div class="table-scroll">
+        <table class="cls-table" id="cls-table">
+          <thead><tr><th>Instruction</th><th>Cycles</th><th>Cycle 3</th><th>Cycle 4</th><th>Cycle 5</th></tr></thead>
+          <tbody id="cls-body"><tr><td colspan="5"><em>Loading the table&hellip;</em></td></tr></tbody>
+        </table>
+      </div>
+      <p>Cycles 1 and 2 are the same for every row, so they are left out. <code>bne</code> is <code>beq</code> with the condition reversed; the textbook draws only <code>beq</code>, and the hardware difference is one gate.</p>
+    </section>
+
+    <!-- ============================================================
+         Widget 2
+         ============================================================ -->
+    <section id="sec-stepper">
+      <div class="widget-card" id="w-stepper">
+        <div class="widget-card__title">The Cycle Stepper</div>
+        <div class="widget-card__subtitle">The program from page 1, one clock cycle at a time. The highlighted blocks and wires in the figure above are the ones in use this cycle.</div>
+
+        <p class="walk-status">MARS places <code>la $s0, vals</code> at <code>0x00400000</code>&ndash;<code>0x00400004</code> as two instructions. The stepper starts after it, with <code>$s0</code> already holding <code>0x10010000</code>, so every address below is the one MARS uses.</p>
+
+        <div class="listing" id="cs-list" aria-label="The program, with the instruction in progress highlighted"></div>
+        <div class="ctl-row">
+          <button type="button" class="widget-btn widget-btn--primary" id="cs-cycle">step one cycle</button>
+          <button type="button" class="widget-btn widget-btn--outline" id="cs-instr">step one instruction</button>
+          <button type="button" class="widget-btn widget-btn--outline" id="cs-run">run to the end</button>
+          <button type="button" class="widget-btn widget-btn--outline" id="cs-reset">reset</button>
+        </div>
+
+        <div class="now" id="cs-now" aria-live="polite">
+          <div class="now__head"><span class="phase-tag" id="cs-phase">ready</span> <span id="cs-head">Press <em>step one cycle</em> to fetch the first instruction.</span></div>
+          <ul class="now__rtl" id="cs-rtl"></ul>
+          <div class="chips" id="cs-sig" aria-label="Control signals asserted this cycle"></div>
+        </div>
+
+        <div class="counters" id="cs-count"></div>
+
+        <p class="grp-title">Registers the program cannot name</p>
+        <div class="regs" id="cs-internal"></div>
+        <p class="grp-title">Registers the program uses</p>
+        <div class="regs" id="cs-regs"></div>
+        <p class="grp-title">Data memory</p>
+        <div class="regs" id="cs-mem"></div>
+        <p class="walk-status" id="cs-status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         9.8
+         ============================================================ -->
+    <section id="sec-9-8">
+      <h2>9.8 &nbsp; Counting cycles</h2>
+
+      <p>Run the stepper to the end. The program executes <strong>19 instructions in 76 cycles</strong> before reaching <code>syscall</code> &mdash; an average of exactly <strong>4.0 cycles per instruction</strong>. (The <code>syscall</code> itself is fetched and decoded, and then the machine hands control to the system, which this model does not include.) MARS, which does not model cycles, reports the same final values: <code>$t1</code> = 25, <code>sum</code> = 25.</p>
+
+      <p>Where the cycles go is worth reading off the table in &sect;9.7. A load takes five because it uses memory twice &mdash; once to fetch itself, once to fetch its data &mdash; and on a machine with one memory those cannot happen in the same cycle. A branch takes three because it has nothing to write anywhere except, perhaps, the PC. Change the mix of instructions and the average changes with it; a loop full of loads is slower per instruction than a loop full of adds.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Forward: Week 15</div>
+        <p>&ldquo;Average cycles per instruction&rdquo; has a name, <strong>CPI</strong>, and in Week 15 it becomes one third of the equation for how long a program takes. The number you just got by stepping is the number that equation needs.</p>
+      </div>
+
+      <!-- ========== Self-check B ========== -->
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Four questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+
+      <p>For the fetch-decode-execute cycle in a second voice, log into your Saylor CS301 account at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 5: Designing a Processor</strong>, which builds MIPS datapaths and their control. CS301 does not step a program cycle by cycle against MARS's addresses; this page is the source for that.</p>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>You can follow any instruction you write through a real processor, one cycle at a time, and say which register changes in each. Next page: the difference between the parts that hold and move values and the part that decides when they do.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 9, Page 2
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['cycle', 'mips'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.cycle || !L.mips) { return; }
+    var CY = L.cycle;
+
+    function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+    /* The page-1 program, minus the `la` (MARS: two words at 0x00400000). */
+    var PROGRAM = [
+      '        .data',
+      'vals:   .word 6, 11, 8',
+      'sum:    .word 0',
+      '        .text',
+      '        addi $t0, $zero, 3',
+      '        add  $t1, $zero, $zero',
+      'loop:   lw   $t2, 0($s0)',
+      '        add  $t1, $t1, $t2',
+      '        addi $s0, $s0, 4',
+      '        addi $t0, $t0, -1',
+      '        bne  $t0, $zero, loop',
+      '        sw   $t1, 0($s0)',
+      '        addi $v0, $zero, 10',
+      '        syscall'
+    ].join('\n');
+    var OPTS = { textBase: 0x00400008, regs: { '$s0': 0x10010000 } };
+
+    /* ---------- The per-class table, from the model ---------- */
+    (function () {
+      var body = document.getElementById('cls-body');
+      if (!body) { return; }
+      var ROWS = [
+        ['R', 'R-type: <code>add sub and or slt</code>'],
+        ['addi', '<code>addi</code>'],
+        ['lw', '<code>lw</code>'],
+        ['sw', '<code>sw</code>'],
+        ['beq', '<code>beq</code>, <code>bne</code>'],
+        ['j', '<code>j</code>']
+      ];
+      body.innerHTML = ROWS.map(function (row) {
+        var p = CY.profile(row[0]);
+        var cells = [3, 4, 5].map(function (c) {
+          var step = p.filter(function (s) { return s.cycle === c; })[0];
+          return '<td>' + (step ? '<ul>' + step.rtl.map(function (t) { return '<li><code>' + esc(t) + '</code></li>'; }).join('') + '</ul>' : '&mdash;') + '</td>';
+        }).join('');
+        return '<tr><td>' + row[1] + '</td><td class="n">' + p.length + '</td>' + cells + '</tr>';
+      }).join('');
+    }());
+
+    /* ---------- Which wires carry something, per cycle ---------- */
+    function wiresFor(rec) {
+      if (rec.phase === 1) { return ['w-pc-mux', 'w-mux-mem', 'w-mem-ir', 'w-alu-pc']; }
+      if (rec.phase === 2) { return rec.cls === 'syscall' ? [] : ['w-ir-regs', 'w-regs-a', 'w-regs-b', 'w-alu-aluout']; }
+      if (rec.phase === 3) {
+        if (rec.cls === 'R') { return ['w-a-alu', 'w-b-alu', 'w-alu-aluout']; }
+        if (rec.cls === 'lw' || rec.cls === 'sw' || rec.cls === 'addi') { return ['w-a-alu', 'w-alu-aluout']; }
+        if (rec.cls === 'beq' || rec.cls === 'bne') { return ['w-a-alu', 'w-b-alu'].concat(rec.taken ? ['w-aluout-bus', 'w-aluout-pc'] : []); }
+        return [];
+      }
+      if (rec.phase === 4) {
+        if (rec.cls === 'R' || rec.cls === 'addi') { return ['w-aluout-bus', 'w-aluout-regs']; }
+        if (rec.cls === 'lw') { return ['w-aluout-bus', 'w-aluout-mux', 'w-mux-mem', 'w-mem-mdr']; }
+        if (rec.cls === 'sw') { return ['w-aluout-bus', 'w-aluout-mux', 'w-mux-mem', 'w-b-mem']; }
+      }
+      if (rec.phase === 5) { return ['w-mdr-regs']; }
+      return [];
+    }
+
+    function light(rec) {
+      var svg = document.getElementById('dp');
+      if (!svg) { return; }
+      Array.prototype.forEach.call(svg.querySelectorAll('.on'), function (el) { el.classList.remove('on'); });
+      if (!rec) { return; }
+      var blocks = rec.active.slice(), wires = wiresFor(rec);
+      if (wires.indexOf('w-mux-mem') !== -1) { blocks.push('mux'); }
+      blocks.forEach(function (b) { var el = document.getElementById('b-' + b); if (el) { el.classList.add('on'); } });
+      wires.forEach(function (w) { var el = document.getElementById(w); if (el) { el.classList.add('on'); } });
+    }
+
+    /* ---------- Widget 2 — The Cycle Stepper ---------- */
+    (function () {
+      var host = document.getElementById('w-stepper');
+      if (!host) { return; }
+      var elList = document.getElementById('cs-list'), elPhase = document.getElementById('cs-phase');
+      var elHead = document.getElementById('cs-head'), elRtl = document.getElementById('cs-rtl');
+      var elSig = document.getElementById('cs-sig'), elCount = document.getElementById('cs-count');
+      var elInt = document.getElementById('cs-internal'), elRegs = document.getElementById('cs-regs');
+      var elMem = document.getElementById('cs-mem'), elStatus = document.getElementById('cs-status');
+      var m, last, prev, lastDoneCycle;
+      var SHOW = ['$t0', '$t1', '$t2', '$s0'];
+      var DATA = [['vals[0]', 0x10010000], ['vals[1]', 0x10010004], ['vals[2]', 0x10010008], ['sum', 0x1001000C]];
+
+      function decoded(word) {
+        var bits = (word >>> 0).toString(2);
+        while (bits.length < 32) { bits = '0' + bits; }
+        if (bits === '00000000000000000000000000001100') { return 'syscall'; }
+        var d = L.mips.decode(bits);
+        return d.ok ? d.text : '&mdash;';
+      }
+
+      function reset() {
+        m = CY.machine(PROGRAM, OPTS);
+        last = null; lastDoneCycle = 0;
+        prev = m.state();
+        light(null);
+        elPhase.textContent = 'ready';
+        elHead.innerHTML = 'Press <em>step one cycle</em> to fetch the first instruction.';
+        elRtl.innerHTML = ''; elSig.innerHTML = '';
+        elStatus.textContent = '';
+        paint();
+      }
+
+      function paint() {
+        var s = m.state();
+        var curAddr = last && last.instruction ? last.instruction.addr : null;
+        elList.innerHTML = m.program.text.map(function (t) {
+          var cur = t.addr === curAddr;
+          return '<div class="listing__ln' + (cur ? ' listing__ln--cur' : '') + '"' + (cur ? ' aria-current="step"' : '') + '>' +
+            '<span class="listing__addr">' + CY.hex(t.addr) + '  ' + CY.hex(t.word) + '</span>  ' + esc(t.src) + '</div>';
+        }).join('');
+
+        function box(name, val, note, changed) {
+          return '<div class="reg' + (changed ? ' reg--changed' : '') + '"><b>' + name + '</b> ' + val + (note ? '<small>' + note + '</small>' : '') + '</div>';
+        }
+        var w = last ? last.writes : [];
+        elInt.innerHTML = [
+          box('PC', CY.hex(s.PC), 'next instruction', w.indexOf('PC') !== -1),
+          box('IR', CY.hex(s.IR), s.IR ? decoded(s.IR) : 'empty', w.indexOf('IR') !== -1),
+          box('A', s.A, '', w.indexOf('A') !== -1),
+          box('B', s.B, '', w.indexOf('B') !== -1),
+          box('ALUOut', (s.ALUOut > 9 || s.ALUOut < -9) ? CY.hex(s.ALUOut) + ' = ' + s.ALUOut : String(s.ALUOut), '', w.indexOf('ALUOut') !== -1),
+          box('MDR', s.MDR, '', w.indexOf('MDR') !== -1)
+        ].join('');
+        elRegs.innerHTML = SHOW.map(function (r) {
+          var v = m.reg(r);
+          return box(r, r === '$s0' ? CY.hex(v) : String(v), '', w.indexOf(r) !== -1);
+        }).join('');
+        elMem.innerHTML = DATA.map(function (d) {
+          var changed = w.some(function (x) { return x.indexOf(CY.hex(d[1])) !== -1; });
+          return box(d[0], String(m.word(d[1])), CY.hex(d[1]), changed);
+        }).join('');
+
+        var done = m.instructions();
+        elCount.innerHTML = 'Cycle <b>' + m.cycles() + '</b> &middot; instructions completed <b>' + done + '</b>' +
+          (done ? ' &middot; average <b>' + (lastDoneCycle / done).toFixed(2) + '</b> cycles per instruction' : '');
+      }
+
+      function show(rec) {
+        last = rec;
+        light(rec);
+        elPhase.textContent = 'step ' + rec.phase + ': ' + rec.phaseName.toLowerCase();
+        var where = rec.instruction ? esc(rec.instruction.src) + ' at ' + CY.hex(rec.instruction.addr) : '';
+        elHead.innerHTML = 'Cycle ' + rec.cycle + (where ? ' &mdash; <code>' + where + '</code>' : '') +
+          (rec.done && !m.halted() ? ' &mdash; <strong>instruction complete</strong>' : '');
+        elRtl.innerHTML = rec.rtl.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('');
+        elSig.innerHTML = rec.signals.length
+          ? rec.signals.map(function (sg) { return '<span class="chip">' + esc(sg) + '</span>'; }).join('')
+          : '<span class="chip chip--none">no write enables this cycle</span>';
+        if (rec.done && rec.cls !== 'syscall') { lastDoneCycle = rec.cycle; }
+        if (m.halted()) {
+          elStatus.textContent = 'Finished: ' + m.instructions() + ' instructions in ' + lastDoneCycle +
+            ' cycles before the syscall, then the syscall’s fetch and decode. sum = ' + m.word(0x1001000C) + '.';
+        } else {
+          elStatus.textContent = '';
+        }
+        paint();
+      }
+
+      function oneCycle() { if (m.halted()) { return false; } show(m.stepCycle()); return true; }
+
+      document.getElementById('cs-cycle').addEventListener('click', oneCycle);
+      document.getElementById('cs-instr').addEventListener('click', function () {
+        if (m.halted()) { return; }
+        var r;
+        do { r = m.stepCycle(); show(r); } while (!r.done && !m.halted());
+      });
+      document.getElementById('cs-run').addEventListener('click', function () {
+        var r = null;
+        while (!m.halted()) { r = m.stepCycle(); if (r.done && r.cls !== 'syscall') { lastDoneCycle = r.cycle; } }
+        if (r) { show(r); }
+      });
+      document.getElementById('cs-reset').addEventListener('click', reset);
+      reset();
+    }());
+
+    /* ---------- Self-check B ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+        { q: 'Cycle 1 of the <code>add</code> at <code>0x00400014</code> has just finished. What is in the PC?',
+          opts: ['0x00400014', '0x00400018', '0x00400010', 'The address the add will write to'],
+          correct: 1,
+          why: 'Fetch adds 4 to the PC in the same cycle it reads the instruction, so the PC already points at the next one.' },
+        { q: 'A <code>lw</code> has finished cycle 4 but not cycle 5. Where is the word it loaded?',
+          opts: ['In the IR', 'In ALUOut', 'In the MDR', 'Already in the destination register'],
+          correct: 2,
+          why: 'Cycle 4 reads memory into the MDR; cycle 5 copies the MDR into the register file. ALUOut holds the address, not the data.' },
+        { q: 'In cycle 3 of <code>sw $t1, 0($s0)</code>, what does the ALU compute?',
+          opts: ['$t1 + $s0', 'The address: A (the base, $s0) plus the offset', 'PC + 4', 'Nothing; a store does not use the ALU'],
+          correct: 1,
+          why: 'A store needs an address before it can write, and base + offset is an addition. The value to store waits in B.' },
+        { q: 'Why does cycle 2 compute <code>PC + offset &times; 4</code> even for an <code>add</code>?',
+          opts: ['Because add uses the offset field', 'The ALU is free in that cycle, and if the instruction turns out to be a branch its target is ready a cycle sooner', 'To check that the PC is aligned', 'It does not; cycle 2 is skipped for R-type'],
+          correct: 1,
+          why: 'Until decode finishes the machine cannot know it is not a branch. Computing the target costs nothing, and the result is simply ignored for an add.' }
+      ];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p>' +
+          '<div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi];
+        var okAns = (oi === item.correct);
+        var fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) {
+          el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false');
+        });
+      }
+      host.addEventListener('click', function (e) {
+        var t = e.target.closest('.quiz-option');
+        if (t) { answer(+t.dataset.q, +t.dataset.o); }
+      });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+  })();
+  </script>
+</body>
+</html>

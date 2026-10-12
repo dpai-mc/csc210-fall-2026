@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w9-01">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 9: The Stored Program</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ---------- */
+    .asm {
+      font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.55;
+      background: var(--color-code-bg); border: 1px solid var(--color-border);
+      border-radius: var(--radius); padding: var(--space-md); margin: var(--space-md) 0;
+      overflow-x: auto; white-space: pre;
+    }
+    .asm .cm { color: var(--color-text-muted); }
+
+    .vn-wrap { overflow-x: auto; margin: var(--space-md) 0; }
+    .vn { display: block; width: 100%; max-width: 760px; min-width: 460px; height: auto; margin: 0 auto; font-family: var(--font-sans); }
+    .vn rect { fill: #f4f7fa; stroke: #8a99a8; stroke-width: 1.5; }
+    .vn .cpu { fill: #eef4f9; stroke: var(--color-primary); stroke-width: 2; }
+    .vn text { fill: var(--color-text); font-size: 15px; font-weight: 700; text-anchor: middle; }
+    .vn text.sub { font-size: 11px; font-weight: 400; fill: var(--color-text-muted); }
+    .vn .bus { stroke: var(--color-accent-hov); stroke-width: 6; fill: none; }
+    .vn .tap { stroke: var(--color-accent-hov); stroke-width: 3; fill: none; }
+
+    /* Widget 1 */
+    .seg-title { font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); margin: var(--space-sm) 0 var(--space-xs); }
+    .words { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 4px; }
+    .wbtn {
+      font-family: var(--font-mono); font-size: var(--fs-sm); text-align: left; cursor: pointer;
+      border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-surface);
+      padding: var(--space-xs) var(--space-sm); line-height: 1.3;
+    }
+    .wbtn small { display: block; font-size: 10px; color: var(--color-text-muted); }
+    .wbtn[aria-pressed="true"] { border: 2px solid var(--color-accent); background: #fff5eb; padding: calc(var(--space-xs) - 1px) calc(var(--space-sm) - 1px); }
+    .wbtn:focus-visible { outline: 3px solid var(--color-primary-lt); outline-offset: 1px; }
+    .read { border: 2px solid var(--color-primary); border-radius: var(--radius); background: var(--color-code-bg); padding: var(--space-md); margin-top: var(--space-md); }
+    .read__addr { font-size: var(--fs-sm); color: var(--color-text-muted); margin: 0 0 var(--space-xs); }
+    .bits { display: flex; flex-wrap: wrap; gap: 3px; margin: var(--space-xs) 0 var(--space-sm); }
+    .bits span { font-family: var(--font-mono); font-size: var(--fs-sm); border: 1px solid var(--color-border); border-radius: 3px; padding: 1px 4px; background: var(--color-surface); }
+    .bits span i { display: block; font-style: normal; font-size: 9px; color: var(--color-text-muted); text-align: center; }
+    .two-read { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
+    @media (max-width: 640px) { .two-read { grid-template-columns: 1fr; } }
+    .two-read > div { border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-surface); padding: var(--space-sm); }
+    .two-read h4 { margin: 0 0 var(--space-xs); font-size: var(--fs-sm); }
+    .two-read .v { font-family: var(--font-mono); font-size: var(--fs-md); color: var(--color-primary); overflow-wrap: anywhere; }
+    .read__note { font-size: var(--fs-sm); margin: var(--space-sm) 0 0; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 9 &rsaquo; <span>Page 1 — The Stored Program</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>The Stored Program</h1>
+    <p><strong>Sections 9.1 – 9.4</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1 hour</p>
+
+    <!-- ============================================================
+         9.1
+         ============================================================ -->
+    <section id="sec-9-1">
+      <h2>9.1 &nbsp; You have been the control unit</h2>
+
+      <p><strong>What you have.</strong> A register that holds a byte and lets go of a shared wire (Week 5). An ALU that computes seven things at once and hands back the one you select (Weeks 6&ndash;7). A RAM that turns an 8-bit address into one selected byte, with an MAR to hold the address (Week 8). And on the software side, MIPS programs that compute, branch, call procedures and walk arrays.</p>
+
+      <p><strong>What you cannot do yet.</strong> Make those parts do anything on their own. Think back over what actually moved a value in your circuits. In Week 5, a byte crossed the bus from R1 to R2 because you raised R1&rsquo;s <code>e</code>, then R2&rsquo;s <code>s</code>, then dropped them in the right order. In Week 8, a byte reached RAM because you set the address, pulsed <code>sa</code>, and then pulsed <code>s</code>. Every one of those signals came from your mouse. <strong>You have been the control unit.</strong></p>
+
+      <p>A processor does this hundreds of millions of times a second, and nobody is clicking. Something inside it has to decide, every clock cycle, which line goes high. And it has to get its instructions from somewhere.</p>
+
+      <p><strong>What you can do by the end of this week.</strong> Describe the organization almost every computer since the late 1940s has shared, and follow a single MIPS instruction through a real processor, cycle by cycle, naming which register changes in each. Building the part that decides is Weeks 10 through 13. This week is about understanding what it will have to do.</p>
+    </section>
+
+    <!-- ============================================================
+         9.2
+         ============================================================ -->
+    <section id="sec-9-2">
+      <h2>9.2 &nbsp; One memory for both</h2>
+
+      <p>The earliest electronic computers were programmed by rewiring them. ENIAC, completed at the end of 1945, was set up for a new problem by moving cables and setting switches &mdash; the program was the wiring. In the same year, John von Neumann&rsquo;s <em>First Draft of a Report on the EDVAC</em>, written with the ENIAC team&rsquo;s ideas in front of him, described the alternative almost every computer since has used:</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">The stored-program idea</div>
+        <p>Encode the instructions as numbers, and keep them <strong>in the same memory as the data</strong> they work on. Then changing the program means changing the contents of memory, not the machine &mdash; and a program is just another thing a computer can read, write, load and copy.</p>
+      </div>
+
+      <p>A machine organized this way is called a <strong>von Neumann machine</strong>, and it has five parts:</p>
+
+      <div class="vn-wrap">
+        <svg class="vn" viewBox="0 0 760 300" role="img" aria-labelledby="vn-title vn-desc">
+          <title id="vn-title">The von Neumann organization</title>
+          <desc id="vn-desc">A CPU box on the left contains three parts: the control unit, the ALU, and registers. To the right are Memory, Input and Output. A single bus runs along the bottom and every part connects to it, so instructions and data travel the same path to the same memory.</desc>
+          <rect class="cpu" x="20" y="20" width="290" height="190" rx="6"/>
+          <text x="165" y="44">CPU</text>
+          <rect x="40" y="60" width="120" height="60" rx="4"/><text x="100" y="95">Control</text>
+          <rect x="175" y="60" width="115" height="60" rx="4"/><text x="232" y="95">ALU</text>
+          <rect x="40" y="135" width="250" height="55" rx="4"/><text x="165" y="160">Registers</text><text class="sub" x="165" y="178">including the PC</text>
+          <rect x="360" y="40" width="170" height="150" rx="4"/><text x="445" y="110">Memory</text><text class="sub" x="445" y="130">instructions and data</text>
+          <rect x="580" y="40" width="160" height="60" rx="4"/><text x="660" y="76">Input</text>
+          <rect x="580" y="130" width="160" height="60" rx="4"/><text x="660" y="166">Output</text>
+          <path class="bus" d="M30 255 H740"/>
+          <path class="tap" d="M165 210 V255"/><path class="tap" d="M445 190 V255"/>
+          <path class="tap" d="M620 100 V115 H750 V255"/><path class="tap" d="M700 190 V255"/>
+          <text class="sub" x="390" y="285">one path between the CPU and memory, shared by instructions and data</text>
+        </svg>
+      </div>
+
+      <ul>
+        <li><strong>Memory</strong> holds the program and the data, side by side, as numbers.</li>
+        <li><strong>The ALU</strong> does the arithmetic and logic.</li>
+        <li><strong>Control</strong> fetches instructions from memory, works out what each one asks for, and drives every other part&rsquo;s control lines to do it. It is the part you have been playing.</li>
+        <li><strong>Input</strong> and <strong>output</strong> connect the machine to the world.</li>
+      </ul>
+
+      <p>The ALU, control and a set of registers together are what we call the <strong>CPU</strong>. One register in that set matters more than the rest this week: the <strong>program counter</strong>, which holds the address of the next instruction.</p>
+
+      <h3>The cost: one path</h3>
+      <p>Because instructions and data live in the same memory and reach the CPU along the same path, the CPU can fetch an instruction or move a piece of data, but not both at the same moment. As processors got faster than memory, that single path became the limit on how fast a program could run, and it has a name: the <strong>von Neumann bottleneck</strong>. It is a real cost of a good idea, and a large part of modern processor design &mdash; caches especially &mdash; exists to work around it. You will see how in Week 16.</p>
+
+      <div class="callout callout--note">
+        <div class="callout__title">The other arrangement</div>
+        <p>A <strong>Harvard</strong> machine keeps instructions and data in two separate memories with two separate paths. Many small microcontrollers are built that way, and you will meet a textbook MIPS design that is too, in Week 11. Everything on this week&rsquo;s pages is the von Neumann arrangement: one memory.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         9.3
+         ============================================================ -->
+    <section id="sec-9-3">
+      <h2>9.3 &nbsp; An instruction is a number</h2>
+
+      <p>Here is the program this week follows. It adds up a three-element array and stores the total. Every instruction in it is one you have written before.</p>
+
+      <div class="asm">        .data
+vals:   .word  6, 11, 8           <span class="cm"># 0x10010000, 0x10010004, 0x10010008</span>
+sum:    .word  0                  <span class="cm"># 0x1001000C</span>
+        .text
+        la    $s0, vals           <span class="cm"># a pseudo-instruction: two real words, 0x00400000-0x00400004</span>
+        addi  $t0, $zero, 3       <span class="cm"># $t0 = how many are left</span>
+        add   $t1, $zero, $zero   <span class="cm"># $t1 = the running total</span>
+loop:   lw    $t2, 0($s0)         <span class="cm"># the next element</span>
+        add   $t1, $t1, $t2
+        addi  $s0, $s0, 4         <span class="cm"># point at the next word</span>
+        addi  $t0, $t0, -1
+        bne   $t0, $zero, loop
+        sw    $t1, 0($s0)         <span class="cm"># $s0 now points at sum</span>
+        addi  $v0, $zero, 10      <span class="cm"># exit</span>
+        syscall</div>
+
+      <p>Assemble it in MARS and look at the Execute tab. The <strong>Text Segment</strong> pane shows each instruction as a 32-bit word at an address starting from <code>0x00400000</code> &mdash; the encodings you learned to build by hand in Week 5. The <strong>Data Segment</strong> pane shows <code>6</code>, <code>11</code>, <code>8</code> and <code>0</code> as 32-bit words starting from <code>0x10010000</code>. Different addresses, the same memory, the same kind of thing: 32-bit numbers.</p>
+
+      <p>So try reading each one the other way.</p>
+    </section>
+
+    <!-- ============================================================
+         Widget 1
+         ============================================================ -->
+    <section id="sec-widget1">
+      <div class="widget-card" id="w-twoway">
+        <div class="widget-card__title">Same Bits, Two Readings</div>
+        <div class="widget-card__subtitle">Every word of the program after <code>la</code>, and every word of its data, exactly as MARS stores them before the program runs. Pick one.</div>
+
+        <p class="seg-title">Text segment &mdash; where the PC will point</p>
+        <div class="words" id="tw-text" role="group" aria-label="Text segment words"></div>
+        <p class="seg-title">Data segment &mdash; where loads and stores will point</p>
+        <div class="words" id="tw-data" role="group" aria-label="Data segment words"></div>
+
+        <div class="read" id="tw-read" aria-live="polite">
+          <p class="read__addr" id="tw-addr"></p>
+          <div class="bits" id="tw-bits" aria-hidden="true"></div>
+          <div class="two-read">
+            <div><h4>Read as a signed integer</h4><div class="v" id="tw-int"></div></div>
+            <div><h4>Read as an instruction</h4><div class="v" id="tw-ins"></div></div>
+          </div>
+          <p class="read__note" id="tw-note"></p>
+        </div>
+      </div>
+
+      <p>Two of the data words deserve a second look. The <code>0</code> stored at <code>sum</code> is also <code>sll $zero, $zero, 0</code>: shift register zero left by nothing and put the result in register zero, which can never change. It does nothing, and that is exactly what MIPS uses it for: MIPS gave &ldquo;do nothing&rdquo; no opcode of its own, and MARS assembles <code>nop</code> to this same all-zero word. And the <code>8</code> at <code>vals[2]</code> is <code>jr $zero</code> &mdash; a jump to address 0. As data it is a small number in an array. As an instruction it would send the program somewhere it has no business going.</p>
+    </section>
+
+    <!-- ============================================================
+         9.4
+         ============================================================ -->
+    <section id="sec-9-4">
+      <h2>9.4 &nbsp; What decides: the PC</h2>
+
+      <p>Nothing in a word marks it as an instruction or as data. The machine decides by <em>how it reaches the word</em>:</p>
+      <ul>
+        <li>A word is an <strong>instruction</strong> if the PC points at it. Fetch reads it into the processor and decodes it.</li>
+        <li>A word is <strong>data</strong> if a load or store points at it. It is copied to or from a register and never decoded.</li>
+      </ul>
+
+      <p>That is the Week 1 idea at full size. Week 1&rsquo;s byte <code>01000010</code> was 66, or the letter <code>B</code>, or part of an instruction, depending on what the program did with it, and its page promised that this week you would see the last of those readings in action. Here it is: the same 32 bits are an <code>addi</code> if the PC lands on them and a large integer if a <code>lw</code> does.</p>
+
+      <p>It also explains a whole family of bugs. If a branch target is computed wrongly, or a procedure returns through a corrupted <code>$ra</code>, the PC can end up pointing at data &mdash; and the machine will fetch it, decode it and execute it, because it has no way to know it should not. A procedure that forgets to save <code>$ra</code> before calling another, as in Week 7, sends the PC somewhere unintended too &mdash; usually back into its own code, which is the mild version.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">Next: the loop that does the fetching</div>
+        <p>The PC points at a word; the machine fetches it, works out what it says, and does it; then the PC points at the next word. Page 2 follows that loop through a real MIPS processor, one clock cycle at a time, using the program above.</p>
+      </div>
+
+      <!-- ========== Self-check A ========== -->
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Three questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+
+      <p>For processor organization in a second voice, log into your Saylor CS301 account at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 5: Designing a Processor</strong>. CS301 does not decode your own program&rsquo;s words both ways; the widget above is the source for that.</p>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>A program is numbers in memory, and the PC is what turns a number into an instruction. Next page: what a processor does with the instruction once it has it.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 9, Page 1
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['cycle', 'mips'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.cycle || !L.mips) { return; }
+    var CY = L.cycle;
+
+    function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+    /* ---------- Widget 1 — Same Bits, Two Readings ----------
+       The words come from the same assembler as page 2's stepper, which
+       the test suite checks word for word against MARS's own dump. */
+    (function () {
+      var host = document.getElementById('w-twoway');
+      if (!host) { return; }
+      var SRC = [
+        '.data', 'vals: .word 6, 11, 8', 'sum: .word 0', '.text',
+        'addi $t0, $zero, 3', 'add $t1, $zero, $zero', 'loop: lw $t2, 0($s0)', 'add $t1, $t1, $t2',
+        'addi $s0, $s0, 4', 'addi $t0, $t0, -1', 'bne $t0, $zero, loop', 'sw $t1, 0($s0)',
+        'addi $v0, $zero, 10', 'syscall'
+      ].join('\n');
+      var prog = CY.assemble(SRC, 0x00400008);
+      var DATA_NAMES = ['vals[0]', 'vals[1]', 'vals[2]', 'sum'];
+      var items = prog.text.map(function (t) { return { addr: t.addr, word: t.word, seg: 'text', label: t.src.replace(/\s+/g, ' ') }; })
+        .concat(prog.data.map(function (d, i) { return { addr: d.addr, word: d.value, seg: 'data', label: DATA_NAMES[i] }; }));
+
+      function bitsOf(w) { var s = (w >>> 0).toString(2); while (s.length < 32) { s = '0' + s; } return s; }
+
+      function asInstruction(w) {
+        var b = bitsOf(w);
+        if (b === '00000000000000000000000000001100') { return { ok: true, text: 'syscall', fields: [['opcode', b.slice(0, 6)], ['', b.slice(6, 26)], ['funct', b.slice(26)]] }; }
+        var d = L.mips.decode(b);
+        if (d.ok) { return { ok: true, text: d.text, fields: d.fields.map(function (f) { return [f.name, f.bits]; }) }; }
+        var f = b.slice(0, 6) === '000000'
+          ? [['opcode', b.slice(0, 6)], ['rs', b.slice(6, 11)], ['rt', b.slice(11, 16)], ['rd', b.slice(16, 21)], ['shamt', b.slice(21, 26)], ['funct', b.slice(26)]]
+          : [['opcode', b.slice(0, 6)], ['rs', b.slice(6, 11)], ['rt', b.slice(11, 16)], ['immediate', b.slice(16)]];
+        return { ok: false, fields: f };
+      }
+
+      var NOTES = {
+        '0x00000000': 'The all-zero word: the integer 0, and also <code>sll $zero, $zero, 0</code>, which changes nothing. MIPS uses it as its no-operation instruction, and MARS assembles <code>nop</code> to exactly this word.',
+        '0x00000008': 'The integer 8, and also <code>jr $zero</code>: jump to the address held in <code>$zero</code>, which is always 0. Harmless here, because the PC never points at it.',
+        '0x0000000C': 'The integer 12, and also <code>syscall</code>. In the text segment the PC will reach it, so it is an instruction; the same word in the data segment would just be 12.'
+      };
+
+      function pick(i) {
+        var it = items[i];
+        host.querySelectorAll('.wbtn').forEach(function (el) { el.setAttribute('aria-pressed', el.dataset.i === String(i) ? 'true' : 'false'); });
+        var ins = asInstruction(it.word);
+        document.getElementById('tw-addr').innerHTML = 'Address <code>' + CY.hex(it.addr) + '</code>, ' +
+          (it.seg === 'text' ? 'text segment &mdash; the source line was <code>' + esc(it.label) + '</code>' : 'data segment &mdash; <code>' + esc(it.label) + '</code>') +
+          '. The word is <code>' + CY.hex(it.word) + '</code>.';
+        document.getElementById('tw-bits').innerHTML = ins.fields.map(function (f) {
+          return '<span>' + f[1] + (f[0] ? '<i>' + f[0] + '</i>' : '') + '</span>';
+        }).join('');
+        document.getElementById('tw-int').textContent = String(it.word | 0);
+        document.getElementById('tw-ins').innerHTML = ins.ok ? esc(ins.text)
+          : '<span style="font-size:var(--fs-sm);color:var(--color-text-muted)">No instruction in this course&rsquo;s table uses this pattern.</span>';
+        var note = NOTES[CY.hex(it.word)];
+        if (!note) {
+          note = it.seg === 'text'
+            ? 'MARS put this here as the instruction <code>' + esc(it.label) + '</code>. Read as a number it is ' + (it.word | 0) + ', which means nothing to anyone.'
+            : 'MARS put this here as the number ' + (it.word | 0) + '. ' + (ins.ok ? 'It also happens to be a valid instruction.' : 'Read as an instruction, its pattern is not one this course has taught.');
+        }
+        document.getElementById('tw-note').innerHTML = note + ' <strong>Which reading is right depends only on whether the PC or a load reaches it.</strong>';
+      }
+
+      function chips(seg, hostId) {
+        document.getElementById(hostId).innerHTML = items.map(function (it, i) {
+          if (it.seg !== seg) { return ''; }
+          return '<button type="button" class="wbtn" data-i="' + i + '" aria-pressed="false">' + CY.hex(it.word) +
+            '<small>' + CY.hex(it.addr) + (seg === 'data' ? ' &middot; ' + esc(it.label) : '') + '</small></button>';
+        }).join('');
+      }
+      chips('text', 'tw-text');
+      chips('data', 'tw-data');
+      host.addEventListener('click', function (e) {
+        var t = e.target.closest('.wbtn');
+        if (t) { pick(+t.dataset.i); }
+      });
+      pick(items.length - 1);
+    }());
+
+    /* ---------- Self-check A ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+        { q: 'In a stored-program (von Neumann) machine, where is the program kept while it runs?',
+          opts: ['In the control unit, as wiring', 'In the same memory as the data, as numbers', 'In a separate instruction memory', 'In the registers'],
+          correct: 1,
+          why: 'That is the whole idea: instructions are numbers in the same memory as the data. A separate instruction memory is the Harvard arrangement.' },
+        { q: 'The word <code>0x00000008</code> sits at <code>0x10010008</code> in the program above. What is it?',
+          opts: ['The integer 8, because it is in the data segment', 'The instruction jr $zero, because it decodes as one', 'Either: the integer 8 if a load reaches it, jr $zero if the PC does', 'Neither; it is padding'],
+          correct: 2,
+          why: 'Nothing in the bits decides. In this program only a load ever reaches it, so it behaves as 8; if the PC pointed at it, it would execute as jr $zero.' },
+        { q: 'What is the von Neumann bottleneck?',
+          opts: ['The ALU can only do one operation at a time', 'Instructions and data share one path to one memory, so fetching and moving data take turns', 'There are only 32 registers', 'The PC can only count up by 4'],
+          correct: 1,
+          why: 'One memory, one path: every instruction fetch and every load or store goes the same way, one after another.' }
+      ];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p>' +
+          '<div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi];
+        var okAns = (oi === item.correct);
+        var fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) {
+          el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false');
+        });
+      }
+      host.addEventListener('click', function (e) {
+        var t = e.target.closest('.quiz-option');
+        if (t) { answer(+t.dataset.q, +t.dataset.o); }
+      });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+  })();
+  </script>
+</body>
+</html>
