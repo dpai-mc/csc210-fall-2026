@@ -44,12 +44,42 @@
          ============================================================ -->
     <section id="part-a">
       <h2>Part A &mdash; Logisim Checkpoint 4 <span class="q-pts">(60 points)</span></h2>
-      <p>Four new component tabs and one new circuit tab, <code>CPU</code>, where everything meets on the bus. Pages 1&ndash;3 of this week explain every connection; read them first.</p>
+      <p>Six new component tabs and one new circuit tab, <code>CPU</code>, where everything meets on the bus. Pages 1&ndash;3 of this week explain every connection; read them first.</p>
 
       <div class="callout callout--aha">
         <div class="callout__title">Most of the parts are already in your file</div>
-        <p><code>REGISTER_8BIT</code> and <code>MEM_8BIT</code> from <strong>Week 5</strong>; <code>MEM_1BIT</code> from <strong>Week 4</strong>; <code>DECODER_2TO4</code> from <strong>Week 3</strong>; <code>ALU_8BIT</code> from <strong>Week 7</strong>. <strong>Instantiate them. Do not rebuild or modify any of them.</strong> R0&ndash;R3 and ACC are five instances of your <code>REGISTER_8BIT</code>, not new tabs.</p>
+        <p><code>REGISTER_8BIT</code> and <code>MEM_8BIT</code> from <strong>Week 5</strong>; <code>MEM_1BIT</code> from <strong>Week 4</strong>; <code>DECODER_2TO4</code> from <strong>Week 3</strong>; <code>ALU_8BIT</code> from <strong>Week 7</strong>. <strong>Instantiate them. Do not rebuild or modify any of them.</strong> R0&ndash;R3 are four instances of the new register tab <code>CPU_REGISTER</code>, and ACC is one instance of <code>ACC_REGISTER</code>. Both wrap your <code>REGISTER_8BIT</code>; only their appearance differs.</p>
       </div>
+
+      <h3>Tab <code>CPU_REGISTER</code> &mdash; these pin names are exact</h3>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Appearance</th></tr></thead>
+          <tbody>
+            <tr><td><code class="pin-table__name">o</code></td><td>8</td><td>out</td><td>top edge &mdash; to the bus</td></tr>
+            <tr><td><code class="pin-table__name">i</code></td><td>8</td><td>in</td><td>top edge &mdash; from the bus</td></tr>
+            <tr><td><code class="pin-table__name">s</code></td><td>1</td><td>in</td><td>bottom edge &mdash; set</td></tr>
+            <tr><td><code class="pin-table__name">e</code></td><td>1</td><td>in</td><td>bottom edge &mdash; enable</td></tr>
+            <tr><td><code class="pin-table__name">mem</code></td><td>8</td><td>out</td><td>side &mdash; the stored byte, always visible</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="inside">Inside: <strong>one <code>REGISTER_8BIT</code> instance</strong>, each of its pins wired straight to the matching pin here (its <code>reg</code> to <code>mem</code>). Nothing else. Edit this tab&rsquo;s circuit appearance as in the table, with <code>s</code> and <code>e</code> labelled (page 1, &sect;10.4). Do not edit <code>REGISTER_8BIT</code>&rsquo;s own appearance.</p>
+
+      <h3>Tab <code>ACC_REGISTER</code> &mdash; these pin names are exact</h3>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Appearance</th></tr></thead>
+          <tbody>
+            <tr><td><code class="pin-table__name">i</code></td><td>8</td><td>in</td><td>top edge &mdash; from the ALU&rsquo;s <code>C</code></td></tr>
+            <tr><td><code class="pin-table__name">o</code></td><td>8</td><td>out</td><td>bottom edge &mdash; to the bus</td></tr>
+            <tr><td><code class="pin-table__name">s</code></td><td>1</td><td>in</td><td>right side, upper &mdash; set</td></tr>
+            <tr><td><code class="pin-table__name">e</code></td><td>1</td><td>in</td><td>right side, lower &mdash; enable</td></tr>
+            <tr><td><code class="pin-table__name">mem</code></td><td>8</td><td>out</td><td>left side &mdash; the stored byte, always visible</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="inside">Inside: exactly as <code>CPU_REGISTER</code> &mdash; one <code>REGISTER_8BIT</code> instance, each pin wired straight through, its <code>reg</code> to <code>mem</code>. Only the appearance differs (page 2, &sect;10.7), so ACC sits under the ALU with its control pins facing the control section.</p>
 
       <h3>Tab <code>TMP</code> &mdash; these pin names are exact</h3>
       <div class="table-scroll">
@@ -113,11 +143,11 @@
       <h3>Tab <code>CPU</code> &mdash; the bus and the core</h3>
       <ol>
         <li><strong>The bus:</strong> eight 1-bit wire loops, <strong>innermost = bit 0</strong>, outermost = bit 7 (page 1, &sect;10.4). Leave a large empty space in the middle; the control unit goes there in Week 11.</li>
-        <li><strong>On the bus, through splitter fans:</strong> R0, R1, R2 and R3 (both <code>i</code> and <code>o</code>); ACC&rsquo;s <code>o</code>; TMP&rsquo;s <code>i</code>; the ALU&rsquo;s <code>A</code>; and a <strong>test port</strong> &mdash; an 8-bit input pin <code>data</code> through an 8-bit controlled buffer controlled by an input pin <code>data_e</code>. The test port is scaffolding for loading values by hand; nothing later depends on it.</li>
-        <li><strong>Off the bus:</strong> TMP <code>o</code> &rarr; BUS1 <code>i</code>; BUS1 <code>o</code> &rarr; ALU <code>B</code>; ALU <code>C</code> &rarr; ACC <code>i</code>; ALU <code>CO</code>, <code>AL</code>, <code>EQ</code>, <code>Z</code> &rarr; FLAGS <code>c_in</code>, <code>a_in</code>, <code>e_in</code>, <code>z_in</code>.</li>
-        <li><strong>REG_SELECT</strong>&rsquo;s eight outputs to R0&ndash;R3&rsquo;s <code>e</code> and <code>s</code>.</li>
+        <li><strong>On the bus, through splitter fans:</strong> R0, R1, R2 and R3 &mdash; four <code>CPU_REGISTER</code> instances, along the top, both <code>i</code> and <code>o</code> fanned up to the loops; ACC&rsquo;s <code>o</code>; TMP&rsquo;s <code>i</code>; the ALU&rsquo;s <code>A</code>; and a <strong>test port</strong> &mdash; an 8-bit input pin <code>data</code> through an 8-bit controlled buffer controlled by an input pin <code>data_e</code>. The test port is scaffolding for loading values by hand; nothing later depends on it.</li>
+        <li><strong>Off the bus:</strong> TMP <code>o</code> &rarr; BUS1 <code>i</code>; BUS1 <code>o</code> &rarr; ALU <code>B</code>; ALU <code>C</code> &rarr; ACC <code>i</code> (an <code>ACC_REGISTER</code> directly under the ALU, as in the figure below); ALU <code>CO</code>, <code>AL</code>, <code>EQ</code>, <code>Z</code> &rarr; FLAGS <code>c_in</code>, <code>a_in</code>, <code>e_in</code>, <code>z_in</code>.</li>
+        <li><strong>REG_SELECT</strong>, below the registers, with its eight outputs running up to R0&ndash;R3&rsquo;s <code>e</code> and <code>s</code>. This is where the control unit will sit from Week 11.</li>
         <li><strong>Control input pins</strong>, all pull-down: <code>ra</code>, <code>rb</code> (2 bits) to REG_SELECT; <code>rega_e</code>, <code>regb_e</code>, <code>regb_s</code> to REG_SELECT; <code>tmp_s</code> to TMP; <code>acc_e</code>, <code>acc_s</code> to ACC; <code>flags_s</code> to FLAGS; <code>bus1</code> to BUS1; <code>opcode</code> (3 bits) and <code>ci</code> to the ALU; <code>data</code> and <code>data_e</code> for the test port.</li>
-        <li><strong>Probes</strong> on the <code>reg</code> output of R0&ndash;R3 and ACC, on TMP&rsquo;s <code>o</code>, the ALU&rsquo;s <code>C</code>, the four FLAGS outputs, and the bus (combine the eight loops through one more splitter into an 8-bit probe).</li>
+        <li><strong>Probes</strong> on the <code>mem</code> output of R0&ndash;R3, the <code>mem</code> output of ACC, on TMP&rsquo;s <code>o</code>, the ALU&rsquo;s <code>C</code>, the four FLAGS outputs, and the bus (combine the eight loops through one more splitter into an 8-bit probe).</li>
       </ol>
 
       <figure class="circuit-canvas">
@@ -134,8 +164,10 @@
             <tr><td><code>TMP</code>: three pins exactly, a <code>MEM_8BIT</code> instance, the input buffer controlled by <code>s</code></td><td>6</td></tr>
             <tr><td><code>BUS1</code>: three pins exactly, output <code>00000001</code> when <code>bus1</code> = 1 and <code>i</code> when 0</td><td>6</td></tr>
             <tr><td><code>FLAGS</code>: nine pins exactly, four <code>MEM_1BIT</code> instances, one shared <code>s</code></td><td>6</td></tr>
-            <tr><td><code>REG_SELECT</code>: thirteen pins exactly, <code>DECODER_2TO4</code> instances, the AND and OR gating correct</td><td>12</td></tr>
-            <tr><td><code>CPU</code> tab: eight-loop bus with bit 0 inside; every part on or off the bus as listed; control and probe pins present</td><td>18</td></tr>
+            <tr><td><code>CPU_REGISTER</code>: five pins exactly, one <code>REGISTER_8BIT</code> instance, appearance with <code>o</code>/<code>i</code> on top and <code>s</code>/<code>e</code> on the bottom</td><td>4</td></tr>
+            <tr><td><code>REG_SELECT</code>: thirteen pins exactly, <code>DECODER_2TO4</code> instances, the AND and OR gating correct</td><td>10</td></tr>
+            <tr><td><code>ACC_REGISTER</code>: five pins exactly, one <code>REGISTER_8BIT</code> instance, appearance with <code>i</code> on top, <code>o</code> on the bottom and <code>s</code>/<code>e</code> on the right</td><td>2</td></tr>
+            <tr><td><code>CPU</code> tab: eight-loop bus with bit 0 inside; R0&ndash;R3 as <code>CPU_REGISTER</code>s and ACC as an <code>ACC_REGISTER</code>; every part on or off the bus as listed; control and probe pins present</td><td>14</td></tr>
             <tr><td>Ten verification screenshots, matching the table below</td><td>10</td></tr>
             <tr><td>Single file; only Wiring and Gates components</td><td>2</td></tr>
           </tbody>
@@ -166,7 +198,8 @@
       <h3>Submission checklist</h3>
       <ul class="lab-checklist">
         <li>All circuits are contained within this single <code>.circ</code> file — no external file links</li>
-        <li><code>TMP</code>, <code>BUS1</code>, <code>FLAGS</code>, <code>REG_SELECT</code> and <code>CPU</code> present, pins named exactly as above</li>
+        <li><code>CPU_REGISTER</code>, <code>ACC_REGISTER</code>, <code>TMP</code>, <code>BUS1</code>, <code>FLAGS</code>, <code>REG_SELECT</code> and <code>CPU</code> present, pins named exactly as above</li>
+        <li>R0&ndash;R3 are <code>CPU_REGISTER</code> instances and ACC is an <code>ACC_REGISTER</code>; <code>REGISTER_8BIT</code>&rsquo;s own appearance is unchanged</li>
         <li><code>REGISTER_8BIT</code>, <code>MEM_8BIT</code>, <code>MEM_1BIT</code>, <code>DECODER_2TO4</code> and <code>ALU_8BIT</code> instantiated from the tabs you already had &mdash; none rebuilt, none modified</li>
         <li>Every splitter fan connects bit 0 to the innermost bus loop</li>
         <li>Only TMP&rsquo;s <code>i</code>, the ALU&rsquo;s <code>A</code>, ACC&rsquo;s <code>o</code>, R0&ndash;R3, the test port and the bus probe touch the bus</li>

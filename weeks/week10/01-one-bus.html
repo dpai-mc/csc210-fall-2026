@@ -128,8 +128,27 @@
       <figure class="circuit-canvas">
         <img class="circuit-canvas__img" src="images/Reg0_Wiring.jpg" style="max-width:380px"
              alt="A register block labelled REG with pins o and i on top and s and e on the bottom. Above it, two splitters each fan out into eight wires that run up to the eight horizontal bus loops; the fans are labelled 7 down to 0 from left to right.">
-        <figcaption class="circuit-canvas__caption">One register on the bus. Its <code>o</code> and <code>i</code> each go through their own splitter fan to all eight loops. The <code>s</code> and <code>e</code> pins point down, away from the bus, toward whatever controls them.</figcaption>
+        <figcaption class="circuit-canvas__caption">One register on the bus &mdash; a <code>CPU_REGISTER</code>, below. Its <code>o</code> and <code>i</code> each go through their own splitter fan to all eight loops. The <code>s</code> and <code>e</code> pins point down, away from the bus, toward whatever controls them.</figcaption>
       </figure>
+
+      <h3>A register shaped for the bus: <code>CPU_REGISTER</code></h3>
+
+      <p>Your Week 5 <code>REGISTER_8BIT</code> works, but its appearance was drawn for a tab of its own: <code>i</code> on one side, <code>o</code> on the other, the control pins wherever they landed. Placed four times along the top of a bus, that shape sends wires crossing each other between every register and the loops, and between every register and the control lines below it.</p>
+
+      <p>So R0&ndash;R3 get a new tab, <strong><code>CPU_REGISTER</code></strong>, that changes nothing about the circuit and everything about the drawing. Inside is <strong>one instance of your <code>REGISTER_8BIT</code></strong>, with each of its five pins wired straight to a pin of the new tab. Then edit the new tab&rsquo;s appearance:</p>
+      <ul>
+        <li><strong><code>o</code> and <code>i</code> on the top edge</strong>, facing the bus. Each fans out to the eight loops directly above it, bit 0 to the innermost.</li>
+        <li><strong><code>s</code> and <code>e</code> on the bottom edge</strong>, facing down. In your CPU&rsquo;s layout the registers sit <strong>between the bus and the control section</strong>, so these two single wires drop straight down to it &mdash; this week to REG_SELECT, from Week 11 to the control unit.</li>
+        <li><strong><code>mem</code>, the stored byte, out one side</strong>, where a probe can read it without touching the bus or the control lines.</li>
+      </ul>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/cpu-register.png" style="max-width:300px"
+             alt="A Logisim circuit appearance: a wide rectangle labelled cpu R. Two pins on the top edge are labelled o on the left and i on the right. Two pins on the bottom edge are labelled s on the left and e on the right. One more pin, unlabelled, sits on the left side.">
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s register appearance: <code>o</code> and <code>i</code> on top, <code>s</code> and <code>e</code> on the bottom, the stored byte on the left side. Your tab names that side pin <code>mem</code>.</figcaption>
+      </figure>
+
+      <p>This is the Week 4 lesson about circuit appearance doing real work: the gates inside are unchanged, and a dozen parts on one canvas become readable. <code>REGISTER_8BIT</code> itself stays exactly as Week 5 built it &mdash; do not edit its appearance, because RAM_BYTE and everything else that instantiates it would change shape too.</p>
 
       <div class="callout callout--warn">
         <div class="callout__title">The one rule that makes or breaks the bus</div>
