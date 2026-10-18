@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w10-04">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 10: Your CPU's Instruction Set</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .fmt-table td:nth-child(2) { font-family: var(--font-mono); white-space: nowrap; }
+    .fmt-table td:nth-child(3) { font-family: var(--font-mono); white-space: nowrap; }
+    .tier-table td:first-child { font-weight: 700; font-size: var(--fs-lg); text-align: center; }
+    .byte-split { font-family: var(--font-mono); font-size: var(--fs-lg); letter-spacing: .08em; text-align: center; margin: var(--space-md) 0; overflow-wrap: anywhere; }
+    .byte-split span { padding: 2px 6px; border-radius: 4px; }
+    .f-class { background: #e8eef7; } .f-op { background: #fff1e0; } .f-ra { background: #e9f6ee; } .f-rb { background: #f3eafa; }
+
+    /* Decoder widget */
+    .bitrow { display: flex; flex-wrap: wrap; gap: 4px; margin: var(--space-sm) 0; align-items: flex-end; }
+    .bitbtn { display: flex; flex-direction: column; align-items: center; min-width: 2.6rem; font-family: var(--font-mono); font-size: var(--fs-lg); padding: 4px 6px; }
+    .bitbtn small { font-family: var(--font-sans); font-size: 10px; color: inherit; opacity: .8; }
+    .dec-out { border: 2px solid var(--color-primary); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-code-bg); margin: var(--space-sm) 0; }
+    .dec-out__text { font-family: var(--font-mono); font-size: var(--fs-lg); font-weight: 700; color: var(--color-primary); overflow-wrap: anywhere; }
+    .dec-fields { list-style: none; padding: 0; margin: var(--space-xs) 0 0; font-size: var(--fs-sm); }
+    .dec-fields li { margin: 2px 0; }
+    .dec-fields code { font-weight: 700; }
+    .enc-row { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; margin: var(--space-sm) 0; }
+    .enc-row input { font-family: var(--font-mono); font-size: var(--fs-sm); padding: 3px 8px; border: 1px solid var(--color-border); border-radius: 4px; min-width: 11rem; }
+    .listing { font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.5; background: var(--color-code-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) 0; margin: var(--space-sm) 0; overflow-x: auto; }
+    .listing__ln { white-space: pre; padding: 0 var(--space-md); border-left: 4px solid transparent; cursor: pointer; }
+    .listing__ln:hover, .listing__ln:focus { background: #eef3f8; outline: none; }
+    .listing__ln--cur { background: #fff5eb; border-left-color: var(--color-accent); font-weight: 700; }
+    .listing__cm { color: var(--color-text-muted); }
+    .raw { font-family: var(--font-mono); font-size: var(--fs-sm); background: var(--color-code-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); white-space: pre; overflow-x: auto; max-height: 12rem; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 10 &rsaquo; <span>Page 4 — Your CPU&rsquo;s Instruction Set</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Your CPU&rsquo;s Instruction Set</h1>
+    <p><strong>Sections 10.13 – 10.16</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1.25 hours</p>
+
+    <section id="sec-10-13">
+      <h2>10.13 &nbsp; One byte per instruction</h2>
+
+      <p>Week 9 traced MIPS, whose instructions are 32 bits wide. Your CPU&rsquo;s memory holds bytes and its bus carries bytes, so its instructions are <strong>one byte</strong> each &mdash; plus, for three of them, a second byte holding a number. Here is the whole instruction set, the one your final project implements:</p>
+
+      <div class="table-scroll">
+        <table class="fmt-table" id="fmt-table">
+          <thead><tr><th>Class</th><th>Byte, b7&hellip;b0</th><th>Written</th><th>Does</th><th>Bytes</th></tr></thead>
+          <tbody id="fmt-body"><tr><td colspan="5"><em>Loading the table&hellip;</em></td></tr></tbody>
+        </table>
+      </div>
+
+      <p>Letters in the byte column are fields: <code>ooo</code> is an ALU opcode, <code>aa</code> and <code>bb</code> are register numbers RA and RB, and <code>caez</code> picks which flags a conditional jump tests. The eight ALU instructions are <code>ADD SHR SHL NOT AND OR XOR</code> for opcodes <code>000</code>&ndash;<code>110</code>, and <code>CMP</code> for <code>111</code>, which compares RA with RB &mdash; the A and E flags record RA &gt; RB and RA = RB &mdash; and writes no register. Opcode <code>111</code> selects no ALU leg, as you found in Week 7; CMP needs only the A and E flags, which come from the comparator on every opcode.</p>
+
+      <p>Two rows are special. <code>END</code>, <code>11001111</code>, stops the program. It is the same byte as <code>AND R3, R3</code> &mdash; an instruction that would change nothing anyway &mdash; so your CPU gives up that one AND and treats the byte as &ldquo;stop&rdquo;. And the <code>0111</code> instructions move bytes in and out of the CPU; they are Week 12&rsquo;s subject, and their bit layout arrives then.</p>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Which end is bit 0</div>
+        <p>Every byte on these pages is written with <strong>b7 on the left and b0 on the right</strong>, the same convention as your bus loops and Week 8&rsquo;s address split. Your instructor&rsquo;s Fall 2025 build pages and videos, which later weeks use, number the bits of an instruction from the <em>left</em>, starting at 0. The bytes are identical; only the labels differ. When a figure says &ldquo;bit 0 = 1 means an ALU instruction&rdquo;, it means the leftmost bit, b7 here.</p>
+      </div>
+
+      <p>Three instructions need a number the byte has no room for: DATA puts a value in a register, and JMP and the conditional jumps need an address. Each is followed in memory by that number, and the CPU reads both bytes. Every other instruction is complete in one byte &mdash; even <code>LD</code> and <code>ST</code>, which take their RAM address from a register (RA) rather than from the instruction.</p>
+    </section>
+
+    <section id="sec-10-14">
+      <h2>10.14 &nbsp; Reading a byte</h2>
+
+      <p>Take <code>10000110</code>, hex <code>0x86</code>, and split it where the format says:</p>
+
+      <p class="byte-split" aria-label="1, then 000, then 01, then 10"><span class="f-class">1</span> <span class="f-op">000</span> <span class="f-ra">01</span> <span class="f-rb">10</span></p>
+
+      <ul>
+        <li><strong>b7 = 1</strong>: an ALU instruction.</li>
+        <li><strong>b6&ndash;b4 = <code>000</code></strong>: ADD. These three bits go to your ALU&rsquo;s <code>opcode</code> pins.</li>
+        <li><strong>b3&ndash;b2 = <code>01</code></strong>: RA is R1. These two bits go to REG_SELECT&rsquo;s <code>ra</code>.</li>
+        <li><strong>b1&ndash;b0 = <code>10</code></strong>: RB is R2. These go to <code>rb</code>.</li>
+      </ul>
+
+      <p><code>0x86</code> is <code>ADD R1, R2</code>: R2 &larr; R1 + R2. Nothing has to translate it. <strong>Every field is a wire to something you have built:</strong> the opcode field drives the ALU, the register fields drive REG_SELECT, and in Week 11 the class bit and the other fields drive the control unit that decides which transfers happen. The instruction <em>is</em> the control-line settings, packed into a byte.</p>
+    </section>
+
+    <!-- ========== Widget 4 ========== -->
+    <section id="sec-decoder">
+      <div class="widget-card" id="w-decoder">
+        <div class="widget-card__title">Instruction Decoder</div>
+        <div class="widget-card__subtitle">Click the bits to build a byte, type an instruction to encode it, or click a line of the program in 10.15.</div>
+
+        <div class="bitrow" id="dec-bits" role="group" aria-label="The eight bits of the instruction byte, b7 to b0"></div>
+        <div class="enc-row">
+          <label for="dec-next">next byte (hex)</label>
+          <input id="dec-next" type="text" value="0F" maxlength="4" autocomplete="off" style="min-width:4rem;width:4.5rem">
+          <label for="dec-enc">or type an instruction</label>
+          <input id="dec-enc" type="text" placeholder="e.g. SHL R3, R3" autocomplete="off">
+          <button type="button" class="widget-btn widget-btn--small widget-btn--primary" id="dec-go">encode</button>
+        </div>
+
+        <div class="dec-out" aria-live="polite">
+          <div class="dec-out__text" id="dec-text"></div>
+          <div id="dec-hex" style="font-family:var(--font-mono);font-size:var(--fs-sm)"></div>
+          <ul class="dec-fields" id="dec-fields"></ul>
+        </div>
+        <p id="dec-status" style="font-size:var(--fs-sm);min-height:1.4em" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section id="sec-10-15">
+      <h2>10.15 &nbsp; A whole program</h2>
+
+      <p>Here is a real program for your CPU. Your instructor wrote it for the Fall 2025 class, and it is the program the A tier of the final project must run. It arrives as a file called <code>MYSIM.txt</code>, in the format Logisim uses to load a RAM: a header line, then one byte per line in hex.</p>
+
+      <div class="raw" id="mysim-raw" aria-label="The first lines of MYSIM.txt"></div>
+
+      <p>Decoded with the same model as the widget above, here are its 23 bytes. Click any line to see it in the decoder.</p>
+
+      <div class="listing" id="mysim-list" aria-label="MYSIM.txt, decoded"></div>
+
+      <p>It multiplies 5 by 5 the way you multiply on paper, one bit of the multiplier at a time. R0 holds the multiplier, R1 the multiplicand, R2 the running product, and R3 a single 1 bit that counts the passes. Each pass shifts R0 right: if the bit that falls out (into the carry flag) is 1, R1 is added to R2. Then R1 doubles, ready for the next bit, and R3&rsquo;s 1 moves up a place. On the eighth pass that 1 falls off the top of R3, the carry flag catches it, and the jump at <code>0x12</code> leaves the loop. 5 is <code>00000101</code>, so passes 1 and 3 add: R2 = 5 + 20 = <strong>25</strong>.</p>
+
+      <p>Two details to notice. In the finished CPU, the carry flag feeds the ALU&rsquo;s carry-in, so the program clears the flags with <code>CLF</code> before the shift of R0, before the add, and before R1 doubles, keeping a stale carry from being shifted or added in. And the whole program is 23 bytes &mdash; it fits in the 32 bytes of RAM you built in Week 8, which is exactly why 32 was enough. The last byte, <code>0xCF</code> at <code>0x16</code>, is <code>END</code>; building the circuit that recognises it and stops the clock is part of Week 14.</p>
+    </section>
+
+    <section id="sec-10-16">
+      <h2>10.16 &nbsp; The final project, and the plan due this week</h2>
+
+      <p>Your final project, due <strong>12/11</strong>, is a working Logisim CPU built from everything in your file. It is graded in three tiers by <strong>what your finished CPU executes, from RAM, correctly</strong>:</p>
+
+      <div class="table-scroll">
+        <table class="tier-table" id="tier-table">
+          <thead><tr><th>Tier</th><th>Your CPU executes</th><th>Instructions</th></tr></thead>
+          <tbody>
+            <tr><td>C</td><td>fetch, and every ALU instruction</td><td>ADD SHR SHL NOT AND OR XOR CMP &mdash; 8</td></tr>
+            <tr><td>B</td><td>everything in C, plus memory and immediate values</td><td>+ LD ST DATA &mdash; 11</td></tr>
+            <tr><td>A</td><td>everything in B, plus every jump and CLF, and runs <code>MYSIM.txt</code> to R2 = 25</td><td>+ JMPR JMP J<em>caez</em> CLF &mdash; 15</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>At every tier you submit one <code>.circ</code> file, a test program for each class of instruction you implemented with the results you expect, and written documentation of your design decisions and test results. The tiers exist so that a CPU that runs part of the instruction set correctly is worth something; a CPU that runs all of it is the goal.</p>
+
+      <p>The <strong>CPU Project Plan</strong>, due Sunday with Assignment 10, asks you to choose the tier you are aiming for, list the instructions that tier needs, write a short test program in bytes for each class &mdash; use the decoder above to check them &mdash; and lay your work out against Checkpoints 5, 6 and 7. It is graded complete or incomplete, and the point is the feedback: a plan that is too ambitious, or a test that does not test what you think, is cheap to fix in Week 10 and expensive in Week 16.</p>
+
+      <!-- ========== Self-check D ========== -->
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Four questions, not graded. Use the decoder if you like.</div>
+        <div id="sc-body"></div>
+      </div>
+
+      <p>For instruction formats in a second voice, log into your Saylor CS301 account at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 5: Designing a Processor</strong>. CS301 covers MIPS&rsquo;s 32-bit formats; this page is the only source for your CPU&rsquo;s.</p>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>You can read and write every instruction your CPU will run, say which wire each field drives, and follow a whole program through. That is Week 10. Assignment 10 and the CPU Project Plan are both due Sunday, October 25, at 11:59 pm. Next week the control unit takes your place: the circuit that reads these bytes and raises the lines you have been raising by hand.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 10, Page 4
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['core'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.core) { return; }
+    var C = L.core;
+    function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function hx(v) { return C.hex2(v).slice(2); }
+
+    /* ---------- The format table, from the model ---------- */
+    (function () {
+      var body = document.getElementById('fmt-body');
+      if (!body) { return; }
+      body.innerHTML = C.FORMATS.map(function (f) {
+        return '<tr><td>' + f.cls + '</td><td>' + f.pattern + '</td><td>' + esc(f.syntax) + '</td><td>' + esc(f.meaning) + '</td><td>' + f.length + '</td></tr>';
+      }).join('');
+    }());
+
+    /* ---------- MYSIM.txt, raw and decoded ---------- */
+    var NOTES = {
+      0x00: 'R0 = 5, the multiplier', 0x02: 'R1 = 5, the multiplicand', 0x04: 'R3 = 1, the pass counter',
+      0x06: 'R2 = R2 XOR R2 = 0, the product', 0x07: 'top of the loop: clear the flags',
+      0x08: 'lowest bit of R0 falls into the carry flag', 0x09: 'carry set? go and add',
+      0x0B: 'otherwise skip the add', 0x0D: 'clear the flags before adding', 0x0E: 'R2 = R1 + R2',
+      0x0F: 'clear the flags before shifting', 0x10: 'R1 doubles', 0x11: 'the counter bit moves up',
+      0x12: 'it fell off the top: eight passes, done', 0x14: 'otherwise round again', 0x16: 'stop'
+    };
+    (function () {
+      var raw = document.getElementById('mysim-raw');
+      if (raw) { raw.textContent = 'v2.0 raw\n' + C.MYSIM.map(function (b) { return b.toString(16).toUpperCase(); }).join('\n') + '\n0\n0\n… (zeros to the end of the 256 bytes)'; }
+    }());
+    var rows = C.disassemble(C.MYSIM);
+    (function () {
+      var list = document.getElementById('mysim-list');
+      if (!list) { return; }
+      list.innerHTML = rows.map(function (r, i) {
+        var bytes = r.bytes.map(hx).join(' ');
+        while (bytes.length < 6) { bytes += ' '; }
+        var t = r.text;
+        while (t.length < 15) { t += ' '; }
+        return '<div class="listing__ln" role="button" tabindex="0" data-row="' + i + '">' + hx(r.addr) + '   ' + bytes + '  ' + esc(t) +
+          '<span class="listing__cm">' + esc(NOTES[r.addr] || '') + '</span></div>';
+      }).join('');
+    }());
+
+    /* ---------- Widget 4 — Instruction Decoder ---------- */
+    var setByte;
+    (function () {
+      var host = document.getElementById('w-decoder');
+      if (!host) { return; }
+      var byte = 0x86;
+      var elBits = document.getElementById('dec-bits'), elNext = document.getElementById('dec-next');
+      var elStatus = document.getElementById('dec-status');
+
+      function nextVal() {
+        var t = elNext.value.trim().replace(/^0x/i, '');
+        return /^[0-9a-fA-F]{1,2}$/.test(t) ? parseInt(t, 16) : null;
+      }
+
+      function paint(curRow) {
+        elBits.innerHTML = [7, 6, 5, 4, 3, 2, 1, 0].map(function (k) {
+          var v = (byte >> k) & 1;
+          return '<button type="button" class="widget-btn bitbtn' + (v ? ' widget-btn--primary' : ' widget-btn--outline') + '" data-bit="' + k + '" aria-pressed="' + (v ? 'true' : 'false') + '" aria-label="bit ' + k + ', ' + v + '">' + v + '<small>b' + k + '</small></button>';
+        }).join('');
+        var nx = nextVal();
+        var d = C.decodeByte(byte, nx === null ? undefined : nx);
+        document.getElementById('dec-text').textContent = d.text;
+        document.getElementById('dec-hex').textContent = C.bits(byte, 8) + ' = ' + C.hex2(byte) +
+          (d.length === 2 ? '   followed by ' + (nx === null ? '?' : C.hex2(nx)) + ' — a two-byte instruction' : '   — one byte');
+        document.getElementById('dec-fields').innerHTML = d.fields.map(function (f) {
+          var where = f.hi === f.lo ? 'b' + f.hi : 'b' + f.hi + '–b' + f.lo;
+          return '<li>' + where + ' <code>' + f.bits + '</code> ' + esc(f.name) + (f.meaning ? ': ' + esc(f.meaning) : '') + '</li>';
+        }).join('');
+        document.querySelectorAll('#mysim-list .listing__ln').forEach(function (el) {
+          var cur = curRow !== undefined && +el.dataset.row === curRow;
+          el.classList.toggle('listing__ln--cur', cur);
+          if (cur) { el.setAttribute('aria-current', 'step'); } else { el.removeAttribute('aria-current'); }
+        });
+      }
+
+      setByte = function (b, nx, row) {
+        byte = b & 255;
+        if (nx !== undefined && nx !== null) { elNext.value = hx(nx); }
+        paint(row);
+      };
+
+      elBits.addEventListener('click', function (e) {
+        var t = e.target.closest('[data-bit]');
+        if (!t) { return; }
+        byte ^= (1 << +t.dataset.bit);
+        elStatus.textContent = '';
+        paint();
+      });
+      elNext.addEventListener('input', function () { paint(); });
+      function encode() {
+        var r = C.encode(document.getElementById('dec-enc').value);
+        if (!r.ok) { elStatus.textContent = r.error; return; }
+        elStatus.textContent = 'Encoded as ' + r.bytes.map(function (b) { return C.hex2(b); }).join(' ') + '.';
+        setByte(r.bytes[0], r.bytes[1]);
+      }
+      document.getElementById('dec-go').addEventListener('click', encode);
+      document.getElementById('dec-enc').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); encode(); } });
+      paint();
+    }());
+
+    (function () {
+      var list = document.getElementById('mysim-list');
+      if (!list || !setByte) { return; }
+      function pick(el) {
+        var r = rows[+el.dataset.row];
+        setByte(r.bytes[0], r.bytes[1], +el.dataset.row);
+        document.getElementById('dec-status').textContent = 'Address ' + C.hex2(r.addr) + ' of MYSIM.txt.';
+      }
+      list.addEventListener('click', function (e) { var t = e.target.closest('.listing__ln'); if (t) { pick(t); } });
+      list.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.listing__ln');
+        if (t) { e.preventDefault(); pick(t); }
+      });
+    }());
+
+    /* ---------- Self-check D ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+        { q: 'What is <code>10100101</code> (<code>0xA5</code>)?',
+          opts: ['SHL R1, R1', 'SHR R1, R1', 'ADD R2, R1', 'ST R1, R1'],
+          correct: 0,
+          why: 'b7 = 1: ALU. b6–b4 = 010: SHL. b3–b2 = 01 and b1–b0 = 01: R1 and R1. It is the byte at 0x10 in MYSIM.txt.' },
+        { q: 'Which byte is <code>ST R3, R2</code> — store R2 at the RAM address held in R3?',
+          opts: ['0x1E', '0x0E', '0x9E', '0x1B'],
+          correct: 0,
+          why: '0001 is ST; RA = R3 is 11; RB = R2 is 10. 0001 1110 = 0x1E. 0x0E is LD R3, R2.' },
+        { q: 'At address <code>0x09</code> of MYSIM.txt are the bytes <code>58 0D</code>. What do they do?',
+          opts: ['Jump to 0x0D if the carry flag is 1', 'Always jump to 0x0D', 'Put 0x0D into R0', 'Jump to the address held in R1'],
+          correct: 0,
+          why: '0101 is a conditional jump; caez = 1000 selects only C. The next byte, 0x0D, is the address.' },
+        { q: 'Your CPU runs every ALU instruction, LD, ST and DATA correctly, but no jumps. Which tier is that?',
+          opts: ['B', 'C', 'A', 'None; a CPU without jumps is incomplete'],
+          correct: 0,
+          why: 'B is C plus memory and immediate values. A adds the jumps, CLF and running MYSIM.txt.' }
+      ];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p><div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi], okAns = (oi === item.correct), fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) { el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false'); });
+      }
+      host.addEventListener('click', function (e) { var t = e.target.closest('.quiz-option'); if (t) { answer(+t.dataset.q, +t.dataset.o); } });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+  })();
+  </script>
+</body>
+</html>

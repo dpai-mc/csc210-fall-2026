@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w10-02">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 10: Around the ALU</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .xfer-table td:first-child { font-weight: 700; white-space: nowrap; }
+    .flag-table td:first-child { font-family: var(--font-mono); font-weight: 700; }
+
+    /* The Core widget */
+    .core-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-md); }
+    @media (max-width: 760px) { .core-grid { grid-template-columns: 1fr; } }
+    .core-panel { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-surface); min-width: 0; }
+    .core-panel h3 { margin: 0 0 var(--space-xs); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .tg-row { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 var(--space-sm); align-items: center; }
+    .tg-row > span.lbl { font-size: var(--fs-xs); font-weight: 700; min-width: 3.4rem; }
+    .core-sel { font-family: var(--font-mono); font-size: var(--fs-sm); padding: 2px 6px; border: 1px solid var(--color-border); border-radius: 4px; max-width: 100%; }
+    .core-data { font-family: var(--font-mono); font-size: var(--fs-sm); width: 7.5rem; padding: 2px 6px; border: 1px solid var(--color-border); border-radius: 4px; }
+    .vals { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 4px; }
+    .val { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); background: var(--color-surface); overflow-wrap: anywhere; }
+    .val b { font-family: var(--font-sans); color: var(--color-primary); }
+    .val small { display: block; font-family: var(--font-sans); font-size: 11px; color: var(--color-text-muted); }
+    .val--on { border-color: var(--color-accent-hov); background: #fff5eb; }
+    .val--wrote { border-color: var(--color-success); background: #f0faf4; }
+    .busline { font-family: var(--font-mono); border: 2px solid var(--color-primary); border-radius: var(--radius); padding: var(--space-xs) var(--space-sm); margin: var(--space-xs) 0; background: var(--color-code-bg); overflow-wrap: anywhere; }
+    .busline--bad { border-color: var(--color-danger); background: #fdf0ef; }
+    .busline--float { border-style: dashed; border-color: var(--color-border); }
+    .flags4 { display: flex; gap: 4px; flex-wrap: wrap; }
+    .flag { font-family: var(--font-mono); border: 1px solid var(--color-border); border-radius: 4px; padding: 1px 8px; }
+    .flag--1 { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .core-status { font-size: var(--fs-sm); min-height: 1.5em; margin: var(--space-xs) 0; }
+    .recipe { font-size: var(--fs-sm); padding: var(--space-xs) var(--space-sm); border-left: 4px solid var(--color-accent); background: var(--color-code-bg); margin: var(--space-sm) 0; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 10 &rsaquo; <span>Page 2 — Around the ALU</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Around the ALU</h1>
+    <p><strong>Sections 10.5 – 10.8</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1.25 hours</p>
+
+    <section id="sec-10-5">
+      <h2>10.5 &nbsp; Two inputs, one value</h2>
+
+      <p>Page 1 left a problem. Your ALU computes <code>A + B</code>: it needs two bytes at its inputs <em>at the same moment</em>. The bus carries one byte at a time. And the result has to go somewhere &mdash; usually back into a register, which means back across the bus.</p>
+
+      <p>Put the ALU&rsquo;s <code>A</code> input on the bus, and solve the other two problems with one small part each:</p>
+      <ul>
+        <li><strong>The second operand waits in TMP.</strong> One transfer earlier, the register holding B drives the bus and TMP captures it. TMP&rsquo;s output is wired permanently to the ALU&rsquo;s <code>B</code> input, so when A arrives on the bus in the next transfer, B is already there.</li>
+        <li><strong>The result waits in ACC, the accumulator.</strong> The ALU&rsquo;s output cannot go straight onto the bus: in that transfer the bus is already driven by the register supplying A, and it is also the ALU&rsquo;s own input, so its result would feed back into itself. ACC captures the result instead, and in a later transfer ACC drives the bus and the destination register captures it.</li>
+      </ul>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/CPU_Overview.png"
+             alt="Block diagram of the whole CPU on a black background. A blue bus runs around the outside. Along the top edge, four registers with s and e lines connect down to a large central Control Unit block. At the top left, TMP feeds a small bus1 block, which feeds the B input of a tall ALU on the left; the ALU's A input comes straight from the bus. The ALU's op1 to op3, carry-in, carry-out, larger, equal and zero lines run toward the control unit, and a clock block sits beside it. Below the ALU, ACC takes the ALU's output and connects to the bus at the bottom. On the right, the MAR sits above the RAM, both connected to the bus.">
+        <figcaption class="circuit-canvas__caption">The whole CPU. <strong>This week you build everything here except the control unit, the clock, the MAR and the RAM.</strong> The diagram labels the four registers R1&ndash;R4; your CPU names them <strong>R0&ndash;R3</strong>, as its instructions do. Notice that TMP is the only register that does not connect back to the bus.</figcaption>
+      </figure>
+    </section>
+
+    <section id="sec-10-6">
+      <h2>10.6 &nbsp; TMP and BUS1</h2>
+
+      <p><strong>TMP</strong> is a <code>MEM_8BIT</code> from Week 5, not a full register. It never drives the bus &mdash; its output goes only to the ALU &mdash; so it needs no enable and no output buffers. It has one addition: an 8-bit <strong>controlled buffer on its input</strong>, controlled by the same <code>s</code> line.</p>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/tmp-circuit.png" style="max-width:520px"
+             alt="A Logisim circuit: an 8-bit input pin i reads 00000000 and passes through a triangular controlled buffer into the left side of a block labelled CPU MEM 8. A 1-bit input pin s at the bottom connects both to the block's set input and to the buffer's control input. The block's output runs right to an 8-bit output pin o, which reads EEEEEEEE.">
+        <figcaption class="circuit-canvas__caption">TMP: one <code>MEM_8BIT</code> and one controlled buffer, both driven by <code>s</code>. The output reads <code>EEEEEEEE</code> because this TMP has never been written &mdash; correct, as in Week 5.</figcaption>
+      </figure>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Why the buffer on TMP&rsquo;s input?</div>
+        <p>On paper it does nothing: while <code>s</code> = 0 the memory cells ignore their input anyway. In practice, Logisim Classic 2.7.1 runs the finished CPU reliably with it and unreliably without it &mdash; the same lesson as the ninth buffer in your Week 5 register. This is a description of how the simulator behaves, not a diagnosis of why. Build it; the circuit is right either way, and the tool has its own behaviour.</p>
+      </div>
+
+      <p><strong>BUS1</strong> sits between TMP and the ALU&rsquo;s <code>B</code> input. It has one control line, <code>bus1</code>. With <code>bus1</code> = 0 it passes TMP straight through. With <code>bus1</code> = 1 it ignores TMP and delivers exactly <code>00000001</code>. It is eight gates and an inverter: bit 0 is <code>TMP<sub>0</sub> OR bus1</code>; bits 1&ndash;7 are each <code>TMP<sub>k</sub> AND NOT bus1</code>.</p>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/bus1-and-bits1-7.jpg"
+             alt="A Logisim circuit. An 8-bit input labelled input from TMP is split into eight bits. A 1-bit input labelled bus 1, set to 1, passes through a NOT gate whose output feeds one input of each of seven AND gates; the other input of each AND gate is one of bits 1 to 7 from TMP. Bit 0 from TMP and the bus 1 input itself feed an OR gate. The seven AND outputs and the OR output recombine through a splitter into an 8-bit output labelled output to ACC B, which reads 00000001.">
+        <figcaption class="circuit-canvas__caption">BUS1 with <code>bus1</code> = 1: TMP holds <code>00000000</code> and the output is <code>00000001</code>. The output pin is labelled &ldquo;to ACC B&rdquo; in this figure; it goes to the ALU&rsquo;s <code>B</code> input. Your tab names its pins <code>i</code>, <code>bus1</code> and <code>o</code>.</figcaption>
+      </figure>
+
+      <p>Why build a circuit whose only trick is the number 1? Because adding 1 is the most common thing a CPU does: after every instruction, the address of the next one is the old address plus one. Put any register on the bus, raise <code>bus1</code>, select ADD, and ACC captures that register plus 1 &mdash; with no register anywhere holding a 1. In Week 13 this is how your CPU will step its program counter.</p>
+    </section>
+
+    <section id="sec-10-7">
+      <h2>10.7 &nbsp; ACC and FLAGS</h2>
+
+      <p><strong>ACC</strong> is a fifth <code>REGISTER_8BIT</code>, wired differently from R0&ndash;R3: its <code>i</code> comes from the ALU&rsquo;s <code>C</code> output, not from the bus, and its <code>o</code> goes to the bus. It is the only way a result gets back.</p>
+
+      <p><strong>FLAGS</strong> keeps the ALU&rsquo;s four status outputs. Your ALU&rsquo;s <code>CO</code>, <code>AL</code>, <code>EQ</code> and <code>Z</code> are live &mdash; they change the instant the bus or TMP changes, which is one transfer later. An instruction that wants to ask &ldquo;was that last result zero?&rdquo; needs the answer held. FLAGS is four of your Week 4 <code>MEM_1BIT</code> cells sharing one <code>s</code> line, pulsed in the same transfer that sets ACC.</p>
+
+      <div class="table-scroll">
+        <table class="flag-table">
+          <thead><tr><th>Flag</th><th>Captured from</th><th>Means</th></tr></thead>
+          <tbody>
+            <tr><td>C</td><td><code>CO</code></td><td>carry out of an add &mdash; <strong>unsigned</strong> overflow &mdash; or the bit shifted out of a shift. There is no signed-overflow flag.</td></tr>
+            <tr><td>A</td><td><code>AL</code></td><td>A was larger than B (unsigned)</td></tr>
+            <tr><td>E</td><td><code>EQ</code></td><td>A equalled B</td></tr>
+            <tr><td>Z</td><td><code>Z</code></td><td>the result was zero</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/flags-details.jpg" style="max-width:480px"
+             alt="A Logisim circuit with four 1-bit input pins labelled C, A, E and Z on the left, each wired to the input of its own block labelled CPU MEM 1, stacked vertically. A single input pin s at the bottom connects to the set input of all four blocks. Each block's output runs right to an output pin labelled C, A, E or Z.">
+        <figcaption class="circuit-canvas__caption">FLAGS: four <code>MEM_1BIT</code> cells, one shared <code>s</code>. This figure uses the same letters on both sides; your tab names the inputs <code>c_in a_in e_in z_in</code> and the outputs <code>C A E Z</code> so the two can never be confused.</figcaption>
+      </figure>
+
+      <p>Remember from Week 7 that <code>AL</code> and <code>EQ</code> come from the comparator, which compares A and B on every opcode, not only XOR. FLAGS therefore records the comparison of the two operands after <em>any</em> ALU operation. Nothing uses the held flags this week; in Week 14 they decide whether a jump is taken.</p>
+    </section>
+
+    <section id="sec-10-8">
+      <h2>10.8 &nbsp; An ALU operation is three transfers</h2>
+
+      <p>Put the parts together and an ALU operation on two registers &mdash; call them RA and RB &mdash; takes three transfers, always in this order. This table is produced by the same model that runs the widget below, for <code>ADD R0, R1</code>:</p>
+
+      <div class="table-scroll">
+        <table class="xfer-table" id="xfer-table">
+          <thead><tr><th>Transfer</th><th>Drives the bus</th><th>Captures</th><th>Effect</th></tr></thead>
+          <tbody id="xfer-body"><tr><td colspan="4"><em>Loading the table&hellip;</em></td></tr></tbody>
+        </table>
+      </div>
+
+      <p>Read the effect column carefully, because it fixes what the instruction means: <strong><code>ADD R0, R1</code> leaves R0 unchanged and replaces R1 with R0 + R1.</strong> RB supplies B <em>and</em> receives the result. For NOT, SHR and SHL, which use only A, the same three transfers run &mdash; TMP is loaded and simply ignored &mdash; and RB receives the result of operating on RA. A compare stops after the second transfer: the flags are captured, and no register is written.</p>
+
+      <p>In Week 11 your control unit performs these three transfers automatically, as steps 4, 5 and 6 of its stepper. Steps 1 to 3 fetch the instruction. Today you are the stepper.</p>
+    </section>
+
+    <!-- ========== Widget 2 ========== -->
+    <section id="sec-core">
+      <div class="widget-card" id="w-core">
+        <div class="widget-card__title">The Core</div>
+        <div class="widget-card__subtitle">Your Checkpoint 4 circuit, minus the wiring. Choose what drives the bus and what captures, then do the transfer. Load a recipe to have the controls filled in one transfer at a time.</div>
+
+        <div class="recipe">
+          <label for="core-recipe"><strong>Recipe:</strong></label>
+          <select id="core-recipe" class="core-sel">
+            <option value="ADD,0,1">ADD R0, R1</option>
+            <option value="XOR,3,3">XOR R3, R3</option>
+            <option value="SHL,2,2">SHL R2, R2</option>
+            <option value="CMP,0,1">CMP R0, R1</option>
+            <option value="INC,1">R1 + 1 &rarr; R1, using BUS1</option>
+          </select>
+          <button type="button" class="widget-btn widget-btn--small widget-btn--primary" id="core-load">fill in the next transfer</button>
+          <span id="core-recipe-step" aria-live="polite"></span>
+        </div>
+
+        <div class="core-grid">
+          <div class="core-panel">
+            <h3>This transfer</h3>
+            <div class="tg-row" id="core-en"><span class="lbl">Enable</span></div>
+            <div class="tg-row"><span class="lbl">test port</span><label class="sr-only" for="core-data">Test port value, 8 bits</label><input class="core-data" id="core-data" type="text" maxlength="8" value="00001010" autocomplete="off"></div>
+            <div class="tg-row" id="core-set"><span class="lbl">Set</span></div>
+            <div class="tg-row"><span class="lbl">ALU</span>
+              <label class="sr-only" for="core-op">ALU opcode</label>
+              <select id="core-op" class="core-sel"></select>
+              <button type="button" class="widget-btn widget-btn--small" aria-pressed="false" id="core-bus1">bus1</button>
+              <button type="button" class="widget-btn widget-btn--small" aria-pressed="false" id="core-ci">ci</button>
+            </div>
+            <div class="tg-row">
+              <button type="button" class="widget-btn widget-btn--primary" id="core-go">do this transfer</button>
+              <button type="button" class="widget-btn widget-btn--outline" id="core-clear">clear the controls</button>
+              <button type="button" class="widget-btn widget-btn--outline" id="core-reset">reset</button>
+            </div>
+          </div>
+          <div class="core-panel">
+            <h3>Live</h3>
+            <div class="busline" id="core-bus" aria-live="polite"></div>
+            <div class="vals" id="core-alu"></div>
+            <p class="lbl" style="font-size:var(--fs-xs);margin:var(--space-xs) 0 2px">ALU flags, live</p>
+            <div class="flags4" id="core-live"></div>
+          </div>
+        </div>
+
+        <div class="core-panel" style="margin-top:var(--space-md)">
+          <h3>Stored</h3>
+          <div class="vals" id="core-regs"></div>
+          <p class="lbl" style="font-size:var(--fs-xs);margin:var(--space-xs) 0 2px">FLAGS, held</p>
+          <div class="flags4" id="core-held"></div>
+        </div>
+        <p class="core-status" id="core-status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section id="sec-check">
+      <!-- ========== Self-check B ========== -->
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Four questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+
+      <p>For accumulators and register transfers in a second voice, log into your Saylor CS301 account at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 5: Designing a Processor</strong>. CS301&rsquo;s MIPS datapath reads two registers at once and has no TMP or ACC; this page is the source for why yours does.</p>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>You can run any ALU operation on two registers in three transfers and say what each part holds after each one. Next page: how &ldquo;R1&rdquo; becomes a wire &mdash; turning a two-bit number into the right register&rsquo;s <code>e</code> or <code>s</code>.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 10, Page 2
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['core', 'alu'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.core || !L.alu) { return; }
+    var C = L.core;
+    function b8(v) { return v === null || v === undefined ? 'EEEEEEEE' : C.bits(v, 8); }
+    function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+    /* ---------- The three-transfer table, from the model ---------- */
+    (function () {
+      var body = document.getElementById('xfer-body');
+      if (!body) { return; }
+      var m = C.machine({ R0: 5, R1: 7 });
+      var steps = C.aluSteps('ADD', 0, 1);
+      var WORDS = ['first', 'second', 'third'];
+      body.innerHTML = steps.map(function (s, i) {
+        var r = m.transfer({ enable: s.enable, set: s.set, opcode: s.opcode });
+        var effect = esc(s.rtl);
+        if (s.set.indexOf('TMP') >= 0) { effect += ' &mdash; TMP now holds B, ready at the ALU&rsquo;s <code>B</code> input'; }
+        if (s.set.indexOf('ACC') >= 0) { effect += ' &mdash; with R0 = 5 and R1 = 7, ACC = ' + r.alu.c; }
+        if (s.enable.indexOf('ACC') >= 0) { effect += ' &mdash; R1 = ' + m.state().R1; }
+        return '<tr><td>' + (i + 1) + ' (' + WORDS[i] + ')</td><td>' + s.enable.join(', ') + '</td><td>' + s.set.join(' and ') + '</td><td>' + effect + '</td></tr>';
+      }).join('');
+    }());
+
+    /* ---------- Widget 2 — The Core ---------- */
+    (function () {
+      var host = document.getElementById('w-core');
+      if (!host) { return; }
+      var INIT = { R0: 5, R1: 7, R2: 0x81, R3: 0x3C };
+      var EN = ['R0', 'R1', 'R2', 'R3', 'ACC', 'DATA'];
+      var SET = ['R0', 'R1', 'R2', 'R3', 'TMP', 'ACC', 'FLAGS'];
+      var m, ctl, wrote, recipe, recipeStep;
+
+      var elEn = document.getElementById('core-en'), elSet = document.getElementById('core-set');
+      var elOp = document.getElementById('core-op');
+      elOp.innerHTML = C.ALU_MNEMONICS.map(function (mn, i) {
+        return '<option value="' + i + '">' + C.bits(i, 3) + ' ' + (mn === 'CMP' ? '(none &mdash; CMP)' : mn) + '</option>';
+      }).join('');
+      EN.forEach(function (n) {
+        var bt = document.createElement('button');
+        bt.type = 'button'; bt.className = 'widget-btn widget-btn--small'; bt.dataset.en = n;
+        bt.setAttribute('aria-pressed', 'false');
+        bt.textContent = n === 'DATA' ? 'test port' : n;
+        bt.setAttribute('aria-label', 'enable ' + bt.textContent);
+        elEn.appendChild(bt);
+      });
+      SET.forEach(function (n) {
+        var bt = document.createElement('button');
+        bt.type = 'button'; bt.className = 'widget-btn widget-btn--small'; bt.dataset.set = n;
+        bt.setAttribute('aria-pressed', 'false');
+        bt.textContent = n;
+        bt.setAttribute('aria-label', 'set ' + n);
+        elSet.appendChild(bt);
+      });
+
+      function dataVal() {
+        var t = document.getElementById('core-data').value.replace(/\s+/g, '');
+        return /^[01]{8}$/.test(t) ? parseInt(t, 2) : null;
+      }
+      function lines() {
+        return { enable: EN.filter(function (n) { return ctl.en[n]; }), set: SET.filter(function (n) { return ctl.set[n]; }),
+                 data: dataVal(), bus1: ctl.bus1, ci: ctl.ci, opcode: +elOp.value };
+      }
+      function clearCtl() { ctl = { en: {}, set: {}, bus1: 0, ci: 0 }; }
+
+      function reset() {
+        m = C.machine(INIT); clearCtl(); wrote = []; recipe = null; recipeStep = 0;
+        elOp.value = '0';
+        document.getElementById('core-recipe-step').textContent = '';
+        document.getElementById('core-status').textContent = 'R0 = 5, R1 = 7, R2 = 10000001 and R3 = 00111100. TMP and ACC have never been written.';
+        paint();
+      }
+
+      function flagHtml(name, v) {
+        return '<span class="flag' + (v === 1 ? ' flag--1' : '') + '">' + name + ' ' + (v === null || v === undefined ? '?' : v) + '</span>';
+      }
+
+      function paint() {
+        var l = lines(), s = m.state();
+        EN.forEach(function (n) { elEn.querySelector('[data-en="' + n + '"]').setAttribute('aria-pressed', ctl.en[n] ? 'true' : 'false'); });
+        SET.forEach(function (n) { elSet.querySelector('[data-set="' + n + '"]').setAttribute('aria-pressed', ctl.set[n] ? 'true' : 'false'); });
+        document.getElementById('core-bus1').setAttribute('aria-pressed', ctl.bus1 ? 'true' : 'false');
+        document.getElementById('core-ci').setAttribute('aria-pressed', ctl.ci ? 'true' : 'false');
+
+        var badData = l.enable.indexOf('DATA') >= 0 && l.data === null;
+        var ev = badData ? null : m.evaluate(l);
+        var bus = ev ? ev.bus : { state: 'error', why: 'the test port needs eight 0s and 1s' };
+        var elBus = document.getElementById('core-bus');
+        elBus.className = 'busline' + (bus.state === 'conflict' || bus.state === 'error' ? ' busline--bad' : bus.state === 'float' ? ' busline--float' : '');
+        elBus.innerHTML = '<b>Bus</b> ' + (bus.state === 'driven' ? b8(bus.value) + ' &larr; ' + (bus.drivers[0] === 'DATA' ? 'test port' : bus.drivers[0])
+          : bus.state === 'float' ? 'xxxxxxxx (floating)' : 'EEEEEEEE &mdash; ' + esc(bus.why.replace('DATA', 'the test port')));
+
+        var alu = ev && ev.alu;
+        var tmpNow = s.TMP;
+        var bIn = ctl.bus1 ? 1 : tmpNow;
+        document.getElementById('core-alu').innerHTML =
+          '<div class="val"><b>A</b> ' + (bus.state === 'driven' ? b8(bus.value) : 'xxxxxxxx') + '<small>the bus</small></div>' +
+          '<div class="val' + (ctl.bus1 ? ' val--on' : '') + '"><b>B</b> ' + b8(bIn) + '<small>' + (ctl.bus1 ? 'BUS1 forcing 1' : 'TMP through BUS1') + '</small></div>' +
+          '<div class="val"><b>C</b> ' + (alu ? (alu.c === null ? 'xxxxxxxx' : b8(alu.c)) : 'xxxxxxxx') + '<small>' + C.ALU_MNEMONICS[+elOp.value] + (alu && alu.c === null ? ': no leg selected' : '') + '</small></div>';
+        document.getElementById('core-live').innerHTML = alu
+          ? flagHtml('CO', alu.C) + flagHtml('AL', alu.A) + flagHtml('EQ', alu.E) + flagHtml('Z', alu.Z)
+          : '<span class="flag">nothing valid at the ALU inputs</span>';
+
+        document.getElementById('core-regs').innerHTML = ['R0', 'R1', 'R2', 'R3', 'TMP', 'ACC'].map(function (n) {
+          var cls = 'val' + (wrote.indexOf(n) >= 0 ? ' val--wrote' : '') + (ctl.en[n] ? ' val--on' : '');
+          return '<div class="' + cls + '"><b>' + n + '</b> ' + b8(s[n]) + '<small>' + (s[n] === null ? 'no meaningful value' : '= ' + s[n]) + '</small></div>';
+        }).join('');
+        document.getElementById('core-held').innerHTML = C.FLAG_NAMES.map(function (f) { return flagHtml(f, s.flags[f]); }).join('');
+      }
+
+      host.addEventListener('click', function (e) {
+        var t = e.target.closest('button');
+        if (!t) { return; }
+        if (t.dataset.en) { ctl.en[t.dataset.en] = !ctl.en[t.dataset.en]; wrote = []; paint(); }
+        else if (t.dataset.set) { ctl.set[t.dataset.set] = !ctl.set[t.dataset.set]; paint(); }
+        else if (t.id === 'core-bus1') { ctl.bus1 = ctl.bus1 ? 0 : 1; paint(); }
+        else if (t.id === 'core-ci') { ctl.ci = ctl.ci ? 0 : 1; paint(); }
+      });
+      elOp.addEventListener('change', paint);
+      document.getElementById('core-data').addEventListener('input', paint);
+
+      document.getElementById('core-go').addEventListener('click', function () {
+        var l = lines(), st = document.getElementById('core-status');
+        if (l.enable.indexOf('DATA') >= 0 && l.data === null) { st.textContent = 'The test port needs eight 0s and 1s.'; return; }
+        if (!l.set.length) { st.textContent = 'Nothing is set to capture. Choose at least one Set.'; return; }
+        var r = m.transfer(l);
+        if (!r.ok) { st.textContent = 'Refused. ' + r.error; wrote = []; paint(); return; }
+        wrote = r.wrote;
+        var s = m.state();
+        st.textContent = 'Done: ' + r.wrote.map(function (n) {
+          return n === 'FLAGS' ? 'FLAGS = C' + s.flags.C + ' A' + s.flags.A + ' E' + s.flags.E + ' Z' + (s.flags.Z === null ? '?' : s.flags.Z) : n + ' = ' + b8(s[n]) + ' (' + s[n] + ')';
+        }).join(', ') + '. ' + (r.warning ? r.warning + ' ' : '') + 'The transfer ends with every e dropped; the buttons stay lit so you can see what you did.';
+        if (recipe && recipeStep >= recipe.length) {
+          document.getElementById('core-recipe-step').textContent = 'Recipe complete.';
+        }
+        paint();
+      });
+      document.getElementById('core-clear').addEventListener('click', function () { clearCtl(); wrote = []; paint(); });
+      document.getElementById('core-reset').addEventListener('click', reset);
+
+      function recipeSteps(v) {
+        var p = v.split(',');
+        if (p[0] === 'INC') {
+          var r = 'R' + p[1];
+          return [{ enable: [r], set: ['ACC'], bus1: 1, opcode: 0, rtl: 'ACC ← ' + r + ' + 1' },
+                  { enable: ['ACC'], set: [r], bus1: 0, opcode: 0, rtl: r + ' ← ACC' }];
+        }
+        return C.aluSteps(p[0], +p[1], +p[2]).map(function (s) { return { enable: s.enable, set: s.set, bus1: 0, opcode: s.opcode, rtl: s.rtl }; });
+      }
+      document.getElementById('core-recipe').addEventListener('change', function () { recipe = null; recipeStep = 0; document.getElementById('core-recipe-step').textContent = ''; });
+      document.getElementById('core-load').addEventListener('click', function () {
+        if (!recipe || recipeStep >= recipe.length) { recipe = recipeSteps(document.getElementById('core-recipe').value); recipeStep = 0; }
+        var s = recipe[recipeStep];
+        clearCtl();
+        s.enable.forEach(function (n) { ctl.en[n] = true; });
+        s.set.forEach(function (n) { ctl.set[n] = true; });
+        ctl.bus1 = s.bus1; elOp.value = String(s.opcode);
+        recipeStep++;
+        document.getElementById('core-recipe-step').textContent = 'Transfer ' + recipeStep + ' of ' + recipe.length + ': ' + s.rtl + '. Press do this transfer.';
+        wrote = [];
+        paint();
+      });
+
+      reset();
+    }());
+
+    /* ---------- Self-check B ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+        { q: 'Why does the ALU’s output go to ACC instead of straight onto the bus?',
+          opts: ['ACC is faster than the bus', 'In that transfer the bus is already driven by the register supplying A, and it is the ALU’s own input', 'The ALU’s output is only 4 bits wide', 'So the flags can be computed'],
+          correct: 1,
+          why: 'Driving C onto the bus would make two drivers, and would feed the result back into A while it is being computed. ACC holds it for one transfer.' },
+        { q: 'TMP holds <code>00110000</code> and <code>bus1</code> = 1. What reaches the ALU’s B input?',
+          opts: ['00110000', '00110001', '00000001', '00000000'],
+          correct: 2,
+          why: 'BUS1 ANDs bits 1–7 with NOT bus1, which clears them, and ORs bit 0 with bus1, which sets it. TMP is ignored.' },
+        { q: 'After <code>ADD R2, R3</code>, which register has changed?',
+          opts: ['R2', 'R3', 'Both', 'Neither; the result is only in ACC'],
+          correct: 1,
+          why: 'RB supplies B and receives the result: R3 ← R2 + R3. ACC also holds the sum, but ACC is not a register an instruction names.' },
+        { q: 'R0 = 9 and R1 = 9. After the second transfer of <code>ADD R0, R1</code>, what does FLAGS hold?',
+          opts: ['C0 A0 E1 Z0', 'C0 A0 E0 Z1', 'C1 A0 E1 Z0', 'C0 A1 E0 Z0'],
+          correct: 0,
+          why: '9 + 9 = 18: no carry, not zero. The comparator is live on every opcode, and 9 equals 9, so E = 1 and A = 0.' }
+      ];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p><div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi], okAns = (oi === item.correct), fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) { el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false'); });
+      }
+      host.addEventListener('click', function (e) { var t = e.target.closest('.quiz-option'); if (t) { answer(+t.dataset.q, +t.dataset.o); } });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+  })();
+  </script>
+</body>
+</html>

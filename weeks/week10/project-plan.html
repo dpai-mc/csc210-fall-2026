@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w10-plan">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — CPU Project Plan</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .q-block { border-left: 3px solid var(--color-border); padding-left: var(--space-md); margin: var(--space-lg) 0; }
+    .q-num { font-weight: 700; color: var(--color-primary); }
+    .q-pts { font-size: var(--fs-sm); color: var(--color-text-muted); }
+    .ans { margin-top: var(--space-sm); }
+    .ans__input { display: block; width: 100%; box-sizing: border-box; min-height: 4.6em; resize: vertical; font-family: var(--font-sans); font-size: var(--fs-sm); line-height: 1.55; color: var(--color-text); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm); }
+    .ans__input:focus { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+    .ans--mono .ans__input { font-family: var(--font-mono); }
+    .ans__print { display: none; }
+    .cover-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-md); margin: var(--space-md) 0; }
+    .cover-grid > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
+    .cover-grid label { display: block; font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); margin-bottom: var(--space-xs); }
+    .cover-grid input { width: 100%; box-sizing: border-box; font-size: var(--fs-base); padding: var(--space-xs) var(--space-sm); border: 1px solid var(--color-border); border-radius: 4px; }
+    .tier-table td:first-child { font-weight: 700; font-size: var(--fs-lg); text-align: center; }
+    .choice { display: flex; flex-wrap: wrap; gap: var(--space-md); margin: var(--space-sm) 0; }
+    .choice label { display: flex; gap: 6px; align-items: center; font-weight: 600; }
+    .ins-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 4px var(--space-md); margin: var(--space-sm) 0; }
+    .ins-grid label { font-family: var(--font-mono); font-size: var(--fs-sm); display: flex; gap: 6px; align-items: center; }
+    .ins-grid h4 { grid-column: 1 / -1; margin: var(--space-sm) 0 0; font-size: var(--fs-sm); }
+    .check-out { font-family: var(--font-mono); font-size: var(--fs-sm); white-space: pre; overflow-x: auto; background: var(--color-code-bg); border: 1px solid var(--color-border); border-radius: 4px; padding: var(--space-xs) var(--space-sm); margin-top: var(--space-xs); }
+    .check-out:empty { display: none; }
+    .submit-row { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: var(--space-lg) 0; }
+    @media print {
+      .sp-header, .sp-footer, .no-print { display: none !important; }
+      .q-block { break-inside: avoid; }
+      body { background: #fff; }
+      .ans__input { display: none; }
+      .ans__print { display: block; white-space: pre-wrap; word-break: break-word; border: 1px solid #999; border-radius: 3px; padding: 6px 8px; min-height: 3em; font-size: 10.5pt; line-height: 1.5; }
+      .ans--mono .ans__print { font-family: var(--font-mono); }
+      .check-out { white-space: pre-wrap; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 10 &rsaquo; <span>CPU Project Plan</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>CPU Project Plan</h1>
+    <p><span class="points-badge">Complete / incomplete</span> &nbsp;|&nbsp; Week 10 &nbsp;|&nbsp; <strong>Due Sunday 10/25, 11:59 pm</strong> &nbsp;|&nbsp; Print to PDF and upload to Canvas</p>
+
+    <section id="intro">
+      <p>Your final project, due <strong>12/11</strong>, is a working Logisim CPU. This plan is where you decide what yours will do, and check that your tests test it, while changing your mind is still cheap. It is graded <strong>complete or incomplete</strong>. Complete means every section below is answered, and the test bytes you write decode to the instructions you say they are &mdash; the <em>check my bytes</em> buttons do that for you. You get written feedback either way.</p>
+      <div class="callout callout--warn">
+        <div class="callout__title">Nothing you type on this page is saved anywhere</div>
+        <p>There is no storage behind these boxes. Close the tab or reload and <strong>your typing is gone.</strong> Print to PDF before you leave.</p>
+      </div>
+    </section>
+
+    <section id="tiers">
+      <h2>The three tiers</h2>
+      <p>Graded by <strong>what your finished CPU executes, from RAM, correctly</strong>. Page 4 of Week 10, &sect;10.16, explains them.</p>
+      <div class="table-scroll">
+        <table class="tier-table">
+          <thead><tr><th>Tier</th><th>Your CPU executes</th><th>Instructions</th></tr></thead>
+          <tbody>
+            <tr><td>C</td><td>fetch, and every ALU instruction</td><td>ADD SHR SHL NOT AND OR XOR CMP &mdash; 8</td></tr>
+            <tr><td>B</td><td>everything in C, plus memory and immediate values</td><td>+ LD ST DATA &mdash; 11</td></tr>
+            <tr><td>A</td><td>everything in B, plus every jump and CLF, and runs <code>MYSIM.txt</code> to R2 = 25</td><td>+ JMPR JMP J<em>caez</em> CLF &mdash; 15</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>At every tier you also submit one <code>.circ</code> file, a test program per class of instruction with expected results, and written documentation.</p>
+    </section>
+
+    <section id="plan-cover">
+      <h2>You</h2>
+      <div class="cover-grid">
+        <div><label for="cv-name">Name</label><input type="text" id="cv-name" autocomplete="name"></div>
+        <div><label for="cv-date">Date</label><input type="text" id="cv-date" autocomplete="off"></div>
+      </div>
+    </section>
+
+    <section id="plan-1">
+      <h2>1. Your target</h2>
+      <div class="q-block">
+        <p><span class="q-num">1a.</span> Which tier are you aiming for?</p>
+        <div class="choice" role="radiogroup" aria-label="Target tier">
+          <label><input type="radio" name="tier" value="C"> C</label>
+          <label><input type="radio" name="tier" value="B"> B</label>
+          <label><input type="radio" name="tier" value="A"> A</label>
+        </div>
+        <p><span class="q-num">1b.</span> In two or three sentences: why that tier, given the rest of your term?</p>
+        <div class="ans"><label class="sr-only" for="p1b">Why that tier</label><textarea class="ans__input" id="p1b" rows="3"></textarea><div class="ans__print" aria-hidden="true"></div></div>
+      </div>
+    </section>
+
+    <section id="plan-2">
+      <h2>2. The instructions you will build</h2>
+      <div class="q-block">
+        <p>Tick every instruction you plan to implement. Choosing a tier above ticks its instructions for you; add or remove any you like.</p>
+        <div class="ins-grid" id="ins-grid">
+          <h4>ALU (tier C)</h4>
+          <label><input type="checkbox" value="ADD" data-tier="C"> ADD</label>
+          <label><input type="checkbox" value="SHR" data-tier="C"> SHR</label>
+          <label><input type="checkbox" value="SHL" data-tier="C"> SHL</label>
+          <label><input type="checkbox" value="NOT" data-tier="C"> NOT</label>
+          <label><input type="checkbox" value="AND" data-tier="C"> AND</label>
+          <label><input type="checkbox" value="OR" data-tier="C"> OR</label>
+          <label><input type="checkbox" value="XOR" data-tier="C"> XOR</label>
+          <label><input type="checkbox" value="CMP" data-tier="C"> CMP</label>
+          <h4>Memory and immediates (tier B)</h4>
+          <label><input type="checkbox" value="LD" data-tier="B"> LD</label>
+          <label><input type="checkbox" value="ST" data-tier="B"> ST</label>
+          <label><input type="checkbox" value="DATA" data-tier="B"> DATA</label>
+          <h4>Jumps and flags (tier A)</h4>
+          <label><input type="checkbox" value="JMPR" data-tier="A"> JMPR</label>
+          <label><input type="checkbox" value="JMP" data-tier="A"> JMP</label>
+          <label><input type="checkbox" value="Jcaez" data-tier="A"> J<em>caez</em> (all 15)</label>
+          <label><input type="checkbox" value="CLF" data-tier="A"> CLF</label>
+        </div>
+      </div>
+    </section>
+
+    <section id="plan-3">
+      <h2>3. Test programs</h2>
+      <p>For each class you ticked, write a short program <strong>as bytes in hex</strong>, one instruction per line, starting at address 00, and say what it should leave in the registers. Use <code>DATA</code> to set up values only if you are building tier B or A; at tier C, say what you will load into the registers by hand before running. The check button decodes your bytes so you can see whether they are what you meant.</p>
+
+      <div class="q-block">
+        <p><span class="q-num">3a.</span> <strong>ALU test.</strong> Bytes, then the starting and expected register values.</p>
+        <div class="ans ans--mono"><label class="sr-only" for="p3a">ALU test bytes</label><textarea class="ans__input" id="p3a" rows="4" placeholder="86&#10;A5"></textarea><div class="ans__print" aria-hidden="true"></div></div>
+        <button type="button" class="widget-btn widget-btn--small widget-btn--outline no-print kernel-only" data-check="p3a">check my bytes</button>
+        <div class="check-out" id="p3a-out" aria-live="polite"></div>
+        <div class="ans"><label class="sr-only" for="p3a-exp">ALU test: start and expected values</label><textarea class="ans__input" id="p3a-exp" rows="2" placeholder="Start: R1 = 3, R2 = 4.  Expect: R2 = 7, then R1 = 6."></textarea><div class="ans__print" aria-hidden="true"></div></div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">3b.</span> <strong>Memory and immediate test</strong> (tiers B and A; write &ldquo;not building&rdquo; for C).</p>
+        <div class="ans ans--mono"><label class="sr-only" for="p3b">Memory test bytes</label><textarea class="ans__input" id="p3b" rows="4"></textarea><div class="ans__print" aria-hidden="true"></div></div>
+        <button type="button" class="widget-btn widget-btn--small widget-btn--outline no-print kernel-only" data-check="p3b">check my bytes</button>
+        <div class="check-out" id="p3b-out" aria-live="polite"></div>
+        <div class="ans"><label class="sr-only" for="p3b-exp">Memory test: expected values</label><textarea class="ans__input" id="p3b-exp" rows="2"></textarea><div class="ans__print" aria-hidden="true"></div></div>
+      </div>
+
+      <div class="q-block">
+        <p><span class="q-num">3c.</span> <strong>Jump test</strong> (tier A; write &ldquo;not building&rdquo; otherwise). A loop that runs a known number of times is a good test. <code>MYSIM.txt</code> is required at tier A in addition to this.</p>
+        <div class="ans ans--mono"><label class="sr-only" for="p3c">Jump test bytes</label><textarea class="ans__input" id="p3c" rows="4"></textarea><div class="ans__print" aria-hidden="true"></div></div>
+        <button type="button" class="widget-btn widget-btn--small widget-btn--outline no-print kernel-only" data-check="p3c">check my bytes</button>
+        <div class="check-out" id="p3c-out" aria-live="polite"></div>
+        <div class="ans"><label class="sr-only" for="p3c-exp">Jump test: expected values</label><textarea class="ans__input" id="p3c-exp" rows="2"></textarea><div class="ans__print" aria-hidden="true"></div></div>
+      </div>
+    </section>
+
+    <section id="plan-4">
+      <h2>4. Schedule</h2>
+      <p>What you expect to have working at each point. Be specific: &ldquo;fetch and ADD running from RAM&rdquo;, not &ldquo;making progress&rdquo;.</p>
+      <div class="q-block">
+        <p><span class="q-num">4a.</span> By Checkpoint 5 &mdash; the control unit, Week 11 (11/01)</p>
+        <div class="ans"><label class="sr-only" for="p4a">By Checkpoint 5</label><textarea class="ans__input" id="p4a" rows="2"></textarea><div class="ans__print" aria-hidden="true"></div></div>
+        <p><span class="q-num">4b.</span> By Checkpoint 6 &mdash; the complete datapath, Week 13 (11/15)</p>
+        <div class="ans"><label class="sr-only" for="p4b">By Checkpoint 6</label><textarea class="ans__input" id="p4b" rows="2"></textarea><div class="ans__print" aria-hidden="true"></div></div>
+        <p><span class="q-num">4c.</span> By Checkpoint 7 &mdash; Week 14 (11/22)</p>
+        <div class="ans"><label class="sr-only" for="p4c">By Checkpoint 7</label><textarea class="ans__input" id="p4c" rows="2"></textarea><div class="ans__print" aria-hidden="true"></div></div>
+        <p><span class="q-num">4d.</span> Between 11/23 and the 12/11 deadline</p>
+        <div class="ans"><label class="sr-only" for="p4d">Before the deadline</label><textarea class="ans__input" id="p4d" rows="2"></textarea><div class="ans__print" aria-hidden="true"></div></div>
+      </div>
+    </section>
+
+    <section id="plan-5">
+      <h2>5. One risk, one question</h2>
+      <div class="q-block">
+        <p><span class="q-num">5a.</span> What is most likely to go wrong, and what will you do if it does?</p>
+        <div class="ans"><label class="sr-only" for="p5a">Risk</label><textarea class="ans__input" id="p5a" rows="3"></textarea><div class="ans__print" aria-hidden="true"></div></div>
+        <p><span class="q-num">5b.</span> One question for your instructor about the project.</p>
+        <div class="ans"><label class="sr-only" for="p5b">Question</label><textarea class="ans__input" id="p5b" rows="2"></textarea><div class="ans__print" aria-hidden="true"></div></div>
+      </div>
+    </section>
+
+    <div class="submit-row no-print">
+      <button class="widget-btn widget-btn--primary" type="button" id="print-plan">Print my plan to PDF</button>
+    </div>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; CPU Project Plan
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  /* ============================================================
+     The plan form. Printing does NOT depend on shared/logic.js: a
+     stale kernel on the server must never stop a student printing.
+     Only the "check my bytes" buttons need CSCLogic.core, and they
+     hide themselves when it is missing. No storage of any kind.
+     ============================================================ */
+  (function () {
+    'use strict';
+    var textareas = document.querySelectorAll('.ans__input');
+    function mirror() {
+      Array.prototype.forEach.call(textareas, function (t) {
+        var out = t.parentNode.querySelector('.ans__print');
+        if (out) { out.textContent = t.value; }
+      });
+    }
+    Array.prototype.forEach.call(textareas, function (t) {
+      t.addEventListener('input', function () { t.style.height = 'auto'; t.style.height = (t.scrollHeight + 2) + 'px'; });
+    });
+    document.getElementById('print-plan').addEventListener('click', function () { mirror(); window.print(); });
+    if (window.matchMedia) {
+      var mq = window.matchMedia('print');
+      var onChange = function (e) { if (e.matches) { mirror(); } };
+      if (mq.addEventListener) { mq.addEventListener('change', onChange); } else if (mq.addListener) { mq.addListener(onChange); }
+    }
+
+    /* Choosing a tier ticks that tier's instructions and the ones below it. */
+    var ORDER = { C: 1, B: 2, A: 3 };
+    Array.prototype.forEach.call(document.querySelectorAll('input[name="tier"]'), function (r) {
+      r.addEventListener('change', function () {
+        var lvl = ORDER[r.value];
+        Array.prototype.forEach.call(document.querySelectorAll('#ins-grid input[type="checkbox"]'), function (c) {
+          c.checked = ORDER[c.dataset.tier] <= lvl;
+        });
+      });
+    });
+
+    var C = window.CSCLogic && window.CSCLogic.core;
+    if (!C) {
+      Array.prototype.forEach.call(document.querySelectorAll('.kernel-only'), function (b) { b.hidden = true; });
+      return;
+    }
+    function parseBytes(text) {
+      var toks = String(text).split(/[\s,]+/).filter(function (t) { return t.length; });
+      var out = [], bad = [];
+      toks.forEach(function (t) {
+        var s = t.replace(/^0x/i, '');
+        if (/^[0-9a-fA-F]{1,2}$/.test(s)) { out.push(parseInt(s, 16)); } else { bad.push(t); }
+      });
+      return { bytes: out, bad: bad };
+    }
+    Array.prototype.forEach.call(document.querySelectorAll('[data-check]'), function (b) {
+      b.addEventListener('click', function () {
+        var id = b.dataset.check, p = parseBytes(document.getElementById(id).value), out = document.getElementById(id + '-out');
+        if (p.bad.length) { out.textContent = 'Not hex bytes: ' + p.bad.join(' ') + '. Write two hex digits per byte, e.g. 86 or 0x86.'; return; }
+        if (!p.bytes.length) { out.textContent = 'No bytes yet.'; return; }
+        var rows = [], addr = 0;
+        while (addr < p.bytes.length) {
+          var d = C.decodeByte(p.bytes[addr], p.bytes[addr + 1]);
+          var hx = p.bytes.slice(addr, addr + d.length).map(function (x) { return C.hex2(x).slice(2); }).join(' ');
+          rows.push(C.hex2(addr).slice(2) + '   ' + (hx + '      ').slice(0, 6) + '  ' + d.text +
+            (d.length === 2 && addr + 1 >= p.bytes.length ? '   ← missing its second byte' : ''));
+          addr += d.length;
+        }
+        out.textContent = rows.join('\n');
+      });
+    });
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w10-03">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 10: Naming a Register</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .cmp-table td:first-child { font-weight: 700; }
+    .rs-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-sm); margin: var(--space-sm) 0; }
+    @media (max-width: 700px) { .rs-grid { grid-template-columns: 1fr; } }
+    .rs-dec { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-xs) var(--space-sm); background: var(--color-surface); min-width: 0; }
+    .rs-dec h4 { margin: 0 0 4px; font-size: var(--fs-sm); }
+    .rs-dec small { color: var(--color-text-muted); display: block; margin-bottom: 4px; }
+    .rs-line { display: flex; justify-content: space-between; gap: 6px; font-family: var(--font-mono); font-size: var(--fs-sm); padding: 1px 6px; border-radius: 3px; }
+    .rs-line--hot { background: #fff1e0; font-weight: 700; }
+    .rs-line--on { background: var(--color-primary); color: #fff; font-weight: 700; }
+    .rs-out { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin: var(--space-sm) 0; }
+    .rs-pin { border: 1px solid var(--color-border); border-radius: 4px; text-align: center; font-family: var(--font-mono); font-size: var(--fs-sm); padding: 4px 2px; }
+    .rs-pin--1 { background: var(--color-primary); color: #fff; border-color: var(--color-primary); font-weight: 700; }
+    .rs-pin--bad { background: var(--color-danger); color: #fff; border-color: var(--color-danger); }
+    .rs-ctl { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; margin: var(--space-xs) 0; }
+    .rs-ctl select { font-family: var(--font-mono); font-size: var(--fs-sm); padding: 2px 6px; border: 1px solid var(--color-border); border-radius: 4px; }
+    .rs-status { font-size: var(--fs-sm); min-height: 1.5em; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 10 &rsaquo; <span>Page 3 — Naming a Register</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Naming a Register</h1>
+    <p><strong>Sections 10.9 – 10.12</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~45 minutes</p>
+
+    <section id="sec-10-9">
+      <h2>10.9 &nbsp; What a register number is</h2>
+
+      <p>On page 2 you ran <code>ADD R0, R1</code> by raising R1&rsquo;s <code>e</code>, then R0&rsquo;s, then pulsing R1&rsquo;s <code>s</code>. Every register has its own pair of lines, eight lines in all for R0&ndash;R3, and choosing a register meant choosing which line to touch.</p>
+
+      <p>An instruction cannot touch a line. It can only carry bits. Four registers need two bits to name one of them &mdash; <code>00</code> for R0 through <code>11</code> for R3 &mdash; and something has to turn those two bits into one line out of four. You built that something in Week 3: <strong><code>DECODER_2TO4</code></strong>, whose 2-bit <code>sel</code> raises exactly one of <code>out0</code>&ndash;<code>out3</code>. A register number is a decoder input. That is all &ldquo;R2&rdquo; means to the hardware.</p>
+    </section>
+
+    <section id="sec-10-10">
+      <h2>10.10 &nbsp; REG_SELECT</h2>
+
+      <p>An ALU operation names two registers, RA and RB, and uses them three ways: RA drives the bus, RB drives the bus, and RB captures the result. So there are three decoders, each followed by four AND gates that let its chosen line through only when one control line is high:</p>
+
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Decoder</th><th>Its <code>sel</code></th><th>ANDed with</th><th>Produces</th></tr></thead>
+          <tbody>
+            <tr><td>A</td><td><code>ra</code></td><td><code>rega_e</code></td><td>&ldquo;RA, drive the bus&rdquo;</td></tr>
+            <tr><td>B</td><td><code>rb</code></td><td><code>regb_e</code></td><td>&ldquo;RB, drive the bus&rdquo;</td></tr>
+            <tr><td>B&prime;</td><td><code>rb</code></td><td><code>regb_s</code></td><td>&ldquo;RB, capture&rdquo; &mdash; these four are <code>r0_s</code>&ndash;<code>r3_s</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Each register&rsquo;s enable can be asked for by either of the first two decoders, so <code>r0_e</code> is <strong>decoder A&rsquo;s line 0 OR decoder B&rsquo;s line 0</strong>, and likewise for the other three. The whole circuit is three decoders, twelve AND gates and four OR gates.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Why that OR is safe &mdash; a third kind of guarantee</div>
+        <p>If <code>rega_e</code> and <code>regb_e</code> were ever high together, with RA and RB different, two registers would drive the bus at once. Nothing in REG_SELECT&rsquo;s wiring prevents it. What prevents it is <strong>timing</strong>: the control unit raises <code>regb_e</code> in one step and <code>rega_e</code> in the next, never both.</p>
+        <p>You have now seen all three ways a design keeps one driver on a wire. The ALU&rsquo;s output stage guarantees it by <strong>structure</strong> &mdash; its decoder can only select one leg. The bus guarantees nothing by itself and pays for <strong>controlled buffers</strong> so parts can let go. REG_SELECT relies on <strong>the sequence the control unit follows</strong>. The third is the cheapest and the most fragile: it is correct only as long as the control unit is.</p>
+      </div>
+
+      <p>When <code>ra</code> and <code>rb</code> name the <em>same</em> register &mdash; <code>XOR R3, R3</code> &mdash; nothing special happens. R3 drives the bus in one transfer because <code>regb_e</code> asked, and again in the next because <code>rega_e</code> asked; the OR does not care which.</p>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/control-alu-diagram.jpg"
+             alt="A Logisim control-unit circuit. In the lower left, two 2-by-4 decoder blocks labelled REG B and REG A take their inputs from bits of an IR IN pin at the bottom. Their outputs feed columns of AND gates whose other inputs are lines labelled REGB_E and REGA_E; pairs of AND outputs meet in OR gates driving output pins R0_E, R1_E, R2_E and R3_E. On the right, a third 2-by-4 decoder on the same register-B bits feeds AND gates with REGB_S, driving outputs R0_S to R3_S. A stepper block runs across the top, with lines to TMP_S, ACC_S, REGB_S and others.">
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s control unit for the ALU instruction. <strong>The register-select part is the lower left and right: decoders REG A and REG B with their AND and OR gates, and the third decoder on the right with <code>REGB_S</code>.</strong> In Fall 2026 that part is its own tab, <code>REG_SELECT</code>, built this week. The stepper across the top and everything it drives is Week 11.</figcaption>
+      </figure>
+    </section>
+
+    <!-- ========== Widget 3 ========== -->
+    <section id="sec-select">
+      <div class="widget-card" id="w-select">
+        <div class="widget-card__title">Register Select</div>
+        <div class="widget-card__subtitle">Set the two register fields and the three control lines. Each decoder lights its chosen line; a line reaches an output only when its control line is high.</div>
+
+        <div class="rs-ctl">
+          <label for="rs-ra"><code>ra</code></label>
+          <select id="rs-ra"><option value="0">00 (R0)</option><option value="1">01 (R1)</option><option value="2">10 (R2)</option><option value="3">11 (R3)</option></select>
+          <label for="rs-rb"><code>rb</code></label>
+          <select id="rs-rb"><option value="0">00 (R0)</option><option value="1" selected>01 (R1)</option><option value="2">10 (R2)</option><option value="3">11 (R3)</option></select>
+          <button type="button" class="widget-btn widget-btn--small" aria-pressed="false" data-l="regaE">rega_e</button>
+          <button type="button" class="widget-btn widget-btn--small" aria-pressed="false" data-l="regbE">regb_e</button>
+          <button type="button" class="widget-btn widget-btn--small" aria-pressed="false" data-l="regbS">regb_s</button>
+        </div>
+        <div class="rs-ctl">
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small" id="rs-walk">step through the ALU instruction</button>
+          <span id="rs-walk-txt" aria-live="polite"></span>
+        </div>
+
+        <div class="rs-grid" id="rs-decs"></div>
+        <p class="grp-title" style="font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;margin:var(--space-sm) 0 0">Enables</p>
+        <div class="rs-out" id="rs-e"></div>
+        <p class="grp-title" style="font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;margin:var(--space-sm) 0 0">Sets</p>
+        <div class="rs-out" id="rs-s"></div>
+        <p class="rs-status" id="rs-status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section id="sec-10-11">
+      <h2>10.11 &nbsp; Four registers plus REG_SELECT is a register file</h2>
+
+      <p>A <strong>register file</strong> is a set of registers that are reached by number rather than by name. R0&ndash;R3 and REG_SELECT are exactly that, and now you can set yours beside the MIPS register file you programmed in Weeks 5&ndash;8 and watched in Week 9:</p>
+
+      <div class="table-scroll">
+        <table class="cmp-table">
+          <thead><tr><th></th><th>MIPS</th><th>Your CPU</th></tr></thead>
+          <tbody>
+            <tr><td>Registers an instruction can name</td><td>32, <code>$zero</code>&ndash;<code>$ra</code></td><td>4, R0&ndash;R3</td></tr>
+            <tr><td>Bits per register field</td><td>5</td><td>2</td></tr>
+            <tr><td>Registers read at once</td><td>two, in one cycle</td><td>one per transfer &mdash; the bus carries one value</td></tr>
+            <tr><td>Where the second operand waits</td><td>nowhere; both arrive together</td><td>TMP</td></tr>
+            <tr><td>Register fields in an ALU instruction</td><td>three: <code>rs</code>, <code>rt</code>, <code>rd</code></td><td>two: RA, RB &mdash; RB is both a source and the destination</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>None of those differences is a different idea. MIPS spends hardware to do in one cycle what your CPU does in three transfers, and spends instruction bits on a third register field so <code>add $t0, $t1, $t2</code> can leave both sources intact. Your <code>ADD R1, R2</code> overwrites R2 &mdash; a cost you pay in instructions, the way MIPS pays in wires.</p>
+    </section>
+
+    <section id="sec-10-12">
+      <h2>10.12 &nbsp; Who drives these lines</h2>
+
+      <p>Today, you do: in Checkpoint 4, <code>ra</code>, <code>rb</code>, <code>rega_e</code>, <code>regb_e</code> and <code>regb_s</code> are input pins you click. Next week the control unit takes over. The two register fields will come straight from the bits of the instruction being executed, and the three control lines from the stepper, one step at a time. Page 4 shows exactly which bits of an instruction become <code>ra</code> and <code>rb</code>.</p>
+
+      <!-- ========== Self-check C ========== -->
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Three questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>You can turn a two-bit register number into the right register&rsquo;s enable or set line, and explain what keeps two registers off the bus at once. Next page: the instruction byte those register numbers live in, and the whole instruction set of your CPU.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 10, Page 3
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['core'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.core) { return; }
+    var C = L.core;
+
+    /* ---------- Widget 3 — Register Select ---------- */
+    (function () {
+      var host = document.getElementById('w-select');
+      if (!host) { return; }
+      var ctl = { regaE: 0, regbE: 0, regbS: 0 };
+      var walk = -1;
+      var elRa = document.getElementById('rs-ra'), elRb = document.getElementById('rs-rb');
+
+      function dec(title, sub, sel, gate, gateName) {
+        var rows = [0, 1, 2, 3].map(function (k) {
+          var hot = k === sel, on = hot && gate;
+          return '<div class="rs-line' + (on ? ' rs-line--on' : hot ? ' rs-line--hot' : '') + '"><span>out' + k + '</span><span>' +
+            (hot ? '1' : '0') + ' AND ' + gateName + ' = ' + (on ? '1' : '0') + '</span></div>';
+        }).join('');
+        return '<div class="rs-dec"><h4>' + title + '</h4><small>' + sub + '</small>' + rows + '</div>';
+      }
+
+      function paint() {
+        var ra = +elRa.value, rb = +elRb.value;
+        var r = C.regSelect({ ra: ra, rb: rb, regaE: ctl.regaE, regbE: ctl.regbE, regbS: ctl.regbS });
+        host.querySelectorAll('[data-l]').forEach(function (b) { b.setAttribute('aria-pressed', ctl[b.dataset.l] ? 'true' : 'false'); });
+        document.getElementById('rs-decs').innerHTML =
+          dec('Decoder A', 'sel = ra = ' + C.bits(ra, 2), ra, ctl.regaE, 'rega_e') +
+          dec('Decoder B', 'sel = rb = ' + C.bits(rb, 2), rb, ctl.regbE, 'regb_e') +
+          dec('Decoder B′', 'sel = rb = ' + C.bits(rb, 2), rb, ctl.regbS, 'regb_s');
+        document.getElementById('rs-e').innerHTML = r.e.map(function (v, k) {
+          return '<div class="rs-pin' + (v ? (r.conflict ? ' rs-pin--bad' : ' rs-pin--1') : '') + '">r' + k + '_e = ' + v + '</div>';
+        }).join('');
+        document.getElementById('rs-s').innerHTML = r.s.map(function (v, k) {
+          return '<div class="rs-pin' + (v ? ' rs-pin--1' : '') + '">r' + k + '_s = ' + v + '</div>';
+        }).join('');
+        var st = document.getElementById('rs-status');
+        if (r.conflict) {
+          st.textContent = 'Two enables are high: R' + ra + ' and R' + rb + ' would both drive the bus. Nothing in REG_SELECT stops this — the control unit must never raise rega_e and regb_e together.';
+        } else if (ctl.regaE && ctl.regbE) {
+          st.textContent = 'rega_e and regb_e are both high, but ra and rb name the same register, so one register drives. Harmless here; never done by the control unit.';
+        } else {
+          var on = [];
+          r.e.forEach(function (v, k) { if (v) { on.push('R' + k + ' drives the bus'); } });
+          r.s.forEach(function (v, k) { if (v) { on.push('R' + k + ' captures'); } });
+          st.textContent = on.length ? on.join('; ') + '.' : 'No control line is high, so every output is 0 whatever ra and rb say.';
+        }
+      }
+
+      host.addEventListener('click', function (e) {
+        var t = e.target.closest('[data-l]');
+        if (t) { ctl[t.dataset.l] = ctl[t.dataset.l] ? 0 : 1; walk = -1; document.getElementById('rs-walk-txt').textContent = ''; paint(); }
+      });
+      elRa.addEventListener('change', paint);
+      elRb.addEventListener('change', paint);
+
+      document.getElementById('rs-walk').addEventListener('click', function () {
+        var ra = +elRa.value, rb = +elRb.value;
+        var steps = C.aluSteps('ADD', ra, rb);
+        walk = (walk + 1) % (steps.length + 1);
+        ctl = { regaE: 0, regbE: 0, regbS: 0 };
+        var txt = document.getElementById('rs-walk-txt');
+        if (walk === steps.length) {
+          txt.textContent = 'Done. Three transfers; REG_SELECT raised one line in each.';
+        } else {
+          var s = steps[walk];
+          if (s.lines.regb_e) { ctl.regbE = 1; }
+          if (s.lines.rega_e) { ctl.regaE = 1; }
+          if (s.lines.regb_s) { ctl.regbS = 1; }
+          txt.textContent = 'Transfer ' + (walk + 1) + ' of ADD R' + ra + ', R' + rb + ': ' + s.rtl +
+            (s.enable[0] === 'ACC' ? ' (ACC’s own e is not a REG_SELECT line)' : '') + '.';
+        }
+        paint();
+      });
+
+      paint();
+    }());
+
+    /* ---------- Self-check C ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+        { q: '<code>rb</code> = <code>10</code> and <code>regb_s</code> = 1. Every other control line is 0. Which output is high?',
+          opts: ['r2_s', 'r2_e', 'r1_s', 'r2_e and r2_s'],
+          correct: 0,
+          why: 'Decoder B′ raises its line 2 and regb_s lets it through. Decoder B also raises line 2, but regb_e is 0, so no enable goes high.' },
+        { q: 'What stops REG_SELECT from enabling two registers at once?',
+          opts: ['Its OR gates only pass one input', 'The decoders can only raise one output', 'Nothing in its wiring; the control unit never raises rega_e and regb_e in the same step', 'The controlled buffers inside each register'],
+          correct: 2,
+          why: 'Each decoder raises one line, but there are two decoders driving the enables. Only the sequence the control unit follows keeps them apart.' },
+        { q: 'Why does your CPU need TMP when MIPS does not?',
+          opts: ['MIPS registers are wider', 'MIPS reads two registers in the same cycle; your bus carries one value per transfer', 'MIPS has no ALU flags', 'MIPS uses multiplexers instead of decoders for everything'],
+          correct: 1,
+          why: 'With one bus, the two operands must arrive in two transfers, so the first has to wait somewhere. MIPS’s register file has two read ports.' }
+      ];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p><div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi], okAns = (oi === item.correct), fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) { el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false'); });
+      }
+      host.addEventListener('click', function (e) { var t = e.target.closest('.quiz-option'); if (t) { answer(+t.dataset.q, +t.dataset.o); } });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+  })();
+  </script>
+</body>
+</html>

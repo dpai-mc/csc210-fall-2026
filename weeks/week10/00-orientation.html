@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w10-00">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 10 Orientation: One Bus, Four Registers</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .split-bar { display: flex; height: 2.2rem; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--color-border); margin: var(--space-sm) 0; }
+    .split-bar > div { display: flex; align-items: center; justify-content: center; font-size: var(--fs-xs); font-weight: 700; color: #fff; text-align: center; padding: 0 2px; overflow: hidden; }
+    .split-bar .sb-pg { background: var(--color-primary); }
+    .split-bar .sb-cp { background: var(--color-accent-hov); }
+    .split-bar .sb-qz { background: var(--color-success); }
+    .split-bar .sb-pl { background: #6b5b95; }
+    .split-legend { display: flex; justify-content: space-between; font-size: var(--fs-xs); color: var(--color-text-muted); gap: var(--space-sm); }
+    .due { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-md); margin: var(--space-md) 0; }
+    .due > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
+    .due h3 { margin-top: 0; font-size: var(--fs-base); }
+    @media (max-width: 760px) { .due { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 10 &rsaquo; <span>Orientation</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Week 10 — One Bus, Four Registers</h1>
+    <p><strong>The CPU core: the bus, the register file, the parts around the ALU, and the instruction set</strong> &nbsp;|&nbsp; <strong>10/19 – 10/25</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~9 hours</p>
+
+    <section id="sec-gap">
+      <div class="callout callout--hook">
+        <div class="callout__title">Your parts have never met.</div>
+        <p>Your file holds a register, an ALU with its flags, and a RAM with its address register. Each one works, and each one sits in its own tab, connected to nothing. Last week ended on the picture of a real processor: a datapath that holds and moves values, and a control unit that decides when.</p>
+        <p>This week you build the datapath of your own CPU. One shared 8-bit bus, four registers a program can name, and the small parts the ALU needs around it to work on a bus at all. By Sunday you will run <code>ADD R0, R1</code> by hand, in three moves, on a circuit you wired yourself. You are still the control unit &mdash; for one more week.</p>
+      </div>
+    </section>
+
+    <section id="sec-shape">
+      <h2>The shape of the week</h2>
+      <div class="split-bar" role="img" aria-label="Of about nine hours this week: about four and a half hours on the orientation and the four Week 10 pages, about three hours on Checkpoint 4 in Logisim, about three quarters of an hour on the Canvas quiz, and about three quarters of an hour on the CPU project plan.">
+        <div class="sb-pg" style="flex:4.5">Week 10 pages</div>
+        <div class="sb-cp" style="flex:3">Checkpoint 4</div>
+        <div class="sb-qz" style="flex:0.75">Quiz</div>
+        <div class="sb-pl" style="flex:0.75">Plan</div>
+      </div>
+      <div class="split-legend"><span>~4.5 hrs</span><span>~3 hrs</span><span>~0.75</span><span>~0.75</span></div>
+      <p>Read pages 1 and 2 before you open Logisim. The checkpoint is mostly wiring &mdash; a bus of eight wire loops with every part connected to it the same way &mdash; and the pages explain why each connection is where it is. A wiring mistake on the bus is much easier to avoid than to find.</p>
+
+      <div class="due">
+        <div>
+          <h3>Assignment 10, Part A</h3>
+          <p><strong>Logisim Checkpoint 4</strong> &mdash; 60 points. Your <code>.circ</code> file and ten screenshots.</p>
+        </div>
+        <div>
+          <h3>Assignment 10, Part B</h3>
+          <p>A <strong>Canvas quiz</strong> on the four pages &mdash; 40 points, 16 questions, auto-graded. No time limit, two attempts, higher score kept.</p>
+        </div>
+        <div>
+          <h3>CPU Project Plan</h3>
+          <p>Which tier you are aiming for and which instructions you will build. Graded <strong>complete / incomplete</strong>, with feedback.</p>
+        </div>
+      </div>
+      <p><strong>All three are due Sunday 10/25, 11:59 pm.</strong></p>
+    </section>
+
+    <section id="sec-path">
+      <h2>This week&rsquo;s learning path</h2>
+      <p>Read the pages in order; each builds on the parts the one before it introduced.</p>
+
+      <div class="spa-card-grid">
+        <div class="spa-card">
+          <div class="spa-card__number">Page 1</div>
+          <div class="spa-card__title">One Wire for Everyone</div>
+          <div class="spa-card__time">~1 hr &nbsp;|&nbsp; Sections 10.1–10.4</div>
+          <div class="spa-card__desc">The bus: one shared road, one driver at a time. How a value moves from one register to another, and how the eight-loop bus is built in Logisim.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+        <div class="spa-card">
+          <div class="spa-card__number">Page 2</div>
+          <div class="spa-card__title">Around the ALU</div>
+          <div class="spa-card__time">~1.25 hr &nbsp;|&nbsp; Sections 10.5–10.8</div>
+          <div class="spa-card__desc">The ALU has two inputs and the bus carries one value. TMP, BUS1, ACC and FLAGS, and why an ALU operation takes three transfers.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+        <div class="spa-card">
+          <div class="spa-card__number">Page 3</div>
+          <div class="spa-card__title">Naming a Register</div>
+          <div class="spa-card__time">~45 min &nbsp;|&nbsp; Sections 10.9–10.12</div>
+          <div class="spa-card__desc">How two bits become &ldquo;R2&rdquo;: three of your Week 3 decoders turn your four registers into a register file.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+        <div class="spa-card">
+          <div class="spa-card__number">Page 4</div>
+          <div class="spa-card__title">Your CPU&rsquo;s Instruction Set</div>
+          <div class="spa-card__time">~1.25 hr &nbsp;|&nbsp; Sections 10.13–10.16</div>
+          <div class="spa-card__desc">One byte per instruction, and every field a wire to something you built. A 23-byte program that multiplies 5 by 5, and the final project&rsquo;s three tiers.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-tools">
+      <h2>Tools and reading</h2>
+      <ul>
+        <li><strong>Logisim 2.7.1</strong> &mdash; needed for Checkpoint 4. Open the same course file you have used since Week 2.</li>
+        <li><strong>MARS</strong> &mdash; not needed this week.</li>
+        <li><strong>Saylor CS301</strong> &mdash; log in at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 5: Designing a Processor</strong> for registers, buses and datapaths in a second voice. It describes MIPS, not this CPU; the four pages are the source for your machine.</li>
+      </ul>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 10, Orientation
+  </footer>
+</body>
+</html>

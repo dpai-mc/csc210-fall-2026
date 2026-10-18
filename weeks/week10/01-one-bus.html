@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w10-01">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 10: One Wire for Everyone</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .steps4 { counter-reset: s; list-style: none; padding-left: 0; }
+    .steps4 li { counter-increment: s; position: relative; padding-left: 2.4rem; margin: var(--space-xs) 0; }
+    .steps4 li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 1.7rem; height: 1.7rem; border-radius: 50%; background: var(--color-primary); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: var(--fs-sm); }
+
+    /* Bus Bench */
+    .bb-bus { font-family: var(--font-mono); font-size: var(--fs-base); border: 2px solid var(--color-primary); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); margin: var(--space-sm) 0; background: var(--color-code-bg); display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; }
+    .bb-bus b { font-family: var(--font-sans); }
+    .bb-bus--conflict { border-color: var(--color-danger); background: #fdf0ef; }
+    .bb-bus--float { border-style: dashed; border-color: var(--color-border); }
+    .bb-bus--error { border-color: var(--color-danger); }
+    .bb-rows { display: grid; gap: var(--space-xs); margin: var(--space-sm) 0; }
+    .bb-row { display: grid; grid-template-columns: 4.2rem 1fr auto auto; gap: var(--space-sm); align-items: center; border: 1px solid var(--color-border); border-radius: 4px; padding: var(--space-xs) var(--space-sm); background: var(--color-surface); }
+    .bb-row--drive { border-color: var(--color-accent-hov); background: #fff5eb; }
+    .bb-row--wrote { border-color: var(--color-success); background: #f0faf4; }
+    .bb-name { font-weight: 700; color: var(--color-primary); }
+    .bb-val { font-family: var(--font-mono); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+    .bb-val input { font-family: var(--font-mono); font-size: var(--fs-sm); width: 7.5rem; padding: 2px 6px; border: 1px solid var(--color-border); border-radius: 4px; }
+    @media (max-width: 520px) { .bb-row { grid-template-columns: 3rem 1fr; } }
+    .bb-goal { font-size: var(--fs-sm); margin: var(--space-sm) 0; padding: var(--space-xs) var(--space-sm); border-left: 4px solid var(--color-accent); background: var(--color-code-bg); }
+    .bb-status { font-size: var(--fs-sm); min-height: 1.5em; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 10 &rsaquo; <span>Page 1 — One Wire for Everyone</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>One Wire for Everyone</h1>
+    <p><strong>Sections 10.1 – 10.4</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1 hour</p>
+
+    <section id="sec-10-1">
+      <h2>10.1 &nbsp; Your parts have never met</h2>
+
+      <p><strong>What you have.</strong> A <code>REGISTER_8BIT</code> from Week 5 that holds a byte and can put it on a wire or let go of it. An <code>ALU_8BIT</code> from Weeks 6 and 7 that computes seven things at once and keeps its flags live. A <code>RAM_16X16</code> from Week 8 with its MAR. And from Week 9, the shape every processor shares: a datapath that holds and moves values, and a control path that decides which value moves when.</p>
+
+      <p><strong>What you can&rsquo;t do yet.</strong> Move a byte from one register to another. Put two registers through the ALU. Your parts sit in separate tabs and nothing connects them.</p>
+
+      <p>The obvious fix is a wire from everything to everything. It does not survive arithmetic. Your finished CPU has about ten parts that exchange bytes; connecting every pair takes 45 connections, each 8 bits wide, and every part needs a way to choose which of its many inputs to listen to. Real processors made this choice early: <strong>one shared set of wires, called a bus, that every part connects to.</strong> Any part can put a byte on it; any part can take a byte from it. The cost is that only one byte can be on it at a time.</p>
+
+      <p><strong>What you will be able to do by the end of this week.</strong> Run any ALU operation on any two of four registers, by hand, in three moves on one bus, and read the instruction byte that asks for it.</p>
+    </section>
+
+    <section id="sec-10-2">
+      <h2>10.2 &nbsp; One wire, many drivers</h2>
+
+      <p>You already built the hard part. Week 5&rsquo;s register has two control lines with different jobs:</p>
+      <ul>
+        <li><strong><code>e</code> (enable) puts the stored byte on the wire.</strong> While <code>e</code> = 0, the register&rsquo;s output buffers stop driving and the output <em>floats</em>: <code>xxxxxxxx</code>, not <code>00000000</code>. That is what the controlled buffers in its output stage are for.</li>
+        <li><strong><code>s</code> (set) takes whatever is on the wire into the register.</strong> While <code>s</code> = 0 the register ignores its input completely.</li>
+      </ul>
+
+      <p>Connect five registers&rsquo; <code>i</code> and <code>o</code> pins to the same eight wires and you have a bus. Every register can see every byte that crosses it, and none of them is changed by it unless its own <code>s</code> is pulsed. The bus has exactly one rule:</p>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">One driver at a time</div>
+        <p>At most one part may have its <code>e</code> high. With none, the bus floats. With two, the bus is in <strong>conflict</strong>: on every bit where they differ, one part pulls the wire up while the other pulls it down, and Logisim shows the wire red with <code>E</code>. <strong>Two drivers are a conflict even when they happen to hold the same byte.</strong> Nothing guarantees they will still agree a moment later, and a design that works only while two values agree is not a design.</p>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Not the same as the ALU&rsquo;s output</div>
+        <p>In Week 6 you met seven operation legs that share one output, and the rule there was the opposite: every unselected leg drives <code>00000000</code>, the results are ORed, and that works because 0 changes nothing in an OR. That is not a bus. The ALU can use the cheap AND-and-OR arrangement because its decoder <em>guarantees by its structure</em> that only one leg is ever selected. Nothing in the structure of your CPU can promise that only one register is enabled &mdash; that depends on what the control unit does from moment to moment &mdash; so the bus pays for controlled buffers that can genuinely let go.</p>
+      </div>
+    </section>
+
+    <section id="sec-10-3">
+      <h2>10.3 &nbsp; A transfer</h2>
+
+      <p>Moving a byte from R1 to R3 is a <strong>transfer</strong>, and it takes four steps in this order. You met it in Week 5; now it is the only way anything moves.</p>
+      <ol class="steps4">
+        <li>Raise R1&rsquo;s <code>e</code>. R1&rsquo;s byte is on the bus.</li>
+        <li>Raise R3&rsquo;s <code>s</code>. R3 follows the bus.</li>
+        <li>Drop R3&rsquo;s <code>s</code>. R3 now holds the byte.</li>
+        <li>Drop R1&rsquo;s <code>e</code>. The bus floats again.</li>
+      </ol>
+
+      <p>The <code>s</code> pulse sits entirely inside the <code>e</code> pulse. Your registers are level-sensitive latches &mdash; while <code>s</code> is high they follow their input &mdash; so the byte on the bus must already be there when <code>s</code> rises and still be there when it falls. Steps 1 and 4 guarantee it. In Week 11 the clock circuit produces exactly this nesting automatically; until then, you do it with your fingers.</p>
+
+      <p>Nothing stops one transfer from having several receivers. Raise R1&rsquo;s <code>e</code>, pulse the <code>s</code> of R0 <em>and</em> R3 together, and both get the byte. One driver, any number of listeners.</p>
+    </section>
+
+    <!-- ========== Widget 1 ========== -->
+    <section id="sec-bench">
+      <div class="widget-card" id="w-bench">
+        <div class="widget-card__title">The Bus Bench</div>
+        <div class="widget-card__subtitle">Four registers and a test port on one bus. Raise an <code>e</code> to drive the bus; press <em>pulse s</em> to capture what is on it. R2 has never been written.</div>
+
+        <div class="bb-goal" id="bb-goal" aria-live="polite"></div>
+
+        <div class="bb-bus" id="bb-bus" aria-live="polite"></div>
+        <div class="bb-rows" id="bb-rows"></div>
+
+        <div class="ctl-row" style="display:flex;flex-wrap:wrap;gap:var(--space-sm);margin:var(--space-sm) 0">
+          <button type="button" class="widget-btn widget-btn--outline" id="bb-alloff">drop every e</button>
+          <button type="button" class="widget-btn widget-btn--outline" id="bb-next">next goal</button>
+          <button type="button" class="widget-btn widget-btn--outline" id="bb-reset">reset</button>
+        </div>
+        <p class="bb-status" id="bb-status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section id="sec-10-4">
+      <h2>10.4 &nbsp; Building the bus in Logisim</h2>
+
+      <p>Your bus is <strong>eight separate 1-bit wire loops</strong>, one per bit, drawn as concentric rectangles around the outside of a new circuit tab. Draw them with the wiring tool half a rectangle at a time, and make them bigger than you think you need &mdash; everything else goes inside them, and moving a finished bus is miserable.</p>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/8bit_BUS.jpg"
+             alt="A Logisim canvas showing eight concentric rectangular wire loops, close together, forming a large empty frame with room inside for components.">
+        <figcaption class="circuit-canvas__caption">The bus before anything is attached: eight loops, one per bit. The <strong>innermost loop is bit 0</strong> and the outermost is bit 7.</figcaption>
+      </figure>
+
+      <p>Every 8-bit pin that touches the bus &mdash; a register&rsquo;s <code>i</code>, its <code>o</code>, the ALU&rsquo;s <code>A</code> &mdash; connects through a <strong>splitter</strong> fanned out to eight 1-bit wires, one to each loop. A register therefore needs two fans: one for its input, one for its output.</p>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/Reg0_Wiring.jpg" style="max-width:380px"
+             alt="A register block labelled REG with pins o and i on top and s and e on the bottom. Above it, two splitters each fan out into eight wires that run up to the eight horizontal bus loops; the fans are labelled 7 down to 0 from left to right.">
+        <figcaption class="circuit-canvas__caption">One register on the bus. Its <code>o</code> and <code>i</code> each go through their own splitter fan to all eight loops. The <code>s</code> and <code>e</code> pins point down, away from the bus, toward whatever controls them.</figcaption>
+      </figure>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">The one rule that makes or breaks the bus</div>
+        <p>Every fan must connect bit 0 to the innermost loop and bit 7 to the outermost, on every part, without exception. Get one fan backwards and that part reads and writes bytes bit-reversed: <code>00000101</code> leaves R1 and arrives in R3 as <code>10100000</code>. Nothing turns red, because nothing is electrically wrong. Build one fan carefully, test it, then copy and paste it for every other port.</p>
+      </div>
+
+      <p>Logisim would also let you draw a bus as a single 8-bit-wide wire. This course uses eight loops because every circuit figure for the rest of the term is drawn that way, and because you can see each bit cross the bus. Your parts&rsquo; <code>e</code>, <code>s</code> and other control pins stay unconnected stubs for now, wired to input pins you toggle yourself &mdash; Assignment 10 lists them.</p>
+
+      <!-- ========== Self-check A ========== -->
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Three questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+
+      <p>For buses and register transfers in a second voice, log into your Saylor CS301 account at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 5: Designing a Processor</strong>. CS301 builds MIPS datapaths with multiplexers rather than a single tri-state bus; this page is the source for your machine.</p>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>You can move any byte between any registers on one bus, one driver at a time, and you know how to wire that bus in Logisim. Next page: the ALU needs two inputs, and the bus carries one value.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 10, Page 1
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['core'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.core) { return; }
+    var C = L.core;
+
+    function b8(v) { return v === null ? 'EEEEEEEE' : C.bits(v, 8); }
+
+    /* ---------- Widget 1 — The Bus Bench ---------- */
+    (function () {
+      var host = document.getElementById('w-bench');
+      if (!host) { return; }
+      var INIT = { R0: 0x16, R1: 0x5A, R3: 0xF0 };
+      var NAMES = ['R0', 'R1', 'R2', 'R3', 'DATA'];
+      var GOALS = [
+        { text: 'Copy R1 into R3.', check: function (s) { return s.R3 === 0x5A; } },
+        { text: 'Put 01010101 into R2 from the test port.', check: function (s) { return s.R2 === 0x55; } },
+        { text: 'Copy R0 into both R1 and R3 in a single transfer.', check: function (s, last) { return s.R1 === 0x16 && s.R3 === 0x16 && last && last.length === 2; } }
+      ];
+      var m, en, goal, wrote, lastSet;
+      var elBus = document.getElementById('bb-bus'), elRows = document.getElementById('bb-rows');
+      var elStatus = document.getElementById('bb-status'), elGoal = document.getElementById('bb-goal');
+
+      function dataVal() {
+        var inp = document.getElementById('bb-data');
+        var t = inp ? inp.value.replace(/\s+/g, '') : '00000000';
+        return /^[01]{8}$/.test(t) ? parseInt(t, 2) : null;
+      }
+
+      function reset() {
+        m = C.machine(INIT);
+        en = {}; wrote = null; lastSet = null; goal = goal || 0;
+        elStatus.textContent = '';
+        build();
+        paint();
+      }
+
+      function build() {
+        elRows.innerHTML = NAMES.map(function (n) {
+          var isData = n === 'DATA';
+          return '<div class="bb-row" id="bb-row-' + n + '">' +
+            '<span class="bb-name">' + (isData ? 'test port' : n) + '</span>' +
+            '<span class="bb-val" id="bb-val-' + n + '">' +
+              (isData ? '<label class="sr-only" for="bb-data">Test port value, 8 bits</label><input id="bb-data" type="text" inputmode="numeric" maxlength="9" value="01010101" autocomplete="off">' : '') +
+            '</span>' +
+            '<button type="button" class="widget-btn widget-btn--small" aria-pressed="false" data-e="' + n + '">e</button>' +
+            (isData ? '<span></span>' : '<button type="button" class="widget-btn widget-btn--small widget-btn--outline" data-s="' + n + '">pulse s</button>') +
+          '</div>';
+        }).join('');
+        document.getElementById('bb-data').addEventListener('input', paint);
+      }
+
+      function lines() {
+        return { enable: NAMES.filter(function (n) { return en[n]; }), data: dataVal() };
+      }
+
+      function paint() {
+        var s = m.state();
+        NAMES.forEach(function (n) {
+          if (n !== 'DATA') { document.getElementById('bb-val-' + n).textContent = b8(s[n]) + (s[n] === null ? '  never written' : ''); }
+          var row = document.getElementById('bb-row-' + n);
+          row.className = 'bb-row' + (en[n] ? ' bb-row--drive' : '') + (wrote && wrote.indexOf(n) >= 0 ? ' bb-row--wrote' : '');
+          var btn = row.querySelector('[data-e]');
+          btn.setAttribute('aria-pressed', en[n] ? 'true' : 'false');
+          btn.setAttribute('aria-label', (n === 'DATA' ? 'test port' : n) + ' enable, ' + (en[n] ? 'high' : 'low'));
+        });
+        var l = lines();
+        var bad = l.enable.indexOf('DATA') >= 0 && l.data === null;
+        var ev = bad ? null : m.evaluate(l);
+        var bus = ev ? ev.bus : { state: 'error', why: 'the test port needs eight 0s and 1s' };
+        elBus.className = 'bb-bus' + (bus.state === 'conflict' ? ' bb-bus--conflict' : bus.state === 'float' ? ' bb-bus--float' : bus.state === 'error' ? ' bb-bus--error' : '');
+        elBus.innerHTML = '<b>Bus:</b> ' + (bus.state === 'driven' ? b8(bus.value) + ' <span>driven by ' + (bus.drivers[0] === 'DATA' ? 'the test port' : bus.drivers[0]) + '</span>'
+          : bus.state === 'float' ? 'xxxxxxxx <span>floating &mdash; nothing is driving it</span>'
+          : bus.state === 'conflict' ? 'EEEEEEEE <span><strong>CONFLICT</strong> &mdash; ' + bus.why.replace('DATA', 'the test port') + '</span>'
+          : 'EEEEEEEE <span>' + bus.why + '</span>');
+        var g = GOALS[goal % GOALS.length];
+        var done = g.check(s, lastSet);
+        elGoal.innerHTML = '<strong>Goal ' + (goal % GOALS.length + 1) + ' of ' + GOALS.length + ':</strong> ' + g.text + (done ? ' &nbsp;<strong>Done.</strong>' : '');
+      }
+
+      elRows.addEventListener('click', function (e) {
+        var t = e.target.closest('button');
+        if (!t) { return; }
+        if (t.dataset.e) {
+          en[t.dataset.e] = !en[t.dataset.e];
+          wrote = null;
+          elStatus.textContent = '';
+          paint();
+          return;
+        }
+        if (t.dataset.s) {
+          var n = t.dataset.s, l = lines();
+          if (l.enable.indexOf('DATA') >= 0 && l.data === null) { elStatus.textContent = 'The test port needs eight 0s and 1s.'; return; }
+          l.set = [n];
+          var r = m.transfer(l);
+          if (!r.ok) {
+            elStatus.textContent = 'Refused. ' + r.error + (r.bus.state === 'conflict' ? ' Drop one of the enables first.' : r.bus.state === 'float' ? ' Raise one register’s e first.' : '');
+            wrote = null; lastSet = null;
+          } else {
+            wrote = r.wrote;
+            lastSet = r.wrote;
+            var src = r.bus.drivers[0];
+            elStatus.textContent = src === n ? n + ' captured its own byte. Harmless, and changes nothing.' :
+              n + ' captured ' + b8(r.bus.value) + ' from ' + (src === 'DATA' ? 'the test port' : src) + '.';
+          }
+          paint();
+        }
+      });
+
+      /* Multi-receiver transfer for goal 3: a dedicated button appears
+         beside the rows, so no hidden modifier keys are needed. */
+      var multi = document.createElement('div');
+      multi.className = 'bb-goal';
+      multi.innerHTML = '<label for="bb-multi">One transfer, several receivers: </label>' +
+        '<select id="bb-multi"><option value="R1,R3">R1 and R3</option><option value="R0,R2">R0 and R2</option><option value="R0,R1,R2,R3">all four</option></select> ' +
+        '<button type="button" class="widget-btn widget-btn--small widget-btn--outline" id="bb-multi-go">pulse their s together</button>';
+      elRows.parentNode.insertBefore(multi, elRows.nextSibling);
+      document.getElementById('bb-multi-go').addEventListener('click', function () {
+        var l = lines();
+        l.set = document.getElementById('bb-multi').value.split(',');
+        var r = m.transfer(l);
+        if (!r.ok) { elStatus.textContent = 'Refused. ' + r.error; wrote = null; lastSet = null; }
+        else { wrote = r.wrote; lastSet = r.wrote; elStatus.textContent = r.wrote.join(' and ') + ' all captured ' + b8(r.bus.value) + ' in one transfer.'; }
+        paint();
+      });
+
+      document.getElementById('bb-alloff').addEventListener('click', function () { en = {}; wrote = null; elStatus.textContent = 'Every e is low. The bus floats.'; paint(); });
+      document.getElementById('bb-next').addEventListener('click', function () { goal++; reset(); });
+      document.getElementById('bb-reset').addEventListener('click', reset);
+      goal = 0;
+      reset();
+    }());
+
+    /* ---------- Self-check A ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+        { q: 'R1 and R2 both hold <code>00001111</code>, and both have <code>e</code> = 1. What is on the bus?',
+          opts: ['00001111 — they agree, so there is no problem', 'A conflict — two drivers is an error even when they agree', '00000000 — the two cancel out', '00011110 — the two are added'],
+          correct: 1,
+          why: 'The rule is one driver at a time, not one value at a time. Two output stages tied together are a fault whether or not their bytes happen to match right now.' },
+        { q: 'Which order copies R2 into R0?',
+          opts: ['R0 s up, R2 e up, R0 s down, R2 e down', 'R2 e up, R0 s up, R0 s down, R2 e down', 'R2 e up, R2 e down, R0 s up, R0 s down', 'R0 s up, R0 s down, R2 e up, R2 e down'],
+          correct: 1,
+          why: 'R0’s set pulse must sit entirely inside R2’s enable pulse, so the byte is on the bus for the whole time R0 is listening.' },
+        { q: 'Every register’s input pin is on the bus. Why does only one of them change during a transfer?',
+          opts: ['Only the register whose s is pulsed takes the byte; the others ignore their input', 'The bus sends the byte to the nearest register', 'The others are floating', 'Every register does change; that is why only one transfer can happen per clock'],
+          correct: 0,
+          why: 'While s = 0 a register holds its byte whatever its input shows. That is the whole difference between e and s.' }
+      ];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p>' +
+          '<div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi], okAns = (oi === item.correct), fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) {
+          el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false');
+        });
+      }
+      host.addEventListener('click', function (e) { var t = e.target.closest('.quiz-option'); if (t) { answer(+t.dataset.q, +t.dataset.o); } });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+  })();
+  </script>
+</body>
+</html>
