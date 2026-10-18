@@ -1631,6 +1631,425 @@
   }
 
   /* ============================================================
+     WEEK 10 -- The CPU core on one bus (CSCLogic.core)
+     ============================================================
+     Added 2026-10-18.
+
+     WHAT THIS MODELS. The course CPU's core as the Fall 2025 build
+     pages define it (CPU_Overview.png, circuits-additional-circuits-
+     needed, circuits-bus1, circuits-final-cpu-flags, circuits-control-
+     alu-instruction): ONE 8-bit bus; R0-R3 and ACC are REGISTER_8BIT
+     instances; TMP is a MEM_8BIT feeding BUS1, which feeds the ALU's B
+     input; the bus is the ALU's A input; the ALU's C output is ACC's
+     input; CO/AL/EQ/Z go to FLAGS, four MEM_1BIT cells with one s.
+     PC, IR, MAR and RAM are NOT here -- they join the bus in Week 13.
+
+     A TRANSFER is one bus cycle as the student performs it by hand:
+     raise one e, pulse some s lines, drop the e. transfer() takes the
+     lines that are high and either commits every capture at once or
+     refuses the whole transfer and says why. evaluate() is the same
+     computation without the commit, so a widget can show live values.
+
+     THREE LOAD-BEARING RULES, asserted in week10-spa.test.js:
+
+       1. Two drivers are a conflict EVEN WHEN THEY AGREE. This reuses
+          busResolve() rather than re-deriving it, so the Week 5 rule and
+          the Week 10 bus cannot drift apart.
+       2. ACC enabled and set in the same transfer is REFUSED. ACC's
+          output would drive the bus, which is the ALU's A input, which
+          feeds ACC's input while its s is high: a loop through a
+          transparent latch. This is the reason ACC exists at all, and
+          the day this is allowed the week's central claim is false.
+       3. BUS1 forces exactly 00000001 -- bit 0 ORed with bus1, bits 1-7
+          ANDed with NOT bus1 -- whatever TMP holds.
+
+     ALU operations take three transfers, in this order, as the Fall
+     2025 control unit performs them (circuits-control-arith, steps 4-6):
+       RB -> TMP;  RA -> bus, ACC and FLAGS capture;  ACC -> RB.
+     So ADD RA, RB means RB <- RA + RB. CMP stops after the second.
+
+     THE INSTRUCTION SET is Fall 2025's, ruled the course ISA by Dave on
+     2026-10-18. Fall 2025's pages number bits LEFT TO RIGHT FROM 0; this
+     kernel and every Fall 2026 page write b7 (left) ... b0 (right), the
+     convention the bus, the splitters and Week 8's address split already
+     use. Same bytes, different labels. MYSIM.txt is checked byte for
+     byte against a hand decode in the test suite.
+
+     docs/AssemblyReference.xlsx (Dave, 2026-10-18) is the instruction
+     list of record. It agrees with every Fall 2025 build page and adds
+     two things: END = 11001111 (0xCF, the byte that is otherwise
+     AND R3, R3), and the 0111 class is I/O (IND INA OUTD OUTA, no bit
+     layout given -- Week 12). Two entries in it are typos and are NOT
+     followed: SHR/SHL's descriptions are swapped (001 is shift right,
+     per the ALU), and JMPR is listed as 1100 (it is 0011).
+
+     NAMING. Every helper is core-prefixed (the Week 6 shadowing rule).
+     Values are integers 0-255, or null for a register never written --
+     which Logisim shows as EEEEEEEE.
+     ============================================================ */
+
+  var CORE_REGS = ['R0', 'R1', 'R2', 'R3'];
+  var CORE_ALU_MNEMONICS = ['ADD', 'SHR', 'SHL', 'NOT', 'AND', 'OR', 'XOR', 'CMP'];
+  var CORE_ONE_INPUT = { SHR: 1, SHL: 1, NOT: 1 };
+  var CORE_FLAG_NAMES = ['C', 'A', 'E', 'Z'];
+
+  var CORE_FORMATS = [
+    { cls: 'ALU',  pattern: '1ooo aabb', length: 1, syntax: 'op RA, RB',
+      meaning: 'RB ← RA op RB. NOT, SHR and SHL use RA only. CMP sets the flags and writes no register.' },
+    { cls: 'LD',   pattern: '0000 aabb', length: 1, syntax: 'LD RA, RB',  meaning: 'RB ← RAM[RA]' },
+    { cls: 'ST',   pattern: '0001 aabb', length: 1, syntax: 'ST RA, RB',  meaning: 'RAM[RA] ← RB' },
+    { cls: 'DATA', pattern: '0010 00bb', length: 2, syntax: 'DATA RB, n', meaning: 'RB ← n, the next byte' },
+    { cls: 'JMPR', pattern: '0011 00bb', length: 1, syntax: 'JMPR RB',    meaning: 'PC ← RB' },
+    { cls: 'JMP',  pattern: '0100 0000', length: 2, syntax: 'JMP a',      meaning: 'PC ← a, the next byte' },
+    { cls: 'JIF',  pattern: '0101 caez', length: 2, syntax: 'Jcaez a',    meaning: 'if any flag selected by c a e z is 1, PC ← a; otherwise go on' },
+    { cls: 'CLF',  pattern: '0110 0000', length: 1, syntax: 'CLF',        meaning: 'C, A, E and Z ← 0' },
+    { cls: 'IO',   pattern: '0111 xxxx', length: 1, syntax: 'IND  INA  OUTD  OUTA', meaning: 'input and output (Week 12)' },
+    { cls: 'END',  pattern: '1100 1111', length: 1, syntax: 'END',        meaning: 'stop: the end of the program. The same byte as AND R3, R3, which is therefore not used as an AND.' }
+  ];
+
+  /* MYSIM.txt (old/csc210-fall-2025/cpu-design/files), the 23 bytes
+     before the zeros. Decoded by hand in CSC210-Week10-LegacyContent-
+     Review.md section 4: shift-and-add, R2 = 5 x 5. */
+  var CORE_MYSIM = [0x20, 0x05, 0x21, 0x05, 0x23, 0x01, 0xEA, 0x60, 0x90, 0x58, 0x0D, 0x40,
+                    0x0F, 0x60, 0x86, 0x60, 0xA5, 0xAF, 0x58, 0x16, 0x40, 0x07, 0xCF];
+
+  function coreBits(v, width) {
+    var s = ((v >>> 0) & ((1 << width) - 1)).toString(2);
+    while (s.length < width) { s = '0' + s; }
+    return s;
+  }
+  function coreHex2(v) {
+    var s = (v & 255).toString(16).toUpperCase();
+    return '0x' + (s.length < 2 ? '0' + s : s);
+  }
+
+  /* Logisim's "v2.0 raw" RAM image: a header line, then hex values
+     separated by whitespace; "n*v" means n copies of v. */
+  function coreParseImage(text) {
+    var lines = String(text).replace(/#.*$/gm, '').split(/\s+/).filter(function (t) { return t.length; });
+    if (lines.length && /^v2\.0$/.test(lines[0])) { lines.shift(); if (lines[0] === 'raw') { lines.shift(); } }
+    var out = [], i, m, n, v, k;
+    for (i = 0; i < lines.length; i++) {
+      m = /^(?:(\d+)\*)?([0-9a-fA-F]+)$/.exec(lines[i]);
+      if (!m) { throw new Error('not a v2.0 raw image value: ' + lines[i]); }
+      n = m[1] ? parseInt(m[1], 10) : 1;
+      v = parseInt(m[2], 16) & 255;
+      for (k = 0; k < n; k++) { out.push(v); }
+    }
+    return out;
+  }
+
+  function coreReg(n) { return 'R' + (n & 3); }
+
+  /* decodeByte(b, next) -- one instruction. next is the following byte,
+     needed by DATA, JMP and Jcaez; leave it undefined to decode the
+     first byte alone. Every field carries its bits as a b7..b0 string. */
+  function coreDecodeByte(b, next) {
+    b = b & 255;
+    var bits = coreBits(b, 8);
+    var hasNext = (typeof next === 'number');
+    var nx = hasNext ? (next & 255) : null;
+    var nxText = hasNext ? coreHex2(nx) : '?';
+    function f(name, lo, hi, meaning) {
+      return { name: name, hi: hi, lo: lo, bits: bits.slice(7 - hi, 8 - lo), meaning: meaning };
+    }
+
+    if (b === 0xCF) {
+      return { ok: true, cls: 'END', mnemonic: 'END', length: 1, text: 'END',
+        fields: [f('byte', 0, 7, 'END: stop. The same bits as AND R3, R3, which the CPU gives up to mean this')] };
+    }
+    if (b & 0x80) {
+      var op = (b >> 4) & 7, ra = (b >> 2) & 3, rb = b & 3, m = CORE_ALU_MNEMONICS[op];
+      return { ok: true, cls: 'ALU', mnemonic: m, op: op, ra: ra, rb: rb, length: 1,
+        text: m + ' ' + coreReg(ra) + ', ' + coreReg(rb),
+        fields: [f('class', 7, 7, '1: an ALU instruction'),
+                 f('op', 4, 6, m + ' (ALU opcode ' + coreBits(op, 3) + ')'),
+                 f('RA', 2, 3, coreReg(ra) + (CORE_ONE_INPUT[m] ? ', the only operand' : ', the A operand')),
+                 f('RB', 0, 1, coreReg(rb) + (m === 'CMP' ? ', the B operand; not written' : (CORE_ONE_INPUT[m] ? ', where the result goes' : ', the B operand and where the result goes')))] };
+    }
+
+    var hi3 = (b >> 4) & 7, a2 = (b >> 2) & 3, b2 = b & 3;
+    var head = [f('class', 7, 7, '0: not an ALU instruction'), f('kind', 4, 6, '')];
+    if (hi3 === 0 || hi3 === 1) {
+      var ld = hi3 === 0;
+      head[1].meaning = ld ? 'LD' : 'ST';
+      return { ok: true, cls: ld ? 'LD' : 'ST', mnemonic: ld ? 'LD' : 'ST', ra: a2, rb: b2, length: 1,
+        text: (ld ? 'LD ' : 'ST ') + coreReg(a2) + ', ' + coreReg(b2),
+        fields: head.concat([f('RA', 2, 3, coreReg(a2) + ' holds the RAM address'),
+                             f('RB', 0, 1, coreReg(b2) + (ld ? ' receives the byte' : ' is the byte stored'))]) };
+    }
+    if (hi3 === 2) {
+      head[1].meaning = 'DATA';
+      return { ok: true, cls: 'DATA', mnemonic: 'DATA', rb: b2, operand: nx, length: 2,
+        text: 'DATA ' + coreReg(b2) + ', ' + nxText,
+        fields: head.concat([f('unused', 2, 3, 'always 00'), f('RB', 0, 1, coreReg(b2) + ' receives the next byte')]) };
+    }
+    if (hi3 === 3) {
+      head[1].meaning = 'JMPR';
+      return { ok: true, cls: 'JMPR', mnemonic: 'JMPR', rb: b2, length: 1,
+        text: 'JMPR ' + coreReg(b2),
+        fields: head.concat([f('unused', 2, 3, 'always 00'), f('RB', 0, 1, 'the PC takes ' + coreReg(b2))]) };
+    }
+    if (hi3 === 4) {
+      head[1].meaning = 'JMP';
+      return { ok: true, cls: 'JMP', mnemonic: 'JMP', operand: nx, length: 2,
+        text: 'JMP ' + nxText,
+        fields: head.concat([f('unused', 0, 3, 'not used')]) };
+    }
+    if (hi3 === 5) {
+      var flags = { C: (b >> 3) & 1, A: (b >> 2) & 1, E: (b >> 1) & 1, Z: b & 1 };
+      var letters = CORE_FLAG_NAMES.filter(function (k) { return flags[k]; }).join('');
+      head[1].meaning = 'J (jump if)';
+      return { ok: true, cls: 'JIF', mnemonic: 'J' + letters, flags: flags, operand: nx, length: 2,
+        text: 'J' + letters + ' ' + nxText + (letters ? '' : '  (no flag selected: never jumps)'),
+        fields: head.concat([f('c', 3, 3, 'test C'), f('a', 2, 2, 'test A'), f('e', 1, 1, 'test E'), f('z', 0, 0, 'test Z')]) };
+    }
+    if (hi3 === 6) {
+      head[1].meaning = 'CLF';
+      return { ok: true, cls: 'CLF', mnemonic: 'CLF', length: 1, text: 'CLF',
+        fields: head.concat([f('unused', 0, 3, 'not used')]) };
+    }
+    head[1].meaning = 'input / output';
+    return { ok: true, cls: 'IO', mnemonic: 'IO', length: 1, text: 'I/O instruction (IND, INA, OUTD or OUTA)',
+      fields: head.concat([f('which', 0, 3, 'which I/O operation, and which register: Week 12')]) };
+  }
+
+  /* encode(text) -- the reverse, for the decoder widget and the quiz
+     verifier. Returns { ok, bytes } or { ok: false, error }. */
+  function coreEncode(text) {
+    var t = String(text).trim().toUpperCase().replace(/\s+/g, ' ');
+    var m = /^([A-Z]+)\s*(.*)$/.exec(t);
+    if (!m) { return { ok: false, error: 'empty' }; }
+    var mn = m[1], args = m[2] ? m[2].split(/\s*,\s*/) : [];
+    function reg(s) { var r = /^R([0-3])$/.exec(s || ''); return r ? +r[1] : -1; }
+    function num(s) {
+      if (!s) { return -1; }
+      var v = /^0X[0-9A-F]+$/.test(s) ? parseInt(s, 16) : (/^\d+$/.test(s) ? parseInt(s, 10) : -1);
+      return (v >= 0 && v <= 255) ? v : -1;
+    }
+    var op = CORE_ALU_MNEMONICS.indexOf(mn), a, b, n;
+    if (op >= 0) {
+      a = reg(args[0]); b = reg(args[1]);
+      if (args.length !== 2 || a < 0 || b < 0) { return { ok: false, error: mn + ' needs two registers, RA, RB' }; }
+      return { ok: true, bytes: [0x80 | (op << 4) | (a << 2) | b] };
+    }
+    if (mn === 'LD' || mn === 'ST') {
+      a = reg(args[0]); b = reg(args[1]);
+      if (args.length !== 2 || a < 0 || b < 0) { return { ok: false, error: mn + ' needs two registers, RA, RB' }; }
+      return { ok: true, bytes: [((mn === 'ST' ? 1 : 0) << 4) | (a << 2) | b] };
+    }
+    if (mn === 'DATA') {
+      b = reg(args[0]); n = num(args[1]);
+      if (args.length !== 2 || b < 0 || n < 0) { return { ok: false, error: 'DATA needs a register and a value 0-255' }; }
+      return { ok: true, bytes: [0x20 | b, n] };
+    }
+    if (mn === 'JMPR') {
+      b = reg(args[0]);
+      if (args.length !== 1 || b < 0) { return { ok: false, error: 'JMPR needs one register' }; }
+      return { ok: true, bytes: [0x30 | b] };
+    }
+    if (mn === 'CLF') { return args.length ? { ok: false, error: 'CLF takes nothing' } : { ok: true, bytes: [0x60] }; }
+    if (mn === 'END') { return args.length ? { ok: false, error: 'END takes nothing' } : { ok: true, bytes: [0xCF] }; }
+    if (/^(IND|INA|OUTD|OUTA)$/.test(mn)) { return { ok: false, error: mn + ' is an I/O instruction; its bit layout arrives in Week 12' }; }
+    if (mn === 'JMP') {
+      n = num(args[0]);
+      if (args.length !== 1 || n < 0) { return { ok: false, error: 'JMP needs an address 0-255' }; }
+      return { ok: true, bytes: [0x40, n] };
+    }
+    var j = /^J([CAEZ]+)$/.exec(mn);
+    if (j && /^C?A?E?Z?$/.test(j[1])) {
+      n = num(args[0]);
+      if (args.length !== 1 || n < 0) { return { ok: false, error: mn + ' needs an address 0-255' }; }
+      var cond = (j[1].indexOf('C') >= 0 ? 8 : 0) | (j[1].indexOf('A') >= 0 ? 4 : 0) |
+                 (j[1].indexOf('E') >= 0 ? 2 : 0) | (j[1].indexOf('Z') >= 0 ? 1 : 0);
+      return { ok: true, bytes: [0x50 | cond, n] };
+    }
+    return { ok: false, error: 'not an instruction of the course CPU: ' + mn };
+  }
+
+  /* disassemble(bytes) -- a listing. Stops where only zeros remain, so a
+     256-byte image decodes to its program and not to 233 LD R0, R0. */
+  function coreDisassemble(bytes) {
+    var end = bytes.length, rows = [], addr = 0, d;
+    while (end > 0 && (bytes[end - 1] & 255) === 0) { end--; }
+    while (addr < end) {
+      d = coreDecodeByte(bytes[addr], bytes[addr + 1]);
+      rows.push({ addr: addr, bytes: bytes.slice(addr, addr + d.length).map(function (x) { return x & 255; }),
+                  text: d.text, cls: d.cls, mnemonic: d.mnemonic, decoded: d });
+      addr += d.length;
+    }
+    return rows;
+  }
+
+  /* BUS1 -- the circuit between TMP and the ALU's B input. */
+  function coreBus1(bits, on) {
+    var x = [], i, b1 = on ? 1 : 0;
+    for (i = 0; i < 8; i++) { x.push(bits && bits[i] ? 1 : 0); }
+    var out = [];
+    for (i = 0; i < 7; i++) { out.push(x[i] & (b1 ? 0 : 1)); }   // b7..b1: AND with NOT bus1
+    out.push(x[7] | b1);                                            // b0: OR with bus1
+    return out;
+  }
+
+  /* REG_SELECT -- three DECODER_2TO4s. decA on ra gated by rega_e; decB
+     on rb gated by regb_e; a second decoder on rb gated by regb_s.
+     e[k] is an OR of two lines. */
+  function coreRegSelect(ctl) {
+    var ra = (ctl.ra | 0) & 3, rb = (ctl.rb | 0) & 3;
+    var ae = ctl.regaE ? 1 : 0, be = ctl.regbE ? 1 : 0, bs = ctl.regbS ? 1 : 0;
+    var decA = [], decB = [], ea = [], eb = [], e = [], s = [], k;
+    for (k = 0; k < 4; k++) {
+      decA.push(k === ra ? 1 : 0);
+      decB.push(k === rb ? 1 : 0);
+      ea.push(decA[k] & ae);
+      eb.push(decB[k] & be);
+      e.push(ea[k] | eb[k]);
+      s.push(decB[k] & bs);
+    }
+    var high = e.filter(function (x) { return x; }).length;
+    return { decA: decA, decB: decB, ea: ea, eb: eb, e: e, s: s, driving: high, conflict: high > 1 };
+  }
+
+  /* The transfers of one ALU instruction, as the control unit will
+     perform them in Week 11 (stepper steps 4-6). */
+  function coreAluSteps(mnemonic, ra, rb) {
+    var op = CORE_ALU_MNEMONICS.indexOf(String(mnemonic).toUpperCase());
+    if (op < 0) { throw new Error('not an ALU mnemonic: ' + mnemonic); }
+    var A = coreReg(ra), B = coreReg(rb), m = CORE_ALU_MNEMONICS[op];
+    var expr = CORE_ONE_INPUT[m] ? (m + ' ' + A) : (A + ' ' + m + ' TMP');
+    var steps = [
+      { step: 4, enable: [B], set: ['TMP'], opcode: op, bus1: 0,
+        lines: { rb: rb & 3, regb_e: 1, tmp_s: 1 }, rtl: 'TMP ← ' + B },
+      { step: 5, enable: [A], set: ['ACC', 'FLAGS'], opcode: op, bus1: 0,
+        lines: { ra: ra & 3, rega_e: 1, acc_s: 1, flags_s: 1, opcode: op },
+        rtl: 'ACC ← ' + expr + ';  FLAGS ← C A E Z' }
+    ];
+    if (m !== 'CMP') {
+      steps.push({ step: 6, enable: ['ACC'], set: [B], opcode: op, bus1: 0,
+        lines: { rb: rb & 3, acc_e: 1, regb_s: 1 }, rtl: B + ' ← ACC' });
+    }
+    return steps;
+  }
+
+  /* machine(init) -- the core, driven one transfer at a time.
+       init  { R0..R3, TMP, ACC: 0-255 | null, flags: {C,A,E,Z} }
+     transfer(lines) / evaluate(lines), lines =
+       { enable: ['R1' | 'ACC' | 'DATA', ...], set: ['R2' | 'TMP' | 'ACC' | 'FLAGS', ...],
+         data: 0-255, bus1: 0|1, opcode: 0-7, ci: 0|1 } */
+  function coreMachine(init) {
+    init = init || {};
+    var st = { R: [], TMP: null, ACC: null, F: { C: 0, A: 0, E: 0, Z: 0 } };
+    var k;
+    for (k = 0; k < 4; k++) { st.R.push(init['R' + k] === undefined ? null : init['R' + k]); }
+    if (init.TMP !== undefined) { st.TMP = init.TMP; }
+    if (init.ACC !== undefined) { st.ACC = init.ACC; }
+    if (init.flags) { CORE_FLAG_NAMES.forEach(function (f) { if (init.flags[f] !== undefined) { st.F[f] = init.flags[f]; } }); }
+    var count = 0;
+
+    function valueOf(name, data) {
+      if (name === 'ACC') { return st.ACC; }
+      if (name === 'DATA') { return (data | 0) & 255; }
+      var r = /^R([0-3])$/.exec(name);
+      if (r) { return st.R[+r[1]]; }
+      throw new Error('cannot drive the bus: ' + name);
+    }
+
+    function evaluate(lines) {
+      lines = lines || {};
+      var en = (lines.enable || []).slice(), set = (lines.set || []).slice();
+      var drivers = en.map(function (n) {
+        var v = valueOf(n, lines.data);
+        return { name: n, value: v, driving: true, bits: intToWord(v === null ? 0 : v, 8) };
+      });
+      var r = busResolve(drivers), bus;
+      if (r.state === 'driven' && drivers.filter(function (d) { return d.driving; })[0].value === null) {
+        bus = { state: 'error', value: null, drivers: en,
+                why: en[0] + ' has never been written, so it drives EEEEEEEE' };
+      } else if (r.state === 'driven') {
+        bus = { state: 'driven', value: wordToInt(r.bits), drivers: en };
+      } else if (r.state === 'conflict') {
+        bus = { state: 'conflict', value: null, drivers: en,
+                why: en.join(' and ') + ' are both driving the bus' };
+      } else {
+        bus = { state: 'float', value: null, drivers: [], why: 'nothing is driving the bus' };
+      }
+
+      /* TMP is a transparent latch: while tmp_s is high it follows the
+         bus, so the B input the ALU sees in the same transfer is the new
+         value. Fall 2025 never sets TMP and ACC together; modelled
+         honestly anyway. */
+      var tmpNow = (set.indexOf('TMP') >= 0 && bus.state === 'driven') ? bus.value : st.TMP;
+      var b1 = lines.bus1 ? 1 : 0;
+      var bIn = null;
+      if (b1) { bIn = 1; } else if (tmpNow !== null) { bIn = tmpNow; }
+      var alu = null;
+      if (bus.state === 'driven' && bIn !== null) {
+        var ev = aluEvaluate((lines.opcode | 0) & 7, intToWord(bus.value, 8),
+                             b1 ? coreBus1(intToWord(tmpNow || 0, 8), 1) : intToWord(bIn, 8), lines.ci ? 1 : 0);
+        alu = { a: bus.value, b: b1 ? 1 : bIn, c: ev.out ? wordToInt(ev.out) : null,
+                C: ev.cout ? 1 : 0, A: ev.al ? 1 : 0, E: ev.eq ? 1 : 0, Z: ev.z === null ? null : (ev.z ? 1 : 0),
+                op: CORE_ALU_MNEMONICS[(lines.opcode | 0) & 7] };
+      }
+
+      var error = null;
+      if (en.indexOf('ACC') >= 0 && set.indexOf('ACC') >= 0) {
+        error = 'ACC is driving the bus and capturing at the same time. Its output is the ALU’s A input, ' +
+                'and the ALU’s result is its input, so the value would chase itself round the loop while s is high. ' +
+                'Never set ACC in the transfer that enables it.';
+      }
+      var needsBus = set.filter(function (n) { return n !== 'ACC' && n !== 'FLAGS'; });
+      var needsAlu = set.filter(function (n) { return n === 'ACC' || n === 'FLAGS'; });
+      if (!error && (needsBus.length || needsAlu.length) && bus.state !== 'driven') {
+        error = 'Nothing to capture: ' + bus.why + '.';
+      }
+      if (!error && needsAlu.length && bIn === null) {
+        error = 'The ALU’s B input comes from TMP, and TMP has never been written. Load TMP first, or raise bus1.';
+      }
+      /* Opcode 111 is not refused: the Fall 2025 control unit raises
+         ACC_S for CMP like any ALU instruction and simply skips the
+         write-back (control-alu-diagram.jpg), so ACC captures a floating
+         C. Modelled as null -- nothing meaningful -- with a warning. */
+      var warning = null;
+      if (!error && set.indexOf('ACC') >= 0 && alu && alu.c === null) {
+        warning = 'Opcode 111 selects no ALU leg, so C floats and ACC captures nothing meaningful. CMP never uses ACC, so that is harmless.';
+      }
+      return { ok: !error, error: error, warning: warning, bus: bus, alu: alu, set: set, enable: en };
+    }
+
+    function transfer(lines) {
+      var ev = evaluate(lines);
+      if (!ev.ok) { return ev; }
+      var wrote = [];
+      ev.set.forEach(function (n) {
+        var r = /^R([0-3])$/.exec(n);
+        if (r) { st.R[+r[1]] = ev.bus.value; wrote.push(n); }
+        else if (n === 'TMP') { st.TMP = ev.bus.value; wrote.push(n); }
+        else if (n === 'ACC') { st.ACC = ev.alu.c; wrote.push(n); }
+        else if (n === 'FLAGS') { CORE_FLAG_NAMES.forEach(function (f) { st.F[f] = ev.alu[f]; }); wrote.push(n); }
+        else { throw new Error('cannot set: ' + n); }
+      });
+      count++;
+      ev.wrote = wrote;
+      return ev;
+    }
+
+    function state() {
+      return { R0: st.R[0], R1: st.R[1], R2: st.R[2], R3: st.R[3], TMP: st.TMP, ACC: st.ACC,
+               flags: { C: st.F.C, A: st.F.A, E: st.F.E, Z: st.F.Z }, transfers: count };
+    }
+
+    return { evaluate: evaluate, transfer: transfer, state: state };
+  }
+
+  /* Run one ALU instruction's transfers on a machine. Used by the tests
+     and the Core widget's recipes, so both follow coreAluSteps. */
+  function coreRunAlu(machine, mnemonic, ra, rb, ci) {
+    return coreAluSteps(mnemonic, ra, rb).map(function (s) {
+      return machine.transfer({ enable: s.enable, set: s.set, opcode: s.opcode, bus1: 0, ci: ci ? 1 : 0 });
+    });
+  }
+
+  /* ============================================================
      WEEK 9 -- The multi-cycle MIPS datapath (CSCLogic.cycle)
      ============================================================
      Added 2026-10-05.
@@ -2479,6 +2898,29 @@
       wordToBytes: memWordToBytes,
       bytesToWord: memBytesToWord,
       machine: memMachine
+    },
+
+    /* Week 10 additions -- the CPU core on one bus, and the course
+       CPU's instruction set. Every helper is core-prefixed; see the
+       block comment. */
+    core: {
+      REGS: CORE_REGS,
+      ALU_MNEMONICS: CORE_ALU_MNEMONICS,
+      ONE_INPUT: CORE_ONE_INPUT,
+      FLAG_NAMES: CORE_FLAG_NAMES,
+      FORMATS: CORE_FORMATS,
+      MYSIM: CORE_MYSIM,
+      bits: coreBits,
+      hex2: coreHex2,
+      parseImage: coreParseImage,
+      decodeByte: coreDecodeByte,
+      encode: coreEncode,
+      disassemble: coreDisassemble,
+      bus1: coreBus1,
+      regSelect: coreRegSelect,
+      aluSteps: coreAluSteps,
+      machine: coreMachine,
+      runAlu: coreRunAlu
     },
 
     /* Week 9 additions -- the multi-cycle MIPS datapath. Every helper
