@@ -36,7 +36,7 @@
           </tbody>
         </table>
       </div>
-      <p>The <strong>CPU Project Plan</strong> is a separate Canvas assignment, due the same day and graded complete/incomplete. It is not part of these 100 points.</p>
+      <p>The <strong>CPU Project Plan</strong> is a separate Canvas assignment, due the same day, worth 10 points, graded complete/incomplete. It is not part of these 100 points.</p>
     </section>
 
     <!-- ============================================================
@@ -60,11 +60,11 @@
             <tr><td><code class="pin-table__name">i</code></td><td>8</td><td>in</td><td>top edge &mdash; from the bus</td></tr>
             <tr><td><code class="pin-table__name">s</code></td><td>1</td><td>in</td><td>bottom edge &mdash; set</td></tr>
             <tr><td><code class="pin-table__name">e</code></td><td>1</td><td>in</td><td>bottom edge &mdash; enable</td></tr>
-            <tr><td><code class="pin-table__name">mem</code></td><td>8</td><td>out</td><td>side &mdash; the stored byte, always visible</td></tr>
+            <tr><td><code class="pin-table__name">reg</code></td><td>8</td><td>out</td><td>side &mdash; the stored byte, always visible</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="inside">Inside: <strong>one <code>REGISTER_8BIT</code> instance</strong>, each of its pins wired straight to the matching pin here (its <code>reg</code> to <code>mem</code>). Nothing else. Edit this tab&rsquo;s circuit appearance as in the table, with <code>s</code> and <code>e</code> labelled (page 1, &sect;10.4). Do not edit <code>REGISTER_8BIT</code>&rsquo;s own appearance.</p>
+      <p class="inside">Inside: <strong>one <code>REGISTER_8BIT</code> instance</strong>, each of its pins wired straight to the matching pin of the same name. Nothing else. Edit this tab&rsquo;s circuit appearance as in the table, with <code>s</code> and <code>e</code> labelled (page 1, &sect;10.4). Do not edit <code>REGISTER_8BIT</code>&rsquo;s own appearance.</p>
 
       <h3>Tab <code>ACC_REGISTER</code> &mdash; these pin names are exact</h3>
       <div class="table-scroll">
@@ -75,11 +75,11 @@
             <tr><td><code class="pin-table__name">o</code></td><td>8</td><td>out</td><td>bottom edge &mdash; to the bus</td></tr>
             <tr><td><code class="pin-table__name">s</code></td><td>1</td><td>in</td><td>right side, upper &mdash; set</td></tr>
             <tr><td><code class="pin-table__name">e</code></td><td>1</td><td>in</td><td>right side, lower &mdash; enable</td></tr>
-            <tr><td><code class="pin-table__name">mem</code></td><td>8</td><td>out</td><td>left side &mdash; the stored byte, always visible</td></tr>
+            <tr><td><code class="pin-table__name">reg</code></td><td>8</td><td>out</td><td>left side &mdash; the stored byte, always visible</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="inside">Inside: exactly as <code>CPU_REGISTER</code> &mdash; one <code>REGISTER_8BIT</code> instance, each pin wired straight through, its <code>reg</code> to <code>mem</code>. Only the appearance differs (page 2, &sect;10.7), so ACC sits under the ALU with its control pins facing the control section.</p>
+      <p class="inside">Inside: exactly as <code>CPU_REGISTER</code> &mdash; one <code>REGISTER_8BIT</code> instance, each pin wired straight through to the pin of the same name. Only the appearance differs (page 2, &sect;10.7), so ACC sits under the ALU with its control pins facing the control section.</p>
 
       <h3>Tab <code>TMP</code> &mdash; these pin names are exact</h3>
       <div class="table-scroll">
@@ -147,7 +147,7 @@
         <li><strong>Off the bus:</strong> TMP <code>o</code> &rarr; BUS1 <code>i</code>; BUS1 <code>o</code> &rarr; ALU <code>B</code>; ALU <code>C</code> &rarr; ACC <code>i</code> (an <code>ACC_REGISTER</code> directly under the ALU, as in the figure below); ALU <code>CO</code>, <code>AL</code>, <code>EQ</code>, <code>Z</code> &rarr; FLAGS <code>c_in</code>, <code>a_in</code>, <code>e_in</code>, <code>z_in</code>.</li>
         <li><strong>REG_SELECT</strong>, below the registers, with its eight outputs running up to R0&ndash;R3&rsquo;s <code>e</code> and <code>s</code>. This is where the control unit will sit from Week 11.</li>
         <li><strong>Control input pins</strong>, all pull-down: <code>ra</code>, <code>rb</code> (2 bits) to REG_SELECT; <code>rega_e</code>, <code>regb_e</code>, <code>regb_s</code> to REG_SELECT; <code>tmp_s</code> to TMP; <code>acc_e</code>, <code>acc_s</code> to ACC; <code>flags_s</code> to FLAGS; <code>bus1</code> to BUS1; <code>opcode</code> (3 bits) and <code>ci</code> to the ALU; <code>data</code> and <code>data_e</code> for the test port.</li>
-        <li><strong>Probes</strong> on the <code>mem</code> output of R0&ndash;R3, the <code>mem</code> output of ACC, on TMP&rsquo;s <code>o</code>, the ALU&rsquo;s <code>C</code>, the four FLAGS outputs, and the bus (combine the eight loops through one more splitter into an 8-bit probe).</li>
+        <li><strong>Probes</strong> on the <code>reg</code> output of R0&ndash;R3 and of ACC, on TMP&rsquo;s <code>o</code>, the ALU&rsquo;s <code>C</code>, the four FLAGS outputs, and the bus (combine the eight loops through one more splitter into an 8-bit probe).</li>
       </ol>
 
       <figure class="circuit-canvas">

@@ -139,20 +139,44 @@
       <ul>
         <li><strong><code>o</code> and <code>i</code> on the top edge</strong>, facing the bus. Each fans out to the eight loops directly above it, bit 0 to the innermost.</li>
         <li><strong><code>s</code> and <code>e</code> on the bottom edge</strong>, facing down. In your CPU&rsquo;s layout the registers sit <strong>between the bus and the control section</strong>, so these two single wires drop straight down to it &mdash; this week to REG_SELECT, from Week 11 to the control unit.</li>
-        <li><strong><code>mem</code>, the stored byte, out one side</strong>, where a probe can read it without touching the bus or the control lines.</li>
+        <li><strong><code>reg</code>, the stored byte, out one side</strong>, where a probe can read it without touching the bus or the control lines.</li>
       </ul>
 
       <figure class="circuit-canvas">
         <img class="circuit-canvas__img" src="images/cpu-register.png" style="max-width:300px"
              alt="A Logisim circuit appearance: a wide rectangle labelled cpu R. Two pins on the top edge are labelled o on the left and i on the right. Two pins on the bottom edge are labelled s on the left and e on the right. One more pin, unlabelled, sits on the left side.">
-        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s register appearance: <code>o</code> and <code>i</code> on top, <code>s</code> and <code>e</code> on the bottom, the stored byte on the left side. Your tab names that side pin <code>mem</code>.</figcaption>
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s register appearance: <code>o</code> and <code>i</code> on top, <code>s</code> and <code>e</code> on the bottom, the stored byte on the left side. Your tab names that side pin <code>reg</code>, as <code>REGISTER_8BIT</code> does.</figcaption>
       </figure>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Look back: the orientation video builds <code>CPU_REGISTER</code>, 12:03 to 20:47</div>
+        <ol>
+          <li><strong>Project &rarr; Add Circuit&hellip;</strong>, named <code>CPU_REGISTER</code>.</li>
+          <li>Drop in <strong>one instance of your <code>REGISTER_8BIT</code></strong>.</li>
+          <li>Add pins and wire each to the matching pin of the instance: 1-bit inputs <code>s</code> and <code>e</code>; an 8-bit input <code>i</code>; an 8-bit output <code>o</code>, with its <em>Three-state?</em> attribute set to <strong>No</strong>; and an 8-bit output <code>reg</code> on the instance&rsquo;s <code>reg</code>.</li>
+          <li><strong>Project &rarr; Edit Circuit Appearance.</strong> A new tab starts with Logisim&rsquo;s default box. Enlarge it, then drag each pin&rsquo;s anchor to its edge &mdash; hover over an anchor to see which pin it is: <code>o</code> and <code>i</code> on top, <code>s</code> and <code>e</code> on the bottom, <code>reg</code> on the left side. Add a text label such as <em>CPU R</em>.</li>
+          <li>Place four of them along the top of the <code>CPU</code> tab, inside the bus. No wire crosses another.</li>
+        </ol>
+        <p>Because the tab contains an <em>instance</em> of <code>REGISTER_8BIT</code>, any change you ever make inside <code>REGISTER_8BIT</code> appears in all four registers automatically. The video also previews the shapes the PC and IR will need; those come in Week 13.</p>
+      </div>
 
       <p>This is the Week 4 lesson about circuit appearance doing real work: the gates inside are unchanged, and a dozen parts on one canvas become readable. <code>REGISTER_8BIT</code> itself stays exactly as Week 5 built it &mdash; do not edit its appearance, because RAM_BYTE and everything else that instantiates it would change shape too.</p>
 
       <div class="callout callout--warn">
         <div class="callout__title">The one rule that makes or breaks the bus</div>
         <p>Every fan must connect bit 0 to the innermost loop and bit 7 to the outermost, on every part, without exception. Get one fan backwards and that part reads and writes bytes bit-reversed: <code>00000101</code> leaves R1 and arrives in R3 as <code>10100000</code>. Nothing turns red, because nothing is electrically wrong. Build one fan carefully, test it, then copy and paste it for every other port.</p>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Look back: the orientation video builds this, 05:05 to 12:03</div>
+        <p>If you have not watched it, here is what it shows, in order:</p>
+        <ol>
+          <li><strong>Project &rarr; Add Circuit&hellip;</strong>, and name the new tab <code>CPU</code>.</li>
+          <li>In the <strong>Base</strong> library, choose the <strong>Wiring Tool</strong>. It draws wire in free space, not attached to anything, and each drag draws an L &mdash; so one loop is two Ls whose ends meet.</li>
+          <li><strong>Too big is better than too small.</strong> A loop cannot easily be enlarged once the inner ones are inside it. Viewed at 75%, the finished bus fills most of the canvas, with the RAM, four registers, the ALU, ACC, the control section, FLAGS, the PC and the IR all inside it eventually.</li>
+          <li>If a segment goes wrong, select it with the Wiring Tool still active, delete it, and extend from the wire that is left.</li>
+          <li>Start each new loop <strong>one grid step in and one down</strong> from the corner of the last one, and make sure it never overlaps it. Repeat for eight concentric loops. <strong>The innermost loop is bit 0.</strong></li>
+        </ol>
       </div>
 
       <p>Logisim would also let you draw a bus as a single 8-bit-wide wire. This course uses eight loops because every circuit figure for the rest of the term is drawn that way, and because you can see each bit cross the bus. Your parts&rsquo; <code>e</code>, <code>s</code> and other control pins stay unconnected stubs for now, wired to input pins you toggle yourself &mdash; Assignment 10 lists them.</p>

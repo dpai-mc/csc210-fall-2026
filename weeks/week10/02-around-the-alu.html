@@ -91,6 +91,11 @@
       </figure>
 
       <p>Why build a circuit whose only trick is the number 1? Because adding 1 is the most common thing a CPU does: after every instruction, the address of the next one is the old address plus one. Put any register on the bus, raise <code>bus1</code>, select ADD, and ACC captures that register plus 1 &mdash; with no register anywhere holding a 1. In Week 13 this is how your CPU will step its program counter.</p>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Look back: the orientation video, 22:04 to 23:33</div>
+        <p>TMP is shown as a memory circuit with &ldquo;some added circuit stuff&rdquo; &mdash; the input buffer above. BUS1 is traced bit by bit: with <code>bus1</code> = 1 the NOT gives 0, which clears bits 1&ndash;7 through their ANDs, and the OR sets bit 0, so the output is always <code>00000001</code>; with <code>bus1</code> = 0, TMP flows straight through. Your instructor&rsquo;s word for it is a <em>filter</em>.</p>
+      </div>
     </section>
 
     <section id="sec-10-7">
@@ -98,12 +103,12 @@
 
       <p><strong>ACC</strong> is a fifth <code>REGISTER_8BIT</code>, wired differently from R0&ndash;R3: its <code>i</code> comes from the ALU&rsquo;s <code>C</code> output, not from the bus, and its <code>o</code> goes to the bus. It is the only way a result gets back.</p>
 
-      <p>Like R0&ndash;R3, ACC gets a tab of its own that changes only the drawing: <strong><code>ACC_REGISTER</code></strong>, one <code>REGISTER_8BIT</code> instance wired straight through, with the appearance edited to fit where ACC sits &mdash; directly under the ALU. <code>i</code> goes on the <strong>top</strong> edge, so the ALU&rsquo;s <code>C</code> drops straight into it; <code>o</code> on the <strong>bottom</strong>, down to the bus; <code>s</code> and <code>e</code> on the <strong>right</strong> side, toward the control section; and <code>mem</code>, the stored byte, on the left.</p>
+      <p>Like R0&ndash;R3, ACC gets a tab of its own that changes only the drawing: <strong><code>ACC_REGISTER</code></strong>, one <code>REGISTER_8BIT</code> instance wired straight through, with the appearance edited to fit where ACC sits &mdash; directly under the ALU. <code>i</code> goes on the <strong>top</strong> edge, so the ALU&rsquo;s <code>C</code> drops straight into it; <code>o</code> on the <strong>bottom</strong>, down to the bus; <code>s</code> and <code>e</code> on the <strong>right</strong> side, toward the control section; and <code>reg</code>, the stored byte, on the left. The steps are the same as for <code>CPU_REGISTER</code> on page 1; the orientation video shows the ACC shape at 18:21.</p>
 
       <figure class="circuit-canvas">
         <img class="circuit-canvas__img" src="images/cpu-accumulator.png" style="max-width:300px"
              alt="A Logisim circuit appearance: a wide rectangle labelled ACC. One pin labelled i sits in the middle of the top edge and one labelled o in the middle of the bottom edge. Two pins labelled s and e sit on the right edge, s above e. One more pin, unlabelled, sits on the left side.">
-        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s ACC appearance: <code>i</code> on top from the ALU, <code>o</code> on the bottom to the bus, <code>s</code> above <code>e</code> on the right, the stored byte on the left. Your tab names that side pin <code>mem</code>. Compare it with <code>CPU_REGISTER</code> on page 1: same circuit inside, drawn for a different place on the canvas.</figcaption>
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s ACC appearance: <code>i</code> on top from the ALU, <code>o</code> on the bottom to the bus, <code>s</code> above <code>e</code> on the right, the stored byte on the left. Your tab names that side pin <code>reg</code>. Compare it with <code>CPU_REGISTER</code> on page 1: same circuit inside, drawn for a different place on the canvas.</figcaption>
       </figure>
 
       <p><strong>FLAGS</strong> keeps the ALU&rsquo;s four status outputs. Your ALU&rsquo;s <code>CO</code>, <code>AL</code>, <code>EQ</code> and <code>Z</code> are live &mdash; they change the instant the bus or TMP changes, which is one transfer later. An instruction that wants to ask &ldquo;was that last result zero?&rdquo; needs the answer held. FLAGS is four of your Week 4 <code>MEM_1BIT</code> cells sharing one <code>s</code> line, pulsed in the same transfer that sets ACC.</p>
@@ -127,6 +132,11 @@
       </figure>
 
       <p>Remember from Week 7 that <code>AL</code> and <code>EQ</code> come from the comparator, which compares A and B on every opcode, not only XOR. FLAGS therefore records the comparison of the two operands after <em>any</em> ALU operation. Nothing uses the held flags this week; in Week 14 they decide whether a jump is taken.</p>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Look back: the orientation video, 23:36 to 24:08</div>
+        <p>The four flags get their letters &mdash; carry out <strong>C</strong>, A is larger <strong>A</strong>, A equals B <strong>E</strong>, result is zero <strong>Z</strong> &mdash; each stored in its own one-bit memory, all set together, and later wired as <code>C A E Z</code> into the control unit.</p>
+      </div>
     </section>
 
     <section id="sec-10-8">

@@ -132,6 +132,11 @@
     <section id="sec-10-12">
       <h2>10.12 &nbsp; Who drives these lines</h2>
 
+      <div class="callout callout--note">
+        <div class="callout__title">Look back: the orientation video, 21:08 to 21:31</div>
+        <p>Your instructor&rsquo;s registers run R0 on the right to R3 on the left. <strong>Any order works</strong>, as long as REG_SELECT&rsquo;s <code>r0_e</code> and <code>r0_s</code> go to the register you call R0, and so on &mdash; the number is decided by the wire, not by where the box sits.</p>
+      </div>
+
       <p>Today, you do: in Checkpoint 4, <code>ra</code>, <code>rb</code>, <code>rega_e</code>, <code>regb_e</code> and <code>regb_s</code> are input pins you click. Next week the control unit takes over. The two register fields will come straight from the bits of the instruction being executed, and the three control lines from the stepper, one step at a time. Page 4 shows exactly which bits of an instruction become <code>ra</code> and <code>rb</code>.</p>
 
       <!-- ========== Self-check C ========== -->

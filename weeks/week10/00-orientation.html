@@ -17,6 +17,7 @@
     .due > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
     .due h3 { margin-top: 0; font-size: var(--fs-base); }
     @media (max-width: 760px) { .due { grid-template-columns: 1fr; } }
+    .video-ts { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--color-text-muted); white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -63,7 +64,7 @@
         </div>
         <div>
           <h3>CPU Project Plan</h3>
-          <p>Which tier you are aiming for and which instructions you will build. Graded <strong>complete / incomplete</strong>, with feedback.</p>
+          <p>Which tier you are aiming for and which instructions you will build. <strong>10 points, graded complete/incomplete</strong>, with feedback.</p>
         </div>
       </div>
       <p><strong>All three are due Sunday 10/25, 11:59 pm.</strong></p>
@@ -108,6 +109,35 @@
       </div>
     </section>
 
+    <section id="sec-video">
+      <h2>Week 10 overview video</h2>
+      <p>About 33 minutes. Your instructor walks through the four pages, then builds two things in Logisim that the pages describe in words: the eight-loop bus <span class="video-ts">(from 05:05)</span> and the <code>CPU_REGISTER</code> and <code>ACC_REGISTER</code> tabs <span class="video-ts">(12:03 to 20:47)</span>. TMP, BUS1 and FLAGS follow at 21:00, the instruction set and <code>MYSIM.txt</code> at 26:08, and the project tiers and this week&rsquo;s assignment from 27:21. Click any line of the transcript to jump there.</p>
+
+      <div class="video-breakout">
+        <div class="video-transcript-row">
+          <div class="video-col">
+            <div class="video-frame" id="video-container">
+              <iframe id="youtube-player"
+                      src="https://www.youtube.com/embed/ONtpsJVDQKU?enablejsapi=1&amp;cc_load_policy=1&amp;iv_load_policy=3&amp;modestbranding=1&amp;rel=0"
+                      title="CSC210 Week 10 Orientation: One Bus, Four Registers"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allowfullscreen loading="lazy"></iframe>
+            </div>
+            <div class="video-caption">Closed captions available. Use the transcript panel to jump to any point in the video.</div>
+          </div>
+          <div class="transcript-col">
+            <h2 class="sr-only">Video transcript</h2>
+            <div class="transcript-panel" id="transcript-container" role="region"
+                 aria-live="polite"
+                 aria-label="Video transcript. Select a line to jump to that point in the video. The line currently being spoken is announced as the video plays.">
+              <p class="transcript-loading">Loading transcript&hellip;</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section id="sec-tools">
       <h2>Tools and reading</h2>
       <ul>
@@ -123,5 +153,1475 @@
   <footer class="sp-footer">
     CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 10, Orientation
   </footer>
+  <script>
+  (function () {
+    'use strict';
+
+    /* ------------------------------------------------------------
+       Week 10 overview video. Procedure A -- one video on this page, so
+       no TranscriptManager. VIDEO_ID is the YouTube id; vttContent holds
+       the WEBVTT captions inline so the panel needs no second request
+       and works from the Canvas iframe without a CORS fetch.
+
+       The source VTT (csc210-wk10.vtt, Whisper) arrived with CRLF line
+       endings and 488 cues. Deleted: a silence-loop hallucination of 48
+       one-second cues reading only "This." from 08:29 to 09:17, replaced by four cues
+       of the narration as Dave reconstructed it from the video; zero-length
+       or stray cues at 10:47 ("a") and 29:12 ("you"); an anticipation cue
+       at 00:56; rolling-window duplicates at 23:27, 23:28 and 32:34. A
+       Cyrillic hallucination in the 26-second cue at 29:42 was
+       transliterated, and the cue before it cut back. Mis-heard terms
+       repaired: Logisim, program counter, 8-bit register, REGISTER_8BIT,
+       NOTs/ANDs/ORs, C A E Z, MYSIM.txt, Logisim Checkpoint 4, .circ, ALU.
+       438 cues out. The repaired file is csc210-wk10.vtt in this folder.
+       If the transcript is ever regenerated, re-run the repair.
+       ------------------------------------------------------------ */
+
+    var VIDEO_ID = 'ONtpsJVDQKU';
+    var vttContent = `WEBVTT
+
+00:00.080 --> 00:06.740
+Aloha and welcome. So this week, week 10, is all about the bus and the moving around in the ALU.
+
+00:07.900 --> 00:15.680
+And so we have, after the orientation, we have four learning sections about the bus, the ALU,
+
+00:16.360 --> 00:19.700
+naming and registers, and the last one is about the instruction set.
+
+00:19.780 --> 00:27.120
+And this is all for our 8-bit CPU simulation.
+
+00:27.120 --> 00:33.480
+Okay, so it's taking the concepts we've already learned about and learning new concepts,
+
+00:33.700 --> 00:36.560
+but applying them to our 8-bit CPU.
+
+00:38.540 --> 00:44.500
+All right, so what you need to do this week is we have the bus.
+
+00:47.000 --> 00:50.140
+Okay, so we have an assignment.
+
+00:52.660 --> 00:55.960
+There's a work on your .circ file.
+
+00:57.120 --> 01:00.660
+There's a Canvas quiz, which I haven't posted yet, but I will.
+
+01:03.980 --> 01:09.140
+And then there's a CPU project plan that just, it's like a 10-pointer.
+
+01:09.240 --> 01:19.840
+I think I put on it for 10 points, but it's really just so that you think about what you're going to do for your final project.
+
+01:19.980 --> 01:22.180
+And I'll talk about that in a second.
+
+01:23.460 --> 01:26.780
+And you're not bound and beholden by what you put here.
+
+01:27.120 --> 01:29.300
+You can do whatever, any of these you want,
+
+01:29.400 --> 01:34.440
+but there's a tiered structure of how many points you can get based on what you do.
+
+01:35.060 --> 01:38.420
+Okay, so one wire for everyone.
+
+01:38.700 --> 01:42.760
+Just talked about the bus, how it works, how we're going to build it in Logisim.
+
+01:43.780 --> 01:47.300
+And then working around the ALU, you have two inputs,
+
+01:47.420 --> 01:50.740
+and you have some other flags and stuff that you need to connect to it.
+
+01:51.640 --> 01:53.620
+And then naming your register.
+
+01:53.980 --> 01:57.100
+We're going to name them R0, R1, R2.
+
+01:57.120 --> 02:01.960
+R2 and R3, because we're going to have four registers in our 8-bit CPU.
+
+02:02.880 --> 02:05.620
+And then a little bit about the instruction set.
+
+02:06.820 --> 02:10.860
+Okay, and the program that, if you do everything, will run.
+
+02:11.160 --> 02:12.840
+Right now, it multiplies 5 by 5.
+
+02:12.980 --> 02:18.380
+I might change it to something else, but right now, the program, sample program I have is 5 times 5.
+
+02:18.940 --> 02:22.080
+And it runs on the CPU, and you can see how it runs,
+
+02:22.080 --> 02:27.040
+and how we load the RAM with the program, and then how it runs.
+
+02:28.000 --> 02:32.960
+Okay, so we're doing everything in Logisim this week.
+
+02:33.180 --> 02:40.180
+And then if you look into the CS301, Unit 5, Designing a Processor,
+
+02:40.900 --> 02:49.400
+you can look at registers, buses, and data paths to get another view on how the CPU works.
+
+02:50.300 --> 02:54.420
+Okay, so I do want to spend a little bit of time, not a lot,
+
+02:55.180 --> 02:56.400
+on the bus.
+
+02:57.120 --> 03:04.760
+Okay, so when you're creating this, there's nothing new you have to create.
+
+03:04.940 --> 03:07.080
+You've created everything you need for this week.
+
+03:07.980 --> 03:08.180
+Okay.
+
+03:10.120 --> 03:13.080
+But let's talk about how it works.
+
+03:14.020 --> 03:16.440
+You have one set of wires, that's our bus.
+
+03:17.180 --> 03:23.820
+To enable it, enable something, it's taking that stored byte and putting it out on the bus.
+
+03:24.340 --> 03:26.820
+And set takes whatever's on the bus and stores it.
+
+03:27.120 --> 03:29.120
+Kind of thing.
+
+03:29.120 --> 03:33.120
+So that's E is output from your thing to the bus,
+
+03:33.120 --> 03:37.120
+and S is input from the bus to your thing, typically.
+
+03:37.120 --> 03:45.120
+Okay, so this talks about how to do it.
+
+03:45.120 --> 03:50.120
+You raise R1 to put it on the bus.
+
+03:50.120 --> 03:54.120
+You raise R3 set to grab it from the bus.
+
+03:54.120 --> 03:56.120
+You drop R3 set because it's already set.
+
+03:56.120 --> 03:57.120
+Okay.
+
+03:57.120 --> 03:58.120
+So it's already got the thing.
+
+03:58.120 --> 04:03.120
+And then you drop R1 to E, enable to wipe it off the bus.
+
+04:04.120 --> 04:05.120
+Okay.
+
+04:05.120 --> 04:07.120
+And so the bus bench here, that's what it's trying to do.
+
+04:08.120 --> 04:11.120
+Like, goal 1 of 3, copy R1 into R3.
+
+04:12.120 --> 04:15.120
+Well, we have R1 to put it on the bus.
+
+04:16.120 --> 04:17.120
+We have to enable it.
+
+04:17.120 --> 04:18.120
+Notice it's on the bus.
+
+04:19.120 --> 04:23.120
+To have R3 store it, right now it has some number in there.
+
+04:23.120 --> 04:25.120
+We want to put this number in there.
+
+04:25.120 --> 04:26.120
+We have to pulse set.
+
+04:26.120 --> 04:29.120
+So if I click it, it goes on and then off.
+
+04:29.120 --> 04:31.120
+And so R3 now has it.
+
+04:31.120 --> 04:33.120
+I'm done because I did it.
+
+04:33.120 --> 04:39.120
+But what I should do is disable R1 or drop every E.
+
+04:39.120 --> 04:40.120
+Okay.
+
+04:40.120 --> 04:43.120
+And so that will reset it back to.
+
+04:43.120 --> 04:45.120
+And then you can go next goal.
+
+04:45.120 --> 04:46.120
+There's three goals.
+
+04:46.120 --> 04:47.120
+Next goal.
+
+04:47.120 --> 04:48.120
+And you can walk through it.
+
+04:48.120 --> 04:50.120
+If you want to start over, you have to reload the page.
+
+04:50.120 --> 04:54.120
+Reset doesn't really reset the whole page.
+
+04:54.120 --> 04:55.120
+You have to just reload it.
+
+04:55.120 --> 05:02.120
+If you reload the page and scroll back down to bus bench, you start back over.
+
+05:02.120 --> 05:03.120
+Okay.
+
+05:03.120 --> 05:05.120
+So that's how you use the bus bench.
+
+05:05.120 --> 05:08.120
+So building the bus and Logisim.
+
+05:08.120 --> 05:11.120
+So here you're going to build.
+
+05:11.120 --> 05:14.120
+And part of your homework is to build this.
+
+05:14.120 --> 05:20.120
+And what I'm going to build is eight 1-bit wires that are going to be a loop.
+
+05:20.120 --> 05:23.120
+And the rest of our CPU is going to be inside of it.
+
+05:23.120 --> 05:24.120
+Okay.
+
+05:24.120 --> 05:26.120
+And this is our bus.
+
+05:26.120 --> 05:28.120
+These eight wires are our bus.
+
+05:28.120 --> 05:29.120
+Okay.
+
+05:29.120 --> 05:32.120
+So I have to tell you how you can build it.
+
+05:32.120 --> 05:41.120
+So in Logisim, if you have this, we want to create a new circuit.
+
+05:41.120 --> 05:45.120
+So let me expand it a little bit just so you can see it.
+
+05:45.120 --> 05:51.120
+So in our project, we're going to add a circuit.
+
+05:51.120 --> 05:52.120
+Circuit.
+
+05:52.120 --> 05:53.120
+I'm going to call that circuit.
+
+05:53.120 --> 05:55.120
+For now, CPU.
+
+05:55.120 --> 05:58.120
+And say okay.
+
+05:58.120 --> 06:08.120
+So now I have this CPU circuit that has that magnifying glass on it, which means that's what's active over here.
+
+06:08.120 --> 06:09.120
+All right.
+
+06:09.120 --> 06:12.120
+So let me get out of that magnifier.
+
+06:12.120 --> 06:13.120
+Oh, no.
+
+06:13.120 --> 06:14.120
+I need to say the magnifier.
+
+06:14.120 --> 06:17.120
+Now, what I need to do is I need to create wires.
+
+06:17.120 --> 06:18.120
+Okay.
+
+06:18.120 --> 06:21.120
+And over here, we have these.
+
+06:21.120 --> 06:22.120
+We have these.
+
+06:22.120 --> 06:24.120
+We have all the things we've built.
+
+06:24.120 --> 06:27.120
+And then we have these libraries.
+
+06:27.120 --> 06:30.120
+And we can use wiring, right?
+
+06:30.120 --> 06:31.120
+The wiring library.
+
+06:31.120 --> 06:37.120
+We said we can use most of the gates library.
+
+06:37.120 --> 06:43.120
+But we're not going to use the plexers, arithmetic, memory, input output libraries.
+
+06:43.120 --> 06:46.120
+We might use a piece from here or there from one or two of them.
+
+06:46.120 --> 06:47.120
+But go to base.
+
+06:47.120 --> 06:50.120
+So you want to expand base.
+
+06:50.120 --> 06:51.120
+Okay.
+
+06:51.120 --> 06:53.120
+You want to grab the wiring tool.
+
+06:53.120 --> 06:58.120
+And so this lets us create wires that are not attached to anything else.
+
+06:58.120 --> 06:59.120
+Okay.
+
+06:59.120 --> 07:01.120
+So we'll click wiring tool.
+
+07:01.120 --> 07:14.120
+And now we can click on any of these dots and, you know, create a wire out in free space.
+
+07:14.120 --> 07:15.120
+Okay.
+
+07:15.120 --> 07:17.120
+So I'm just going to stop it there.
+
+07:17.120 --> 07:20.120
+And then let me close my magnifier.
+
+07:20.120 --> 07:22.120
+So.
+
+07:22.120 --> 07:23.120
+All right.
+
+07:23.120 --> 07:27.120
+So we create this wiring tool out in free space.
+
+07:27.120 --> 07:29.120
+And then we can.
+
+07:29.120 --> 07:34.120
+Since you can only make an L, we can make a loop this way.
+
+07:34.120 --> 07:35.120
+Okay.
+
+07:35.120 --> 07:39.120
+Now, there's a bunch of different ways to make more loops.
+
+07:39.120 --> 07:41.120
+And if your loop's not.
+
+07:41.120 --> 07:43.120
+Oops.
+
+07:43.120 --> 07:47.120
+If your loop's not big enough.
+
+07:47.120 --> 07:49.120
+Oops.
+
+07:49.120 --> 07:53.120
+You can't.
+
+07:53.120 --> 07:54.120
+Make it bigger.
+
+07:54.120 --> 07:55.120
+Okay.
+
+07:55.120 --> 07:59.120
+So what you really want to do.
+
+07:59.120 --> 08:04.120
+Is.
+
+08:04.120 --> 08:05.120
+When you make your loop.
+
+08:05.120 --> 08:08.120
+When you're using the wiring tool and you make your loop.
+
+08:08.120 --> 08:10.120
+Actually.
+
+08:10.120 --> 08:11.120
+Want to make a bigger.
+
+08:11.120 --> 08:12.120
+Bigger.
+
+08:12.120 --> 08:14.120
+Too big is better than too small.
+
+08:14.120 --> 08:15.120
+Okay.
+
+08:15.120 --> 08:18.120
+So you want to make it bigger so you can get everything in it.
+
+08:19.120 --> 08:20.120
+Okay.
+
+08:20.120 --> 08:21.120
+So make a big loop.
+
+08:21.120 --> 08:22.120
+Now.
+
+08:22.120 --> 08:23.120
+In order to.
+
+08:23.120 --> 08:24.120
+Make the next loop.
+
+08:24.120 --> 08:25.120
+And this one might not be big enough.
+
+08:25.120 --> 08:26.120
+But to make the next loop.
+
+08:26.120 --> 08:27.120
+What you want to do.
+
+08:27.120 --> 08:28.120
+Is.
+
+08:28.120 --> 08:29.120
+You're going to start one in and one down.
+
+08:29.120 --> 08:42.000
+Start creating the loop.
+
+08:42.000 --> 08:58.000
+Start the loop, and then you're going to click on this and go down.
+
+08:58.000 --> 09:09.000
+Make sure it doesn't overlap. You don't want it to overlap,
+
+09:09.000 --> 09:17.120
+but one in.
+
+09:17.120 --> 09:27.440
+went away click on that and go up like that oops if you do screw up like this
+
+09:27.440 --> 09:33.860
+you can get out a wiring tool you can click on this one and delete it then you
+
+09:33.860 --> 09:41.700
+can because now I have something to attach to I can just extend it to finish
+
+09:41.700 --> 09:43.880
+it
+
+09:47.120 --> 09:53.360
+you have that it's kind of really finicky there I'll just start it there
+
+09:53.360 --> 10:03.240
+and then I'll start another one go up here man bad today but we want to make
+
+10:03.240 --> 10:06.900
+it connection and make sure it's a loop and you can make eight of those
+
+10:06.900 --> 10:12.620
+concentric one off one off one off and that's gonna be your bus okay and this
+
+10:12.620 --> 10:17.100
+one might not be this one's probably not big enough but that's
+
+10:17.100 --> 10:30.760
+we're gonna make your bus so let me open one here that I have so you shrink
+
+10:30.760 --> 10:37.140
+this down so ultimately when you're done it's gonna look something like this so
+
+10:37.140 --> 10:43.920
+this is at 75% so it takes up you know two-thirds five more than a half and
+
+10:43.920 --> 10:47.040
+you're gonna end up eight of these but you're gonna have a Ram
+
+10:47.100 --> 10:56.160
+four registers an ALU an accumulator a control section your flags your program
+
+10:56.160 --> 11:04.800
+counter your instruction register a way to load RAM okay you have a temp which
+
+11:04.800 --> 11:16.840
+isn't in a good place it's disconnected you have a temp and a bus one and
+
+11:16.840 --> 11:20.900
+two of them don't work right so they're just like very sturdy things you need
+
+11:20.900 --> 11:27.180
+something big uh okay so we're gonna build all these things okay but
+
+11:27.180 --> 11:37.800
+basically this is kind of the minimum size that you need is something that's
+
+11:37.800 --> 11:42.120
+this big at 75% okay so if you think about it at 75% vertically it goes from
+
+11:42.120 --> 11:46.680
+just under the top to basically where the end of the selection right menu
+
+11:46.680 --> 12:03.680
+okay so you need to build that for your bus okay so that's gonna look like this
+
+12:03.680 --> 12:09.480
+the innermost innermost lip I mean loop is zero and then what you're gonna do is
+
+12:09.480 --> 12:16.020
+you're gonna make a register okay and you see this register as an input and
+
+12:16.020 --> 12:20.820
+output and the input and output both connected to the bus so when I'm trying
+
+12:20.820 --> 12:26.400
+to read it from the bus into the register I want it on the input and when
+
+12:26.400 --> 12:28.800
+I want to take it from the register and put it on the bus it'll go out the
+
+12:28.800 --> 12:40.440
+output and then my two one bit set in enables okay this shape if we look at
+
+12:40.440 --> 12:45.920
+our register let me throw a register in here
+
+12:46.020 --> 12:53.720
+have an 8-bit register if I throw a register in here this shapes are
+
+12:53.720 --> 13:00.200
+nothing alike this one flows left to right input output and I want them to be
+
+13:00.200 --> 13:05.980
+on the top set and E on the bottom that's okay right but I don't want to
+
+13:05.980 --> 13:09.340
+change the register because I use this register in the RAM byte and other
+
+13:09.340 --> 13:15.320
+places already so if I redraw it it'll screw those other things up okay cuz
+
+13:15.320 --> 13:15.820
+anything I do
+
+13:16.020 --> 13:23.320
+will mess those other things up so what I want to do is I'm gonna delete this
+
+13:23.320 --> 13:28.460
+what I want to do is I want in my project so I'm gonna add a new circuit
+
+13:28.460 --> 13:41.360
+and it's gonna be my CPU register so I'm gonna call it CPU register okay I mean
+
+13:41.360 --> 13:45.980
+this is empty one so how I'm going to create this I'm
+
+13:46.020 --> 13:51.120
+just gonna take this 8-bit register and put it in here and then what I need to
+
+13:51.120 --> 14:03.180
+do is I have to access these points input output set oops get rid of that I
+
+14:03.180 --> 14:10.100
+need to access set need to access enable
+
+14:10.100 --> 14:16.020
+okay and then I want to access the reg which is what's stored in there okay so
+
+14:16.020 --> 14:25.120
+set and enable are just one bit inputs so I'm gonna take an input put it in here there sets
+
+14:25.120 --> 14:32.160
+attached I'll duplicate that enable it's just a one bit input I'll stick it in there I'll change
+
+14:32.160 --> 14:44.060
+the thing to E for enable okay I'll duplicate it again input is an 8-bit input so I will change
+
+14:44.060 --> 15:00.300
+it to 8-bit and change its name to I for input and I will attach it to input okay output over
+
+15:00.300 --> 15:10.220
+here is I'm call that oh for output I need to make it 8 bits and needs to be not three state
+
+15:10.220 --> 15:12.640
+and then I will
+
+15:14.060 --> 15:17.260
+click on it and attach it to output from my register.
+
+15:18.320 --> 15:20.980
+And then I can duplicate this.
+
+15:25.380 --> 15:26.800
+Oops.
+
+15:26.800 --> 15:29.120
+And I want to take this duplicated one
+
+15:29.120 --> 15:31.940
+and I'm just going to put it somewhere up here.
+
+15:31.940 --> 15:33.220
+I'm going to call it reg
+
+15:33.220 --> 15:36.760
+since that's what is stored in the register.
+
+15:36.760 --> 15:38.560
+And then I will link it to reg.
+
+15:40.360 --> 15:41.260
+All right.
+
+15:41.260 --> 15:44.200
+So now I have all these inputs and outputs
+
+15:44.200 --> 15:48.320
+and then I can go to CPU register, edit its appearance.
+
+15:48.320 --> 15:51.140
+I don't have an appearance because it's a new circuit.
+
+15:51.140 --> 15:53.620
+It's built off the register, the 8-bit register.
+
+15:53.620 --> 15:56.180
+So if I make any changes to the 8-bit register circuit
+
+15:56.180 --> 15:57.180
+or REGISTER_8BIT,
+
+15:57.180 --> 15:59.040
+it will make those same changes here.
+
+16:00.820 --> 16:01.660
+All right.
+
+16:01.660 --> 16:03.460
+So what I need to do here now is I need to,
+
+16:04.980 --> 16:06.480
+I'm going to move this up.
+
+16:06.480 --> 16:08.980
+So it's on lines, on dots.
+
+16:10.060 --> 16:11.200
+And then,
+
+16:11.200 --> 16:12.600
+I'm going to make it bigger.
+
+16:14.660 --> 16:16.060
+Okay.
+
+16:16.060 --> 16:17.140
+And then I'll click on these.
+
+16:17.140 --> 16:17.980
+What is this one?
+
+16:17.980 --> 16:19.100
+This one's output.
+
+16:21.000 --> 16:22.700
+Let's see, this one's input.
+
+16:22.700 --> 16:24.220
+So I'll put input up here.
+
+16:24.220 --> 16:25.660
+I think input's on the right.
+
+16:26.660 --> 16:27.900
+I hope it's on the left.
+
+16:31.580 --> 16:32.720
+Okay.
+
+16:32.720 --> 16:35.920
+This green thing, I'm going to move it over here.
+
+16:35.920 --> 16:37.480
+This is reg.
+
+16:37.480 --> 16:39.180
+I'm not going to move it yet.
+
+16:39.180 --> 16:40.520
+This next one is set.
+
+16:40.520 --> 16:42.760
+I'll put set on the bottom.
+
+16:42.760 --> 16:44.020
+Next one's enable.
+
+16:44.020 --> 16:46.560
+I'll put enable on the right.
+
+16:46.560 --> 16:48.960
+I'll put this reg in the middle on the left.
+
+16:49.980 --> 16:51.640
+I'm going to move this right into the middle.
+
+16:51.640 --> 16:53.420
+It doesn't matter where you put this
+
+16:53.420 --> 16:57.360
+because it's just a thing that says this is a circuit.
+
+16:57.360 --> 17:00.100
+It's not, it means it's a circuit.
+
+17:00.100 --> 17:01.900
+And then I'm going to call this,
+
+17:02.780 --> 17:07.200
+let me give it my thing a name called CPU-R.
+
+17:07.200 --> 17:08.820
+So CPU register.
+
+17:08.820 --> 17:13.820
+And then I need in and out and set and enable.
+
+17:17.820 --> 17:20.760
+I could do reg, but I'm just going to leave it there.
+
+17:20.760 --> 17:24.240
+I just know the one that's not labeled is tied to the output
+
+17:24.240 --> 17:26.820
+for whatever's stored in this register.
+
+17:29.080 --> 17:31.920
+Right, and then I'm just going to move these
+
+17:31.920 --> 17:36.920
+to where I want the input, you know, next to the proper item.
+
+17:38.820 --> 17:43.820
+Set is here, enable is here, and CPU-R is here.
+
+17:47.840 --> 17:52.840
+Okay, so this is my CPU register and it lines up
+
+17:52.840 --> 17:57.840
+so that now, see I have input, output, set and enable
+
+17:58.780 --> 18:00.500
+and lines up the same kind of way.
+
+18:00.500 --> 18:05.500
+So it makes it easier when I'm building it
+
+18:05.740 --> 18:07.700
+and I put them up here.
+
+18:07.700 --> 18:08.700
+Here's my CPU register.
+
+18:08.820 --> 18:10.580
+I have four of them.
+
+18:10.580 --> 18:15.580
+It makes it easier, right, to place them into the design.
+
+18:17.500 --> 18:20.500
+Okay, I don't have wires crossing over other wires and stuff.
+
+18:21.540 --> 18:26.540
+All right, okay, the accumulator is going to be similar
+
+18:27.680 --> 18:30.880
+in that it's a register as well,
+
+18:30.880 --> 18:34.540
+but in order to place it in the design,
+
+18:34.540 --> 18:37.540
+you're going to have to do the same thing.
+
+18:37.540 --> 18:41.260
+You can see I have input on the top, output on the bottom,
+
+18:41.260 --> 18:42.980
+set and enable on the right.
+
+18:43.780 --> 18:47.480
+So you do the exactly the same thing, create a new circuit,
+
+18:47.480 --> 18:49.700
+you know, ACC underscore register.
+
+18:52.200 --> 18:54.980
+Okay, doing all the same things.
+
+18:54.980 --> 18:57.440
+Just when you redraw it and give it a circuit appearance,
+
+18:57.440 --> 19:00.120
+you change the appearance to look like this.
+
+19:00.120 --> 19:03.060
+Okay, program counter.
+
+19:04.540 --> 19:08.220
+Is the same as another register,
+
+19:08.220 --> 19:10.400
+except for now you have set and enable on the top,
+
+19:10.400 --> 19:14.060
+input output on the bottom, create another one.
+
+19:14.060 --> 19:16.540
+Instruction register is not a register.
+
+19:16.540 --> 19:19.360
+It's a, I believe it's just a memory circuit.
+
+19:20.620 --> 19:23.340
+It'll say in the instructions,
+
+19:23.340 --> 19:27.720
+but I had to redraw it again so that it looks appropriate
+
+19:27.720 --> 19:29.760
+to make it go in, has output on the top,
+
+19:29.760 --> 19:33.880
+input on the bottom and set, okay.
+
+19:34.540 --> 19:39.540
+So when you see things that are built off of other things,
+
+19:40.720 --> 19:45.160
+the easiest way is just what I did, copy it in,
+
+19:45.160 --> 19:47.600
+attach all the inputs and outputs,
+
+19:47.600 --> 19:49.580
+and then do change the circuit appearance.
+
+19:49.580 --> 19:51.660
+And it's, it'll be in there.
+
+19:51.660 --> 19:56.660
+So that if I ever change anything in my register,
+
+20:01.220 --> 20:03.220
+okay, if I change anything,
+
+20:04.540 --> 20:06.600
+anything internal to register,
+
+20:07.600 --> 20:11.120
+it will automatically also change in CPU register.
+
+20:13.100 --> 20:17.360
+Okay, because this eight bit register is
+
+20:19.800 --> 20:20.980
+built off of this design,
+
+20:20.980 --> 20:25.840
+which basically it's a linked copy of this design, right?
+
+20:25.840 --> 20:28.100
+Same for any of those, like I said already,
+
+20:28.100 --> 20:30.000
+same for any of the other circuits
+
+20:30.000 --> 20:32.300
+where it's essentially identical.
+
+20:32.300 --> 20:33.720
+I'm just redrawing them to make them,
+
+20:33.720 --> 20:36.860
+fit my layout better.
+
+20:42.440 --> 20:46.480
+Okay, so that's register reshaped,
+
+20:46.480 --> 20:47.840
+looks something like this.
+
+20:53.280 --> 20:54.120
+All right.
+
+20:55.920 --> 21:00.620
+And then working around the ALU,
+
+21:02.520 --> 21:03.460
+it's a similar thing.
+
+21:03.460 --> 21:07.800
+Here's our kind of a gross view of our ALU.
+
+21:08.900 --> 21:10.280
+Okay, we have our control unit,
+
+21:10.280 --> 21:14.020
+we have our four registers.
+
+21:14.020 --> 21:15.440
+I should have renamed numbered these,
+
+21:15.440 --> 21:18.440
+but I numbered mine R0 on the right,
+
+21:18.440 --> 21:21.140
+R1, R2, R3 on the left.
+
+21:21.140 --> 21:23.320
+Can number however you want.
+
+21:23.320 --> 21:25.080
+It just makes a difference
+
+21:25.080 --> 21:27.080
+in how you hook up your control unit,
+
+21:27.080 --> 21:31.020
+just make sure that they tie to the right values.
+
+21:32.380 --> 21:33.260
+Okay. Our RAM has a Memory Address Register,
+
+21:33.260 --> 21:41.740
+so it has an address and a set value okay things like that our alu has two
+
+21:41.740 --> 21:49.340
+inputs a a comes off the bus on mine i made a come out to the side not the top b though does
+
+21:49.340 --> 21:57.740
+come out this way to the top my op code comes in i have my flags that come over they're not
+
+21:57.740 --> 22:03.500
+connected to anything yet i have a clock to make an accumulator so it's kind of just the basic
+
+22:04.220 --> 22:10.380
+and this is what you're building talks about temp and bus one how to build them or what they are
+
+22:14.380 --> 22:21.500
+okay so temp is just a memory circuit with some added input output right some added
+
+22:21.500 --> 22:26.460
+circuit stuff on there and then our bus is this is our bus
+
+22:28.060 --> 22:29.100
+one circuit
+
+22:31.500 --> 22:33.100
+okay whenever bus one is one
+
+22:35.340 --> 22:42.620
+okay this rightmost bit is one and everything else is zero because if you look at if it's one
+
+22:43.740 --> 22:46.700
+it NOTs to zero and it ANDs it with all the other bits
+
+22:48.300 --> 22:56.780
+it ORs it to one, it takes the one and ORs it with the zero bit from whatever temp is
+
+22:57.740 --> 23:00.540
+So it will always be 00000001.
+
+23:02.380 --> 23:04.780
+okay and what that means it's doing it's just adding one
+
+23:06.620 --> 23:13.980
+to get the next instruction register pretty much all right if it's not one if it's zero
+
+23:14.700 --> 23:20.380
+right this is zero and everything is one then whatever is in temp flows right through
+
+23:23.500 --> 23:26.780
+okay so it's just kind of a filter.
+
+23:30.700 --> 23:33.980
+accumulator, right where you want to put input, output, set and enable
+
+23:36.300 --> 23:42.620
+and then the flags you want to carry out we call it c you want a is larger we call it a
+
+23:42.620 --> 23:47.820
+a equals b we call it e result is zero we call it z and so you take them
+
+23:49.260 --> 23:54.860
+you put them into a cpu each one has its own one bit memory so you set them
+
+23:58.060 --> 24:00.940
+okay so you can store them when you set it you store whatever those are
+
+24:01.740 --> 24:08.940
+and then when you want them out you tie them to C, A, E, Z into our control unit
+
+24:13.020 --> 24:19.340
+okay so um anyway that's the primary stuff from a building perspective
+
+24:21.580 --> 24:26.460
+this week um these are registered number reg numbers
+
+24:27.740 --> 24:33.020
+okay what is r a what is r b typically in a command it's r a and r b
+
+24:33.660 --> 24:40.620
+but we're going to have them r 0 or 1. okay this is a sample of a control unit
+
+24:42.060 --> 24:48.700
+that only does one thing i believe this one adds a and b no it does something else
+
+24:53.180 --> 24:53.740
+so
+
+24:53.740 --> 24:59.020
+so anyway this circuit only does one thing
+
+25:02.220 --> 25:06.220
+okay and typically when you when we build this what we're going to do is we're going to have
+
+25:06.220 --> 25:12.700
+all our enables down the left side and all our sets down the right side and then we have a clock
+
+25:12.700 --> 25:20.300
+enable signal and a clock set signal and they're tied to every set and enables tied to every enable
+
+25:20.860 --> 25:23.660
+and we're ending it so that it can only be enabled
+
+25:23.740 --> 25:28.460
+when clock enable is set to one it can only be set when clock set is set to one
+
+25:29.180 --> 25:33.740
+and then our clock comes into this stepper and as we cycle our clock it moves through these
+
+25:33.740 --> 25:39.820
+different steps okay first it does step one then does two then three then four then five then six
+
+25:40.460 --> 25:47.260
+and then seven sends us back to do one again so we go one two three four five six one two three
+
+25:47.260 --> 25:53.660
+four five six one two three four five six so every um step or every one of these steps is set to one
+
+25:53.660 --> 25:54.620
+one clock cycle
+
+25:57.420 --> 26:01.660
+your one cpu cycle is six steps in our clock
+
+26:04.140 --> 26:04.620
+all right
+
+26:08.940 --> 26:17.820
+um then the last part is the actual instruction set this is our assembly language essentially
+
+26:19.340 --> 26:20.780
+okay so um
+
+26:24.620 --> 26:25.340
+let's see
+
+26:27.500 --> 26:30.140
+so it walks through different instruction codes
+
+26:31.100 --> 26:37.500
+um there's a whole program here which is called MYSIM.txt which i will provide to you as part of
+
+26:37.500 --> 26:46.700
+the project that basically loads in hex it loads the whole program here is the expanded
+
+26:48.620 --> 26:51.260
+um this is the commands that are in the program and what it does
+
+26:51.260 --> 26:58.380
+okay stores five into r0 stores five into r1 these are to multiply by five
+
+26:58.940 --> 27:03.260
+it stores one into r3 this is our counter like how many times do we do something
+
+27:05.660 --> 27:08.220
+all right our loop counter if you will
+
+27:10.540 --> 27:18.140
+okay so xor r2 with r2 for the product and this is the top of the loop and just go through the loop
+
+27:18.140 --> 27:18.700
+all right
+
+27:21.260 --> 27:28.060
+all right so the final project and the plan so what i'm asking you to do is look at the final
+
+27:28.060 --> 27:35.180
+project and for yourself put in a plan this is what i'm going to try to reach
+
+27:37.580 --> 27:44.380
+okay so tier c which is meaning the highest grade i get is a c on the final project is to
+
+27:45.420 --> 27:50.780
+execute fetch and every alu instruction so let's take the c as a c
+
+27:51.260 --> 27:57.920
+add shift right shift left not and or XOR and compare for a B everything in
+
+27:57.920 --> 28:05.960
+that plus memory and immediate values load and store data basically for a
+
+28:05.960 --> 28:12.200
+everything in B plus every jump and clear flag so that we could run this MYSIM.txt
+
+28:12.200 --> 28:21.600
+program and so for every tier you would submit once or you don't
+
+28:21.600 --> 28:28.800
+have to do every okay and then you decide when you want to stop basically
+
+28:28.800 --> 28:35.480
+but I'm asking you to try to predict where you're going to stop okay
+
+28:35.480 --> 28:39.760
+hopefully everybody wants to do the a and make it work and and see how the
+
+28:39.760 --> 28:42.180
+simulation runs but
+
+28:42.180 --> 28:47.040
+it doesn't always happen. Timewise, you may not have the time, or something
+
+28:47.040 --> 28:51.920
+doesn't work, and you may fall back to a lower tier okay
+
+28:56.740 --> 29:02.100
+all right and so this then this is our assignment for this week Part A, Logisim
+
+29:02.100 --> 29:07.800
+Checkpoint 4, CPU core on its bus so we'll talk about what needs to be
+
+29:07.800 --> 29:12.000
+done in your .circ
+
+29:12.180 --> 29:20.420
+C-I-R-C file okay CPU register bus one temp all the flags so the stuff
+
+29:20.420 --> 29:27.620
+that's in the other three sections okay I want you to build this so you have RAM
+
+29:27.620 --> 29:34.660
+already built you should have you a you built set of build temp bus one I showed
+
+29:34.660 --> 29:40.460
+you how to do the registers you know what an ALU, accumulator is, also
+
+29:40.460 --> 29:42.000
+program counter and a few other things
+
+29:42.000 --> 30:07.860
+organize them all of them will be for now but you need the
+
+30:07.860 --> 30:10.020
+instruction register and then the clock
+
+30:10.020 --> 30:14.500
+i've been posted at the time of making this video but i will post it
+
+30:14.500 --> 30:17.460
+before the week starts
+
+30:19.620 --> 30:22.260
+okay and
+
+30:27.940 --> 30:30.900
+you'll see your responses after your last attempt you can take it a couple
+
+30:30.900 --> 30:36.420
+times and so 60 for the circ file 40 for the
+
+30:36.420 --> 30:41.140
+quiz and then 10 for trying to
+
+30:41.140 --> 30:45.300
+let me know where you think you're going to
+
+30:45.300 --> 30:48.340
+stop in terms of
+
+30:48.500 --> 30:55.940
+your program your final project okay so that this cpu project plan is
+
+30:55.940 --> 30:58.420
+that one
+
+30:58.580 --> 31:02.180
+okay and all it is is just you're going to fill out this form
+
+31:02.180 --> 31:05.540
+name date your target
+
+31:07.380 --> 31:13.780
+um what instructions you build and then test programs
+
+31:17.780 --> 31:22.020
+you can try that if it's not a super i'm not super worried about your test
+
+31:22.020 --> 31:25.860
+program but you can try to try it you may not know yet because you
+
+31:25.860 --> 31:28.980
+just may not have enough insight into how it works
+
+31:28.980 --> 31:32.500
+at this point when that's fine
+
+31:35.620 --> 31:35.860
+okay
+
+31:36.420 --> 31:43.060
+okay and this is kind of a rough idea of when
+
+31:43.060 --> 31:46.260
+how you should be planning this so for next week
+
+31:46.260 --> 31:50.180
+week 11 will be the control unit then by
+
+31:50.180 --> 31:53.620
+13 the complete data path
+
+31:54.020 --> 31:56.260
+okay
+
+31:58.660 --> 32:02.580
+and then it takes a little while to work through stuff there's always a lot of
+
+32:02.580 --> 32:06.260
+troubleshooting things that maybe you got something wired back
+
+32:06.260 --> 32:07.220
+words
+
+32:07.220 --> 32:11.860
+which happens a lot and troubleshooting that
+
+32:11.860 --> 32:15.300
+can be a pain for some sometimes it's hard to figure out what i have wired
+
+32:15.300 --> 32:18.660
+backward or you know if something's not connected in
+
+32:18.660 --> 32:21.940
+the right place that kind of thing so there's some time
+
+32:21.940 --> 32:25.780
+in there to troubleshoot before the end of the semester when
+
+32:25.780 --> 32:32.820
+everything is due all right so uh good luck this week
+
+32:32.820 --> 32:34.740
+and hope everything's going well and
+
+32:36.180 --> 32:42.580
+um we'll talk to you soon if you need help at all please check in with me
+
+32:42.580 --> 32:46.740
+i will be reviewing and checking in with people
+
+32:46.740 --> 32:49.540
+this week as well
+
+32:50.900 --> 32:55.940
+okay thanks and hope you have a great week`;
+
+    var player, timeUpdater, parsedTranscript = [];
+
+    function timeToSeconds(timeStr) {
+      if (!timeStr) return 0;
+      var parts = timeStr.trim().split(':');
+      if (parts.length === 2) {
+        return (parseInt(parts[0]) || 0) * 60 + (parseFloat(parts[1]) || 0);
+      } else if (parts.length === 3) {
+        return (parseInt(parts[0]) || 0) * 3600 + (parseInt(parts[1]) || 0) * 60 + (parseFloat(parts[2]) || 0);
+      }
+      return 0;
+    }
+
+    function parseVtt(vttText) {
+      var cues = vttText.trim().split(/\n\n+/);
+      var parsedCues = [];
+      cues.forEach(function (cueBlock) {
+        if (cueBlock.indexOf('WEBVTT') === 0 || cueBlock.trim() === '') return;
+        var lines = cueBlock.trim().split('\n');
+        var timeLine = lines.filter(function (l) { return l.indexOf('-->') !== -1; })[0];
+        if (!timeLine) return;
+        var parts = timeLine.split(' --> ');
+        var textLines = lines.slice(lines.indexOf(timeLine) + 1);
+        parsedCues.push({
+          start: timeToSeconds(parts[0]),
+          end: timeToSeconds(parts[1]),
+          text: textLines.join(' ').trim()
+        });
+      });
+      return parsedCues;
+    }
+
+    function populateTranscript() {
+      var container = document.getElementById('transcript-container');
+      if (!container) return;
+      container.innerHTML = '';
+      parsedTranscript.forEach(function (cue) {
+        var lineEl = document.createElement('div');
+        lineEl.className = 'transcript-line';
+        lineEl.dataset.start = cue.start;
+        lineEl.dataset.end = cue.end;
+        lineEl.textContent = cue.text;
+        lineEl.setAttribute('role', 'button');
+        lineEl.setAttribute('tabindex', '0');
+        var seekTo = function () {
+          if (player && player.seekTo) { player.seekTo(cue.start, true); player.playVideo(); }
+        };
+        lineEl.addEventListener('click', seekTo);
+        lineEl.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); seekTo(); }
+        });
+        container.appendChild(lineEl);
+      });
+    }
+
+    function highlightCurrentLine() {
+      if (!player || !player.getCurrentTime) return;
+      var currentTime = player.getCurrentTime();
+      var lines = document.querySelectorAll('#transcript-container .transcript-line');
+      lines.forEach(function (line) {
+        var start = parseFloat(line.dataset.start);
+        var end = parseFloat(line.dataset.end);
+        if (currentTime >= start && currentTime < end) {
+          if (!line.classList.contains('active-transcript-line')) {
+            var prev = document.querySelector('#transcript-container .active-transcript-line');
+            if (prev) prev.classList.remove('active-transcript-line');
+            line.classList.add('active-transcript-line');
+            line.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else {
+          line.classList.remove('active-transcript-line');
+        }
+      });
+    }
+
+    function syncTranscriptHeight() {
+      var videoContainer = document.getElementById('video-container');
+      var transcriptContainer = document.getElementById('transcript-container');
+      if (!videoContainer || !transcriptContainer) return;
+      var videoCol = videoContainer.closest('.video-col');
+      var transcriptCol = transcriptContainer.closest('.transcript-col');
+      var sideBySide = !!(videoCol && transcriptCol) && Math.abs(
+        transcriptCol.getBoundingClientRect().top - videoCol.getBoundingClientRect().top) < 2;
+      if (sideBySide) {
+        transcriptContainer.style.height = videoContainer.offsetHeight + 'px';
+        transcriptContainer.style.maxHeight = videoContainer.offsetHeight + 'px';
+      } else {
+        transcriptContainer.style.height = '24rem';
+        transcriptContainer.style.maxHeight = '24rem';
+      }
+    }
+
+    window.onYouTubeIframeAPIReady = function () {
+      if (!VIDEO_ID || !document.getElementById('youtube-player')) return;
+      player = new YT.Player('youtube-player', {
+        videoId: VIDEO_ID,
+        events: {
+          onStateChange: function (event) {
+            clearInterval(timeUpdater);
+            if (event.data === YT.PlayerState.PLAYING) {
+              timeUpdater = setInterval(highlightCurrentLine, 300);
+            }
+          }
+        }
+      });
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      if (!VIDEO_ID || !vttContent.trim()) { syncTranscriptHeight(); return; }
+
+      parsedTranscript = parseVtt(vttContent);
+      populateTranscript();
+      setTimeout(syncTranscriptHeight, 100);
+      if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+        var tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      } else {
+        window.onYouTubeIframeAPIReady();
+      }
+    });
+
+    var resizeTimeout;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(syncTranscriptHeight, 250);
+    });
+  })();
+  </script>
 </body>
 </html>
