@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w12-04">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 12: Asking the System</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .sc-table td:first-child { font-family: var(--font-mono); text-align: center; }
+    .recap td:first-child { font-weight: 700; white-space: nowrap; }
+    .sx-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-md); }
+    @media (max-width: 760px) { .sx-grid { grid-template-columns: 1fr; } }
+    .sx-panel { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-surface); min-width: 0; }
+    .sx-panel h3 { margin: 0 0 var(--space-xs); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .sx-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 4px 0; font-size: var(--fs-sm); }
+    .sx-row select, .sx-row input { font-family: var(--font-mono); padding: 2px 6px; border: 1px solid var(--color-border); border-radius: 4px; }
+    .sx-row input { width: 8rem; }
+    .code { font-family: var(--font-mono); font-size: 13px; background: var(--color-code-bg); border-radius: 4px; padding: 6px 10px; white-space: pre; overflow-x: auto; }
+    .console { font-family: var(--font-mono); background: #1d2733; color: #e8f0e8; border-radius: 4px; padding: 8px 10px; min-height: 2.2em; overflow-wrap: anywhere; }
+    .steps-ol { font-size: var(--fs-sm); margin: var(--space-xs) 0 0; padding-left: 1.3rem; }
+    .steps-ol li.on { font-weight: 700; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 12 &rsaquo; <span>Page 4 — Asking the System</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Asking the System</h1>
+    <p><strong>Sections 12.13 – 12.16</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1 hour</p>
+
+    <section id="sec-12-13">
+      <h2>12.13 &nbsp; Programs that need help</h2>
+
+      <p>Page 3&rsquo;s program wrote straight to the display. On a real computer an ordinary program is not allowed to: the device registers belong to the <strong>operating system</strong>, which shares the screen, the keyboard and the disk among every program running, and checks that each request is allowed. The processor enforces this with two modes. In <strong>kernel mode</strong> the operating system can touch anything; in <strong>user mode</strong> a program that tries to reach a device register, or the operating system&rsquo;s memory, is stopped. So a user program needs a way to ask the operating system to do something for it &mdash; a way that also switches the processor into kernel mode, safely, at a place the operating system chose.</p>
+
+      <p>You have been using that way since Week 5. It is <code>syscall</code>.</p>
+    </section>
+
+    <section id="sec-12-14">
+      <h2>12.14 &nbsp; <code>syscall</code> is a software interrupt</h2>
+
+      <p>Week 5 taught the calling side: put a service number in <code>$v0</code>, any arguments in <code>$a0</code> and <code>$a1</code>, and execute <code>syscall</code>; a result, if any, comes back in <code>$v0</code>. These are the services this course uses:</p>
+
+      <div class="table-scroll">
+        <table class="sc-table">
+          <thead><tr><th><code>$v0</code></th><th>Service</th><th>Arguments and result</th></tr></thead>
+          <tbody id="sc-tbody"><tr><td colspan="3"><em>Loading the table&hellip;</em></td></tr></tbody>
+        </table>
+      </div>
+
+      <p>Here is what the hardware does with it. <code>syscall</code> is an instruction whose whole job is to cause an <strong>exception</strong> &mdash; a deliberate one, which is why it is called a <em>software interrupt</em> or <em>trap</em>. When it executes, a MIPS processor:</p>
+      <ol>
+        <li>saves the address of the <code>syscall</code> in a special register, <strong>EPC</strong> (exception program counter), so it knows where to come back to;</li>
+        <li>records the reason in the <strong>Cause</strong> register &mdash; code 8 means &ldquo;system call&rdquo;;</li>
+        <li>switches to kernel mode and sets the PC to a fixed address where the operating system&rsquo;s <strong>exception handler</strong> lives (<code>0x80000180</code> in MARS);</li>
+        <li>the handler reads <code>$v0</code>, performs the service &mdash; talking to the device registers itself &mdash; and puts any result in <code>$v0</code>;</li>
+        <li>the handler returns to the instruction after the <code>syscall</code>, back in user mode.</li>
+      </ol>
+      <p>Look at what that is: the PC is changed to an address the program did not choose, after the old address is saved. It is a jump, made by the hardware, to the operating system. MARS has no operating system, so it performs each service itself and moves straight on; the program sees the same result either way.</p>
+    </section>
+
+    <!-- ========== Widget 4 ========== -->
+    <section id="sec-sx">
+      <div class="widget-card" id="w-sx">
+        <div class="widget-card__title">syscall</div>
+        <div class="widget-card__subtitle">Choose a service and its input. Left: the code you write. Right: what the program sees afterward, and the five steps the hardware and the kernel take in between.</div>
+
+        <div class="sx-row">
+          <label for="sx-svc"><strong>Service</strong></label>
+          <select id="sx-svc"></select>
+          <label for="sx-arg" id="sx-arg-l">Input</label>
+          <input type="text" id="sx-arg" value="42" autocomplete="off">
+          <button type="button" class="widget-btn widget-btn--primary" id="sx-go">run the syscall</button>
+        </div>
+        <div class="sx-grid">
+          <div class="sx-panel">
+            <h3>Your code</h3>
+            <div class="code" id="sx-code"></div>
+          </div>
+          <div class="sx-panel">
+            <h3>Afterward</h3>
+            <div class="console" id="sx-console" aria-live="polite"></div>
+            <p style="font-size:var(--fs-sm);margin:var(--space-xs) 0 0" id="sx-regs"></p>
+            <ol class="steps-ol" id="sx-steps"></ol>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-12-15">
+      <h2>12.15 &nbsp; Hardware interrupts</h2>
+
+      <p>Page 3 ended with polling&rsquo;s cost: a program asking &ldquo;ready yet?&rdquo; over and over. An <strong>interrupt</strong> turns the question round. The device gets a wire to the processor, and raises it when it is ready &mdash; a key has been pressed, a disk block has arrived. Between instructions the processor checks that wire; if it is up, it does exactly what it does for <code>syscall</code>: saves the PC in EPC, records the cause (this time &ldquo;a device&rdquo;), and jumps to the handler. The handler deals with the device and returns, and the interrupted program carries on as if nothing had happened.</p>
+
+      <p>So there are three kinds of event and one mechanism. A <strong>hardware interrupt</strong> comes from a device, at any moment. A <strong>software interrupt</strong> &mdash; <code>syscall</code> &mdash; comes from the program, on purpose. An <strong>exception</strong> in the narrow sense comes from a mistake, such as an arithmetic overflow or an address that is not aligned; MARS reports those as runtime errors. All three save where the program was and jump to the operating system. The trade-off against polling: interrupts let the processor do useful work while a device is busy, at the price of saving and restoring state on every event. A device that is almost always ready, or a program with nothing else to do, may as well poll.</p>
+
+      <p>The MARS display can interrupt too: setting bit 1 of its control register asks it to. Using that needs an exception handler of your own, which is beyond this course.</p>
+    </section>
+
+    <section id="sec-12-16">
+      <h2>12.16 &nbsp; Your CPU, and Phase 3 in one picture</h2>
+
+      <p>Your CPU has none of this machinery: no kernel mode, no EPC, no interrupt wire, no <code>syscall</code>. When its program is finished, the <code>END</code> instruction (Week 10) will stop its clock &mdash; you build the circuit that detects it in Week 14. That is a fair place for a teaching CPU to stop; everything on this page is built on top of the fetch-decode-execute loop you now understand, by adding a few registers and one more way to change the PC.</p>
+
+      <p>This week closes Phase 3, which set out to explain how the parts you built become a processor that executes instructions. Quiz 2 covers all four weeks:</p>
+
+      <div class="table-scroll">
+        <table class="recap">
+          <thead><tr><th>Week</th><th>The idea</th><th>On your CPU</th></tr></thead>
+          <tbody>
+            <tr><td>9</td><td>Fetch-decode-execute; datapath and control; multi-cycle MIPS</td><td>&ldquo;You have been the control unit.&rdquo;</td></tr>
+            <tr><td>10</td><td>One bus, one driver; TMP, BUS1, ACC, FLAGS; the instruction set</td><td>Checkpoint 4: the core on its bus</td></tr>
+            <tr><td>11</td><td>Clock, stepper, control table; hardwired and microprogrammed; single- and multi-cycle</td><td>Checkpoint 5: ALU instructions and CLF run themselves</td></tr>
+            <tr><td>12</td><td>Memory bus and timing; MDR; memory- and port-mapped I/O; syscall and interrupts</td><td>LD and ST as two transfers; no MDR; I/O instructions as a design</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Three questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>Phase 3 is done. Next week, Phase 4 begins: the program counter, the instruction register and your RAM join the bus, fetch is wired, and your CPU starts reading its own instructions.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 12, Page 4
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['sys'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.sys) { return; }
+    var S = L.sys;
+    function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+    (function () {
+      var tb = document.getElementById('sc-tbody');
+      if (tb) { tb.innerHTML = S.CALLS.map(function (c) { return '<tr><td>' + c.code + '</td><td>' + c.service + '</td><td>' + esc(c.args) + '</td></tr>'; }).join(''); }
+    }());
+
+    /* ---------- Widget 4 — syscall ---------- */
+    (function () {
+      var host = document.getElementById('w-sx');
+      if (!host) { return; }
+      var sel = document.getElementById('sx-svc'), arg = document.getElementById('sx-arg');
+      sel.innerHTML = S.CALLS.map(function (c) { return '<option value="' + c.code + '">' + c.code + ' — ' + c.service + '</option>'; }).join('');
+      var DEFAULT = { 1: '42', 4: 'Hello', 5: '17', 8: 'abc', 9: '16', 10: '', 11: 'A', 12: 'q' };
+      var LABEL = { 1: 'integer in $a0', 4: 'the string', 5: 'what the user types', 8: 'what the user types', 9: 'bytes wanted', 10: '(none)', 11: 'the character', 12: 'the key pressed' };
+      function code(c, a) {
+        switch (c) {
+          case 1:  return 'li   $a0, ' + (parseInt(a, 10) || 0) + '\nli   $v0, 1\nsyscall';
+          case 4:  return '        .data\nmsg:    .asciiz "' + a + '"\n        .text\n        la   $a0, msg\n        li   $v0, 4\n        syscall';
+          case 5:  return 'li   $v0, 5\nsyscall          # the integer is now in $v0';
+          case 8:  return '        .data\nbuf:    .space 16\n        .text\n        la   $a0, buf\n        li   $a1, 16\n        li   $v0, 8\n        syscall';
+          case 9:  return 'li   $a0, ' + (parseInt(a, 10) || 0) + '\nli   $v0, 9\nsyscall          # the address is now in $v0';
+          case 10: return 'li   $v0, 10\nsyscall';
+          case 11: return 'li   $a0, ' + (a ? a.charCodeAt(0) : 65) + "        # '" + (a ? a.charAt(0) : 'A') + "'\nli   $v0, 11\nsyscall";
+          case 12: return 'li   $v0, 12\nsyscall          # the character is now in $v0';
+        }
+        return '';
+      }
+      function result(c, a) {
+        switch (c) {
+          case 1:  return { out: String(parseInt(a, 10) || 0), regs: '$v0 unchanged (1).' };
+          case 4:  return { out: a, regs: '$v0 unchanged (4).' };
+          case 5:  return { out: (parseInt(a, 10) || 0) + '   ← typed', regs: '$v0 = ' + (parseInt(a, 10) || 0) + '.' };
+          case 8:  return { out: a + '   ← typed', regs: 'buf now holds "' + a + '" followed by a newline and a 0 byte, up to $a1 − 1 characters.' };
+          case 9:  return { out: '', regs: '$v0 = 0x10040000, the address of ' + (parseInt(a, 10) || 0) + ' new bytes (the first request; later ones come after it).' };
+          case 10: return { out: '-- program is finished running --', regs: 'Nothing comes back: the program has ended.' };
+          case 11: return { out: a ? a.charAt(0) : 'A', regs: '$v0 unchanged (11).' };
+          case 12: return { out: (a ? a.charAt(0) : 'q') + '   ← typed', regs: '$v0 = ' + (a ? a.charCodeAt(0) : 113) + " ('" + (a ? a.charAt(0) : 'q') + "')." };
+        }
+        return { out: '', regs: '' };
+      }
+      var STEPS = ['EPC ← the address of the syscall', 'Cause ← 8 (system call)', 'kernel mode; PC ← 0x80000180, the exception handler', 'the handler reads $v0 and performs the service', 'return to the instruction after the syscall, in user mode'];
+      function setup() {
+        var c = +sel.value;
+        arg.value = DEFAULT[c]; arg.disabled = (c === 10);
+        document.getElementById('sx-arg-l').textContent = LABEL[c];
+        show(false);
+      }
+      function show(ran) {
+        var c = +sel.value, a = arg.value;
+        document.getElementById('sx-code').textContent = code(c, a);
+        var r = result(c, a);
+        document.getElementById('sx-console').textContent = ran ? r.out : '';
+        document.getElementById('sx-regs').textContent = ran ? r.regs : 'Run it to see the result.';
+        document.getElementById('sx-steps').innerHTML = STEPS.map(function (s, i) {
+          var txt = (c === 10 && i === 4) ? 'the handler ends the program instead of returning' : s;
+          return '<li' + (ran ? ' class="on"' : '') + '>' + esc(txt) + '</li>';
+        }).join('');
+      }
+      sel.addEventListener('change', setup);
+      arg.addEventListener('input', function () { show(false); });
+      document.getElementById('sx-go').addEventListener('click', function () { show(true); });
+      setup();
+    }());
+
+    /* ---------- Self-check D ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+        { q: 'Which register tells <code>syscall</code> which service you want?',
+          opts: ['$a0', '$v0', '$ra', 'EPC'],
+          correct: 1,
+          why: 'The service number goes in $v0. Arguments go in $a0 and $a1; a result comes back in $v0.' },
+        { q: 'When <code>syscall</code> executes on a real MIPS processor, what does EPC receive?',
+          opts: ['The service number', 'The address of the syscall instruction, so the handler knows where to return', 'The address of the exception handler', 'The value read from the keyboard'],
+          correct: 1,
+          why: 'EPC saves where the program was. The PC then goes to the handler&rsquo;s fixed address.' },
+        { q: 'What is the main advantage of a hardware interrupt over polling?',
+          opts: ['It makes the device faster', 'The processor can do other work and is told when the device is ready', 'It needs no handler', 'It uses fewer device registers'],
+          correct: 1,
+          why: 'Polling spends instructions asking; an interrupt lets the device announce itself, at the cost of saving and restoring state.' }
+      ];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p><div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi], okAns = (oi === item.correct), fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) { el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false'); });
+      }
+      host.addEventListener('click', function (e) { var t = e.target.closest('.quiz-option'); if (t) { answer(+t.dataset.q, +t.dataset.o); } });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+  })();
+  </script>
+</body>
+</html>

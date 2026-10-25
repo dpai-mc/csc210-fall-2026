@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w12-01">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 12: The Memory Bus</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .ldst-table td:first-child { font-family: var(--font-mono); font-weight: 700; white-space: nowrap; }
+    .pins td:first-child { font-family: var(--font-mono); }
+    .mb-panel { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-surface); min-width: 0; margin-top: var(--space-sm); }
+    .mb-panel h3 { margin: 0 0 var(--space-xs); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .vals { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 4px; }
+    .val { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+    .val b { font-family: var(--font-sans); color: var(--color-primary); }
+    .val--wrote { border-color: var(--color-success); background: #f0faf4; }
+    .ramgrid { display: grid; grid-template-columns: 2.6rem repeat(16, minmax(0, 1fr)); gap: 2px; font-family: var(--font-mono); font-size: 10px; }
+    .ramgrid div { border: 1px solid var(--color-border); border-radius: 2px; text-align: center; padding: 2px 0; overflow: hidden; }
+    .ramgrid .hd { border: none; color: var(--color-text-muted); font-weight: 700; }
+    .ramgrid .sel { outline: 2px solid var(--color-accent); outline-offset: -2px; background: #fff5eb; }
+    .ramgrid .w { background: #f0faf4; border-color: var(--color-success); }
+    .ramgrid .unpop { border-style: dashed; color: var(--color-text-muted); }
+    .xf { font-size: var(--fs-sm); margin: 2px 0; }
+    .xf--bad { color: var(--color-danger); }
+    .mb-status { font-size: var(--fs-sm); min-height: 1.5em; margin: var(--space-xs) 0; }
+    .mb-sel { font-family: var(--font-mono); font-size: var(--fs-sm); padding: 2px 6px; border: 1px solid var(--color-border); border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 12 &rsaquo; <span>Page 1 — The Memory Bus</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>The Memory Bus</h1>
+    <p><strong>Sections 12.1 – 12.4</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1 hour</p>
+
+    <section id="sec-12-1">
+      <h2>12.1 &nbsp; What a memory needs to be told</h2>
+
+      <p><strong>What you have.</strong> A CPU core that runs ALU instructions under its own control unit, and, in a separate tab since Week 8, a RAM with its own memory address register. <strong>What you can&rsquo;t do yet.</strong> Get a byte from the RAM into a register, or back. <strong>What you can do by the end of this page.</strong> Say exactly which transfers your CPU will use for <code>LD</code> and <code>ST</code>, and what the RAM sees during each.</p>
+
+      <p>Every memory, from your 32-byte RAM to the gigabytes in a laptop, has to be told three things on every access, and the wires that carry them are named for what they carry:</p>
+      <ul>
+        <li><strong>Address lines</strong> &mdash; <em>which</em> location. Eight of them reach 256 locations; 32 reach four billion.</li>
+        <li><strong>Data lines</strong> &mdash; the value itself, going into memory on a write and coming out on a read.</li>
+        <li><strong>Control lines</strong> &mdash; <em>what</em> to do and <em>when</em>: read or write, and a signal that says the address and data are ready now.</li>
+      </ul>
+      <p>Together they are the <strong>memory bus</strong>. Some processors give each group its own wires, so an address and data can travel at the same moment. Others share wires and send the address first, then the data. Yours is the second kind, as you are about to see.</p>
+    </section>
+
+    <section id="sec-12-2">
+      <h2>12.2 &nbsp; Your RAM&rsquo;s bus</h2>
+
+      <p>Look at the pins of the <code>RAM_16X16</code> tab you built in Week 8 and sort them into the three groups:</p>
+
+      <div class="table-scroll">
+        <table class="pins">
+          <thead><tr><th>Pin</th><th>Group</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td>address</td><td>address</td><td>the address offered to the MAR</td></tr>
+            <tr><td>sa</td><td>control</td><td>MAR set: while high, the MAR follows <code>address</code></td></tr>
+            <tr><td>i</td><td>data</td><td>the byte to write</td></tr>
+            <tr><td>o</td><td>data</td><td>the selected byte, or floating</td></tr>
+            <tr><td>s</td><td>control</td><td>write: the selected byte captures <code>i</code></td></tr>
+            <tr><td>e</td><td>control</td><td>read: the selected byte drives <code>o</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Now remember that your CPU has <em>one</em> bus. In Week 13 the RAM joins it like this: <code>address</code>, <code>i</code> and <code>o</code> all connect to the bus, <code>sa</code> becomes the control unit&rsquo;s <code>MAR_S</code>, <code>s</code> becomes <code>RAM_S</code> and <code>e</code> becomes <code>RAM_E</code>. The same eight wires carry an address in one transfer and data in the next. <strong>That is why the RAM has a MAR</strong>: the address has to stay put after the bus moves on to carry the data.</p>
+    </section>
+
+    <section id="sec-12-3">
+      <h2>12.3 &nbsp; LD and ST are two transfers</h2>
+
+      <p>You met the two memory instructions in Week 10: <code>LD RA, RB</code> loads RB from the RAM address held in RA, and <code>ST RA, RB</code> stores RB at the address held in RA. On your CPU each takes two transfers, at steps 4 and 5 of the stepper; step 6 does nothing. This table is produced by the model that runs the widget below:</p>
+
+      <div class="table-scroll">
+        <table class="ldst-table">
+          <thead><tr><th>Instruction</th><th>Step</th><th>Drives the bus</th><th>Captures</th><th>Effect</th></tr></thead>
+          <tbody id="ldst-body"><tr><td colspan="5"><em>Loading the table&hellip;</em></td></tr></tbody>
+        </table>
+      </div>
+
+      <p>Both start the same way: RA drives the bus and the MAR captures it, so the address is locked in. Then they differ only in direction. A load lets the RAM drive the bus and a register capture; a store lets a register drive the bus and the RAM capture. In Week 14 you add these rows to your control unit&rsquo;s table, using the LD and ST class lines you built last week.</p>
+    </section>
+
+    <!-- ========== Widget 1 ========== -->
+    <section id="sec-mb">
+      <div class="widget-card" id="w-mb">
+        <div class="widget-card__title">Memory Bus</div>
+        <div class="widget-card__subtitle">Your four registers and your Week 8 RAM, joined by one bus. Run a load or a store and watch its two transfers.</div>
+
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <label for="mb-pick"><strong>Instruction</strong></label>
+          <select id="mb-pick" class="mb-sel">
+            <option>ST R0, R1</option>
+            <option>LD R0, R3</option>
+            <option>LD R3, R2</option>
+            <option>ST R3, R0</option>
+            <option>LD R2, R1</option>
+            <option>ST R2, R1</option>
+          </select>
+          <button type="button" class="widget-btn widget-btn--primary" id="mb-run">run it</button>
+          <button type="button" class="widget-btn widget-btn--outline" id="mb-reset">reset</button>
+        </div>
+
+        <div class="mb-panel">
+          <h3>Transfers</h3>
+          <div id="mb-xfers"><p class="xf">Choose an instruction and run it.</p></div>
+        </div>
+        <div class="mb-panel">
+          <h3>Registers</h3>
+          <div class="vals" id="mb-regs"></div>
+        </div>
+        <div class="mb-panel">
+          <h3>RAM: the 32 populated bytes (rows 0 and 1)</h3>
+          <div class="ramgrid" id="mb-ram" role="img" aria-label="RAM contents"></div>
+          <p style="font-size:var(--fs-xs);margin:var(--space-xs) 0 0" id="mb-mar"></p>
+        </div>
+        <p class="mb-status" id="mb-status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section id="sec-12-4">
+      <h2>12.4 &nbsp; The 256/32 gap, from the CPU&rsquo;s side</h2>
+
+      <p>In Week 8 you designed a RAM for 256 addresses and populated 32 of them, rows 0 and 1, because Logisim slows to a crawl with the whole matrix. From the CPU&rsquo;s side that has a precise consequence. An address from <code>0x00</code> to <code>0x1F</code> selects a byte. An address from <code>0x20</code> up decodes to a row that has no bytes in it: the row line goes high and nothing answers. So a <strong>load from an unpopulated address</strong> leaves the bus floating, and the register captures nothing anyone chose; a <strong>store to one</strong> stores nothing at all. Try <code>LD R2, R1</code> and <code>ST R2, R1</code> above, with R2 = <code>01000000</code>.</p>
+
+      <p>Real systems face the same gap on a larger scale: a 64-bit processor can name far more addresses than any machine has memory. Week 16 picks this up with the memory hierarchy.</p>
+
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Three questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>You can sort a memory&rsquo;s wires into address, data and control, and list the two transfers of a load and a store on your CPU. Next page: what happens when the memory cannot answer as fast as the processor asks.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 12, Page 1
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['sys', 'core'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.sys || !L.core) { return; }
+    var S = L.sys, C = L.core;
+    function b8(v) { return v === null || v === undefined ? 'EEEEEEEE' : C.bits(v, 8); }
+    function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+    /* ---------- LD/ST table, from the model ---------- */
+    (function () {
+      var body = document.getElementById('ldst-body');
+      if (!body) { return; }
+      var rows = [];
+      S.LDST.forEach(function (ins) {
+        ins.steps.forEach(function (st, i) {
+          rows.push('<tr><td>' + (i === 0 ? ins.syntax : '') + '</td><td>' + st.step + '</td><td>' + st.enable + '</td><td>' + st.set + '</td><td>' + esc(st.rtl) + '</td></tr>');
+        });
+        rows.push('<tr><td></td><td>6</td><td>&mdash;</td><td>&mdash;</td><td>nothing</td></tr>');
+      });
+      body.innerHTML = rows.join('');
+    }());
+
+    /* ---------- Widget 1 — Memory Bus ---------- */
+    (function () {
+      var host = document.getElementById('w-mb');
+      if (!host) { return; }
+      var INIT = { R0: 0x13, R1: 0x5A, R2: 0x40, R3: 0x05, ram: [] };
+      INIT.ram[0x05] = 0x2A; INIT.ram[0x13] = 0x07;
+      var m, last;
+      function reset() {
+        m = S.memCpu(INIT); last = null;
+        document.getElementById('mb-xfers').innerHTML = '<p class="xf">Choose an instruction and run it.</p>';
+        document.getElementById('mb-status').textContent = 'R0 = 00010011 (0x13), R1 = 01011010, R2 = 01000000 (0x40), R3 = 00000101 (0x05). RAM[0x05] = 00101010 and RAM[0x13] = 00000111; the other bytes have never been written.';
+        paint();
+      }
+      function run() {
+        var ins = document.getElementById('mb-pick').value;
+        var r = m.run(ins); last = r;
+        document.getElementById('mb-xfers').innerHTML = r.transfers.map(function (t) {
+          if (!t.ok) { return '<p class="xf xf--bad"><strong>Step ' + t.step + '.</strong> ' + esc(t.error) + '</p>'; }
+          var extra = t.set === 'MAR' ? ' &mdash; row ' + t.row + ', column ' + t.col + (t.populated ? '' : ' <strong>(an unpopulated row)</strong>') : '';
+          return '<p class="xf"><strong>Step ' + t.step + '.</strong> ' + t.enable + ' drives the bus (' + b8(t.bus) + '); ' + t.set + ' captures. ' + esc(t.rtl) + extra + '</p>';
+        }).join('') + '<p class="xf"><strong>Step 6.</strong> Nothing.</p>';
+        document.getElementById('mb-status').textContent = ins + ': ' + (r.ok ? 'done.' : 'see step ' + r.transfers[r.transfers.length - 1].step + '.');
+        paint();
+      }
+      function paint() {
+        var s = m.state();
+        var wroteR = last && last.ok ? last.transfers[1].set : '';
+        document.getElementById('mb-regs').innerHTML = ['R0', 'R1', 'R2', 'R3'].map(function (n) {
+          return '<div class="val' + (wroteR === n ? ' val--wrote' : '') + '"><b>' + n + '</b> ' + b8(s[n]) + '</div>';
+        }).join('');
+        var wroteA = last && last.ok && last.transfers[1].wrote ? last.transfers[1].wrote : [];
+        var h = '<div class="hd"></div>';
+        for (var c = 0; c < 16; c++) { h += '<div class="hd">' + c.toString(16).toUpperCase() + '</div>'; }
+        for (var r = 0; r < 2; r++) {
+          h += '<div class="hd">row ' + r + '</div>';
+          for (var k = 0; k < 16; k++) {
+            var a = r * 16 + k, v = s.ram[a];
+            h += '<div class="' + (s.mar === a ? 'sel' : '') + (wroteA.indexOf(a) >= 0 ? ' w' : '') + '" title="address ' + C.hex2(a) + '">' + (v === null ? 'E' : C.hex2(v).slice(2)) + '</div>';
+          }
+        }
+        document.getElementById('mb-ram').innerHTML = h;
+        document.getElementById('mb-ram').setAttribute('aria-label', 'RAM contents, 32 bytes in hex; unwritten bytes shown as E. MAR = ' + (s.mar === null ? 'never set' : C.hex2(s.mar)));
+        document.getElementById('mb-mar').innerHTML = 'MAR = ' + (s.mar === null ? 'never set' : b8(s.mar) + ' (' + C.hex2(s.mar) + ')' + (s.mar > 0x1F ? ' &mdash; rows 2 to 15 have no bytes, so nothing is selected' : ''));
+      }
+      document.getElementById('mb-run').addEventListener('click', run);
+      document.getElementById('mb-reset').addEventListener('click', reset);
+      reset();
+    }());
+
+    /* ---------- Self-check A ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+        { q: 'Which group of memory-bus lines says whether the access is a read or a write?',
+          opts: ['Address lines', 'Data lines', 'Control lines', 'None: memory works it out from the address'],
+          correct: 2,
+          why: 'Address lines say where, data lines carry the value, control lines say what and when. On your RAM: s (write) and e (read).' },
+        { q: 'During step 5 of <code>ST R3, R0</code>, what drives the bus?',
+          opts: ['R3', 'R0', 'The RAM', 'The MAR'],
+          correct: 1,
+          why: 'ST RA, RB stores RB at the address in RA. Step 4 put R3 (the address) in the MAR; step 5 puts R0 (the data) on the bus for the RAM to capture.' },
+        { q: 'R1 = <code>00100000</code> (0x20). What does <code>LD R1, R2</code> leave in R2?',
+          opts: ['The byte at address 0x20', '00000000', 'Nothing anyone chose: address 0x20 is in row 2, which has no bytes, so the bus floats', 'The byte at address 0x00'],
+          correct: 2,
+          why: '0x20 splits into row 2, column 0. Only rows 0 and 1 are populated, so no byte answers, and a load from a floating bus captures nothing meaningful.' }
+      ];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p><div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi], okAns = (oi === item.correct), fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) { el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false'); });
+      }
+      host.addEventListener('click', function (e) { var t = e.target.closest('.quiz-option'); if (t) { answer(+t.dataset.q, +t.dataset.o); } });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+  })();
+  </script>
+</body>
+</html>

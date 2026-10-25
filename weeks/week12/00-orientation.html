@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w12-00">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 12 Orientation: Talking to Memory and the World</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .split-bar { display: flex; height: 2.2rem; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--color-border); margin: var(--space-sm) 0; }
+    .split-bar > div { display: flex; align-items: center; justify-content: center; font-size: var(--fs-xs); font-weight: 700; color: #fff; text-align: center; padding: 0 2px; overflow: hidden; }
+    .split-bar .sb-pg { background: var(--color-primary); }
+    .split-bar .sb-qz { background: var(--color-success); }
+    .split-bar .sb-q2 { background: var(--color-accent-hov); }
+    .split-legend { display: flex; justify-content: space-between; font-size: var(--fs-xs); color: var(--color-text-muted); gap: var(--space-sm); }
+    .due { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-md); margin: var(--space-md) 0; }
+    .due > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
+    .due h3 { margin-top: 0; font-size: var(--fs-base); }
+    @media (max-width: 760px) { .due { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 12 &rsaquo; <span>Orientation</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Week 12 — Talking to Memory and the World</h1>
+    <p><strong>The memory bus, memory timing, input and output, and the system call</strong> &nbsp;|&nbsp; <strong>11/02 – 11/08</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~6.5 hours</p>
+
+    <section id="sec-gap">
+      <div class="callout callout--hook">
+        <div class="callout__title">Your CPU can&rsquo;t talk to anything yet.</div>
+        <p>Last week your control unit ran an instruction by itself: twenty-four clicks, and a register held a new value. But every part it used was a register on the bus. Your RAM sits in its own tab, waiting for Week 13. There is no keyboard and no screen. And the MARS programs you have written since Week 5 ended with <code>syscall</code>, an instruction that asks for something no program can do for itself.</p>
+        <p>This week is about everything on the other side of the processor: how a CPU asks memory for a byte, what happens when memory is slower than the CPU, how a program reaches a keyboard or a display, and what <code>syscall</code> actually does. It closes Phase 3, so it ends with <strong>Quiz 2</strong> on Weeks 9 to 12.</p>
+      </div>
+    </section>
+
+    <section id="sec-shape">
+      <h2>The shape of the week</h2>
+      <div class="split-bar" role="img" aria-label="Of about six and a half hours this week: about four hours on the orientation and the four Week 12 pages, about half an hour on the Assignment 12 quiz, and about two hours reviewing for and taking Quiz 2.">
+        <div class="sb-pg" style="flex:4">Week 12 pages</div>
+        <div class="sb-qz" style="flex:0.5">A12</div>
+        <div class="sb-q2" style="flex:2">Quiz 2</div>
+      </div>
+      <div class="split-legend"><span>~4 hrs</span><span>~0.5</span><span>~2 hrs</span></div>
+      <p><strong>There is no Logisim checkpoint this week.</strong> Next week&rsquo;s Checkpoint 6 puts the program counter, the instruction register and your RAM on the bus and wires fetch, so page 1 shows you exactly how your CPU will use its RAM before you wire it.</p>
+
+      <div class="due">
+        <div>
+          <h3>Assignment 12</h3>
+          <p>A <strong>Canvas quiz</strong> on the four Week 12 pages &mdash; 25 points, 10 questions, auto-graded. No time limit, two attempts.</p>
+        </div>
+        <div>
+          <h3>Quiz 2</h3>
+          <p><strong>Weeks 9 to 12</strong> &mdash; 100 points, 20 questions, auto-graded. No time limit, two attempts, higher score kept. The Quiz 2 guide in this module lists what it covers.</p>
+        </div>
+      </div>
+      <p><strong>Both are due Sunday 11/08, 11:59 pm.</strong></p>
+    </section>
+
+    <section id="sec-path">
+      <h2>This week&rsquo;s learning path</h2>
+      <div class="spa-card-grid">
+        <div class="spa-card">
+          <div class="spa-card__number">Page 1</div>
+          <div class="spa-card__title">The Memory Bus</div>
+          <div class="spa-card__time">~1 hr &nbsp;|&nbsp; Sections 12.1–12.4</div>
+          <div class="spa-card__desc">Address, data and control lines; your RAM&rsquo;s pins seen as a bus; and LD and ST as two transfers each.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+        <div class="spa-card">
+          <div class="spa-card__number">Page 2</div>
+          <div class="spa-card__title">Memory Is Slow</div>
+          <div class="spa-card__time">~45 min &nbsp;|&nbsp; Sections 12.5–12.8</div>
+          <div class="spa-card__desc">Access time, wait states and handshakes; why MIPS needs a memory data register, and why your CPU does not.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+        <div class="spa-card">
+          <div class="spa-card__number">Page 3</div>
+          <div class="spa-card__title">Input and Output</div>
+          <div class="spa-card__time">~1 hr &nbsp;|&nbsp; Sections 12.9–12.12</div>
+          <div class="spa-card__desc">Memory-mapped I/O in MARS, with a program that prints by polling a display; port-mapped I/O and your CPU&rsquo;s four I/O instructions.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+        <div class="spa-card">
+          <div class="spa-card__number">Page 4</div>
+          <div class="spa-card__title">Asking the System</div>
+          <div class="spa-card__time">~1 hr &nbsp;|&nbsp; Sections 12.13–12.16</div>
+          <div class="spa-card__desc">What <code>syscall</code> really does, interrupts against polling, and Phase 3 in one picture.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-tools">
+      <h2>Tools and reading</h2>
+      <ul>
+        <li><strong>Logisim 2.7.1</strong> &mdash; not needed this week.</li>
+        <li><strong>MARS</strong> &mdash; optional. Page 3&rsquo;s display program runs in MARS with its Keyboard and Display MMIO Simulator, if you want to watch it for real.</li>
+        <li><strong>Saylor CS301</strong> &mdash; log in at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 5: Designing a Processor</strong> for memory, input/output and exceptions in a second voice. It describes MIPS, not your CPU.</li>
+      </ul>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 12, Orientation
+  </footer>
+
+</body>
+</html>

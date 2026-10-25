@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w12-03">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 12: Input and Output</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .mmio-table td:first-child, .io-table td:first-child { font-family: var(--font-mono); white-space: nowrap; }
+    .pl-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: var(--space-md); }
+    @media (max-width: 760px) { .pl-grid { grid-template-columns: 1fr; } }
+    .pl-panel { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-surface); min-width: 0; }
+    .pl-panel h3 { margin: 0 0 var(--space-xs); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .listing { font-family: var(--font-mono); font-size: 12px; overflow-x: auto; background: var(--color-code-bg); border-radius: 4px; padding: 4px 0; }
+    .listing div { white-space: pre; padding: 0 8px; }
+    .listing .cur { background: #fff5eb; outline: 2px solid var(--color-accent); outline-offset: -2px; }
+    .screen { font-family: var(--font-mono); background: #1d2733; color: #e8f0e8; border-radius: 4px; padding: 8px 10px; min-height: 2.2em; font-size: var(--fs-base); overflow-wrap: anywhere; }
+    .kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 4px; margin-top: var(--space-xs); }
+    .kv div { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .kv b { display: block; font-family: var(--font-sans); font-size: var(--fs-xs); color: var(--color-text-muted); }
+    .kv .rdy0 { background: #fdf0ef; border-color: var(--color-danger); }
+    .pl-ctl { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: var(--space-sm); font-size: var(--fs-sm); }
+    .pl-ctl input[type=text] { font-family: var(--font-mono); width: 7rem; padding: 2px 6px; border: 1px solid var(--color-border); border-radius: 4px; }
+    .pl-ctl select { padding: 2px 6px; border: 1px solid var(--color-border); border-radius: 4px; }
+    .pl-status { font-size: var(--fs-sm); min-height: 1.5em; margin: var(--space-xs) 0; }
+    pre.prog { font-size: 13px; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 12 &rsaquo; <span>Page 3 — Input and Output</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Input and Output</h1>
+    <p><strong>Sections 12.9 – 12.12</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1 hour</p>
+
+    <section id="sec-12-9">
+      <h2>12.9 &nbsp; Devices need addresses too</h2>
+
+      <p>A keyboard, a display, a disk or a network card is, from the processor&rsquo;s side, a few <strong>device registers</strong>: one that holds data going in or out, and one or more that hold <strong>status</strong> (&ldquo;a key has been pressed&rdquo;, &ldquo;ready for the next character&rdquo;) or <strong>control</strong> (&ldquo;start&rdquo;, &ldquo;interrupt me when done&rdquo;). The processor reads and writes those registers, and the device does the rest. The only question is how the processor names them, and there are two answers.</p>
+    </section>
+
+    <section id="sec-12-10">
+      <h2>12.10 &nbsp; Memory-mapped I/O</h2>
+
+      <p>In <strong>memory-mapped I/O</strong>, device registers are given addresses in the ordinary address space. A load from one of those addresses reads the device; a store writes it. No new instructions are needed &mdash; the same <code>lw</code> and <code>sw</code> you learned in Week 8 do the job. MIPS works this way. MARS includes a simulated keyboard and display (<em>Tools &rarr; Keyboard and Display MMIO Simulator</em>, then <em>Connect to MIPS</em>) whose four registers sit at the very top of memory:</p>
+
+      <div class="table-scroll">
+        <table class="mmio-table">
+          <thead><tr><th>Address</th><th>Register</th><th>Meaning</th></tr></thead>
+          <tbody id="mmio-body"><tr><td colspan="3"><em>Loading the table&hellip;</em></td></tr></tbody>
+        </table>
+      </div>
+
+      <p>Here is a complete program that prints a string on that display. It does not use <code>syscall</code> to print; it talks to the device directly. Before each character it reads the transmitter control register and loops until bit 0, <em>ready</em>, is 1. Asking a device &ldquo;are you ready?&rdquo; over and over is called <strong>polling</strong>.</p>
+
+      <pre class="prog" id="mmio-src"></pre>
+
+      <p>Two lines are worth a second look. <code>li $s0, 0xffff0000</code> loads a 32-bit constant; like <code>la</code> in Week 9, MARS expands it into two real instructions, and you do not need to know which. And the program reaches the device registers with offsets from <code>$s0</code>: <code>8($s0)</code> is the transmitter control register and <code>12($s0)</code> the transmitter data register &mdash; base plus offset, exactly as for an array.</p>
+    </section>
+
+    <!-- ========== Widget 3 ========== -->
+    <section id="sec-poll">
+      <div class="widget-card" id="w-poll">
+        <div class="widget-card__title">Polling</div>
+        <div class="widget-card__subtitle">The program above, one instruction at a time. After each character the display stays busy &mdash; its ready bit is 0 &mdash; for the number of instructions you choose. Watch the loop at <code>wait:</code> spin until it is ready.</div>
+
+        <div class="pl-ctl">
+          <label for="pl-text">String</label><input type="text" id="pl-text" maxlength="8" value="Hi" autocomplete="off">
+          <label for="pl-delay">Display busy for</label>
+          <select id="pl-delay"><option>0</option><option>2</option><option>4</option><option selected>6</option><option>8</option><option>12</option></select>
+          <span>instructions</span>
+        </div>
+        <div class="pl-ctl">
+          <button type="button" class="widget-btn widget-btn--primary" id="pl-step">one instruction</button>
+          <button type="button" class="widget-btn widget-btn--outline" id="pl-run">run to the end</button>
+          <button type="button" class="widget-btn widget-btn--outline" id="pl-reset">reset</button>
+        </div>
+        <div class="pl-grid">
+          <div class="pl-panel">
+            <h3>Program</h3>
+            <div class="listing" id="pl-listing"></div>
+          </div>
+          <div class="pl-panel">
+            <h3>Display</h3>
+            <div class="screen" id="pl-screen" aria-live="polite"></div>
+            <div class="kv" id="pl-kv"></div>
+          </div>
+        </div>
+        <p class="pl-status" id="pl-status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section id="sec-12-11">
+      <h2>12.11 &nbsp; Port-mapped I/O, and your CPU&rsquo;s four I/O instructions</h2>
+
+      <p>The other answer is <strong>port-mapped</strong> (or <em>isolated</em>) I/O: devices get their own small address space, separate from memory, and the processor has special instructions to reach it. Intel&rsquo;s x86 processors have both kinds; their <code>in</code> and <code>out</code> instructions are port-mapped.</p>
+
+      <p>Your CPU&rsquo;s instruction set is port-mapped. Week 10 showed that the <code>0111</code> group of instructions is input/output, and your instructor&rsquo;s instruction reference names four of them:</p>
+
+      <div class="table-scroll">
+        <table class="io-table">
+          <thead><tr><th>Mnemonic</th><th>Direction</th><th>Kind of byte</th><th>What it does</th></tr></thead>
+          <tbody id="io-body"><tr><td colspan="4"><em>Loading the table&hellip;</em></td></tr></tbody>
+        </table>
+      </div>
+
+      <p>The design behind them is a separate <strong>I/O bus</strong> that every device listens to. A byte on it is either an <em>address</em> or <em>data</em>. To talk to a device, a program first sends its address with <code>OUTA</code>: every device compares that byte with its own address, and the one that matches remembers that it has been selected. After that, <code>OUTD</code> sends data to the selected device and <code>IND</code> reads data from it, until another <code>OUTA</code> selects someone else. Each one moves a single byte between RB and the I/O bus.</p>
+
+      <p>Your CPU will not get any devices: this course stops at the processor and its memory, and these four instructions are not in any of the project tiers. They are here because they show the port-mapped design in a machine you know completely.</p>
+    </section>
+
+    <section id="sec-12-12">
+      <h2>12.12 &nbsp; What polling costs</h2>
+
+      <p>Run the widget with the display busy for 12 instructions, then 0. Every trip round the <code>wait:</code> loop is three instructions that do nothing but ask. A real display is millions of times slower than the processor, so a polling program spends almost all of its time asking. That is fine for a program with nothing else to do, and wasteful for a computer with other work waiting. The fix &mdash; letting the device announce that it is ready instead of being asked &mdash; is on the next page.</p>
+
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Three questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>You can tell memory-mapped from port-mapped I/O, read a polling loop, and say what your CPU&rsquo;s four I/O instructions are for. Next page: <code>syscall</code>, and interrupts.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 12, Page 3
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['sys'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.sys) { return; }
+    var S = L.sys;
+    function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function hex8(v) { return '0x' + ('00000000' + (v >>> 0).toString(16)).slice(-8); }
+
+    /* ---------- Tables and the listing, from the model ---------- */
+    (function () {
+      var mb = document.getElementById('mmio-body');
+      if (mb) { mb.innerHTML = S.MMIO.map(function (r) { return '<tr><td>' + hex8(r.addr) + '</td><td>' + r.name + '</td><td>' + esc(r.use) + '</td></tr>'; }).join(''); }
+      var ib = document.getElementById('io-body');
+      if (ib) { ib.innerHTML = S.IO.map(function (r) { return '<tr><td>' + r.m + '</td><td>' + r.dir + '</td><td>' + r.kind + '</td><td>' + esc(r.says) + '</td></tr>'; }).join(''); }
+      var src = document.getElementById('mmio-src');
+      if (src) { src.textContent = S.MMIO_SOURCE.join('\n'); }
+    }());
+
+    /* ---------- Widget 3 — Polling ---------- */
+    (function () {
+      var host = document.getElementById('w-poll');
+      if (!host) { return; }
+      var run, at;
+      function text() { var t = document.getElementById('pl-text').value.replace(/[^\x20-\x7e]/g, ''); return t || 'Hi'; }
+      function reset() {
+        run = S.mmioRun(text(), +document.getElementById('pl-delay').value); at = 0;
+        document.getElementById('pl-status').textContent = 'Ready to run. The display starts ready.';
+        paint();
+      }
+      function paint() {
+        var t = at > 0 ? run.trace[at - 1] : null;
+        var cur = t ? t.line : 3;
+        if (t && at < run.trace.length) { cur = run.trace[at].line; }
+        document.getElementById('pl-listing').innerHTML = S.MMIO_SOURCE.map(function (l, i) {
+          if (i === 1) { l = 'msg:    .asciiz "' + text() + '"'; }
+          return '<div' + (i === cur && at < run.trace.length ? ' class="cur"' : '') + '>' + esc(l) + '</div>';
+        }).join('');
+        document.getElementById('pl-screen').textContent = t ? t.out : '';
+        var polls = 0, nr = 0;
+        for (var i = 0; i < at; i++) { if (run.trace[i].line === 7) { polls++; if (/= 0/.test(run.trace[i].note)) { nr++; } } }
+        var ready = t ? t.ready : 1;
+        document.getElementById('pl-kv').innerHTML =
+          '<div class="' + (ready ? '' : 'rdy0') + '"><b>ready bit</b>' + ready + '</div>' +
+          '<div><b>instructions</b>' + at + '</div><div><b>polls</b>' + polls + '</div><div><b>not ready</b>' + nr + '</div>';
+      }
+      function step() {
+        if (at >= run.trace.length) { return; }
+        var t = run.trace[at]; at++;
+        document.getElementById('pl-status').textContent = 'Ran: ' + t.src.trim() + (t.note ? ' — ' + t.note + '.' : '') +
+          (at === run.trace.length ? ' The program has exited: ' + run.instructions + ' instructions, ' + run.polls + ' polls, ' + run.notReady + ' of them not ready.' : '');
+        paint();
+      }
+      document.getElementById('pl-step').addEventListener('click', step);
+      document.getElementById('pl-run').addEventListener('click', function () { while (at < run.trace.length) { step(); } });
+      document.getElementById('pl-reset').addEventListener('click', reset);
+      document.getElementById('pl-delay').addEventListener('change', reset);
+      document.getElementById('pl-text').addEventListener('change', reset);
+      reset();
+    }());
+
+    /* ---------- Self-check C ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+        { q: 'What makes I/O <em>memory-mapped</em>?',
+          opts: ['Devices are stored in RAM', 'Device registers have addresses in the ordinary address space, so ordinary loads and stores reach them', 'Every device has its own memory bus', 'The program copies memory to the device with syscall'],
+          correct: 1,
+          why: 'In MARS, sw to 0xffff000c writes the display&rsquo;s data register. No special instruction is involved.' },
+        { q: 'The display is never busy (delay 0). How many times does the program read the transmitter control register to print <code>Hi</code>?',
+          opts: ['1', '2', '3', '6'],
+          correct: 1,
+          why: 'Once per character, and each time the ready bit is already 1, so the wait loop never repeats.' },
+        { q: 'On your CPU&rsquo;s design, what is <code>OUTA</code> for?',
+          opts: ['Sending a data byte to the screen', 'Sending a device address on the I/O bus, so that device knows it is selected', 'Reading an address from RAM', 'Ending the program'],
+          correct: 1,
+          why: 'OUTA selects a device by its address; OUTD and IND then move data to and from the selected device.' }
+      ];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p><div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi], okAns = (oi === item.correct), fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) { el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false'); });
+      }
+      host.addEventListener('click', function (e) { var t = e.target.closest('.quiz-option'); if (t) { answer(+t.dataset.q, +t.dataset.o); } });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+  })();
+  </script>
+</body>
+</html>

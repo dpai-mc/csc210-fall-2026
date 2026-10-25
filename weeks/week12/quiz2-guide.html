@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w12-quiz2">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Quiz 2 Guide</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .bp td:first-child { font-weight: 700; white-space: nowrap; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 12 &rsaquo; <span>Quiz 2 Guide</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Quiz 2 Guide — Weeks 9 to 12</h1>
+    <p><span class="points-badge">100 points</span> &nbsp;|&nbsp; 20 questions &nbsp;|&nbsp; Canvas, auto-graded &nbsp;|&nbsp; <strong>Open Mon 11/02 &ndash; Sun 11/08, 11:59 pm</strong></p>
+
+    <section id="how">
+      <h2>How it works</h2>
+      <ul>
+        <li><strong>20 questions, 5 points each.</strong> Multiple choice and numeric answers; every question is auto-graded.</li>
+        <li><strong>No time limit. Two attempts; your higher score counts.</strong> Each question is drawn from two parallel versions, so your second attempt will usually show different numbers or wording for the same skill.</li>
+        <li><strong>Open notes and course pages.</strong> No collaboration.</li>
+        <li>You see your responses after your last attempt; correct answers are released on Monday 11/09.</li>
+      </ul>
+      <p>Quiz 2 closes Phase 3, which explained how the parts you built in Phases 1 and 2 become a processor that runs instructions. It counts as its own item in the gradebook, separate from Assignment 12.</p>
+    </section>
+
+    <section id="blueprint">
+      <h2>What it covers</h2>
+      <div class="table-scroll">
+        <table class="bp">
+          <thead><tr><th>Week</th><th>Questions</th><th>What you will be asked to do</th><th>Re-run these</th></tr></thead>
+          <tbody>
+            <tr><td>9</td><td>5 (25 pts)</td><td>State the stored-program idea; say what fetch does; count the cycles of a MIPS instruction and of a short sequence on the multi-cycle datapath; tell datapath from control.</td><td>Week 9&rsquo;s Cycle Stepper and its per-class table</td></tr>
+            <tr><td>10</td><td>5 (25 pts)</td><td>Apply the one-driver rule; run an ALU instruction&rsquo;s three transfers and give the result; work out BUS1&rsquo;s output; decode a course-CPU byte; explain TMP and ACC.</td><td>The Core and the Instruction Decoder</td></tr>
+            <tr><td>11</td><td>6 (30 pts)</td><td>Give clk_e and clk_s after a number of clicks; read a step from the stepper&rsquo;s cells; name the control lines high at a step and quarter; tell hardwired from microprogrammed and single-cycle from multi-cycle; read the MIPS single-cycle control table; give the result of an instruction run under the control unit.</td><td>Clock Bench, Stepper, Control Unit, Gates or ROM</td></tr>
+            <tr><td>12</td><td>4 (20 pts)</td><td>Name the transfers of LD and ST; work out wait states; count not-ready polls in the display program; write the registers for a syscall and say what syscall does.</td><td>Memory Bus, Wait States, Polling, syscall</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Outcomes: <strong>SLO1</strong> (organization) 50 points, <strong>SLO2</strong> (how instructions execute) 35 points, <strong>SLO3</strong> (MIPS programs, traced) 15 points.</p>
+    </section>
+
+    <section id="tips">
+      <h2>Worth checking before you start</h2>
+      <ul>
+        <li><strong>On your CPU, ALU instructions and LD write RB.</strong> <code>ADD RA, RB</code> means RB &larr; RA + RB; <code>LD RA, RB</code> means RB &larr; RAM[RA]; <code>ST RA, RB</code> writes RB to RAM[RA].</li>
+        <li><strong>The quarters</strong> run enable on, set on, set off, enable off, and an instruction takes 24 clicks.</li>
+        <li><strong>The step is where the stepper&rsquo;s 1s end:</strong> step <em>k</em> = Q(2k&minus;2) AND NOT Q(2k).</li>
+        <li><strong>Multi-cycle MIPS:</strong> R-type and <code>addi</code> 4 cycles, <code>lw</code> 5, <code>sw</code> 4, <code>beq</code> and <code>j</code> 3.</li>
+        <li><strong>Wait states</strong> = (access time &divide; cycle time, rounded up) &minus; 1.</li>
+        <li><strong>syscall</strong>: service in <code>$v0</code>, arguments in <code>$a0</code>/<code>$a1</code>, result in <code>$v0</code>.</li>
+      </ul>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Quiz 2 Guide
+  </footer>
+
+</body>
+</html>

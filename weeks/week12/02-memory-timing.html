@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w12-02">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 12: Memory Is Slow</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .ws-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-md); }
+    @media (max-width: 760px) { .ws-grid { grid-template-columns: 1fr; } }
+    .ws-panel { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-surface); min-width: 0; }
+    .ws-panel h3 { margin: 0 0 var(--space-xs); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .ws-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 4px 0; font-size: var(--fs-sm); }
+    .ws-row input[type=range] { flex: 1 1 140px; min-width: 0; }
+    .ws-row output { font-family: var(--font-mono); min-width: 4rem; }
+    .cycles { display: flex; flex-wrap: wrap; gap: 3px; margin: var(--space-xs) 0; }
+    .cyc { min-width: 2.6rem; text-align: center; font-size: var(--fs-xs); border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 4px; }
+    .cyc--wait { background: #fff5eb; border-color: var(--color-accent-hov); }
+    .cyc--done { background: #f0faf4; border-color: var(--color-success); }
+    .verdict { font-weight: 700; margin: var(--space-xs) 0; }
+    .hs-list { font-size: var(--fs-sm); }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 12 &rsaquo; <span>Page 2 — Memory Is Slow</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Memory Is Slow</h1>
+    <p><strong>Sections 12.5 – 12.8</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~45 minutes</p>
+
+    <section id="sec-12-5">
+      <h2>12.5 &nbsp; Memory is slower than the processor</h2>
+
+      <p>Page 1 treated a memory access as instant: the address goes in, the byte comes out. In your Logisim CPU it nearly is. In a real computer it is not. The time from an address arriving to the data being ready is the memory&rsquo;s <strong>access time</strong>, and for the main memory in a laptop it is tens of nanoseconds. The processor&rsquo;s clock cycle is a fraction of one nanosecond. A single read from main memory can take longer than a hundred of the processor&rsquo;s cycles.</p>
+
+      <p>Week 16 shows how caches hide most of that. This page is about the simpler question underneath: if the processor asks and the memory is not ready, what does the bus do?</p>
+    </section>
+
+    <section id="sec-12-6">
+      <h2>12.6 &nbsp; Synchronous and asynchronous buses</h2>
+
+      <p>There are two answers.</p>
+
+      <p><strong>A synchronous bus</strong> runs everything off one clock, and the memory must deliver by a fixed clock edge. If the memory is too slow for one cycle, the controller adds <strong>wait states</strong>: extra whole cycles in which the processor simply waits. A memory that needs 45 ns on a bus with a 10 ns cycle needs 5 cycles &mdash; the one the access was supposed to take plus 4 wait states. The rule is: cycles needed = access time &divide; cycle time, rounded up; wait states = that number minus 1.</p>
+
+      <p><strong>An asynchronous bus</strong> has no shared clock for the transfer. It uses a <strong>handshake</strong>: two control lines, one each way.</p>
+      <ol class="hs-list">
+        <li>The processor puts the address on the bus and raises <em>request</em>.</li>
+        <li>The memory finds the data, puts it on the bus and raises <em>ready</em> (or <em>acknowledge</em>).</li>
+        <li>The processor captures the data and drops <em>request</em>.</li>
+        <li>The memory sees request drop and drops <em>ready</em>. The bus is free.</li>
+      </ol>
+      <p>A fast memory answers quickly and a slow one slowly, and neither side needs to know the other&rsquo;s speed in advance. Notice the shape: something is raised, the other side answers, the answer is taken, and both are released in order. It is the same nesting as your clock&rsquo;s set inside enable.</p>
+    </section>
+
+    <!-- ========== Widget 2 ========== -->
+    <section id="sec-ws">
+      <div class="widget-card" id="w-ws">
+        <div class="widget-card__title">Wait States</div>
+        <div class="widget-card__subtitle">Set a memory&rsquo;s access time and a bus&rsquo;s cycle time. Left: what a synchronous bus has to do. Right: whether the memory fits in one quarter of your CPU&rsquo;s clock.</div>
+
+        <div class="ws-row"><label for="ws-acc"><strong>Memory access time</strong></label><input type="range" id="ws-acc" min="5" max="100" step="5" value="45"><output id="ws-acc-o" for="ws-acc">45 ns</output></div>
+        <div class="ws-grid">
+          <div class="ws-panel">
+            <h3>Synchronous bus</h3>
+            <div class="ws-row"><label for="ws-cyc">Cycle time</label><input type="range" id="ws-cyc" min="5" max="50" step="5" value="10"><output id="ws-cyc-o" for="ws-cyc">10 ns</output></div>
+            <div class="cycles" id="ws-cycles"></div>
+            <p class="verdict" id="ws-verdict" aria-live="polite"></p>
+          </div>
+          <div class="ws-panel">
+            <h3>Your CPU</h3>
+            <div class="ws-row"><label for="ws-q">One quarter lasts</label><input type="range" id="ws-q" min="5" max="100" step="5" value="25"><output id="ws-q-o" for="ws-q">25 ns</output></div>
+            <p class="verdict" id="ws-qverdict" aria-live="polite"></p>
+            <p style="font-size:var(--fs-sm)" id="ws-qnote"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-12-7">
+      <h2>12.7 &nbsp; The memory data register</h2>
+
+      <p>In Week 9 you traced <code>lw</code> through the multi-cycle MIPS datapath and met a register a program never sees: the <strong>MDR</strong>, memory data register. Here is why it is there. In that design every cycle ends with every result captured in a register, because in the next cycle the same wires may be doing something else. In cycle 4 of a <code>lw</code>, memory reads the word; in cycle 5 the register file writes it. Between those two cycles, memory&rsquo;s output is not guaranteed to hold still &mdash; its address can change as soon as the next cycle starts. So at the end of cycle 4 the word is captured in the MDR, and cycle 5 writes the register from the MDR, not from memory.</p>
+
+      <p>The general rule is the one behind the IR too: <strong>when a value arrives in one cycle and is used in a later one, something must hold it in between.</strong> The IR holds the instruction; the MDR holds the data.</p>
+    </section>
+
+    <section id="sec-12-8">
+      <h2>12.8 &nbsp; Why your CPU has none</h2>
+
+      <p>Week 9 left this question open: does your CPU need an MDR? It does not, and page 1&rsquo;s table shows why. In step 5 of <code>LD</code>, <code>RAM_E</code> is high for three quarters, so the RAM drives the bus for the whole of that time, and the destination register&rsquo;s set pulse sits inside it. The byte is used <em>in the same transfer</em> that it arrives in. Nothing has to survive into a later step, so nothing has to hold it. The destination register is the buffer.</p>
+
+      <p>What your CPU does need is that the RAM is fast enough: its byte must be on the bus by the time the set rises, one quarter after the enable. That is the right-hand panel above. In Logisim the RAM answers before your next click, so it always fits; a real build of your CPU would choose the clock so that it did.</p>
+
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Three questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>You can work out wait states, describe a handshake, and say when a processor needs an MDR and why yours does not. Next page: memory is not the only thing on the other side of the bus.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 12, Page 2
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['sys'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.sys) { return; }
+    var S = L.sys;
+
+    /* ---------- Widget 2 — Wait States ---------- */
+    (function () {
+      var host = document.getElementById('w-ws');
+      if (!host) { return; }
+      var acc = document.getElementById('ws-acc'), cyc = document.getElementById('ws-cyc'), q = document.getElementById('ws-q');
+      function paint() {
+        var a = +acc.value, c = +cyc.value, qq = +q.value;
+        document.getElementById('ws-acc-o').textContent = a + ' ns';
+        document.getElementById('ws-cyc-o').textContent = c + ' ns';
+        document.getElementById('ws-q-o').textContent = qq + ' ns';
+        var w = S.waitStates(a, c), h = '';
+        for (var i = 0; i <= w; i++) {
+          h += '<span class="cyc ' + (i === w ? 'cyc--done' : 'cyc--wait') + '">' + (i === 0 ? 'access' : 'wait') + '<br>' + ((i + 1) * c) + ' ns</span>';
+        }
+        document.getElementById('ws-cycles').innerHTML = h;
+        document.getElementById('ws-verdict').textContent = w === 0
+          ? 'No wait states: a ' + a + ' ns memory answers within one ' + c + ' ns cycle.'
+          : w + ' wait state' + (w === 1 ? '' : 's') + ': ' + a + ' ns needs ' + (w + 1) + ' cycles of ' + c + ' ns.';
+        var fits = S.quarterFits(a, qq);
+        document.getElementById('ws-qverdict').textContent = fits ? 'Fits: the byte is on the bus before the set rises.' : 'Too slow: the set would rise before the byte arrives.';
+        document.getElementById('ws-qnote').textContent = 'RAM_E rises at the start of step 5; the destination’s set rises one quarter (' + qq + ' ns) later. The memory needs ' + a + ' ns.' +
+          (fits ? '' : ' Your CPU has no wait states, so the only fix is a slower clock: a quarter of at least ' + a + ' ns.');
+      }
+      [acc, cyc, q].forEach(function (el) { el.addEventListener('input', paint); });
+      paint();
+    }());
+
+    /* ---------- Self-check B ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+        { q: 'A memory needs 45 ns. The synchronous bus&rsquo;s cycle is 10 ns. How many wait states?',
+          opts: ['3', '4', '5', '0'],
+          correct: 1,
+          why: '45 / 10 = 4.5, rounded up to 5 cycles. One is the access itself, so 4 are wait states.' },
+        { q: 'Why does the multi-cycle MIPS datapath capture a loaded word in the MDR?',
+          opts: ['Because memory is 8 bits wide', 'Because the word arrives in one cycle and is written to a register in the next, and memory&rsquo;s output need not hold still in between', 'Because the MDR adds 4 to the address', 'Because MIPS has no MAR'],
+          correct: 1,
+          why: 'Every cycle ends with its results held in registers. The word read in cycle 4 is written in cycle 5, so it must be held across the cycle boundary.' },
+        { q: 'Why does your CPU need no MDR?',
+          opts: ['Its RAM is only 32 bytes', 'The RAM drives the bus for the whole of step 5 and the destination captures inside that same transfer', 'It has no load instruction', 'The MAR doubles as an MDR'],
+          correct: 1,
+          why: 'The byte is used in the transfer it arrives in. Nothing needs to survive into a later step, so the destination register is the only buffer needed.' }
+      ];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p><div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi], okAns = (oi === item.correct), fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) { el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false'); });
+      }
+      host.addEventListener('click', function (e) { var t = e.target.closest('.quiz-option'); if (t) { answer(+t.dataset.q, +t.dataset.o); } });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+  })();
+  </script>
+</body>
+</html>
