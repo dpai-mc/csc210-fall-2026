@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w11-assign">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Assignment 11: The Control Unit</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .q-pts { font-size: var(--fs-sm); color: var(--color-text-muted); }
+    .inside { font-size: var(--fs-sm); margin: var(--space-xs) 0 var(--space-md); }
+    #verify-table td:nth-child(2) { font-size: var(--fs-sm); }
+    .ctl-mini td:first-child { font-family: var(--font-mono); font-weight: 700; white-space: nowrap; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 11 &rsaquo; <span>Assignment 11</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Assignment 11 — The Control Unit</h1>
+    <p><span class="points-badge">100 points</span> &nbsp;|&nbsp; Week 11 &nbsp;|&nbsp; Logisim Checkpoint 5 + Canvas quiz &nbsp;|&nbsp; <strong>Due Sunday 11/01, 11:59 pm</strong></p>
+
+    <section id="overview">
+      <h2>What you submit</h2>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Part</th><th>What it is</th><th>How</th><th>Points</th></tr></thead>
+          <tbody>
+            <tr><td><strong>A</strong></td><td>Logisim Checkpoint 5 &mdash; the clock, the stepper and the control unit, running your CPU core</td><td><code>.circ</code> file + 10 screenshots</td><td>60</td></tr>
+            <tr><td><strong>B</strong></td><td>Canvas quiz on the four Week 11 pages</td><td>in Canvas: 16 questions, auto-graded</td><td>40</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART A
+         ============================================================ -->
+    <section id="part-a">
+      <h2>Part A &mdash; Logisim Checkpoint 5 <span class="q-pts">(60 points)</span></h2>
+
+      <p>Three new tabs &mdash; <code>CLOCK</code>, <code>STEPPER</code> and <code>CONTROL_UNIT</code> &mdash; and changes to your <code>CPU</code> tab so that the control unit, not you, drives the core. Pages 1&ndash;3 of this week explain every gate; read them first.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Most of the parts are already in your file</div>
+        <p><code>MEM_1BIT</code> from <strong>Week 4</strong>; <code>DECODER_3TO8</code> from <strong>Week 3</strong>; <code>ALU_8BIT</code> from <strong>Week 7</strong>; everything on the <code>CPU</code> tab from <strong>Week 10</strong>. <strong>Instantiate them. Do not rebuild them.</strong> The one change to an existing tab is a single pin attribute in <code>ALU_8BIT</code>, below.</p>
+      </div>
+
+      <h3>Tab <code>CLOCK</code> &mdash; these pin names are exact</h3>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><code class="pin-table__name">clk_in</code></td><td>1</td><td>in</td><td>the input you click &mdash; pull-down</td></tr>
+            <tr><td><code class="pin-table__name">clk</code></td><td>1</td><td>out</td><td>the flip-flop&rsquo;s Q, to the stepper</td></tr>
+            <tr><td><code class="pin-table__name">clk_e</code></td><td>1</td><td>out</td><td>high in the three enable quarters</td></tr>
+            <tr><td><code class="pin-table__name">clk_s</code></td><td>1</td><td>out</td><td>high in the set quarter only</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="inside"><strong>Inside:</strong> one <strong>J-K flip-flop from Logisim&rsquo;s Memory folder</strong> &mdash; the only part this week from outside Wiring and Gates &mdash; with J and K tied to a constant 1 and its clock input from <code>clk_in</code>. <code>Q</code> &rarr; <code>clk</code>. <code>clk_in</code> NAND <code>Q</code>, through a NOT, &rarr; <code>clk_s</code>. <code>clk_in</code> NAND <code>Q&#772;</code> &rarr; <code>clk_e</code>. Two NANDs, one NOT (page 1, &sect;11.3).</p>
+
+      <h3>Tab <code>STEPPER</code> &mdash; these pin names are exact</h3>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><code class="pin-table__name">clk</code></td><td>1</td><td>in</td><td>from the clock &mdash; <strong>pull-down</strong></td></tr>
+            <tr><td><code class="pin-table__name">reset</code></td><td>1</td><td>in</td><td>empties the chain &mdash; <strong>pull-up</strong></td></tr>
+            <tr><td><code class="pin-table__name">step1</code> &hellip; <code class="pin-table__name">step7</code></td><td>1 each</td><td>out</td><td>exactly one high at a time</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="inside"><strong>Inside:</strong> twelve <code>MEM_1BIT</code> instances in a row, Q1 to Q12, each one&rsquo;s output to the next one&rsquo;s input; NOT <code>reset</code> into Q1. Set of Q1, Q3 &hellip; Q11 = <code>reset</code> OR <code>clk</code>; set of Q2, Q4 &hellip; Q12 = <code>reset</code> OR NOT <code>clk</code>. <code>step1</code> = <code>reset</code> OR NOT Q2; <code>step</code><em>k</em> = Q(2k&minus;2) AND NOT Q(2k) for <em>k</em> = 2 to 6; <code>step7</code> = Q12. Three ORs, eight NOTs, five ANDs (page 2, &sect;11.7). Edit the appearance: <code>clk</code> on the left, <code>reset</code> on the right, the seven steps along the bottom.</p>
+
+      <h3>Tab <code>CONTROL_UNIT</code> &mdash; these pin names are exact</h3>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><code class="pin-table__name">clk</code>, <code class="pin-table__name">clk_e</code>, <code class="pin-table__name">clk_s</code></td><td>1 each</td><td>in</td><td>from <code>CLOCK</code></td></tr>
+            <tr><td><code class="pin-table__name">ir</code></td><td>8</td><td>in</td><td>the instruction</td></tr>
+            <tr><td><code class="pin-table__name">ra</code>, <code class="pin-table__name">rb</code></td><td>2 each</td><td>out</td><td><code>ir</code> bits 3&ndash;2 and 1&ndash;0, to REG_SELECT</td></tr>
+            <tr><td><code class="pin-table__name">rega_e</code>, <code class="pin-table__name">regb_e</code>, <code class="pin-table__name">regb_s</code></td><td>1 each</td><td>out</td><td>to REG_SELECT</td></tr>
+            <tr><td><code class="pin-table__name">tmp_s</code>, <code class="pin-table__name">acc_e</code>, <code class="pin-table__name">acc_s</code>, <code class="pin-table__name">flags_s</code>, <code class="pin-table__name">bus1</code></td><td>1 each</td><td>out</td><td>to TMP, ACC, FLAGS and BUS1</td></tr>
+            <tr><td><code class="pin-table__name">opcode</code></td><td>3</td><td>out</td><td>to the ALU</td></tr>
+            <tr><td><code class="pin-table__name">steps</code></td><td>7</td><td>out</td><td><code>step1</code> &hellip; <code>step7</code> combined, <code>step1</code> as bit 0 &mdash; for a probe</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="inside"><strong>Inside:</strong> one <code>STEPPER</code> instance with <code>clk</code> in and <code>step7</code> wired to its own <code>reset</code>. Class lines: <code>ir</code> bit 7 is the ALU line; bits 6&ndash;4 into a <code>DECODER_3TO8</code>, each of its eight outputs ANDed with NOT bit 7 &mdash; build all eight, wire only output 6 (CLF) this week; CMP = bits 6, 5 and 4 ANDed (page 3, &sect;11.10). Then the control table:</p>
+
+      <div class="table-scroll">
+        <table class="pin-table ctl-mini">
+          <thead><tr><th>Output</th><th>=</th></tr></thead>
+          <tbody>
+            <tr><td>regb_e</td><td><code>step4</code> AND ALU AND <code>clk_e</code></td></tr>
+            <tr><td>tmp_s</td><td><code>step4</code> AND ALU AND <code>clk_s</code></td></tr>
+            <tr><td>rega_e</td><td><code>step5</code> AND ALU AND <code>clk_e</code></td></tr>
+            <tr><td>acc_s</td><td><code>step5</code> AND ALU AND <code>clk_s</code></td></tr>
+            <tr><td>flags_s</td><td>( (<code>step5</code> AND ALU) OR (<code>step4</code> AND CLF) ) AND <code>clk_s</code></td></tr>
+            <tr><td>acc_e</td><td><code>step6</code> AND ALU AND NOT CMP AND <code>clk_e</code></td></tr>
+            <tr><td>regb_s</td><td><code>step6</code> AND ALU AND NOT CMP AND <code>clk_s</code></td></tr>
+            <tr><td>bus1</td><td><code>step4</code> AND CLF</td></tr>
+            <tr><td>opcode</td><td><code>ir</code> bits 6&ndash;4, each AND (<code>step5</code> AND ALU)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="inside">Lay it out as page 3&rsquo;s figures do: enables down the left, sets down the right, the stepper across the top. Edit the appearance so its outputs face the parts they drive; the figure below is your instructor&rsquo;s fetch control unit, a guide to the shape only &mdash; your pins are the ones in the table above.</p>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/Fetch_Control_Unit_Appearance.png" style="max-width:520px"
+             alt="A Logisim circuit appearance: a wide rectangle with the words FETCH CONTROL UNIT across the middle. Along the top edge, pins R3_S, R3_E, R2_S, R2_E, R1_S, R1_E, R0_S and R0_E. Down the left side, TMP_S and BUS 1 near the top, inputs clk, clke and clks in the middle, ACC_S and ACC_E lower down. Down the right side, MAR_S, RAM_E and RAM_S. Along the bottom, PC_S, PC_E, an 8-bit input IR IN, and IR_S.">
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s appearance for a Fall 2025 control unit: register lines along the top, toward the registers; clock inputs on the left; the instruction input on the bottom edge. Your <code>CONTROL_UNIT</code> has different pins; place each where its wire wants to go.</figcaption>
+      </figure>
+
+      <h3>Tab <code>ALU_8BIT</code> &mdash; one attribute</h3>
+      <p>Select the <code>A</code> input pin and set its <strong>pull behaviour to pull-down</strong>. Nothing else in the ALU changes. CLF depends on it: with nothing driving the bus, the ALU must see <code>00000000</code> at A (page 3, &sect;11.11).</p>
+
+      <h3>Tab <code>CPU</code> &mdash; what changes</h3>
+      <ul>
+        <li><strong>Delete</strong> the input pins <code>ra</code>, <code>rb</code>, <code>rega_e</code>, <code>regb_e</code>, <code>regb_s</code>, <code>tmp_s</code>, <code>acc_e</code>, <code>acc_s</code>, <code>flags_s</code>, <code>bus1</code> and <code>opcode</code>. The control unit drives all of those wires now.</li>
+        <li><strong>Place</strong> one <code>CLOCK</code> and one <code>CONTROL_UNIT</code> in the space you left in Week 10. Connect <code>CLOCK</code>&rsquo;s <code>clk</code>, <code>clk_e</code> and <code>clk_s</code> to the control unit, and each control-unit output to the wire its old input pin drove.</li>
+        <li><strong>Add</strong> input pins <code>clk_in</code> (1, to <code>CLOCK</code>), <code>ir</code> (8, to <code>CONTROL_UNIT</code>) and <code>data_s</code> (1, pull-down).</li>
+        <li><strong>The test port:</strong> REG_SELECT&rsquo;s <code>regb_s</code> input becomes an OR of the control unit&rsquo;s <code>regb_s</code> and <code>data_s</code>. Keep <code>data</code>, <code>data_e</code> and <code>ci</code> as they were; <code>ci</code> stays at 0 this week.</li>
+        <li><strong>Probes</strong> on <code>clk</code>, <code>clk_e</code>, <code>clk_s</code> and <code>steps</code>, as well as everything you probed in Week 10.</li>
+      </ul>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Loading a register, and choosing an instruction</div>
+        <p>To put a value in a register by hand: set <code>ir</code> so that its last two bits name the register (<code>10000000</code> for R0, <code>10000001</code> for R1, and so on), set <code>data</code>, raise <code>data_e</code>, pulse <code>data_s</code>, drop <code>data_e</code>. REG_SELECT sends <code>data_s</code> to the register named by <code>rb</code>.</p>
+        <p><strong>Load registers and change <code>ir</code> only while <code>steps</code> shows step 1, 2 or 3</strong> &mdash; right after Simulate &rarr; Reset, or after the 24th click of an instruction. In steps 4 to 6 the control unit is using the bus and acting on <code>ir</code>.</p>
+      </div>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/control-alu-diagram.jpg"
+             alt="Your instructor's control unit for the ALU instruction class, as on page 3: the stepper across the top, the step 4, 5 and 6 AND gates in the middle with the CMP detector, enables down the left gated by clke, sets down the right gated by clks, and the opcode AND gates at the bottom left.">
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s ALU control unit, for reference while you build. It selects registers internally with its own 2&times;4 decoders; yours leaves that to the REG_SELECT already on your <code>CPU</code> tab.</figcaption>
+      </figure>
+
+      <h3>Points</h3>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Criterion</th><th>Points</th></tr></thead>
+          <tbody>
+            <tr><td><code>CLOCK</code>: four pins exactly, one J-K with J = K = 1, two NANDs and a NOT; the quarters run enable on, set on, set off, enable off</td><td>8</td></tr>
+            <tr><td><code>STEPPER</code>: nine pins exactly, twelve <code>MEM_1BIT</code> instances, the set and step logic as listed, pull behaviours set, appearance edited</td><td>12</td></tr>
+            <tr><td><code>CONTROL_UNIT</code>: pins exactly; a <code>STEPPER</code> with <code>step7</code> to <code>reset</code>; the <code>DECODER_3TO8</code> and its eight class ANDs; the CMP gate; every line as in the table, enables with <code>clk_e</code> and sets with <code>clk_s</code>; the gated opcode</td><td>18</td></tr>
+            <tr><td><code>CPU</code> tab: old control pins removed; <code>CLOCK</code> and <code>CONTROL_UNIT</code> wired in; <code>clk_in</code>, <code>ir</code>, <code>data_s</code> and the OR into <code>regb_s</code>; <code>ALU_8BIT</code>&rsquo;s <code>A</code> pulled down; probes present</td><td>10</td></tr>
+            <tr><td>Ten verification screenshots, matching the table below</td><td>10</td></tr>
+            <tr><td>Single file; only Wiring and Gates components, plus the one J-K flip-flop</td><td>2</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Verify, and screenshot each step</h3>
+      <p>Every input starts at 0. &ldquo;Click <code>clk_in</code>&rdquo; means change it once, 0 to 1 or 1 to 0. <code>steps</code> reads with step 1 at the right. Each step continues from the one before.</p>
+
+      <div class="table-scroll">
+        <table class="pin-table" id="verify-table">
+          <thead><tr><th>#</th><th>Do</th><th>Expect</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Simulate &rarr; Reset</td><td><code>steps</code> = <code>0000001</code>; <code>clk</code> = 0, <code>clk_e</code> = 1, <code>clk_s</code> = 0; every register <code>EEEEEEEE</code></td></tr>
+            <tr><td>2</td><td><code>ir</code> = 10000000; <code>data</code> = 00000101, <code>data_e</code> = 1, pulse <code>data_s</code>, <code>data_e</code> = 0</td><td>R0 = <code>00000101</code></td></tr>
+            <tr><td>3</td><td><code>ir</code> = 10000001; <code>data</code> = 00000111, <code>data_e</code> = 1, pulse <code>data_s</code>, <code>data_e</code> = 0</td><td>R1 = <code>00000111</code></td></tr>
+            <tr><td>4</td><td><code>ir</code> stays 10000001, which is ADD R0, R1. Click <code>clk_in</code> 13 times</td><td><code>steps</code> = <code>0001000</code>; <code>clk_e</code> = 1, <code>clk_s</code> = 1; bus = <code>00000111</code>; TMP = <code>00000111</code></td></tr>
+            <tr><td>5</td><td>Click <code>clk_in</code> 11 more times (24 in all)</td><td><code>steps</code> = <code>0000001</code>; R1 = <code>00001100</code>; R0 = <code>00000101</code>; C A E Z = 0 0 0 0</td></tr>
+            <tr><td>6</td><td><code>ir</code> = 11100101 (XOR R1, R1); 24 clicks</td><td>R1 = <code>00000000</code>; C A E Z = 0 0 1 1</td></tr>
+            <tr><td>7</td><td><code>ir</code> = 01100000 (CLF); 24 clicks</td><td>C A E Z = 0 0 0 0</td></tr>
+            <tr><td>8</td><td>Load R2 = 00001001 (<code>ir</code> = 10000010) and R3 = 00000101 (<code>ir</code> = 10000011) as in step 2; then <code>ir</code> = 11111011 (CMP R2, R3); 24 clicks</td><td>R2 = <code>00001001</code> and R3 = <code>00000101</code>, unchanged; A = 1, E = 0. Ignore C and Z.</td></tr>
+            <tr><td>9</td><td><code>ir</code> = 10100010 (SHL R0, R2); 24 clicks</td><td>R2 = <code>00001010</code>; R0 = <code>00000101</code></td></tr>
+            <tr><td>10</td><td>Load R3 = 10000001 (<code>ir</code> = 10000011); then <code>ir</code> = 10011111 (SHR R3, R3); 24 clicks</td><td>R3 = <code>01000000</code>; C A E Z = 1 0 1 0</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Step 4 is the only screenshot taken in the middle of an instruction: step 4, set-on quarter, with R1 on the bus and TMP following it. Step 8&rsquo;s compare writes no register &mdash; that is the CMP gate at step 6 doing its job. Step 9 shows that RB receives the result: R2 &larr; R0 shifted left. In step 10 the bit shifted out of R3 sets C, and E is 1 because the ALU&rsquo;s two inputs were both R3.</p>
+
+      <h3>Submission checklist</h3>
+      <ul class="lab-checklist">
+        <li>All circuits are contained within this single <code>.circ</code> file — no external file links</li>
+        <li><code>CLOCK</code>, <code>STEPPER</code> and <code>CONTROL_UNIT</code> present, pins named exactly as above</li>
+        <li><code>CONTROL_UNIT</code> contains one <code>STEPPER</code> and uses your Week 3 <code>DECODER_3TO8</code>; nothing rebuilt</li>
+        <li>The <code>CPU</code> tab has no <code>ra</code>, <code>rb</code>, <code>rega_e</code>, <code>regb_e</code>, <code>regb_s</code>, <code>tmp_s</code>, <code>acc_e</code>, <code>acc_s</code>, <code>flags_s</code>, <code>bus1</code> or <code>opcode</code> input pins left</li>
+        <li><code>ALU_8BIT</code>&rsquo;s <code>A</code> pin is pull-down; nothing else in the ALU changed</li>
+        <li>Ten screenshots, one per verification step</li>
+        <li>Only Wiring and Gates components used, plus one J-K flip-flop from Memory in <code>CLOCK</code> &mdash; nothing from Plexers or Arithmetic</li>
+      </ul>
+    </section>
+
+    <!-- ============================================================
+         PART B
+         ============================================================ -->
+    <section id="part-b">
+      <h2>Part B &mdash; Canvas quiz <span class="q-pts">(40 points)</span></h2>
+      <p>Sixteen questions on the four Week 11 pages, 2.5 points each, every one auto-graded. Open in Canvas from <strong>Monday 10/26</strong> until <strong>Sunday 11/01 at 11:59 pm</strong>.</p>
+      <ul>
+        <li>No time limit. Two attempts; your higher score counts. Each question is drawn from two parallel versions, so a second attempt usually looks different.</li>
+        <li>Open notes and course pages. The Control Unit widget on page 3 and Gates or ROM on page 4 are the best preparation.</li>
+        <li>You see your responses after your last attempt; correct answers are released on Monday 11/02.</li>
+      </ul>
+    </section>
+
+    <section id="slos">
+      <h2>Points and outcomes</h2>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Part</th><th>Points</th><th>Assesses</th></tr></thead>
+          <tbody>
+            <tr><td>A &mdash; Checkpoint 5</td><td>60</td><td>SLO1, SLO2</td></tr>
+            <tr><td>B &mdash; Canvas quiz</td><td>40</td><td>SLO1, SLO2</td></tr>
+            <tr><td><strong>Total</strong></td><td><strong>100</strong></td><td></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Assignment 11
+  </footer>
+
+</body>
+</html>

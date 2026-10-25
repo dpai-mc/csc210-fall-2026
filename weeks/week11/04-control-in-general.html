@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w11-04">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 11: Control Units in General</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .rom-table td, .mips-table td { font-family: var(--font-mono); text-align: center; }
+    .rom-table td:first-child, .mips-table td:first-child { text-align: left; font-family: var(--font-sans); font-weight: 700; white-space: nowrap; }
+    .rom-table th, .mips-table th { font-size: var(--fs-xs); }
+    .vs-table td:first-child { font-weight: 700; }
+
+    /* Gates or ROM */
+    .gr-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-md); }
+    @media (max-width: 760px) { .gr-grid { grid-template-columns: 1fr; } }
+    .gr-panel { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-surface); min-width: 0; }
+    .gr-panel h3 { margin: 0 0 var(--space-xs); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .gr-sel { font-size: var(--fs-sm); padding: 2px 6px; border: 1px solid var(--color-border); border-radius: 4px; }
+    .word { display: flex; flex-wrap: wrap; gap: 3px; margin: var(--space-xs) 0; }
+    .wb { min-width: 4.4rem; text-align: center; border: 1px solid var(--color-border); border-radius: 4px; padding: 2px 4px; font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .wb small { display: block; font-family: var(--font-sans); font-size: 10px; color: var(--color-text-muted); }
+    .wb--1 { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .wb--1 small { color: #dfe8f3; }
+    .terms { font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .terms li { margin: 2px 0; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 11 &rsaquo; <span>Page 4 — Control Units in General</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Control Units in General</h1>
+    <p><strong>Sections 11.13 – 11.16</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1 hour</p>
+
+    <section id="sec-11-13">
+      <h2>11.13 &nbsp; Yours is hardwired</h2>
+
+      <p>Step back from the gates. Your control unit is a <strong>function</strong>: its inputs are the step the stepper is on and the bits of the instruction, and its output is a set of control lines. Page 3&rsquo;s control table is that function written out. Whatever processor you look at, from your 8-bit CPU to the one in your phone, its control unit computes some function like this one. Processors differ in how big the table is, and in <em>how they store it</em>.</p>
+
+      <p>Your CPU stores it as gates. Each line is an OR of AND terms &mdash; <code>flags_s</code> = (<code>step5</code> AND ALU) OR (<code>step4</code> AND CLF), then ANDed with <code>clk_s</code> &mdash; and the function is the wiring. This is <strong>hardwired control</strong>. It is fast, because a line is only a few gate delays from its inputs, and it is rigid: to change what an instruction does you rewire.</p>
+
+      <p>A control unit is often described as &ldquo;just a combinational circuit&rdquo;. Yours is a combinational circuit <em>plus the stepper</em>. The gates on page 3 forget instantly; the stepper is what lets the same instruction byte mean &ldquo;RB to TMP&rdquo; at one moment and &ldquo;ACC to RB&rdquo; two steps later. Every multi-step control unit has both parts: memory that holds where it is, and logic that turns where it is into lines.</p>
+    </section>
+
+    <section id="sec-11-14">
+      <h2>11.14 &nbsp; Microprogrammed control</h2>
+
+      <p>There is another way to store a table: as a table. Give every combination of instruction class and step an address, and store at that address a word with one bit per control line. Each step, read the word and send its bits to the lines. The words are called <strong>microinstructions</strong>, the table a <strong>microprogram</strong>, and the memory a <strong>control store</strong> &mdash; usually a ROM.</p>
+
+      <p>Here is your control unit&rsquo;s table as a ROM would hold it, produced from the same model as page 3&rsquo;s table. Bit order, left to right, is the order of the column headings:</p>
+
+      <div class="table-scroll">
+        <table class="rom-table" id="rom-table">
+          <thead id="rom-head"><tr><th>Class, step</th></tr></thead>
+          <tbody id="rom-body"><tr><td><em>Loading the table&hellip;</em></td></tr></tbody>
+        </table>
+      </div>
+
+      <p>Nine words of eight bits, plus a rule that the opcode passes through at step 5 of an ALU instruction. The stepper would become a small counter, or <strong>micro-program counter</strong>, and the AND-OR gates of page 3 would be replaced by a ROM lookup. Every other class&rsquo;s steps 4 to 6 are all-zero words.</p>
+
+      <div class="table-scroll">
+        <table class="vs-table">
+          <thead><tr><th></th><th>Hardwired</th><th>Microprogrammed</th></tr></thead>
+          <tbody>
+            <tr><td>The table is stored as</td><td>gates: an OR of AND terms per line</td><td>words in a control store (ROM)</td></tr>
+            <tr><td>Speed</td><td>faster: a line is a few gate delays from its inputs</td><td>slower: every step waits for a memory read</td></tr>
+            <tr><td>Changing an instruction</td><td>redesign and rewire the logic</td><td>change the words; some processors can load new microcode after they ship</td></tr>
+            <tr><td>Many complex instructions</td><td>the logic grows hard to design and verify</td><td>each instruction is a short program; the hardware stays the same</td></tr>
+            <tr><td>Typical use</td><td>simple and RISC processors, such as MIPS</td><td>processors with large, complex instruction sets &mdash; x86 processors use microcode for their most complex instructions</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Real processors mix the two. A modern x86 handles its common instructions with fast hardwired decoding and keeps a microcode ROM for the rare, complicated ones, and its manufacturers ship <strong>microcode updates</strong> to fix bugs in chips that are already in computers. For eight lines and three classes, gates are simpler than a ROM, which is why your CPU is hardwired.</p>
+    </section>
+
+    <!-- ========== Widget 4 ========== -->
+    <section id="sec-gr">
+      <div class="widget-card" id="w-gr">
+        <div class="widget-card__title">Gates or ROM</div>
+        <div class="widget-card__subtitle">The same function, stored two ways. Choose an instruction class and a step: on the left, the word a control store would hold; on the right, the AND terms in your control unit that produce each 1.</div>
+
+        <div style="display:flex;gap:var(--space-sm);flex-wrap:wrap;align-items:center;margin-bottom:var(--space-sm)">
+          <label for="gr-cls"><strong>Class</strong></label>
+          <select id="gr-cls" class="gr-sel">
+            <option value="0">ALU (ADD to XOR)</option>
+            <option value="1">CMP</option>
+            <option value="2">CLF</option>
+          </select>
+          <label for="gr-step"><strong>Step</strong></label>
+          <select id="gr-step" class="gr-sel">
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+          </select>
+        </div>
+        <div class="gr-grid">
+          <div class="gr-panel">
+            <h3>Microprogrammed: one ROM word</h3>
+            <div class="word" id="gr-word"></div>
+            <p id="gr-addr" style="font-size:var(--fs-sm);margin:0"></p>
+          </div>
+          <div class="gr-panel">
+            <h3>Hardwired: the terms that fire</h3>
+            <ul class="terms" id="gr-terms"></ul>
+          </div>
+        </div>
+        <p id="gr-status" aria-live="polite" style="font-size:var(--fs-sm)"></p>
+      </div>
+    </section>
+
+    <section id="sec-11-15">
+      <h2>11.15 &nbsp; Single-cycle and multi-cycle</h2>
+
+      <p>Your control unit has a stepper because one instruction takes several transfers on one bus. Not every processor works that way. In Week 9 you met the alternative: a <strong>single-cycle</strong> MIPS, which does a whole instruction in one long clock cycle, with a separate instruction memory and data memory and separate adders so that nothing has to be used twice. Its control unit has <em>no step input at all</em>. The lines depend only on the opcode, so the whole control unit is one combinational truth table:</p>
+
+      <div class="table-scroll">
+        <table class="mips-table">
+          <thead>
+            <tr><th>Instruction</th><th>RegDst</th><th>ALUSrc</th><th>MemtoReg</th><th>RegWrite</th><th>MemRead</th><th>MemWrite</th><th>Branch</th><th>ALUOp1</th><th>ALUOp0</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>R-type (add, sub, and, or, slt)</td><td>1</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>1</td><td>0</td></tr>
+            <tr><td>lw</td><td>0</td><td>1</td><td>1</td><td>1</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+            <tr><td>sw</td><td>X</td><td>1</td><td>X</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+            <tr><td>beq</td><td>X</td><td>0</td><td>X</td><td>0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td></tr>
+            <tr><td>addi</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>X means &ldquo;don&rsquo;t care&rdquo;: <code>sw</code> and <code>beq</code> write no register, so it does not matter which register would have been chosen or what would have been written. The lines mean:</p>
+      <ul>
+        <li><strong>RegDst</strong> &mdash; which instruction field names the register written: <code>rd</code> (1, R-type) or <code>rt</code> (0, I-type).</li>
+        <li><strong>ALUSrc</strong> &mdash; the ALU&rsquo;s second operand: a register (0) or the sign-extended immediate (1).</li>
+        <li><strong>MemtoReg</strong> &mdash; what is written to the register: the ALU result (0) or the word read from memory (1).</li>
+        <li><strong>RegWrite</strong>, <strong>MemRead</strong>, <strong>MemWrite</strong> &mdash; whether the register file is written, and whether data memory is read or written.</li>
+        <li><strong>Branch</strong> &mdash; this is a <code>beq</code>: if the ALU&rsquo;s zero output is 1, the next PC is the branch target.</li>
+        <li><strong>ALUOp</strong> &mdash; two bits telling a small second control unit how to set the ALU: add (00, for addresses and <code>addi</code>), subtract (01, to compare for <code>beq</code>), or look at the <code>funct</code> field (10, R-type).</li>
+      </ul>
+
+      <p>Three of those lines &mdash; RegDst, ALUSrc and MemtoReg &mdash; are not enables or sets. They are <strong>multiplexer selects</strong>: each chooses which of two values flows on to the next part. That is the job multiplexers do in a processor, and your Week 3 rule still holds: <em>decoders select, multiplexers route</em>. MIPS&rsquo;s control decides with logic like yours; its datapath routes data with multiplexers. Your single-bus CPU routes data by choosing which register drives the bus instead, so it has no multiplexers at all.</p>
+
+      <p><strong>The price of single-cycle is the clock.</strong> Every instruction gets the same one cycle, so the cycle must be long enough for the slowest instruction &mdash; <code>lw</code>, which reads the register file, adds, reads data memory and writes a register, all in sequence. A <code>beq</code> that finishes far sooner still waits out the whole cycle.</p>
+
+      <p><strong>Multi-cycle</strong> splits an instruction into short steps and lets instructions take different numbers of them. Week 9&rsquo;s MIPS took 3 cycles for a branch and 5 for a <code>lw</code>; its control unit was a <strong>finite state machine</strong>, a state register saying which cycle it is on, plus logic choosing the lines and the next state. Your CPU is multi-cycle too, and its state register is the stepper. The difference is that your stepper always runs all six steps.</p>
+    </section>
+
+    <section id="sec-11-16">
+      <h2>11.16 &nbsp; What your CPU costs</h2>
+
+      <p>Count it. Every instruction is six steps, every step four quarters: 24 clicks of <code>clk_in</code>, whatever the instruction does. CLF does all its work in step 4 and then waits through steps 5 and 6. A compare does nothing in step 6. When fetch arrives in Week 13, three of every instruction&rsquo;s six steps will go to fetching it.</p>
+
+      <p>None of that is a mistake. A fixed six steps keeps the stepper and its <code>step7</code>-to-<code>reset</code> wire simple, and simple is what a CPU you can build and debug in a semester needs. But it has a measurable cost, and in Week 15 you will measure it, in <strong>cycles per instruction</strong> &mdash; the number that Week 9&rsquo;s MIPS stepper reported as 4.0 for its trace program. Your CPU&rsquo;s figure is 6 steps for every instruction, so the only way to make it faster is a faster clock or fewer instructions.</p>
+
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Four questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+
+      <p>For hardwired and microprogrammed control and the single-cycle MIPS control unit in a second voice, log into your Saylor CS301 account at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 5: Designing a Processor</strong>. The truth table above is the standard one for that datapath.</p>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>You can say how a control unit stores its table and what each way costs, read a MIPS control truth table, and explain single-cycle against multi-cycle with your own CPU as an example. Next week: how a processor talks to memory and to the outside world &mdash; the memory bus and input/output &mdash; and Quiz 2 on Weeks 9 to 12.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 11, Page 4
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['ctl'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.ctl) { return; }
+    var K = L.ctl;
+    var MC = K.microcode();
+
+    /* ---------- The ROM table, from the model ---------- */
+    (function () {
+      var head = document.getElementById('rom-head'), body = document.getElementById('rom-body');
+      if (!head || !body) { return; }
+      head.innerHTML = '<tr><th>Class, step</th>' + MC.lines.map(function (n) { return '<th>' + n + '</th>'; }).join('') + '<th>word</th></tr>';
+      body.innerHTML = MC.rows.map(function (r) {
+        return '<tr><td>' + r.cls + ', step ' + r.step + '</td>' + r.bits.map(function (b) { return '<td>' + b + '</td>'; }).join('') +
+          '<td>' + r.word + (r.opcodeFromIr ? ' + opcode' : '') + '</td></tr>';
+      }).join('');
+    }());
+
+    /* ---------- Widget 4 — Gates or ROM ---------- */
+    (function () {
+      var host = document.getElementById('w-gr');
+      if (!host) { return; }
+      var IRS = [0x80, 0xF0, 0x60], NAMES = ['ALU (ADD to XOR)', 'CMP', 'CLF'];
+      var selC = document.getElementById('gr-cls'), selS = document.getElementById('gr-step');
+      function paint() {
+        var ci = +selC.value, step = +selS.value, row = MC.rows.filter(function (r) { return r.step === step && r.cls.indexOf(['ALU', 'CMP', 'CLF'][ci]) === 0; })[0];
+        document.getElementById('gr-word').innerHTML = MC.lines.map(function (n, i) {
+          return '<div class="wb' + (row.bits[i] ? ' wb--1' : '') + '"><small>' + n + '</small>' + row.bits[i] + '</div>';
+        }).join('');
+        document.getElementById('gr-addr').innerHTML = 'Address: (' + NAMES[ci] + ', step ' + step + '). Word: <code>' + row.word + '</code>' +
+          (row.opcodeFromIr ? ', with the opcode passed from ir b6&ndash;b4.' : ', and the opcode held at 000.');
+        var d = K.decode(IRS[ci]), fired = [];
+        K.TABLE.forEach(function (t) {
+          t.terms.forEach(function (term) {
+            if (term.step === step && K.WHEN[term.when](d)) {
+              fired.push('<li>' + t.line + ' &larr; step' + term.step + ' AND ' + term.when + (t.gate ? ' AND ' + t.gate : '') + '</li>');
+            }
+          });
+        });
+        if (step === 5 && d.alu) { fired.push('<li>opcode &larr; ir b6&ndash;b4 AND step5 AND ALU</li>'); }
+        document.getElementById('gr-terms').innerHTML = fired.length ? fired.join('') : '<li>none: every AND term is 0, so every line is 0</li>';
+        document.getElementById('gr-status').textContent = 'Every 1 in the word on the left is one AND term firing on the right. ' + fired.length + ' term' + (fired.length === 1 ? '' : 's') + ' at this address.';
+      }
+      selC.addEventListener('change', paint);
+      selS.addEventListener('change', paint);
+      paint();
+    }());
+
+    /* ---------- Self-check D ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+        { q: 'Your control unit is hardwired. What does that mean?',
+          opts: ['It has no memory of any kind', 'Its control table is stored as gates: each line is an OR of AND terms', 'Its instructions are stored in ROM', 'It runs every instruction in one clock cycle'],
+          correct: 1,
+          why: 'Hardwired means the function from (step, instruction) to lines is the wiring itself. It does have memory: the stepper.' },
+        { q: 'In the ROM table, with bits in the order <code>regb_e tmp_s rega_e acc_s flags_s acc_e regb_s bus1</code>, what word is stored for CLF, step 4?',
+          opts: ['00001001', '11000000', '00111000', '00000000'],
+          correct: 0,
+          why: 'CLF at step 4 raises flags_s and bus1 and nothing else: 0000 1 0 0 1.' },
+        { q: 'In the single-cycle MIPS truth table, why is MemtoReg = 1 for <code>lw</code>?',
+          opts: ['Because lw writes to memory', 'Because the value written to the register comes from data memory, not from the ALU', 'Because lw uses an immediate', 'Because lw is an R-type instruction'],
+          correct: 1,
+          why: 'MemtoReg selects what is written back: the ALU result (0) or the word read from memory (1). lw computes the address in the ALU and writes the memory word.' },
+        { q: 'What sets the length of a single-cycle processor&rsquo;s clock cycle?',
+          opts: ['The fastest instruction', 'The average instruction', 'The slowest instruction, because every instruction gets the same one cycle', 'The number of registers'],
+          correct: 2,
+          why: 'One cycle must fit any instruction, so it is sized for the slowest, lw. That waste is what multi-cycle designs recover.' }
+      ];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p><div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi], okAns = (oi === item.correct), fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) { el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false'); });
+      }
+      host.addEventListener('click', function (e) { var t = e.target.closest('.quiz-option'); if (t) { answer(+t.dataset.q, +t.dataset.o); } });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w11-01">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 11: Four Quarters</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .q-table td:first-child, .q-table td:nth-child(2), .q-table td:nth-child(3), .q-table td:nth-child(4), .q-table td:nth-child(5) { font-family: var(--font-mono); text-align: center; }
+
+    /* Clock Bench */
+    .cb-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-md); }
+    @media (max-width: 760px) { .cb-grid { grid-template-columns: 1fr; } }
+    .cb-panel { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-surface); min-width: 0; }
+    .cb-panel h3 { margin: 0 0 var(--space-xs); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .sigs { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 4px; }
+    .sig { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); text-align: center; }
+    .sig b { font-family: var(--font-sans); display: block; font-size: var(--fs-xs); color: var(--color-text-muted); }
+    .sig--1 { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .sig--1 b { color: #dfe8f3; }
+    .wave { width: 100%; overflow-x: auto; }
+    .wave table { border-collapse: collapse; font-size: var(--fs-xs); }
+    .wave th { text-align: right; padding-right: 6px; font-family: var(--font-mono); font-weight: 700; white-space: nowrap; }
+    .wave td { width: 18px; min-width: 18px; height: 18px; padding: 0; border-bottom: 2px solid #9aa5b1; }
+    .wave td.hi { border-bottom: none; border-top: 2px solid var(--color-primary); background: #e8eef6; }
+    .wave td.now { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+    .xfer { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 4px; margin-top: var(--space-xs); }
+    .xv { border: 1px solid var(--color-border); border-radius: 4px; padding: 4px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+    .xv b { font-family: var(--font-sans); color: var(--color-primary); }
+    .xv small { display: block; font-family: var(--font-sans); font-size: 11px; color: var(--color-text-muted); }
+    .xv--on { border-color: var(--color-accent-hov); background: #fff5eb; }
+    .cb-quarter { font-weight: 700; margin: var(--space-xs) 0; }
+    .cb-status { font-size: var(--fs-sm); min-height: 1.5em; margin: var(--space-xs) 0; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 11 &rsaquo; <span>Page 1 — Four Quarters</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Four Quarters: the Clock</h1>
+    <p><strong>Sections 11.1 – 11.4</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~45 minutes</p>
+
+    <section id="sec-11-1">
+      <h2>11.1 &nbsp; You have been the control unit</h2>
+
+      <p><strong>What you have.</strong> A CPU core on one bus: four registers, TMP, BUS1, the ALU, ACC and FLAGS, with REG_SELECT turning a two-bit register number into an enable or set line. You can run any ALU instruction on it in three transfers.</p>
+      <p><strong>What you can&rsquo;t do yet.</strong> Run it without being there. Count what <code>ADD R0, R1</code> took in Checkpoint 4: three transfers, and each transfer was four pin changes in a fixed order &mdash; raise an enable, raise a set, drop the set, drop the enable. Twelve changes, plus the register numbers and the opcode, for one instruction. Get the order wrong once and a register captures the wrong value.</p>
+      <p><strong>What you can do by the end of the week.</strong> Set an instruction byte on one input, click a second input 24 times, and watch your CPU execute the instruction with nobody choosing a single control line.</p>
+
+      <p>Three circuits replace you, one per page. This page builds the first: the <strong>clock</strong>, which turns a single input that goes 0, 1, 0, 1 into the four moves of a transfer.</p>
+    </section>
+
+    <section id="sec-11-2">
+      <h2>11.2 &nbsp; One transfer, four quarters</h2>
+
+      <p>Moving a byte from R1 to R2 across the bus takes four moves, always in this order. You met it in Week 5 and did it by hand in Week 10:</p>
+      <ol>
+        <li><strong>R1&rsquo;s enable goes high.</strong> R1&rsquo;s byte is now on the bus.</li>
+        <li><strong>R2&rsquo;s set goes high.</strong> R2 now follows the bus.</li>
+        <li><strong>R2&rsquo;s set goes low.</strong> R2 now holds the byte.</li>
+        <li><strong>R1&rsquo;s enable goes low.</strong> The bus is free for the next transfer.</li>
+      </ol>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/RegisterTimingBreakdown.png" style="max-width:470px"
+             alt="A timing diagram with two waveforms. The upper one, R1 enable, rises and stays high for three equal sections, then drops for one section, and repeats. The lower one, R2 set, is high only during the second of each four sections. Dashed vertical lines divide the first transfer into four equal sections. The set pulse sits entirely inside the enable pulse.">
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s timing diagram for repeated transfers. The dashed lines cut the first transfer into its four <strong>quarters</strong>. The set pulse sits entirely inside the enable pulse, with a quarter to spare on each side.</figcaption>
+      </figure>
+
+      <p>Why that shape? Your registers are built from <code>MEM_1BIT</code> latches, and a latch is <strong>transparent</strong> while its set line is high: its output follows its input. So the byte on the bus must already be there when set rises, and must still be there when set falls. Enable on before set on, and enable off after set off, guarantees both. If the enable dropped first, R2 would spend a moment following a bus that nobody drives &mdash; and keep whatever it saw when set finally fell.</p>
+
+      <p>Real processors do this in a single clock cycle, with the set signal arriving a little after the enable and leaving a little before it. Your CPU gives each move its own quarter so that you can click through them and see each one happen.</p>
+    </section>
+
+    <section id="sec-11-3">
+      <h2>11.3 &nbsp; The clock circuit</h2>
+
+      <p>The clock takes one input, <code>clk_in</code>, which you click. It produces three outputs: <code>clk_e</code>, which every enable in the CPU will be ANDed with; <code>clk_s</code>, which every set will be ANDed with; and <code>clk</code>, which the stepper on page 2 counts.</p>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/manual-clock-circuit.png" style="max-width:620px"
+             alt="A Logisim circuit. An input pin clk-in on the left connects to the clock input of a J-K flip-flop and to one input of each of two NAND gates. The flip-flop's J and K inputs are both tied to a constant 1 at the top. Its Q output goes up to an output pin labelled clk and into the upper NAND gate, whose output passes through a NOT gate to an output pin labelled clk-set. The flip-flop's lower output, Q-bar, goes into the lower NAND gate, whose output goes straight to an output pin labelled clk-enable.">
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s clock. One J-K flip-flop with J and K tied to 1, two NAND gates and a NOT. Your tab names the pins <code>clk_in</code>, <code>clk</code>, <code>clk_s</code> and <code>clk_e</code>.</figcaption>
+      </figure>
+
+      <p><strong>The flip-flop.</strong> In Week 4 you met the edge-triggered flip-flop and were told this one was coming: a <strong>J-K flip-flop with both inputs tied to 1</strong>, which <em>toggles</em> &mdash; its output <code>Q</code> flips &mdash; on every rising edge of its clock input, and does nothing on a falling edge. Clocked by <code>clk_in</code>, its <code>Q</code> changes once for every two changes of <code>clk_in</code>. That <code>Q</code> is <code>clk</code>.</p>
+
+      <div class="callout callout--note">
+        <div class="callout__title">The one part you do not build</div>
+        <p>The J-K flip-flop is Logisim&rsquo;s own, from the <strong>Memory</strong> folder. It is the single named exception to the course&rsquo;s gates-only rule: the clock is infrastructure, you never build a J-K anywhere in this course, and the learning is in the two NAND gates beside it, which you do build. Every other part this week comes from Wiring and Gates, or from tabs already in your file.</p>
+      </div>
+
+      <p><strong>The two NAND gates.</strong> Each one compares <code>clk_in</code> with one side of the flip-flop:</p>
+      <ul>
+        <li><code>clk_s</code> = NOT ( <code>clk_in</code> NAND <code>Q</code> ) = <code>clk_in</code> AND <code>clk</code>. The set quarter is the only one in which both are 1.</li>
+        <li><code>clk_e</code> = <code>clk_in</code> NAND <code>Q&#772;</code>. It is 0 only when <code>clk_in</code> = 1 and <code>clk</code> = 0 &mdash; the one quarter with every enable off.</li>
+      </ul>
+
+      <p>Start from <code>clk_in</code> = 0 and <code>clk</code> = 0, which is where Logisim puts both after Simulate &rarr; Reset, and click <code>clk_in</code> four times. This table is produced by the same model that runs the widget below:</p>
+
+      <div class="table-scroll">
+        <table class="q-table" id="q-table">
+          <thead><tr><th>Clicks</th><th>clk_in</th><th>clk</th><th>clk_e</th><th>clk_s</th><th>Quarter</th></tr></thead>
+          <tbody id="q-body"><tr><td colspan="6"><em>Loading the table&hellip;</em></td></tr></tbody>
+        </table>
+      </div>
+
+      <p>Four clicks, four quarters: <strong>enable on, set on, set off, enable off</strong> &mdash; exactly the four moves of &sect;11.2, and the fifth click starts the next transfer. Notice that <code>clk_s</code> is never 1 unless <code>clk_e</code> is 1 too. AND every enable in the CPU with <code>clk_e</code> and every set with <code>clk_s</code>, and no transfer can ever have the wrong shape, whatever else goes wrong.</p>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/Clock_Circuit_redraw.png" style="max-width:200px"
+             alt="A Logisim circuit appearance: a square block. The left side has one input labelled Cin. The right side has three outputs labelled, from top to bottom, clk, clk-e and clk-s. The word clk is also written at the top left inside the block.">
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s appearance for the clock: <code>clk_in</code> on the left, the three outputs down the right. His own note on this figure: the outputs are in a different order here than inside the circuit. <strong>An appearance&rsquo;s pin order need not match the inside</strong>, and that is a real source of miswiring &mdash; hover over each pin in Logisim to check its name before you connect it.</figcaption>
+      </figure>
+    </section>
+
+    <!-- ========== Widget 1 ========== -->
+    <section id="sec-bench">
+      <div class="widget-card" id="w-clock">
+        <div class="widget-card__title">Clock Bench</div>
+        <div class="widget-card__subtitle">Click <code>clk_in</code> and watch the three outputs. Below, the same clock drives one transfer: R1 to R2.</div>
+
+        <div class="cb-grid">
+          <div class="cb-panel">
+            <h3>Clock</h3>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:var(--space-sm)">
+              <button type="button" class="widget-btn widget-btn--primary" id="cb-tick">click clk_in</button>
+              <button type="button" class="widget-btn widget-btn--outline" id="cb-four">four clicks</button>
+              <button type="button" class="widget-btn widget-btn--outline" id="cb-reset">Simulate &rarr; Reset</button>
+            </div>
+            <div class="sigs" id="cb-sigs"></div>
+            <p class="cb-quarter" id="cb-quarter" aria-live="polite"></p>
+          </div>
+          <div class="cb-panel">
+            <h3>R1 &rarr; R2</h3>
+            <div class="xfer" id="cb-xfer"></div>
+          </div>
+        </div>
+
+        <div class="cb-panel" style="margin-top:var(--space-md)">
+          <h3>The last 16 clicks</h3>
+          <div class="wave" id="cb-wave" role="img" aria-label="Waveform of clk_in, clk, clk_e and clk_s"></div>
+        </div>
+        <p class="cb-status" id="cb-status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section id="sec-11-4">
+      <h2>11.4 &nbsp; Settling</h2>
+
+      <p>Week 4 warned that &ldquo;everything must settle before the next phase&rdquo; would stop being a fact about chips and become a constraint on your own design. Here it is. When R1&rsquo;s enable rises, its byte does not appear on the bus instantly: it passes through R1&rsquo;s output gates, along the bus wires, and into every input the bus feeds &mdash; including the ALU, whose result ripples through eight full adders before it is stable. A latch that closes while any of that is still changing captures a mixture of old and new.</p>
+
+      <p>The quarters give it time. The byte goes onto the bus a whole quarter before the set rises, and stays a whole quarter after the set falls. In a real processor those margins have names &mdash; <strong>setup time</strong> before the capturing edge and <strong>hold time</strong> after it &mdash; and the length of the clock cycle is chosen so that the slowest path in the circuit settles inside it. In your CPU, you are the one choosing: Logisim settles everything between your clicks.</p>
+
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Three questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>You can say what the clock&rsquo;s three outputs are in each quarter, and why the set quarter sits inside the enable quarters. Next page: a transfer is four quarters, but an instruction is several transfers. Something has to count them.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 11, Page 1
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['ctl', 'core'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.ctl || !L.core) { return; }
+    var K = L.ctl;
+
+    /* ---------- The quarter table, from the model ---------- */
+    (function () {
+      var body = document.getElementById('q-body');
+      if (!body) { return; }
+      var c = K.clock(), s = c.reset(), rows = [];
+      function row(n, s) {
+        return '<tr><td>' + n + '</td><td>' + s.clkIn + '</td><td>' + s.clk + '</td><td>' + s.clkE + '</td><td>' + s.clkS +
+          '</td><td>' + K.QUARTERS[s.quarter].name + (n === 4 ? ' &mdash; the next transfer begins' : '') + '</td></tr>';
+      }
+      rows.push(row(0, s));
+      for (var i = 1; i <= 4; i++) { rows.push(row(i, c.toggle())); }
+      body.innerHTML = rows.join('');
+    }());
+
+    /* ---------- Widget 1 — Clock Bench ---------- */
+    (function () {
+      var host = document.getElementById('w-clock');
+      if (!host) { return; }
+      var R1 = 0x2D, clock, s, hist, r2, clicks;
+
+      function reset() {
+        clock = K.clock(); s = clock.reset(); hist = [s]; r2 = 0; clicks = 0;
+        document.getElementById('cb-status').textContent = 'clk_in = 0 and clk = 0: the first quarter of a transfer. R1 holds 00101101; R2 holds 00000000.';
+        paint();
+      }
+      function tick() {
+        s = clock.toggle(); clicks++;
+        hist.push(s); if (hist.length > 17) { hist.shift(); }
+        if (s.clkE && s.clkS) { r2 = R1; }
+        document.getElementById('cb-status').textContent = 'Click ' + clicks + ': ' + K.QUARTERS[s.quarter].say + '.';
+        paint();
+      }
+      function sig(name, v) { return '<div class="sig' + (v ? ' sig--1' : '') + '"><b>' + name + '</b>' + v + '</div>'; }
+      function paint() {
+        document.getElementById('cb-sigs').innerHTML =
+          sig('clk_in', s.clkIn) + sig('clk (Q)', s.clk) + sig('Q&#772;', s.qBar) + sig('clk_e', s.clkE) + sig('clk_s', s.clkS);
+        document.getElementById('cb-quarter').textContent = 'Quarter ' + (s.quarter + 1) + ' of 4: ' + K.QUARTERS[s.quarter].name;
+        var bus = s.clkE ? L.core.bits(R1, 8) : 'xxxxxxxx';
+        document.getElementById('cb-xfer').innerHTML =
+          '<div class="xv' + (s.clkE ? ' xv--on' : '') + '"><b>R1 e</b> ' + s.clkE + '<small>' + (s.clkE ? 'R1 drives the bus' : 'R1 is off the bus') + '</small></div>' +
+          '<div class="xv"><b>Bus</b> ' + bus + '<small>' + (s.clkE ? 'R1&rsquo;s byte' : 'floating') + '</small></div>' +
+          '<div class="xv' + (s.clkS ? ' xv--on' : '') + '"><b>R2 s</b> ' + s.clkS + '<small>' + (s.clkS ? 'R2 follows the bus' : 'R2 holds') + '</small></div>' +
+          '<div class="xv"><b>R2</b> ' + L.core.bits(r2, 8) + '<small>stored</small></div>';
+        var names = [['clk_in', 'clkIn'], ['clk', 'clk'], ['clk_e', 'clkE'], ['clk_s', 'clkS']];
+        var h = '<table><tbody>';
+        names.forEach(function (n) {
+          h += '<tr><th scope="row">' + n[0] + '</th>';
+          for (var i = 0; i < 17; i++) {
+            var x = hist[i];
+            h += x ? '<td class="' + (x[n[1]] ? 'hi' : '') + (i === hist.length - 1 ? ' now' : '') + '"></td>' : '<td></td>';
+          }
+          h += '</tr>';
+        });
+        document.getElementById('cb-wave').innerHTML = h + '</tbody></table>';
+        document.getElementById('cb-wave').setAttribute('aria-label', 'Waveform of the last ' + hist.length + ' states. Now: clk_in ' + s.clkIn + ', clk ' + s.clk + ', clk_e ' + s.clkE + ', clk_s ' + s.clkS + '.');
+      }
+      document.getElementById('cb-tick').addEventListener('click', tick);
+      document.getElementById('cb-four').addEventListener('click', function () { for (var i = 0; i < 4; i++) { tick(); } });
+      document.getElementById('cb-reset').addEventListener('click', reset);
+      reset();
+    }());
+
+    /* ---------- Self-check A ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+        { q: 'In what order do the four quarters of a transfer come?',
+          opts: ['set on, enable on, enable off, set off', 'enable on, set on, set off, enable off', 'enable on, enable off, set on, set off', 'set on, set off, enable on, enable off'],
+          correct: 1,
+          why: 'The source drives the bus before the destination starts following it, and keeps driving until the destination has stopped. The set pulse sits inside the enable pulse.' },
+        { q: '<code>clk_in</code> = 1 and <code>clk</code> = 0. What are <code>clk_e</code> and <code>clk_s</code>?',
+          opts: ['clk_e = 1, clk_s = 1', 'clk_e = 1, clk_s = 0', 'clk_e = 0, clk_s = 0', 'clk_e = 0, clk_s = 1'],
+          correct: 2,
+          why: 'clk_s = clk_in AND clk = 0. clk_e = clk_in NAND (NOT clk) = 1 NAND 1 = 0. This is the fourth quarter: everything off.' },
+        { q: 'Why must a register&rsquo;s set go low before the source&rsquo;s enable does?',
+          opts: ['Because the J-K flip-flop only toggles on a rising edge', 'Because a latch follows its input while set is high, so the bus must still hold the byte when set falls', 'Because two enables would conflict on the bus', 'It need not; the order of the last two moves does not matter'],
+          correct: 1,
+          why: 'Your registers are level-sensitive latches. The value they keep is whatever the bus held at the moment set fell, so the source must still be driving it then.' }
+      ];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p><div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi], okAns = (oi === item.correct), fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) { el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false'); });
+      }
+      host.addEventListener('click', function (e) { var t = e.target.closest('.quiz-option'); if (t) { answer(+t.dataset.q, +t.dataset.o); } });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+  })();
+  </script>
+</body>
+</html>

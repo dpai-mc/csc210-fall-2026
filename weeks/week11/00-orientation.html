@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w11-00">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 11 Orientation: The Control Unit</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .split-bar { display: flex; height: 2.2rem; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--color-border); margin: var(--space-sm) 0; }
+    .split-bar > div { display: flex; align-items: center; justify-content: center; font-size: var(--fs-xs); font-weight: 700; color: #fff; text-align: center; padding: 0 2px; overflow: hidden; }
+    .split-bar .sb-pg { background: var(--color-primary); }
+    .split-bar .sb-cp { background: var(--color-accent-hov); }
+    .split-bar .sb-qz { background: var(--color-success); }
+    .split-legend { display: flex; justify-content: space-between; font-size: var(--fs-xs); color: var(--color-text-muted); gap: var(--space-sm); }
+    .due { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-md); margin: var(--space-md) 0; }
+    .due > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
+    .due h3 { margin-top: 0; font-size: var(--fs-base); }
+    @media (max-width: 760px) { .due { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 11 &rsaquo; <span>Orientation</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Week 11 — The Control Unit</h1>
+    <p><strong>The clock, the stepper, and the circuit that turns an instruction&rsquo;s bits into control lines</strong> &nbsp;|&nbsp; <strong>10/26 – 11/01</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~8.5 hours</p>
+
+    <section id="sec-gap">
+      <div class="callout callout--hook">
+        <div class="callout__title">You have been the control unit.</div>
+        <p>Last week you ran <code>ADD R0, R1</code> on your own CPU core. To do it you raised <code>regb_e</code>, pulsed <code>tmp_s</code>, dropped <code>regb_e</code>, raised <code>rega_e</code>, pulsed <code>acc_s</code> and <code>flags_s</code>, and so on: a dozen pin changes, in an order you had to get exactly right, for one instruction. A real CPU does that hundreds of millions of times a second and never gets the order wrong.</p>
+        <p>This week you build the circuit that does it for you. A <strong>clock</strong> that shapes every transfer into four quarters, a <strong>stepper</strong> that counts the transfers of an instruction, and a <strong>control unit</strong> that reads an instruction byte and raises the right lines at the right step. By Sunday you will set one byte, click one input 24 times, and watch your CPU execute the instruction on its own.</p>
+      </div>
+    </section>
+
+    <section id="sec-shape">
+      <h2>The shape of the week</h2>
+      <div class="split-bar" role="img" aria-label="Of about eight and a half hours this week: about four and a quarter hours on the orientation and the four Week 11 pages, about three and a half hours on Checkpoint 5 in Logisim, and about three quarters of an hour on the Canvas quiz.">
+        <div class="sb-pg" style="flex:4.25">Week 11 pages</div>
+        <div class="sb-cp" style="flex:3.5">Checkpoint 5</div>
+        <div class="sb-qz" style="flex:0.75">Quiz</div>
+      </div>
+      <div class="split-legend"><span>~4.25 hrs</span><span>~3.5 hrs</span><span>~0.75</span></div>
+      <p>Read pages 1 to 3 before you open Logisim. Each page builds one of the three new circuits, in the order you build them: clock, stepper, control unit. Page 4 steps back and looks at how other processors solve the same problem; it is on the quiz, not in the checkpoint.</p>
+
+      <div class="due">
+        <div>
+          <h3>Assignment 11, Part A</h3>
+          <p><strong>Logisim Checkpoint 5</strong> &mdash; 60 points. Your <code>.circ</code> file and ten screenshots.</p>
+        </div>
+        <div>
+          <h3>Assignment 11, Part B</h3>
+          <p>A <strong>Canvas quiz</strong> on the four pages &mdash; 40 points, 16 questions, auto-graded. No time limit, two attempts, higher score kept.</p>
+        </div>
+      </div>
+      <p><strong>Both are due Sunday 11/01, 11:59 pm.</strong></p>
+    </section>
+
+    <section id="sec-path">
+      <h2>This week&rsquo;s learning path</h2>
+      <p>Read the pages in order. The control unit on page 3 is built from the clock on page 1 and the stepper on page 2.</p>
+
+      <div class="spa-card-grid">
+        <div class="spa-card">
+          <div class="spa-card__number">Page 1</div>
+          <div class="spa-card__title">Four Quarters: the Clock</div>
+          <div class="spa-card__time">~45 min &nbsp;|&nbsp; Sections 11.1–11.4</div>
+          <div class="spa-card__desc">Why one transfer takes four moves, and the flip-flop and two NAND gates that make them: enable on, set on, set off, enable off.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+        <div class="spa-card">
+          <div class="spa-card__number">Page 2</div>
+          <div class="spa-card__title">Counting Steps: the Stepper</div>
+          <div class="spa-card__time">~1 hr &nbsp;|&nbsp; Sections 11.5–11.8</div>
+          <div class="spa-card__desc">Twelve of your own one-bit memory cells pass a 1 down a chain, so the CPU always knows which transfer of an instruction it is on.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+        <div class="spa-card">
+          <div class="spa-card__number">Page 3</div>
+          <div class="spa-card__title">From Bits to Lines: the Control Unit</div>
+          <div class="spa-card__time">~1.25 hr &nbsp;|&nbsp; Sections 11.9–11.12</div>
+          <div class="spa-card__desc">How an instruction byte, a step and the clock become <code>regb_e</code>, <code>tmp_s</code> and the rest. The whole control unit is one table, and every row of it is an AND gate.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+        <div class="spa-card">
+          <div class="spa-card__number">Page 4</div>
+          <div class="spa-card__title">Control Units in General</div>
+          <div class="spa-card__time">~1 hr &nbsp;|&nbsp; Sections 11.13–11.16</div>
+          <div class="spa-card__desc">Hardwired against microprogrammed control, and single-cycle against multi-cycle, with your CPU and MIPS side by side.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-tools">
+      <h2>Tools and reading</h2>
+      <ul>
+        <li><strong>Logisim 2.7.1</strong> &mdash; needed for Checkpoint 5. Open the same course file you have used since Week 2; this week adds three tabs and changes the <code>CPU</code> tab.</li>
+        <li><strong>MARS</strong> &mdash; not needed this week.</li>
+        <li><strong>Saylor CS301</strong> &mdash; log in at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 5: Designing a Processor</strong> for control units, control signals and the single-cycle MIPS datapath in a second voice. It describes MIPS, not this CPU; the four pages are the source for your machine.</li>
+      </ul>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 11, Orientation
+  </footer>
+
+</body>
+</html>

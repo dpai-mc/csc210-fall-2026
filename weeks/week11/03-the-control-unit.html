@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w11-03">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 11: From Bits to Lines</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .ctl-table td:first-child, .fetch-table td:first-child { font-family: var(--font-mono); font-weight: 700; white-space: nowrap; }
+    .cls-table td:first-child { font-family: var(--font-mono); }
+
+    /* Control Unit widget */
+    .cu-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-md); }
+    @media (max-width: 760px) { .cu-grid { grid-template-columns: 1fr; } }
+    .cu-panel { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-surface); min-width: 0; }
+    .cu-panel h3 { margin: 0 0 var(--space-xs); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .tg-row { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 var(--space-sm); align-items: center; }
+    .tg-row > span.lbl { font-size: var(--fs-xs); font-weight: 700; min-width: 3.4rem; }
+    .cu-sel { font-family: var(--font-mono); font-size: var(--fs-sm); padding: 2px 6px; border: 1px solid var(--color-border); border-radius: 4px; max-width: 100%; }
+    .irbit { font-family: var(--font-mono); min-width: 1.6rem; padding-left: 4px; padding-right: 4px; }
+    #cu-bits > span.lbl { min-width: 1.4rem; }
+    .steps { display: flex; flex-wrap: wrap; gap: 4px; }
+    .stp { min-width: 2.2rem; text-align: center; border: 2px solid var(--color-border); border-radius: 999px; padding: 1px 6px; font-weight: 700; font-size: var(--fs-sm); }
+    .stp--on { background: var(--color-accent); border-color: var(--color-accent-hov); color: #fff; }
+    .lines { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 4px; }
+    .ln { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .ln small { display: block; font-family: var(--font-sans); font-size: 11px; color: var(--color-text-muted); }
+    .ln--wait { border-style: dashed; border-color: var(--color-accent-hov); }
+    .ln--1 { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .ln--1 small { color: #dfe8f3; }
+    .vals { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 4px; }
+    .val { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); background: var(--color-surface); overflow-wrap: anywhere; }
+    .val b { font-family: var(--font-sans); color: var(--color-primary); }
+    .val small { display: block; font-family: var(--font-sans); font-size: 11px; color: var(--color-text-muted); }
+    .val--wrote { border-color: var(--color-success); background: #f0faf4; }
+    .busline { font-family: var(--font-mono); border: 2px solid var(--color-primary); border-radius: var(--radius); padding: var(--space-xs) var(--space-sm); margin: var(--space-xs) 0; background: var(--color-code-bg); overflow-wrap: anywhere; }
+    .busline--float { border-style: dashed; border-color: var(--color-border); }
+    .busline--bad { border-color: var(--color-danger); background: #fdf0ef; }
+    .flags4 { display: flex; gap: 4px; flex-wrap: wrap; }
+    .flag { font-family: var(--font-mono); border: 1px solid var(--color-border); border-radius: 4px; padding: 1px 8px; }
+    .flag--1 { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .cu-status { font-size: var(--fs-sm); min-height: 1.5em; margin: var(--space-xs) 0; }
+    .cu-warn { font-size: var(--fs-sm); border-left: 4px solid var(--color-danger); background: #fdf0ef; padding: var(--space-xs) var(--space-sm); margin: var(--space-xs) 0; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 11 &rsaquo; <span>Page 3 — From Bits to Lines</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>From Bits to Lines: the Control Unit</h1>
+    <p><strong>Sections 11.9 – 11.12</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1.25 hours</p>
+
+    <section id="sec-11-9">
+      <h2>11.9 &nbsp; Enables down the left, sets down the right</h2>
+
+      <p>You now have a clock that says <em>which quarter</em> and a stepper that says <em>which step</em>. The control unit adds the third thing &mdash; <em>which instruction</em> &mdash; and from the three of them produces every control line your Week 10 core needs. Its inputs are <code>clk</code>, <code>clk_e</code> and <code>clk_s</code> from the clock, and the 8-bit instruction <code>ir</code>. Its outputs are the eleven control pins you clicked by hand in Checkpoint 4.</p>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/Control_Unit_Template_Circuit.jpg"
+             alt="A Logisim circuit with a long stepper block across the top, its clk input fed from an input pin clk and its output 7 wired back to its reset. Input pins clks and clke are at the top left. Down the left edge, a column of two-input AND gates drives output pins RAM_E, ACC_E, PC_E and R0_E to R3_E; one input of every one of these gates is a common vertical wire from clke. Down the right edge, a second column of AND gates drives output pins MAR_S, ACC_S, RAM_S, TMP_S, R0_S to R3_S, IR_S and PC_S; one input of every one of these is a common wire from clks. An output BUS 1 sits on the left. An 8-bit input IR IN is at the bottom. The middle of the circuit is empty.">
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s control-unit template: the empty frame every control unit starts from. <strong>Every enable on the left is ANDed with <code>clke</code>; every set on the right is ANDed with <code>clks</code>.</strong> His version selects R0&ndash;R3 inside the control unit; yours keeps the REG_SELECT you built in Week 10 on the <code>CPU</code> tab, so your control unit outputs <code>rega_e</code>, <code>regb_e</code> and <code>regb_s</code> instead of eight register lines.</figcaption>
+      </figure>
+
+      <p>Those two columns of AND gates are the whole reason page 1 exists. Whatever the middle of the control unit decides, an enable can only be high while <code>clk_e</code> is, and a set only while <code>clk_s</code> is. Every transfer your CPU ever makes has the shape of &sect;11.2, without the logic in the middle having to know anything about quarters. The middle decides <em>what</em>; the clock decides <em>when</em>.</p>
+    </section>
+
+    <section id="sec-11-10">
+      <h2>11.10 &nbsp; Decoding a class</h2>
+
+      <p>Week 10 showed that every field of an instruction byte is a wire to something you built. The control unit is where the remaining wires go. First it needs a line for each <strong>class</strong> of instruction, high when <code>ir</code> holds an instruction of that class:</p>
+      <ul>
+        <li><strong>ALU.</strong> Bit 7. That is all: <code>b7</code> is the ALU line.</li>
+        <li><strong>Everything else.</strong> Bits 6&ndash;4 go into the <code>DECODER_3TO8</code> you built in Week 3, and each of its eight outputs is ANDed with NOT <code>b7</code>, so that an ALU instruction raises none of them.</li>
+      </ul>
+
+      <div class="table-scroll">
+        <table class="cls-table">
+          <thead><tr><th>b6 b5 b4</th><th>Decoder output</th><th>Class line (with b7 = 0)</th><th>Used</th></tr></thead>
+          <tbody>
+            <tr><td>000</td><td>out0</td><td>LD</td><td>Week 14</td></tr>
+            <tr><td>001</td><td>out1</td><td>ST</td><td>Week 14</td></tr>
+            <tr><td>010</td><td>out2</td><td>DATA</td><td>Week 14</td></tr>
+            <tr><td>011</td><td>out3</td><td>JMPR</td><td>Week 14</td></tr>
+            <tr><td>100</td><td>out4</td><td>JMP</td><td>Week 14</td></tr>
+            <tr><td>101</td><td>out5</td><td>J<em>caez</em></td><td>Week 14</td></tr>
+            <tr><td>110</td><td>out6</td><td><strong>CLF</strong></td><td><strong>this week</strong></td></tr>
+            <tr><td>111</td><td>out7</td><td>I/O</td><td>Week 12</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Build all eight AND gates now and wire only CLF. The other seven lines are ready for Weeks 12 to 14, and building the bank once means the decoding never has to be revisited. This is the course&rsquo;s rule for control, in action: <strong>a decoder selects</strong> &mdash; each output is a line with one meaning.</p>
+
+      <p>One more line: <strong>CMP</strong>, which is <code>b6 AND b5 AND b4</code> &mdash; opcode 111 &mdash; and is only ever used together with the ALU line. A compare runs steps 4 and 5 like any ALU instruction, then must <em>not</em> write a register in step 6. So the CMP line is inverted and ANDed into step 6&rsquo;s gate.</p>
+    </section>
+
+    <section id="sec-11-11">
+      <h2>11.11 &nbsp; The control table</h2>
+
+      <p>Now every control line can be written as a sentence: <em>high at step N, when the instruction is of class X, during the right quarter</em>. Here is the whole of this week&rsquo;s control unit as a table, produced from the same model that runs the widget below:</p>
+
+      <div class="table-scroll">
+        <table class="ctl-table">
+          <thead><tr><th>Line</th><th>ANDed with</th><th>High at</th><th>What it does</th></tr></thead>
+          <tbody id="ctl-body"><tr><td colspan="4"><em>Loading the table&hellip;</em></td></tr></tbody>
+        </table>
+      </div>
+
+      <p>Each row is gates you can read straight off it. <code>regb_e</code> is one 3-input AND: <code>step4</code>, the ALU line, <code>clk_e</code>. <code>flags_s</code> has two terms, so it is two ANDs feeding an OR, and the OR&rsquo;s output is ANDed with <code>clk_s</code>. <strong>Every line in a hardwired control unit is an OR of AND terms.</strong> Page 4 shows that this is not a coincidence of this CPU but what &ldquo;hardwired&rdquo; means.</p>
+
+      <p>Three more outputs complete the control unit:</p>
+      <ul>
+        <li><code>ra</code> and <code>rb</code> are <code>ir</code>&rsquo;s bits 3&ndash;2 and 1&ndash;0, wired straight through to REG_SELECT. They need no gating: REG_SELECT only acts on them when <code>rega_e</code>, <code>regb_e</code> or <code>regb_s</code> is high.</li>
+        <li><code>opcode</code> is <code>ir</code>&rsquo;s bits 6&ndash;4, each <strong>ANDed with (<code>step5</code> AND the ALU line)</strong>. At every other moment the ALU sees <code>000</code> and adds. That matters twice: CLF, below, needs an addition at step 4; and in Week 13, fetch will use the ALU to add 1 to the program counter at step 1, while <code>ir</code> still holds the <em>previous</em> instruction. Without the gating, a fetch after an XOR would XOR the program counter.</li>
+      </ul>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/control-alu-diagram.jpg"
+             alt="A Logisim control-unit circuit. A stepper block runs across the top with output 7 wired back to its reset. Outputs 4, 5 and 6 drop to three AND gates in the middle, each also fed by bit 0 of an IR IN pin at the bottom, which is the ALU-instruction bit in Fall 2025's numbering; the step 6 gate has a third input from a NOT gate whose input is a 3-input AND of the three opcode bits. The three AND outputs fan out through labelled tunnels to REGB_E and TMP_S, REGA_E and ACC_S, and ACC_E and REGB_S. Down the left, AND gates gated by clke drive the enable outputs; down the right, AND gates gated by clks drive the set outputs. In the lower left two 2-by-4 decoders labelled REG B and REG A select R0_E to R3_E, and on the right a third 2-by-4 decoder selects R0_S to R3_S. At the bottom left, three AND gates produce outputs ALU_0, ALU_1 and ALU_2 from the opcode bits.">
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s control unit for the ALU class, with <code>IR IN</code> = CMP. In the middle: <code>step4</code>, <code>step5</code> and <code>step6</code> each ANDed with the ALU bit; the CMP detector (3-input AND, then NOT) blocks step 6. Bottom left: the three opcode outputs, each through an AND. Fall 2025 numbers bits from the left starting at 0, so its &ldquo;bit 0&rdquo; is your <code>b7</code>.</figcaption>
+      </figure>
+
+      <h3>CLF: clearing the flags with an addition</h3>
+
+      <p>There is no &ldquo;clear&rdquo; input on FLAGS. CLF clears it the same way any instruction sets it &mdash; by letting FLAGS capture the ALU&rsquo;s outputs &mdash; at a moment when every one of those outputs is 0. At step 4 of a CLF nothing drives the bus, <code>bus1</code> makes the ALU&rsquo;s B input <code>00000001</code>, and the opcode is <code>000</code>. If the ALU&rsquo;s A input reads <code>00000000</code>, the ALU computes 0 + 1 = 1: no carry, A is not larger than B, A does not equal B, the result is not zero. <code>flags_s</code> captures C A E Z = 0 0 0 0.</p>
+
+      <p>&ldquo;If A reads 00000000&rdquo; needs one setting. With nothing driving the bus, the ALU&rsquo;s A input would float, not read zero. So this week you set the <strong>pull behaviour of <code>ALU_8BIT</code>&rsquo;s <code>A</code> pin to pull-down</strong> &mdash; the same attribute you set on <code>CI</code> in Week 6, a property of the pin, not a component. Nothing is rewired, and while anything drives the bus the pull-down has no effect.</p>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/clear-flags-control-unit.jpg"
+             alt="A Logisim control-unit circuit for the Clear Flags instruction. The IR IN pin at the bottom holds 01100000. Its bits run up to a 3-by-8 decoder in the middle whose eight outputs each feed an AND gate; the other input of each AND gate comes from the first IR bit through a NOT gate. The seventh AND gate's output is highlighted and runs up to a two-input AND gate together with stepper output 4. That gate's output drives the BUS 1 output and, through a tunnel labelled FLAG_S, the FLAGS_S set output on the right, which is ANDed with clks. At the bottom, inputs C, A, E and Z feed a bank of AND gates and an OR gate that are not used by this instruction.">
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s control unit for CLF: the 3&times;8 decoder and its bank of eight ANDs with NOT <code>b7</code>, output 6 ANDed with <code>step4</code>, driving <code>BUS 1</code> and <code>FLAGS_S</code>. The C, A, E, Z inputs at the bottom are for the jump instructions in Week 14.</figcaption>
+      </figure>
+
+      <div class="callout callout--note">
+        <div class="callout__title">After CMP, read only A and E</div>
+        <p>CMP captures the flags at step 5 like any ALU instruction. But opcode 111 selects none of the ALU&rsquo;s seven legs &mdash; you saw in Week 7 that its result floats &mdash; so the C and Z it captures mean nothing. <strong>After a CMP, only A (A is larger) and E (A equals B) are meaningful.</strong> When jumps arrive in Week 14, follow a CMP with JA, JE or JAE, never with a jump that tests Z or C.</p>
+      </div>
+    </section>
+
+    <!-- ========== Widget 3 ========== -->
+    <section id="sec-cu">
+      <div class="widget-card" id="w-cu">
+        <div class="widget-card__title">Control Unit</div>
+        <div class="widget-card__subtitle">Your Checkpoint 5 CPU: clock, stepper and control unit driving the Week 10 core. Choose an instruction, then click <code>clk_in</code>. Each line shows the table term that raised it; a dashed line has its term true and is waiting for its clock quarter.</div>
+
+        <div class="cu-grid">
+          <div class="cu-panel">
+            <h3>Instruction</h3>
+            <div class="tg-row">
+              <label class="sr-only" for="cu-pick">Choose an instruction</label>
+              <select id="cu-pick" class="cu-sel">
+                <option value="129">ADD R0, R1</option>
+                <option value="229">XOR R1, R1</option>
+                <option value="162">SHL R0, R2</option>
+                <option value="159">SHR R3, R3</option>
+                <option value="177">NOT R0, R1</option>
+                <option value="251">CMP R2, R3</option>
+                <option value="96">CLF</option>
+                <option value="1">LD R0, R1 (not this week)</option>
+              </select>
+            </div>
+            <div class="tg-row" id="cu-bits"><span class="lbl">ir</span></div>
+            <p id="cu-dec" style="font-size:var(--fs-sm);margin:0"></p>
+            <div class="tg-row" style="margin-top:var(--space-sm)">
+              <button type="button" class="widget-btn widget-btn--primary" id="cu-tick">click clk_in</button>
+              <button type="button" class="widget-btn widget-btn--outline" id="cu-step">next step</button>
+              <button type="button" class="widget-btn widget-btn--outline" id="cu-all">to the end of the instruction</button>
+              <button type="button" class="widget-btn widget-btn--outline" id="cu-reset">Simulate &rarr; Reset</button>
+            </div>
+            <div class="steps" id="cu-steps"></div>
+            <p style="font-size:var(--fs-sm);margin:var(--space-xs) 0 0" id="cu-clock"></p>
+          </div>
+          <div class="cu-panel">
+            <h3>Control lines</h3>
+            <div class="lines" id="cu-lines"></div>
+          </div>
+        </div>
+
+        <div class="cu-panel" style="margin-top:var(--space-md)">
+          <h3>The core</h3>
+          <div class="busline" id="cu-bus"></div>
+          <div class="vals" id="cu-regs"></div>
+          <p class="lbl" style="font-size:var(--fs-xs);margin:var(--space-xs) 0 2px">FLAGS, held</p>
+          <div class="flags4" id="cu-flags"></div>
+        </div>
+        <div id="cu-warn" aria-live="polite"></div>
+        <p class="cu-status" id="cu-status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section id="sec-11-12">
+      <h2>11.12 &nbsp; Fetch, and the pin that stands in for it</h2>
+
+      <p>Steps 1 to 3 are empty in this week&rsquo;s table. They belong to <strong>fetch</strong> &mdash; reading the next instruction out of RAM &mdash; which is the same for every instruction, because the control unit cannot know what an instruction is until it has fetched it. Fetch needs the program counter, the instruction register and the RAM on the bus, and they join it in Week 13. When they do, your control unit gains these rows:</p>
+
+      <div class="table-scroll">
+        <table class="fetch-table">
+          <thead><tr><th>Step</th><th>Drives the bus</th><th>Captures</th><th>Effect</th></tr></thead>
+          <tbody id="fetch-body"><tr><td colspan="4"><em>Loading the table&hellip;</em></td></tr></tbody>
+        </table>
+      </div>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/control-unit-diagram-fetch.jpg"
+             alt="A Logisim control-unit circuit for the fetch steps. Stepper output 1 is highlighted and runs to the BUS 1 output, the PC_E enable gate on the left, and the MAR_S and ACC_S set gates on the right. Stepper output 2 runs to the RAM_E enable gate and the IR_S set gate. Stepper output 3 runs to the ACC_E enable gate and the PC_S set gate. The remaining gates on both sides have one input grounded.">
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s fetch control unit, at step 1: <code>BUS 1</code>, <code>PC_E</code>, <code>MAR_S</code> and <code>ACC_S</code> all high. It is BUS1&rsquo;s reason for existing: ACC captures PC + 1 while the MAR captures PC. A preview of Week 13, not part of this week&rsquo;s checkpoint.</figcaption>
+      </figure>
+
+      <p>Until then, you are the fetch. The instruction comes from an 8-bit input pin, <code>ir</code>, on your <code>CPU</code> tab. <strong>Set <code>ir</code> only while the stepper is on steps 1 to 3</strong> &mdash; right after Simulate &rarr; Reset, or after the 24th click of an instruction. That is exactly when Week 13&rsquo;s fetch will write the real instruction register (step 2), so the habit is the right one. Change <code>ir</code> in the middle of steps 4 to 6 and the control unit switches to the new instruction&rsquo;s lines immediately, part-way through the old one.</p>
+
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Four questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>You can read any line&rsquo;s gates off the control table, say which lines are high at any step and quarter of an ALU instruction or CLF, and explain why CMP writes nothing and why the opcode is gated. That is the whole of Checkpoint 5. Next page: the same table, stored a different way &mdash; and how MIPS does without a stepper at all.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 11, Page 3
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['ctl', 'core'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.ctl || !L.core) { return; }
+    var K = L.ctl, C = L.core;
+    function b8(v) { return v === null || v === undefined ? 'EEEEEEEE' : C.bits(v, 8); }
+    function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+    /* ---------- The control table and the fetch table, from the model ---------- */
+    (function () {
+      var body = document.getElementById('ctl-body');
+      if (body) {
+        body.innerHTML = K.TABLE.map(function (row) {
+          var when = row.terms.map(function (t) { return 'step ' + t.step + ' AND ' + t.when; }).join(', <em>or</em> ');
+          return '<tr><td>' + row.line + '</td><td>' + (row.gate ? '<code>' + row.gate + '</code>' : '&mdash; (not a bus enable or set)') +
+            '</td><td>' + when + '</td><td>' + esc(row.drives) + '</td></tr>';
+        }).join('');
+      }
+      var fb = document.getElementById('fetch-body');
+      if (fb) {
+        fb.innerHTML = K.FETCH.map(function (f) {
+          return '<tr><td>' + f.step + '</td><td>' + f.enable.join(', ') + '</td><td>' + f.set.join(' and ') + (f.bus1 ? ' (with bus1)' : '') + '</td><td>' + esc(f.rtl) + '</td></tr>';
+        }).join('');
+      }
+    }());
+
+    /* ---------- Widget 3 — Control Unit ---------- */
+    (function () {
+      var host = document.getElementById('w-cu');
+      if (!host) { return; }
+      var INIT = { R0: 5, R1: 7, R2: 9, R3: 0x81 };
+      var cpu, snap, ir = 0x81, warn = '', lastPulse = -9;
+      var pick = document.getElementById('cu-pick'), bitsHost = document.getElementById('cu-bits');
+      for (var i = 7; i >= 0; i--) {
+        var bt = document.createElement('button');
+        bt.type = 'button'; bt.className = 'widget-btn widget-btn--small irbit'; bt.dataset.bit = String(i);
+        bt.setAttribute('aria-label', 'ir bit ' + i);
+        bitsHost.appendChild(bt);
+      }
+
+      function reset() {
+        cpu = K.cpu(INIT); cpu.setIr(ir); snap = cpu.snapshot(); warn = ''; lastPulse = -9;
+        document.getElementById('cu-status').textContent = 'After Simulate → Reset: step 1, first quarter. R0 = 5, R1 = 7, R2 = 9, R3 = 10000001; TMP and ACC never written.';
+        paint();
+      }
+      function setIr(v) {
+        ir = v & 255;
+        var mid = snap && snap.step >= 4;
+        snap = cpu.setIr(ir);
+        warn = mid ? 'You changed ir at step ' + snap.step + '. The control unit switched to the new instruction’s lines at once, part-way through the old one. Set ir only during steps 1 to 3.' : '';
+        var match = false;
+        for (var k = 0; k < pick.options.length; k++) { if (+pick.options[k].value === ir) { pick.selectedIndex = k; match = true; } }
+        if (!match) { pick.selectedIndex = -1; }
+        paint();
+      }
+      function tick(n) {
+        var last = null;
+        for (var k = 0; k < n; k++) { last = cpu.toggle(); }
+        snap = last;
+        var msg = 'Step ' + snap.step + ', ' + snap.quarterName + '.';
+        if (snap.wrote && snap.wrote.length) { msg += ' Captured: ' + snap.wrote.join(', ') + '.'; }
+        if (snap.error) { msg += ' ' + snap.error; }
+        if (snap.warning) { msg += ' ' + snap.warning; }
+        if (snap.pulsed7) { lastPulse = snap.toggles; }
+        if (snap.toggles - lastPulse <= 1) { msg += ' Step 7 reset the stepper: the instruction is done.'; }
+        document.getElementById('cu-status').textContent = msg;
+        paint();
+      }
+      function paint() {
+        var d = K.decode(ir);
+        bitsHost.querySelectorAll('.irbit').forEach(function (bt) {
+          var v = (ir >> +bt.dataset.bit) & 1;
+          bt.textContent = String(v);
+          bt.setAttribute('aria-pressed', v ? 'true' : 'false');
+        });
+        var dec = C.decodeByte(ir);
+        document.getElementById('cu-dec').innerHTML = '<strong>' + esc(d.alu ? dec.text : (d.clf ? 'CLF' : dec.text)) + '</strong> &mdash; class line: ' +
+          (d.alu ? 'ALU (b7)' + (d.cmp ? ', and CMP' : '') : 'decoder out' + d.op + ' (' + d.name + ')') +
+          (!d.alu && !d.clf ? '. Nothing in this week’s table uses it, so steps 4–6 do nothing.' : '');
+
+        var sh = '';
+        for (var k = 0; k < 6; k++) { sh += '<span class="stp' + (snap.steps[k] ? ' stp--on' : '') + '">' + (k + 1) + '</span>'; }
+        document.getElementById('cu-steps').innerHTML = sh;
+        document.getElementById('cu-clock').innerHTML = 'Quarter: <strong>' + snap.quarterName + '</strong> &nbsp; clk_e = ' + snap.clk.clkE + ', clk_s = ' + snap.clk.clkS + ' &nbsp; clicks: ' + snap.toggles;
+
+        var raw = snap.step ? K.raised(ir, snap.step) : {};
+        var lh = K.TABLE.map(function (row) {
+          var v = snap.lines[row.line], term = raw[row.line];
+          var why = '';
+          if (term) {
+            var t = row.terms.filter(function (tt) { return tt.step === snap.step && K.WHEN[tt.when](d); })[0];
+            why = 'step ' + t.step + ' AND ' + t.when + (row.gate ? (v ? ' AND ' + row.gate : ' &mdash; waiting for ' + row.gate) : '');
+          } else { why = row.drives; }
+          return '<div class="ln' + (v ? ' ln--1' : (term ? ' ln--wait' : '')) + '">' + row.line + ' = ' + v + '<small>' + why + '</small></div>';
+        }).join('');
+        lh += '<div class="ln' + (snap.lines.opcode ? ' ln--1' : '') + '">opcode = ' + C.bits(snap.lines.opcode, 3) + '<small>' +
+          (snap.step === 5 && d.alu ? 'ir b6–b4, passed at step 5 of an ALU instruction' : 'gated to 000 (ADD)') + '</small></div>';
+        lh += '<div class="ln">ra = ' + C.bits(snap.lines.ra, 2) + ', rb = ' + C.bits(snap.lines.rb, 2) + '<small>ir b3–b2, b1–b0 to REG_SELECT</small></div>';
+        document.getElementById('cu-lines').innerHTML = lh;
+
+        var bus = snap.bus, el = document.getElementById('cu-bus');
+        el.className = 'busline' + (bus.state === 'float' ? ' busline--float' : (bus.state === 'driven' ? '' : ' busline--bad'));
+        el.innerHTML = '<b>Bus</b> ' + (bus.state === 'driven' ? b8(bus.value) + ' &larr; ' + bus.drivers.join('') :
+          bus.state === 'float' ? 'xxxxxxxx (nothing driving; the ALU&rsquo;s A reads 00000000 through its pull-down)' : 'EEEEEEEE &mdash; ' + esc(bus.why));
+        var s = snap.state, wrote = snap.wrote || [];
+        document.getElementById('cu-regs').innerHTML = ['R0', 'R1', 'R2', 'R3', 'TMP', 'ACC'].map(function (n) {
+          return '<div class="val' + (wrote.indexOf(n) >= 0 ? ' val--wrote' : '') + '"><b>' + n + '</b> ' + b8(s[n]) + '</div>';
+        }).join('');
+        document.getElementById('cu-flags').innerHTML = ['C', 'A', 'E', 'Z'].map(function (f) {
+          var v = s.flags[f];
+          return '<span class="flag' + (v === 1 ? ' flag--1' : '') + '">' + f + ' ' + (v === null || v === undefined ? '?' : v) + '</span>';
+        }).join('');
+        document.getElementById('cu-warn').innerHTML = warn ? '<div class="cu-warn">' + esc(warn) + '</div>' : '';
+      }
+
+      pick.addEventListener('change', function () { setIr(+pick.value); });
+      bitsHost.addEventListener('click', function (e) {
+        var t = e.target.closest('.irbit'); if (!t) { return; }
+        setIr(ir ^ (1 << +t.dataset.bit));
+      });
+      document.getElementById('cu-tick').addEventListener('click', function () { tick(1); });
+      document.getElementById('cu-step').addEventListener('click', function () {
+        var start = snap.step, guard = 0;
+        do { tick(1); guard++; } while (!(snap.step !== start && snap.quarter === 0) && guard < 8);
+      });
+      document.getElementById('cu-all').addEventListener('click', function () {
+        var guard = 0;
+        do { tick(1); guard++; } while (!(snap.step === 1 && snap.quarter === 0) && guard < 24);
+      });
+      document.getElementById('cu-reset').addEventListener('click', reset);
+      reset();
+    }());
+
+    /* ---------- Self-check C ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+        { q: '<code>ir</code> = <code>10001011</code> (ADD R2, R3). The stepper is on step 5 and the clock is in its set-on quarter. Which lines are high?',
+          opts: ['regb_e and tmp_s', 'rega_e, acc_s and flags_s', 'acc_e and regb_s', 'rega_e only'],
+          correct: 1,
+          why: 'Step 5 of an ALU instruction: RA (R2) drives the bus, and ACC and FLAGS capture. In the set-on quarter both clk_e and clk_s are 1, so all three are high. The opcode lines pass 000 through.' },
+        { q: '<code>ir</code> = <code>11111011</code> (CMP R2, R3) and the stepper reaches step 6. What happens?',
+          opts: ['ACC drives the bus and R3 captures it', 'Nothing: the CMP line blocks step 6’s gate', 'FLAGS is captured again', 'R2 and R3 swap'],
+          correct: 1,
+          why: 'CMP is opcode 111. Its 3-input AND, inverted, is ANDed into step 6’s gate, so acc_e and regb_s stay 0 and no register is written.' },
+        { q: 'Why are the three opcode lines ANDed with (step5 AND the ALU line)?',
+          opts: ['To save power', 'So that the ALU adds at every other moment, which CLF needs now and fetch will need for PC + 1', 'Because the ALU can only change opcode on a clock edge', 'So that CMP is detected'],
+          correct: 1,
+          why: 'Outside step 5 of an ALU instruction the ALU sees 000, ADD. CLF adds 0 + 1 at step 4; fetch adds PC + 1 at step 1 while ir still holds the previous instruction.' },
+        { q: '<code>ir</code> = <code>01100000</code>. The stepper is on step 4, set-on quarter. Which lines are high?',
+          opts: ['bus1 and flags_s', 'regb_e and tmp_s', 'flags_s only', 'none, because CLF is not an ALU instruction'],
+          correct: 0,
+          why: '01100000 is CLF: b7 = 0 and decoder output 6. Step 4 AND CLF raises bus1 (not clock-gated) and flags_s (gated with clk_s, which is 1 in this quarter).' }
+      ];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p><div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi], okAns = (oi === item.correct), fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) { el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false'); });
+      }
+      host.addEventListener('click', function (e) { var t = e.target.closest('.quiz-option'); if (t) { answer(+t.dataset.q, +t.dataset.o); } });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+  })();
+  </script>
+</body>
+</html>

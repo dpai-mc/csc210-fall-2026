@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w11-02">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 11: Counting Steps</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .eq-list { font-family: var(--font-mono); font-size: var(--fs-sm); background: var(--color-code-bg); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); overflow-x: auto; }
+    .eq-list div { white-space: nowrap; }
+
+    /* Stepper widget */
+    .st-panel { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-surface); min-width: 0; margin-top: var(--space-sm); }
+    .st-panel h3 { margin: 0 0 var(--space-xs); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .cells { display: flex; flex-wrap: wrap; gap: 10px; }
+    .pair { display: flex; gap: 2px; border: 1px dashed var(--color-border); border-radius: 4px; padding: 3px; }
+    .cell { width: 2.4rem; text-align: center; font-family: var(--font-mono); border: 1px solid var(--color-border); border-radius: 4px; padding: 2px 0; font-size: var(--fs-sm); }
+    .cell small { display: block; font-family: var(--font-sans); font-size: 10px; color: var(--color-text-muted); }
+    .cell--1 { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .cell--1 small { color: #dfe8f3; }
+    .steps { display: flex; flex-wrap: wrap; gap: 6px; }
+    .stp { min-width: 3.4rem; text-align: center; border: 2px solid var(--color-border); border-radius: 999px; padding: 3px 8px; font-weight: 700; font-size: var(--fs-sm); }
+    .stp--on { background: var(--color-accent); border-color: var(--color-accent-hov); color: #fff; }
+    .st-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 4px; }
+    .st-info div { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .st-info b { font-family: var(--font-sans); display: block; font-size: var(--fs-xs); color: var(--color-text-muted); }
+    .st-status { font-size: var(--fs-sm); min-height: 1.5em; margin: var(--space-xs) 0; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 11 &rsaquo; <span>Page 2 — Counting Steps</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Counting Steps: the Stepper</h1>
+    <p><strong>Sections 11.5 – 11.8</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1 hour</p>
+
+    <section id="sec-11-5">
+      <h2>11.5 &nbsp; Which transfer is this?</h2>
+
+      <p>The clock shapes one transfer. An instruction is several. <code>ADD R0, R1</code> on your core is three transfers &mdash; RB to TMP, RA to ACC and FLAGS, ACC to RB &mdash; and in Week 13, when your CPU fetches its own instructions from RAM, three more come first. Six transfers, and in each one a different set of lines must go high.</p>
+
+      <p>So the control unit has to know, at every moment, <em>which transfer it is on</em>. Knowing something that the inputs alone cannot tell you is memory. The circuit that holds it is the <strong>stepper</strong>, and you will build it from the one-bit cell you built in Week 4: twelve <code>MEM_1BIT</code>s and a handful of gates. Its outputs are seven lines, <code>step1</code> to <code>step7</code>, and exactly one of them is high at a time.</p>
+    </section>
+
+    <section id="sec-11-6">
+      <h2>11.6 &nbsp; Two cells in a row</h2>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/Stepper_Base_Unit.jpg" style="max-width:480px"
+             alt="A Logisim circuit with two blocks labelled CPU MEM 1 side by side. An input pin i feeds the left block's input. Its output feeds the right block's input. An input pin s1 connects to the left block's set, and a separate input pin s2 connects to the right block's set. The right block's output goes to an output pin o.">
+        <figcaption class="circuit-canvas__caption">The stepper&rsquo;s base unit: two <code>MEM_1BIT</code> cells in series, each with its own set line, <code>s1</code> and <code>s2</code>.</figcaption>
+      </figure>
+
+      <p>Put a 1 on <code>i</code> and pulse <code>s1</code>: the first cell takes the 1. Pulse <code>s2</code>: the second cell takes the first cell&rsquo;s 1, and <code>o</code> goes high. The 1 has moved one place along. Chain six of these pairs and pulse <code>s1</code>, <code>s2</code>, <code>s1</code>, <code>s2</code>&hellip; and the 1 walks down the chain one place per pulse. Your instructor&rsquo;s first stepper video does exactly this, by hand: &ldquo;set one on, off, set two on, off, move to the next one.&rdquo;</p>
+
+      <p>Why two cells per place, and not one? Because a cell is transparent while its set line is high. If every cell were set at the same time, a 1 entering the first cell would run straight through all twelve in a single pulse. With two set lines that are never high together, each pulse opens only every other cell, and the 1 can advance just one cell before the door behind it closes.</p>
+
+      <p>You have seen this idea before. In Week 4, the edge-triggered flip-flop was built from two latches with opposite enables, a <strong>master</strong> and a <strong>slave</strong>, never open at the same time, so that the output changes only at the edge between them. Week 4&rsquo;s master was open while the clock was 0, so its output changed on the rising edge. Drive <code>s1</code> with <code>clk</code> and <code>s2</code> with NOT <code>clk</code>, and each pair of your cells is the mirror image: the master is open while <code>clk</code> is 1, the slave while it is 0, and the pair&rsquo;s output changes on the <strong>falling</strong> edge. A master-slave flip-flop, made from your own cells.</p>
+    </section>
+
+    <section id="sec-11-7">
+      <h2>11.7 &nbsp; Twelve cells, seven steps</h2>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/stepper-chain.png"
+             alt="A wide Logisim circuit. Twelve small blocks labelled cpu mem 1 sit in a row, wired output to input. Input pins reset and clk are on the left. Reset passes through a NOT gate into the first block's input. Two OR gates on the left combine reset with clk, and reset with NOT clk; their outputs run along the bottom to the set inputs of alternate blocks. Above the row, seven outputs labelled step 1 to step 7: step 1 comes from an OR gate, steps 2 to 6 each from an AND gate, and step 7 straight from the last block. A row of NOT gates feeds the AND gates.">
+        <figcaption class="circuit-canvas__caption">The full stepper. Twelve cells, three OR gates, eight NOT gates, five AND gates. The figure is wide; select it to enlarge.</figcaption>
+      </figure>
+
+      <p>Number the cells Q1 to Q12 from the left. The wiring, all of it:</p>
+
+      <div class="eq-list">
+        <div>input of Q1     = NOT reset</div>
+        <div>input of Q2..Q12 = the cell before it</div>
+        <div>set of Q1, Q3, Q5, Q7, Q9, Q11  = reset OR clk</div>
+        <div>set of Q2, Q4, Q6, Q8, Q10, Q12 = reset OR NOT clk</div>
+        <div>step1 = reset OR NOT Q2</div>
+        <div>step2 = Q2 AND NOT Q4      step3 = Q4 AND NOT Q6      step4 = Q6 AND NOT Q8</div>
+        <div>step5 = Q8 AND NOT Q10     step6 = Q10 AND NOT Q12</div>
+        <div>step7 = Q12</div>
+      </div>
+
+      <p><strong>Reset empties the chain.</strong> With <code>reset</code> = 1, both OR gates output 1, so every cell is open at once, and the first cell&rsquo;s input is NOT 1 = 0. The 0 runs through all twelve. Every Q is 0, and <code>step1</code> = 1.</p>
+
+      <p><strong>Then ones pour in from the left.</strong> With <code>reset</code> back to 0, the first cell&rsquo;s input is a permanent 1. Each time <code>clk</code> goes high the odd cells open: Q1 takes that permanent 1, and Q3, Q5 and the rest each take the value of the cell before them. Each time <code>clk</code> goes low the even cells do the same. Every full clock cycle, the run of 1s grows by one pair:</p>
+
+      <div class="eq-list">
+        <div>after reset          000000000000   step 1</div>
+        <div>after 1 clk cycle    110000000000   step 2</div>
+        <div>after 2 clk cycles   111100000000   step 3</div>
+        <div>after 5 clk cycles   111111111100   step 6</div>
+      </div>
+
+      <p>It is a <strong>thermometer</strong>: the chain fills from the left, and the lit step is the one where the 1s end. That is why step <em>k</em> is Q(2k&minus;2) AND NOT Q(2k): &ldquo;the 1s have reached pair <em>k</em>&minus;1 but not pair <em>k</em>.&rdquo; Exactly one AND gate can be true at a time.</p>
+
+      <p><strong>Step 7 starts it again.</strong> When the 1s reach Q12, <code>step7</code> goes high. The control unit wires <code>step7</code> straight back to <code>reset</code>, so the moment step 7 appears it empties the chain, Q12 falls, <code>step7</code> falls with it, and <code>step1</code> is lit. Step 7 lasts only as long as it takes the reset to ripple through &mdash; too short to see in Logisim &mdash; and the stepper goes 1, 2, 3, 4, 5, 6, 1, 2&hellip;</p>
+
+      <p><strong>When does the step change?</strong> The step outputs read the even cells, which take their new values when <code>clk</code> falls. Look back at page 1&rsquo;s table: <code>clk</code> falls on the fourth quarter, the one in which <code>clk_e</code> drops to 0. So <strong>the step only ever changes while every enable is off.</strong> No register is driving the bus or capturing from it at the instant the control unit switches to the next step&rsquo;s lines. The clock and the stepper were designed together.</p>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Starting up</div>
+        <p>Set <code>reset</code>&rsquo;s pull behaviour to <strong>pull-up</strong> and <code>clk</code>&rsquo;s to <strong>pull-down</strong>, as your instructor&rsquo;s build notes say. After Simulate &rarr; Reset, his stepper comes up on step 1, with <code>step7</code> as its only reset. That is a description of how Logisim behaves with this circuit, not a derivation: on paper every <code>MEM_1BIT</code> starts at <code>E</code>. If yours does not come up on step 1, check the two pull settings and the <code>step7</code>-to-<code>reset</code> wire before anything else.</p>
+      </div>
+    </section>
+
+    <!-- ========== Widget 2 ========== -->
+    <section id="sec-stepper">
+      <div class="widget-card" id="w-stepper">
+        <div class="widget-card__title">Stepper</div>
+        <div class="widget-card__subtitle">Your clock drives your stepper, with <code>step7</code> wired to <code>reset</code> as the control unit wires it. Click <code>clk_in</code> one quarter at a time, or jump a whole step.</div>
+
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button type="button" class="widget-btn widget-btn--primary" id="st-tick">click clk_in</button>
+          <button type="button" class="widget-btn widget-btn--outline" id="st-step">next step (4 clicks)</button>
+          <button type="button" class="widget-btn widget-btn--outline" id="st-reset">Simulate &rarr; Reset</button>
+        </div>
+
+        <div class="st-panel">
+          <h3>Clock</h3>
+          <div class="st-info" id="st-clock"></div>
+        </div>
+        <div class="st-panel">
+          <h3>Twelve cells, in pairs</h3>
+          <div class="cells" id="st-cells"></div>
+        </div>
+        <div class="st-panel">
+          <h3>Step outputs</h3>
+          <div class="steps" id="st-steps"></div>
+        </div>
+        <p class="st-status" id="st-status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section id="sec-11-8">
+      <h2>11.8 &nbsp; Six steps, 24 clicks</h2>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/stepper-appearance.png" style="max-width:640px"
+             alt="A Logisim circuit appearance: a long, thin rectangle labelled stepper. The input clk is at the top left corner and the input reset at the top right corner. Seven outputs numbered 1 to 7 sit along the bottom edge, unevenly spaced.">
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s appearance for the stepper: <code>clk</code> at the left, <code>reset</code> at the right, the seven steps along the bottom, where they drop straight into the control unit&rsquo;s gates. The uneven spacing leaves room for the gates under steps 4 and 5, which have the most to do.</figcaption>
+      </figure>
+
+      <p>Every instruction takes all six steps, and every step is four quarters, so <strong>every instruction takes 24 clicks of <code>clk_in</code></strong> &mdash; from step 1, enable on, back to step 1, enable on. Steps 1 to 3 will be the fetch, the same for every instruction. Steps 4 to 6 are the instruction itself. An instruction that needs fewer steps, like CLF, which does all its work in step 4, still waits through steps 5 and 6 doing nothing. Page 4 comes back to what that costs.</p>
+
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Four questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+
+      <p>For sequencing and the clock in a second voice, log into your Saylor CS301 account at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 5: Designing a Processor</strong>. CS301&rsquo;s multi-cycle MIPS keeps its step in a state register; yours keeps it in a chain of latches.</p>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>You can read a step from the stepper&rsquo;s cells, say when it changes, and count the clicks in an instruction. Next page: the gates that turn &ldquo;step 5&rdquo; and an instruction byte into <code>rega_e</code>, <code>acc_s</code> and <code>flags_s</code>.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 11, Page 2
+  </footer>
+
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['ctl'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.ctl) { return; }
+    var K = L.ctl;
+
+    /* ---------- Widget 2 — Stepper ---------- */
+    (function () {
+      var host = document.getElementById('w-stepper');
+      if (!host) { return; }
+      var clock, stepper, c, st, clicks, lastStep;
+
+      function stepOf(steps) { for (var i = 0; i < 7; i++) { if (steps[i]) { return i + 1; } } return 0; }
+
+      function reset() {
+        clock = K.clock(); stepper = K.stepper();
+        c = clock.reset(); st = stepper.powerUp(); clicks = 0; lastStep = 1;
+        document.getElementById('st-status').textContent = 'After Simulate → Reset: every cell 0, step 1 lit, and the clock in its first quarter.';
+        paint();
+      }
+      function tick() {
+        c = clock.toggle(); st = stepper.settle(c.clk, 0, true); clicks++;
+        var now = stepOf(st.steps), msg = 'Click ' + clicks + ': ' + K.QUARTERS[c.quarter].name + '.';
+        if (st.pulsed7) { msg += ' The 1s reached Q12: step 7 went high, reset emptied the chain, and step 1 is lit again.'; }
+        else if (now !== lastStep) { msg += ' clk fell, the even cells took their new values, and the step moved from ' + lastStep + ' to ' + now + ' — with clk_e already 0.'; }
+        lastStep = now;
+        document.getElementById('st-status').textContent = msg;
+        paint();
+      }
+      function paint() {
+        document.getElementById('st-clock').innerHTML =
+          '<div><b>clicks</b>' + clicks + (clicks ? ' (' + (clicks % 24) + ' into this instruction)' : '') + '</div>' +
+          '<div><b>clk</b>' + c.clk + '</div><div><b>clk_e</b>' + c.clkE + '</div><div><b>clk_s</b>' + c.clkS + '</div>' +
+          '<div><b>quarter</b>' + K.QUARTERS[c.quarter].name + '</div>';
+        var h = '';
+        for (var p = 0; p < 6; p++) {
+          h += '<div class="pair" aria-label="pair ' + (p + 1) + '">';
+          for (var j = 0; j < 2; j++) {
+            var i = 2 * p + j, v = st.cells[i];
+            h += '<div class="cell' + (v ? ' cell--1' : '') + '"><small>Q' + (i + 1) + '</small>' + v + '</div>';
+          }
+          h += '</div>';
+        }
+        document.getElementById('st-cells').innerHTML = h;
+        var sh = '';
+        for (var k = 0; k < 7; k++) {
+          sh += '<span class="stp' + (st.steps[k] ? ' stp--on' : '') + '" aria-label="step ' + (k + 1) + (st.steps[k] ? ', high' : ', low') + '">step ' + (k + 1) + '</span>';
+        }
+        document.getElementById('st-steps').innerHTML = sh;
+      }
+      document.getElementById('st-tick').addEventListener('click', tick);
+      document.getElementById('st-step').addEventListener('click', function () { for (var i = 0; i < 4; i++) { tick(); } });
+      document.getElementById('st-reset').addEventListener('click', reset);
+      reset();
+    }());
+
+    /* ---------- Self-check B ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+        { q: 'What does the stepper remember?',
+          opts: ['The instruction being executed', 'Which transfer of the instruction the CPU is on', 'The address of the next instruction', 'Which register drove the bus last'],
+          correct: 1,
+          why: 'The instruction is on the ir pin (and in Week 13, in the IR). The stepper remembers only where in the instruction the CPU is: step 1 to 6.' },
+        { q: 'Q1 to Q12 read <code>111111000000</code>. Which step is lit?',
+          opts: ['Step 3', 'Step 4', 'Step 6', 'Step 7'],
+          correct: 1,
+          why: 'The 1s end at Q6. step4 = Q6 AND NOT Q8 = 1 AND 1 = 1. Every other step gate is 0.' },
+        { q: 'In which quarter of the clock does the stepper move to the next step?',
+          opts: ['Enable on', 'Set on', 'Set off', 'Enable off'],
+          correct: 3,
+          why: 'The step outputs read the even cells, which change when clk falls. clk falls on the fourth quarter, when clk_e is 0, so nothing is on the bus as the step changes.' },
+        { q: 'How many clicks of <code>clk_in</code> does one instruction take, from step 1 back to step 1?',
+          opts: ['4', '6', '12', '24'],
+          correct: 3,
+          why: 'Six steps of four quarters each. Step 7 is a momentary reset, not a step that takes clicks.' }
+      ];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p><div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi], okAns = (oi === item.correct), fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) { el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false'); });
+      }
+      host.addEventListener('click', function (e) { var t = e.target.closest('.quiz-option'); if (t) { answer(+t.dataset.q, +t.dataset.o); } });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+  })();
+  </script>
+</body>
+</html>
