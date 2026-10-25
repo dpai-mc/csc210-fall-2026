@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="lab-11">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210L — Lab 11: Races and Tables</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ----------
+       .live-tag, .obs-table, .bench-sketch and .paper are copies of
+       lab-10's, not promoted: promoting them means editing published
+       pages, and past content is never modified (Dave, 2026-09-15).
+
+       This page loads no shared kernel and has no widget: an on-page
+       bench would fill in the observation sheet. */
+
+    cite { font-style: normal; font-weight: 600; color: var(--color-text); }
+
+    .live-tag {
+      display: inline-block; font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 700;
+      text-transform: uppercase; letter-spacing: .04em; padding: 2px var(--space-sm); border-radius: 999px;
+      vertical-align: middle; margin-left: var(--space-sm);
+    }
+    .live-tag--together { background: var(--color-success); color: #fff; }
+    .live-tag--solo     { background: var(--color-danger, #b3261e); color: #fff; }
+
+    .obs-table { width: 100%; border-collapse: collapse; margin: var(--space-md) 0; }
+    .obs-table th, .obs-table td { border: 1px solid var(--color-border); padding: var(--space-sm); text-align: left; vertical-align: top; font-size: var(--fs-sm); }
+    .obs-table th { background: var(--color-code-bg); font-weight: 700; }
+    .obs-table td.fill { background: var(--color-code-bg); min-width: 64px; height: 40px; }
+    .obs-table td.fill--wide { min-width: 110px; }
+    .obs-table td.given { font-family: var(--font-mono); white-space: nowrap; }
+    .obs-table caption { caption-side: top; text-align: left; font-weight: 700; padding-bottom: var(--space-sm); }
+
+    .bench-sketch { width: 100%; max-width: 660px; height: auto; display: block; margin: var(--space-md) auto; }
+    .bench-sketch .wire { stroke: var(--color-text); stroke-width: 2; fill: none; }
+    .bench-sketch .box  { fill: var(--color-surface); stroke: var(--color-text); stroke-width: 2; }
+    .bench-sketch .stub { stroke: var(--color-text-muted); stroke-width: 2; fill: none; }
+    .bench-sketch .lbl  { font-family: var(--font-mono); font-size: 13px; fill: var(--color-text); }
+    .bench-sketch .lbl--sm { font-size: 11px; fill: var(--color-text-muted); }
+
+    .paper { font-family: var(--font-mono); font-size: var(--fs-sm); background: var(--color-code-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); white-space: pre; overflow-x: auto; }
+
+    @media print {
+      .sp-header, .sp-footer, .no-print { display: none; }
+      .lab-step, .obs-table, .lab-verify { break-inside: avoid; }
+      .table-scroll { overflow: visible; }
+      .obs-table th, .obs-table td { font-size: 9px; padding: 3px; }
+      .obs-table td.fill, .obs-table td.fill--wide { min-width: 0; }
+      .obs-table td.given { white-space: normal; }
+      a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210L — Computer Organization &amp; Architecture Lab</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Lab 11 &rsaquo; <span>Races and Tables</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Lab 11 — Races and Tables: Why the Stepper Needs Two Cells, and Two Ways to Store a Control Unit</h1>
+
+    <div class="lab-meta">
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Lab Session</span>
+        <span class="lab-meta__value">Tuesday, Oct 27, 2026</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">In-Class Time</span>
+        <span class="lab-meta__value">90 minutes &mdash; all Logisim, plus ten minutes of Checkpoint 5 questions</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Format</span>
+        <span class="lab-meta__value">Live on Zoom</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Today's builds</span>
+        <span class="lab-meta__value"><code>RACE_BENCH</code> and <code>MICRO_ROM</code></span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Assignment</span>
+        <span class="lab-meta__value">Completion Check 11 &mdash; 10 pts</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Due</span>
+        <span class="lab-meta__value lab-meta__value--due">Sun, Nov 1 &middot; 11:59 PM</span>
+      </div>
+    </div>
+
+    <div class="callout callout--aha">
+      <div class="callout__title">What This Session Is, and What It Is Not</div>
+      <p><strong>This lab does not build Checkpoint 5.</strong> <code>CLOCK</code>, <code>STEPPER</code> and <code>CONTROL_UNIT</code> are Assignment 11 Part A, built from the assignment page and the week&rsquo;s four learning pages on your own time. Last week&rsquo;s lab page previewed this session as &ldquo;The Clock&rdquo;; since then the clock has become part of the graded checkpoint, so it is built there, not here.</p>
+      <p><strong>What we build here are two circuits nothing grades</strong>, each answering a question the checkpoint takes for granted. Why does the stepper use <em>twelve</em> cells for six steps &mdash; would six not do? And page 4 of this week says a control unit can be stored as gates <em>or</em> as words in a memory: what does the second one actually look like, and what does it make easy?</p>
+    </div>
+
+    <div class="callout callout--hook">
+      <div class="callout__title">The Question Today Answers</div>
+      <p><strong>What you have:</strong> Your one-bit memory cell, <code>MEM_1BIT</code>, from Week 4, and your <code>DECODER_3TO8</code> from Week 3. This week&rsquo;s pages: the stepper&rsquo;s pairs of cells (<cite>Counting Steps</cite>) and the control table stored as ROM words (<cite>Control Units in General</cite>).</p>
+      <p><strong>What you cannot do yet:</strong> See a latch race &mdash; a value running through a chain of open cells in one pulse &mdash; or hold a control unit that is a table rather than a tangle of gates.</p>
+      <p><strong>What you can do after today:</strong> Make a race happen and stop it, explain why the stepper&rsquo;s two set lines are never high together (except once, on purpose), build Week 11&rsquo;s control table as a gate ROM, and add an instruction to it by adding two words.</p>
+    </div>
+
+    <section id="sec-outcomes">
+      <h2>What You Will Be Able to Do</h2>
+      <ol>
+        <li><strong>Build a chain of latches</strong> and move a 1 along it one cell per pulse.</li>
+        <li><strong>Cause a race on purpose</strong> and say exactly which condition caused it.</li>
+        <li><strong>Build a control store from a decoder and OR gates</strong>, and check every word against page 4&rsquo;s table.</li>
+        <li><strong>Add an instruction by adding words</strong>, and compare that with what the hardwired control unit would need.</li>
+      </ol>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">CS301 Reference</div>
+        <p>Control units, hardwired and microprogrammed, are covered in Saylor CS301 <strong>Unit 5: Designing a Processor</strong>. Log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> and open it as supporting reading. It describes MIPS; this page is the source for your machine.</p>
+      </div>
+    </section>
+
+    <section id="sec-before">
+      <h2>Before You Arrive</h2>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Bring a Working <code>MEM_1BIT</code> and <code>DECODER_3TO8</code></div>
+        <p>Today&rsquo;s benches <strong>instantiate</strong> your Week 4 <code>MEM_1BIT</code> six times and your Week 3 <code>DECODER_3TO8</code> once. <strong>Nothing from Checkpoint 5 is needed</strong> &mdash; if you have not started Assignment 11, you lose nothing today.</p>
+        <p>Your <code>MEM_1BIT</code> must follow <code>In</code> while <code>Set</code> is high and hold when it is low. Your <code>DECODER_3TO8</code> must raise exactly one output for each value of <code>sel</code>, <code>000</code> raising <code>out0</code>.</p>
+      </div>
+
+      <p><strong>Read sections 11.6 and 11.7 of <cite>Counting Steps</cite></strong> and <strong>section 11.14 of <cite>Control Units in General</cite></strong> (the ROM table) in this week&rsquo;s Canvas module. The pages are named rather than linked, because each learning page is embedded in its own Canvas page.</p>
+
+      <p><strong>Bring your <code>CSC210_YourName.circ</code> file. Print this page, or have it open on a second screen.</strong> The observation sheet is what you submit.</p>
+    </section>
+
+    <section id="sec-scope">
+      <h2>What Is Here, and What Is on the Assignment</h2>
+      <div class="table-scroll">
+      <table class="scope-table">
+        <thead><tr><th>Work</th><th>Where it happens</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Checkpoint 5 &mdash; <code>CLOCK</code>, <code>STEPPER</code>, <code>CONTROL_UNIT</code>, the <code>CPU</code> tab changes</td>
+            <td class="scope-solo">Assignment 11 Part A &mdash; not here</td>
+            <td>Pin tables, the control table, the ten-step verification table and the checklist are all on that page.</td>
+          </tr>
+          <tr>
+            <td><strong><code>RACE_BENCH</code></strong></td>
+            <td class="scope-lab"><strong>Built here, and only here</strong></td>
+            <td>Six cells in a chain with two set lines. Not the stepper: no step outputs, no reset, no clock.</td>
+          </tr>
+          <tr>
+            <td><strong><code>MICRO_ROM</code></strong></td>
+            <td class="scope-lab"><strong>Built here, and only here</strong></td>
+            <td>The control table as a gate ROM. Your graded control unit stays hardwired.</td>
+          </tr>
+          <tr>
+            <td>Ten minutes of Checkpoint 5 questions</td>
+            <td class="scope-lab">Here</td>
+            <td>Questions answered, not circuits built. Nothing collected.</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+    </section>
+
+    <!-- ============================================================ Part 1 -->
+    <section id="sec-part-1">
+      <h2>Part 1 — File Check <span class="points-badge">~5 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <div class="lab-step">
+        <div class="lab-step__num">1</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Thirty-second file check</div>
+          <p>Open <code>CSC210_YourName.circ</code>. <code>MEM_1BIT</code> and <code>DECODER_3TO8</code> are tabs in this one file. Create today&rsquo;s two tabs, named exactly:</p>
+          <pre><code>RACE_BENCH
+MICRO_ROM</code></pre>
+          <p>Test benches, like <code>CARRY_BENCH</code>. Nothing later instantiates them.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ Part 2 -->
+    <section id="sec-part-2">
+      <h2>Part 2 — <code>RACE_BENCH</code> <span class="points-badge">~30 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <p>Six <code>MEM_1BIT</code> cells in a row, each one&rsquo;s output feeding the next one&rsquo;s input. The odd cells share one set line, <code>s1</code>; the even cells share another, <code>s2</code>. That is half of your stepper&rsquo;s chain with everything else taken away.</p>
+
+      <svg class="bench-sketch" viewBox="0 0 660 190" role="img" aria-labelledby="race-title race-desc">
+        <title id="race-title">RACE_BENCH: six memory cells in a chain with two set lines</title>
+        <desc id="race-desc">An input pin d on the left feeds the first of six boxes labelled Q1 to Q6, each a MEM_1BIT, drawn in a row. Each box's output feeds the next box's input. A wire labelled s1 runs along the bottom to the set inputs of Q1, Q3 and Q5. A second wire labelled s2 runs below it to the set inputs of Q2, Q4 and Q6. Above each box, an output pin carries its value, labelled q1 to q6.</desc>
+        <line class="stub" x1="10" y1="80" x2="40" y2="80"></line><text class="lbl lbl--sm" x="18" y="72">d</text>
+        <rect class="box" x="40" y="60" width="70" height="40" rx="4"></rect><text class="lbl" x="75" y="85" text-anchor="middle">Q1</text>
+        <line class="wire" x1="110" y1="80" x2="140" y2="80"></line>
+        <rect class="box" x="140" y="60" width="70" height="40" rx="4"></rect><text class="lbl" x="175" y="85" text-anchor="middle">Q2</text>
+        <line class="wire" x1="210" y1="80" x2="240" y2="80"></line>
+        <rect class="box" x="240" y="60" width="70" height="40" rx="4"></rect><text class="lbl" x="275" y="85" text-anchor="middle">Q3</text>
+        <line class="wire" x1="310" y1="80" x2="340" y2="80"></line>
+        <rect class="box" x="340" y="60" width="70" height="40" rx="4"></rect><text class="lbl" x="375" y="85" text-anchor="middle">Q4</text>
+        <line class="wire" x1="410" y1="80" x2="440" y2="80"></line>
+        <rect class="box" x="440" y="60" width="70" height="40" rx="4"></rect><text class="lbl" x="475" y="85" text-anchor="middle">Q5</text>
+        <line class="wire" x1="510" y1="80" x2="540" y2="80"></line>
+        <rect class="box" x="540" y="60" width="70" height="40" rx="4"></rect><text class="lbl" x="575" y="85" text-anchor="middle">Q6</text>
+        <line class="stub" x1="75" y1="60" x2="75" y2="35"></line><text class="lbl lbl--sm" x="75" y="28" text-anchor="middle">q1</text>
+        <line class="stub" x1="175" y1="60" x2="175" y2="35"></line><text class="lbl lbl--sm" x="175" y="28" text-anchor="middle">q2</text>
+        <line class="stub" x1="275" y1="60" x2="275" y2="35"></line><text class="lbl lbl--sm" x="275" y="28" text-anchor="middle">q3</text>
+        <line class="stub" x1="375" y1="60" x2="375" y2="35"></line><text class="lbl lbl--sm" x="375" y="28" text-anchor="middle">q4</text>
+        <line class="stub" x1="475" y1="60" x2="475" y2="35"></line><text class="lbl lbl--sm" x="475" y="28" text-anchor="middle">q5</text>
+        <line class="stub" x1="575" y1="60" x2="575" y2="35"></line><text class="lbl lbl--sm" x="575" y="28" text-anchor="middle">q6</text>
+        <line class="wire" x1="20" y1="135" x2="475" y2="135"></line><text class="lbl lbl--sm" x="20" y="128">s1</text>
+        <line class="wire" x1="75" y1="100" x2="75" y2="135"></line><line class="wire" x1="275" y1="100" x2="275" y2="135"></line><line class="wire" x1="475" y1="100" x2="475" y2="135"></line>
+        <line class="wire" x1="20" y1="165" x2="575" y2="165"></line><text class="lbl lbl--sm" x="20" y="158">s2</text>
+        <line class="wire" x1="175" y1="100" x2="175" y2="165"></line><line class="wire" x1="375" y1="100" x2="375" y2="165"></line><line class="wire" x1="575" y1="100" x2="575" y2="165"></line>
+      </svg>
+
+      <ol class="logisim-steps">
+        <li>Place <strong>six <code>MEM_1BIT</code> instances</strong> in a row and label them Q1 to Q6 with text objects. Wire each one&rsquo;s <code>Q</code> to the next one&rsquo;s <code>In</code>.</li>
+        <li>An input pin <code>d</code> into Q1&rsquo;s <code>In</code>.</li>
+        <li>An input pin <code>s1</code> to the <code>Set</code> of Q1, Q3 and Q5; an input pin <code>s2</code> to the <code>Set</code> of Q2, Q4 and Q6.</li>
+        <li>Output pins <code>q1</code> to <code>q6</code>, one on each cell. Every input pin pull-down.</li>
+      </ol>
+
+      <div class="lab-verify">
+        <div class="lab-verify__title">Empty the chain first &mdash; one minute</div>
+        <ol>
+          <li>A fresh bench shows <code>E</code> on all six outputs. Correct, as in Week 4: no cell has been written.</li>
+          <li><code>d</code> = 0. Raise <code>s1</code> <strong>and</strong> <code>s2</code>, then drop both. All six read 0.</li>
+        </ol>
+        <p>Write down what you just did. You will need it again &mdash; and in Q2 you will explain why it worked.</p>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">2</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Walk a 1 down the chain</div>
+          <p>Set <code>d</code> = 1 and leave it there. Now pulse one set line at a time &mdash; <code>s1</code> up and down, then <code>s2</code> up and down &mdash; and after each pulse record <code>q1</code> to <code>q6</code> on the sheet. Keep going until <code>q6</code> is 1.</p>
+          <p><strong>Count the pulses.</strong> How many did it take for the 1 to reach Q6? How many cells did the 1 advance per pulse?</p>
+        </div>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Compare With the Room &mdash; before step 3</div>
+        <p>Empty the chain again. Then, with <code>d</code> = 1: <strong>if you raise <code>s1</code> and <code>s2</code> together and drop them together, how many of the six cells will hold 1?</strong> Everybody answers in the chat before anyone clicks, and we count.</p>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">3</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">The race</div>
+          <p>Do it: empty the chain, <code>d</code> = 1, raise <code>s1</code> and <code>s2</code> together, drop them together. Record all six outputs.</p>
+          <p>Empty the chain once more, and this time <strong>overlap</strong> the pulses: raise <code>s1</code>; raise <code>s2</code> while <code>s1</code> is still high; drop <code>s1</code>; drop <code>s2</code>. Record the six outputs. Was overlapping for a moment any safer than raising them together?</p>
+        </div>
+      </div>
+
+      <details class="lab-troubleshoot">
+        <summary>Open after you have recorded step 3: what you just saw</summary>
+        <p>A cell whose <code>Set</code> is high is <strong>transparent</strong>: its output follows its input. When every cell is open at once, the 1 at <code>d</code> passes through Q1, which passes it to Q2, which passes it to Q3, and on to Q6, in one pulse &mdash; a <strong>race</strong> through a chain of open latches. The only thing that limits how far a value travels is a closed cell in its way. Two set lines that are <em>never</em> high together guarantee there is always one.</p>
+        <p>Your stepper drives its two set lines from <code>clk</code> and NOT <code>clk</code>, which can never both be 1. That is the whole reason it needs two cells per step &mdash; and it is the reason your registers are safe on a bus, too: the clock never lets a value pass through two open latches in one transfer.</p>
+      </details>
+
+      <h3>Two questions &mdash; answer them on the observation sheet</h3>
+
+      <div class="lab-step">
+        <div class="lab-step__num">Q1</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Why twelve cells for six steps?</div>
+          <p>Your stepper has twelve cells. Using what step 3 showed you, say what would go wrong with a stepper of six cells all set by the same line, <code>clk</code>.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">Q2</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">The one time a race is wanted</div>
+          <p>The stepper&rsquo;s <code>reset</code> raises <em>both</em> set lines at once (page 2, &sect;11.7: both ORs output 1). You did the same thing to empty this bench. Why is a race exactly right for a reset?</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ Part 3 -->
+    <section id="sec-part-3">
+      <h2>Part 3 — <code>MICRO_ROM</code> <span class="points-badge">~30 min</span><span class="live-tag live-tag--solo">Your own, then compare</span></h2>
+
+      <p>Page 4 of this week stores your control unit&rsquo;s table as words: one word per instruction class and step, one bit per control line. A memory chip would hold those words; Logisim&rsquo;s ROM is in the Memory folder and not allowed. So you build the ROM the way the earliest computers did &mdash; a <strong>decoder</strong> picks one word line, and an <strong>OR gate</strong> on each output collects the word lines that have a 1 in that bit. It is called a <em>diode matrix</em>; here the OR gates play the diodes.</p>
+
+      <svg class="bench-sketch" viewBox="0 0 660 244" role="img" aria-labelledby="rom-title rom-desc">
+        <title id="rom-title">MICRO_ROM: a decoder and a row of OR gates</title>
+        <desc id="rom-desc">A 3-bit input pin addr on the left feeds a box labelled DECODER_3TO8. Its eight outputs, word 0 to word 7, run right as horizontal lines. Crossing them vertically are eight output columns labelled regb_e, tmp_s, rega_e, acc_s, flags_s, acc_e, regb_s and bus1. A dot where a word line meets a column means that word line feeds that column's OR gate. Dots are shown on word 0 at regb_e and tmp_s, on word 1 at rega_e, acc_s and flags_s, on word 2 at acc_e and regb_s, and on word 4 at flags_s and bus1.</desc>
+        <line class="stub" x1="10" y1="115" x2="40" y2="115"></line><text class="lbl lbl--sm" x="12" y="107">addr</text>
+        <rect class="box" x="40" y="20" width="90" height="190" rx="4"></rect>
+        <text class="lbl" x="85" y="110" text-anchor="middle">3TO8</text>
+        <g id="wordlines">
+          <line class="wire" x1="130" y1="35" x2="630" y2="35"></line><text class="lbl lbl--sm" x="134" y="31">word 0</text>
+          <line class="wire" x1="130" y1="57" x2="630" y2="57"></line><text class="lbl lbl--sm" x="134" y="53">word 1</text>
+          <line class="wire" x1="130" y1="79" x2="630" y2="79"></line><text class="lbl lbl--sm" x="134" y="75">word 2</text>
+          <line class="wire" x1="130" y1="101" x2="630" y2="101"></line><text class="lbl lbl--sm" x="134" y="97">word 3</text>
+          <line class="wire" x1="130" y1="123" x2="630" y2="123"></line><text class="lbl lbl--sm" x="134" y="119">word 4</text>
+          <line class="wire" x1="130" y1="145" x2="630" y2="145"></line><text class="lbl lbl--sm" x="134" y="141">word 5</text>
+          <line class="wire" x1="130" y1="167" x2="630" y2="167"></line><text class="lbl lbl--sm" x="134" y="163">word 6</text>
+          <line class="wire" x1="130" y1="189" x2="630" y2="189"></line><text class="lbl lbl--sm" x="134" y="185">word 7</text>
+        </g>
+        <g class="cols">
+          <line class="stub" x1="230" y1="20" x2="230" y2="215"></line><text class="lbl lbl--sm" x="230" y="228" text-anchor="middle">regb_e</text>
+          <line class="stub" x1="285" y1="20" x2="285" y2="215"></line><text class="lbl lbl--sm" x="285" y="228" text-anchor="middle">tmp_s</text>
+          <line class="stub" x1="340" y1="20" x2="340" y2="215"></line><text class="lbl lbl--sm" x="340" y="228" text-anchor="middle">rega_e</text>
+          <line class="stub" x1="395" y1="20" x2="395" y2="215"></line><text class="lbl lbl--sm" x="395" y="228" text-anchor="middle">acc_s</text>
+          <line class="stub" x1="450" y1="20" x2="450" y2="215"></line><text class="lbl lbl--sm" x="450" y="228" text-anchor="middle">flags_s</text>
+          <line class="stub" x1="505" y1="20" x2="505" y2="215"></line><text class="lbl lbl--sm" x="505" y="228" text-anchor="middle">acc_e</text>
+          <line class="stub" x1="560" y1="20" x2="560" y2="215"></line><text class="lbl lbl--sm" x="560" y="228" text-anchor="middle">regb_s</text>
+          <line class="stub" x1="615" y1="20" x2="615" y2="215"></line><text class="lbl lbl--sm" x="615" y="228" text-anchor="middle">bus1</text>
+        </g>
+        <circle cx="230" cy="35" r="5"></circle><circle cx="285" cy="35" r="5"></circle>
+        <circle cx="340" cy="57" r="5"></circle><circle cx="395" cy="57" r="5"></circle><circle cx="450" cy="57" r="5"></circle>
+        <circle cx="505" cy="79" r="5"></circle><circle cx="560" cy="79" r="5"></circle>
+        <circle cx="450" cy="123" r="5"></circle><circle cx="615" cy="123" r="5"></circle>
+      </svg>
+
+      <div class="lab-step">
+        <div class="lab-step__num">4</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">The address map</div>
+          <p>Eight addresses, eight words. Use this map; the words come from page 4&rsquo;s ROM table, bits in the order <code>regb_e tmp_s rega_e acc_s flags_s acc_e regb_s bus1</code>:</p>
+<div class="paper">addr  holds                       word
+000   ALU instruction, step 4     from page 4
+001   ALU instruction, step 5     from page 4
+010   ALU instruction, step 6     from page 4
+011   CMP, step 6                 from page 4
+100   CLF, step 4                 from page 4
+101   (empty)                     00000000
+110   (empty)                     00000000
+111   (empty)                     00000000</div>
+          <p><strong>Copy the five words onto your sheet before you build.</strong> CMP&rsquo;s steps 4 and 5 are the same as any ALU instruction&rsquo;s, so in a real control store they would share addresses 000 and 001; only its step 6 differs. CLF&rsquo;s steps 5 and 6 are empty.</p>
+        </div>
+      </div>
+
+      <ol class="logisim-steps">
+        <li>An input pin <code>addr</code>, 3 bits, into one <strong><code>DECODER_3TO8</code> instance</strong>.</li>
+        <li>Eight output pins, 1 bit each, named <code>regb_e</code>, <code>tmp_s</code>, <code>rega_e</code>, <code>acc_s</code>, <code>flags_s</code>, <code>acc_e</code>, <code>regb_s</code> and <code>bus1</code>.</li>
+        <li>For each output, look down its column of your word table. If <strong>one</strong> word has a 1 there, wire that decoder output straight to the pin. If <strong>two or more</strong> do, an OR gate collects them. If <strong>none</strong> does, a constant 0.</li>
+        <li>Also combine the eight outputs through a splitter into an 8-bit output pin <code>word</code>, <code>regb_e</code> as its <strong>most</strong> significant bit, so a probe shows the whole word in the page&rsquo;s order.</li>
+      </ol>
+
+      <div class="lab-verify">
+        <div class="lab-verify__title">Verify all eight addresses</div>
+        <p>Step <code>addr</code> from 000 to 111 and record <code>word</code> each time. Every one must match your table. Count your gates: how many OR gates did the whole control table take?</p>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Compare With the Room &mdash; before step 5</div>
+        <p>Here is an instruction your CPU does <strong>not</strong> have: <code>INC RB</code>, &ldquo;RB &larr; RB + 1&rdquo;. <strong>How many steps after fetch would it need, and which lines in each?</strong> Hint: BUS1 can make the ALU&rsquo;s B input exactly 1, and an ALU result has to go through ACC. Everybody writes an answer before step 5.</p>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">5</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Add an instruction by adding words</div>
+          <p>Work out <code>INC RB</code>&rsquo;s words and put them at addresses <strong>101</strong> and <strong>110</strong> &mdash; two of the empty words. That means wiring decoder outputs 5 and 6 into the OR gates (or to the pins) of whichever lines your words need. Nothing else changes.</p>
+          <p>Verify all eight addresses again.</p>
+        </div>
+      </div>
+
+      <details class="lab-troubleshoot">
+        <summary>Open after you have written your INC words: one way to do it</summary>
+        <p>Two steps. <strong>Step 4:</strong> RB drives the bus, so the ALU&rsquo;s A input is RB; <code>bus1</code> forces B to 1; the opcode is 000 outside step 5 of an ALU instruction, so the ALU adds; ACC captures RB + 1. That is <code>regb_e</code>, <code>acc_s</code> and <code>bus1</code>: <code>10010001</code>. <strong>Step 5:</strong> ACC drives the bus and RB captures: <code>acc_e</code> and <code>regb_s</code>, <code>00000110</code> &mdash; the same word as an ALU instruction&rsquo;s step 6. ACC is never enabled and set in the same step, so there is no loop.</p>
+        <p>Did you capture the flags too? That is a design choice, not a mistake: add <code>flags_s</code> to step 4 and INC sets Z when RB wraps from 255 to 0.</p>
+      </details>
+
+      <h3>One more question &mdash; on the observation sheet</h3>
+
+      <div class="lab-step">
+        <div class="lab-step__num">Q3</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">What would INC cost the hardwired control unit?</div>
+          <p>In <code>MICRO_ROM</code>, adding INC was two words. List what you would have to add to your Checkpoint 5 <code>CONTROL_UNIT</code> to give it INC: which new class line, which AND terms, and which existing OR gates change. Then say, in one sentence, which kind of control unit you would rather extend, and which one you would rather run fast.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ Part 4 -->
+    <section id="sec-part-4">
+      <h2>Last Ten Minutes — Checkpoint 5 Questions <span class="points-badge">~10 min</span><span class="live-tag live-tag--together">Together</span></h2>
+      <p>Bring the questions you have about Assignment 11 Part A: how the clock&rsquo;s two NANDs produce four quarters, why the stepper comes up on step 1, what a dashed line in the Control Unit widget means. Questions are answered; circuits are not built for you, and nothing here is collected.</p>
+    </section>
+
+    <!-- ============================================================ Observation sheet -->
+    <section id="sec-observations">
+      <h2>Observation Sheet</h2>
+      <p>Fill this in as you go &mdash; it is what Completion Check 11 collects. <strong>Write what your bench showed, not what you expected.</strong></p>
+
+      <div class="table-scroll">
+      <table class="obs-table" id="obs-race">
+        <caption>Part 2 — RACE_BENCH (q1 to q6 as six digits)</caption>
+        <thead><tr><th>After</th><th>q1&ndash;q6</th><th>After</th><th>q1&ndash;q6</th></tr></thead>
+        <tbody>
+          <tr><td class="given">emptying the chain</td><td class="fill"></td><td class="given">pulse 4 (s2)</td><td class="fill"></td></tr>
+          <tr><td class="given">pulse 1 (s1)</td><td class="fill"></td><td class="given">pulse 5 (s1)</td><td class="fill"></td></tr>
+          <tr><td class="given">pulse 2 (s2)</td><td class="fill"></td><td class="given">pulse 6 (s2)</td><td class="fill"></td></tr>
+          <tr><td class="given">pulse 3 (s1)</td><td class="fill"></td><td>Pulses to reach Q6; cells per pulse</td><td class="fill"></td></tr>
+          <tr><td>Room vote: cells holding 1, and how the room split</td><td class="fill" colspan="3"></td></tr>
+          <tr><td class="given">s1 and s2 together</td><td class="fill"></td><td class="given">s1, s2 overlapped</td><td class="fill"></td></tr>
+          <tr><td>Q1</td><td class="fill fill--wide" colspan="3"></td></tr>
+          <tr><td>Q2</td><td class="fill fill--wide" colspan="3"></td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="table-scroll">
+      <table class="obs-table" id="obs-rom">
+        <caption>Part 3 — MICRO_ROM (word as 8 bits, regb_e first)</caption>
+        <thead><tr><th>addr</th><th>Word from page 4 (or your INC)</th><th>Word your bench shows</th></tr></thead>
+        <tbody>
+          <tr><td class="given">000</td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td class="given">001</td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td class="given">010</td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td class="given">011</td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td class="given">100</td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td class="given">101 (INC, step 4)</td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td class="given">110 (INC, step 5)</td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td class="given">111</td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>OR gates used, before and after INC</td><td class="fill" colspan="2"></td></tr>
+          <tr><td>Room vote on INC: steps and lines</td><td class="fill" colspan="2"></td></tr>
+          <tr><td>Q3</td><td class="fill fill--wide" colspan="2"></td></tr>
+        </tbody>
+      </table>
+      </div>
+    </section>
+
+    <!-- ============================================================ Assignment -->
+    <section id="sec-assignment">
+      <h2>Assignment: Completion Check 11</h2>
+
+      <div class="lab-meta">
+        <div class="lab-meta__item"><span class="lab-meta__label">Points</span><span class="lab-meta__value">10</span></div>
+        <div class="lab-meta__item"><span class="lab-meta__label">Due</span><span class="lab-meta__value lab-meta__value--due">Sunday, Nov 1, 2026 &middot; 11:59 PM</span></div>
+        <div class="lab-meta__item"><span class="lab-meta__label">Submit via</span><span class="lab-meta__value">Canvas &mdash; Lab 11 Completion Check</span></div>
+        <div class="lab-meta__item"><span class="lab-meta__label">Assesses</span><span class="lab-meta__value">CSLO 1, CSLO 2</span></div>
+      </div>
+
+      <p>This is a CSC210L grade and it collects <strong>nothing that Assignment 11 collects</strong>. Checkpoint 5 is graded there; <code>RACE_BENCH</code>, <code>MICRO_ROM</code> and this observation sheet are graded here and nowhere else. Nothing in CSC210 depends on your attendance in this room.</p>
+
+      <h3>What to Submit</h3>
+      <ol>
+        <li><strong>Your <code>.circ</code> file.</strong> Only the <code>RACE_BENCH</code> and <code>MICRO_ROM</code> tabs are looked at for this check.</li>
+        <li><strong>Your observation sheet</strong> &mdash; a photo of the printout, or the same tables typed up. Neatness is not graded.</li>
+      </ol>
+
+      <h3>Grading Rubric</h3>
+      <table>
+        <thead><tr><th>Criterion</th><th>Points</th><th>Full credit requires</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>RACE_BENCH</code> built and working</td>
+            <td>3</td>
+            <td>A tab named exactly <code>RACE_BENCH</code>: six instances of your own <code>MEM_1BIT</code> in a chain, <code>s1</code> on the odd cells and <code>s2</code> on the even ones; pins named as on this page.</td>
+          </tr>
+          <tr>
+            <td><code>MICRO_ROM</code> built and working</td>
+            <td>3</td>
+            <td>A tab named exactly <code>MICRO_ROM</code>: one instance of your own <code>DECODER_3TO8</code>, OR gates and the nine pins on this page, with INC added at 101 and 110.</td>
+          </tr>
+          <tr>
+            <td>Observation sheet, Part 2</td>
+            <td>2</td>
+            <td>The walk, the vote, the race and the overlap recorded; Q1 and Q2 answered. Being wrong costs nothing here; leaving it blank does.</td>
+          </tr>
+          <tr>
+            <td>Observation sheet, Part 3</td>
+            <td>2</td>
+            <td>All eight words recorded both ways, the gate count, the vote, and Q3.</td>
+          </tr>
+          <tr class="rubric-total"><td>Total</td><td>10</td><td>&nbsp;</td></tr>
+        </tbody>
+      </table>
+
+      <p style="font-size:var(--fs-sm);color:var(--color-text-muted);"><strong>CSLO alignment.</strong> Supports <strong>CSLO&nbsp;1</strong> (describe the organization and architecture of a computer system) through the latch chain and the control store, and <strong>CSLO&nbsp;2</strong> (relate high-level and assembly operations to the hardware that carries them out) through adding an instruction to the table.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">If You Could Not Finish</div>
+        <p>This is a <strong>finish-on-your-own</strong> lab. <code>RACE_BENCH</code> is ten minutes of wiring and five of clicking; <code>MICRO_ROM</code> is about twenty minutes once your word table is written. The two room votes need the room; if you missed them, write your own answer and say so.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ Checklist -->
+    <section id="sec-checklist">
+      <h2>Pre-Submission Checklist</h2>
+      <p>Two minutes before you upload. Check an item only after you have actually verified it.</p>
+      <div class="widget-card" id="widget-checklist">
+        <div class="widget-card__title">Pre-Submission Checklist</div>
+        <div class="widget-card__subtitle">Nothing here is saved &mdash; it is a thinking prompt, not a record.</div>
+        <ul class="lab-checklist" id="ck-list">
+          <li><input type="checkbox" id="ck-1"><label for="ck-1">My file has tabs named exactly <code>RACE_BENCH</code> and <code>MICRO_ROM</code>.</label></li>
+          <li><input type="checkbox" id="ck-2"><label for="ck-2">Both use <strong>instances</strong> of my own <code>MEM_1BIT</code> and <code>DECODER_3TO8</code> &mdash; nothing rebuilt, nothing modified, and nothing from Plexers, Arithmetic or Memory.</label></li>
+          <li><input type="checkbox" id="ck-3"><label for="ck-3">From an empty chain, alternating pulses move the 1 one cell per pulse.</label></li>
+          <li><input type="checkbox" id="ck-4"><label for="ck-4">The race and the overlap are recorded, with the room&rsquo;s vote.</label></li>
+          <li><input type="checkbox" id="ck-5"><label for="ck-5">Q1 and Q2 are answered.</label></li>
+          <li><input type="checkbox" id="ck-6"><label for="ck-6">My word table matches page 4 for addresses 000 to 100.</label></li>
+          <li><input type="checkbox" id="ck-7"><label for="ck-7">My bench shows the same word as my table at all eight addresses.</label></li>
+          <li><input type="checkbox" id="ck-8"><label for="ck-8">INC is at 101 and 110, and ACC is never enabled and set in the same word.</label></li>
+          <li><input type="checkbox" id="ck-9"><label for="ck-9">The gate count, before and after INC, is recorded.</label></li>
+          <li><input type="checkbox" id="ck-10"><label for="ck-10">Q3 is answered.</label></li>
+        </ul>
+        <div class="checklist-status" id="ck-status" role="status" aria-live="polite">0 of 10 verified</div>
+      </div>
+    </section>
+
+    <!-- ============================================================ Next -->
+    <section id="sec-next">
+      <h2>What Comes Next</h2>
+      <p>Today you made a race and stopped it, and stored a control unit as a table. Next week the lecture course turns to memory and the outside world, and the lab builds a device that lives at a memory address.</p>
+
+      <div class="progression">
+        <div class="progression__item completed">
+          <div class="progression__label">Lab 10 &mdash; The Carry That Comes Back</div>
+          <div class="progression__detail">Two-byte arithmetic &mdash; <code>CARRY_BENCH</code></div>
+        </div>
+        <div class="progression__item active">
+          <div class="progression__label">Lab 11 &mdash; Races and Tables</div>
+          <div class="progression__detail">Why two cells per step, and a control unit as words &mdash; <code>RACE_BENCH</code>, <code>MICRO_ROM</code></div>
+        </div>
+        <div class="progression__item">
+          <div class="progression__label">Lab 12 &mdash; A Device at an Address</div>
+          <div class="progression__detail">Memory-mapped output in Logisim, and the MARS keyboard and display</div>
+        </div>
+      </div>
+      <p>Bring your file next Tuesday.</p>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC210L — Computer Organization &amp; Architecture Lab &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <script>
+  /* ============================================================
+     Pre-Submission Checklist -- a count, and nothing more. No
+     persistence, deliberately. No shared kernel is loaded: an
+     on-page bench would fill in the observation sheet.
+     ============================================================ */
+  (function () {
+    'use strict';
+    var boxes = document.querySelectorAll('#ck-list input[type="checkbox"]');
+    var total = boxes.length;
+    function update() {
+      var count = 0, i;
+      for (i = 0; i < boxes.length; i++) {
+        if (boxes[i].checked) { count++; boxes[i].parentNode.classList.add('checked'); }
+        else { boxes[i].parentNode.classList.remove('checked'); }
+      }
+      var status = document.getElementById('ck-status');
+      if (count === total) {
+        status.className = 'checklist-status checklist-status--ready';
+        status.innerHTML = '&#10004; All ' + total + ' verified &mdash; you are ready to submit.';
+      } else {
+        status.className = 'checklist-status';
+        status.textContent = count + ' of ' + total + ' verified';
+      }
+    }
+    Array.prototype.forEach.call(boxes, function (b) { b.addEventListener('change', update); });
+  })();
+  </script>
+</body>
+</html>

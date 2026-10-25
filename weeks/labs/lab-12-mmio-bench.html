@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="lab-12">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210L — Lab 12: A Device at an Address</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ----------
+       .live-tag, .obs-table, .bench-sketch and .paper are copies of
+       lab-10's, not promoted: promoting them means editing published
+       pages, and past content is never modified (Dave, 2026-09-15).
+
+       This page loads no shared kernel and has no widget: an on-page
+       bench would fill in the observation sheet. */
+
+    cite { font-style: normal; font-weight: 600; color: var(--color-text); }
+
+    .live-tag {
+      display: inline-block; font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 700;
+      text-transform: uppercase; letter-spacing: .04em; padding: 2px var(--space-sm); border-radius: 999px;
+      vertical-align: middle; margin-left: var(--space-sm);
+    }
+    .live-tag--together { background: var(--color-success); color: #fff; }
+    .live-tag--solo     { background: var(--color-danger, #b3261e); color: #fff; }
+
+    .obs-table { width: 100%; border-collapse: collapse; margin: var(--space-md) 0; }
+    .obs-table th, .obs-table td { border: 1px solid var(--color-border); padding: var(--space-sm); text-align: left; vertical-align: top; font-size: var(--fs-sm); }
+    .obs-table th { background: var(--color-code-bg); font-weight: 700; }
+    .obs-table td.fill { background: var(--color-code-bg); min-width: 64px; height: 40px; }
+    .obs-table td.fill--wide { min-width: 110px; }
+    .obs-table td.given { font-family: var(--font-mono); white-space: nowrap; }
+    .obs-table caption { caption-side: top; text-align: left; font-weight: 700; padding-bottom: var(--space-sm); }
+
+    .bench-sketch { width: 100%; max-width: 660px; height: auto; display: block; margin: var(--space-md) auto; }
+    .bench-sketch .wire { stroke: var(--color-text); stroke-width: 2; fill: none; }
+    .bench-sketch .box  { fill: var(--color-surface); stroke: var(--color-text); stroke-width: 2; }
+    .bench-sketch .det  { fill: var(--color-code-bg); stroke: var(--color-text-muted); stroke-width: 2; stroke-dasharray: 5 3; }
+    .bench-sketch .stub { stroke: var(--color-text-muted); stroke-width: 2; fill: none; }
+    .bench-sketch .lbl  { font-family: var(--font-mono); font-size: 13px; fill: var(--color-text); }
+    .bench-sketch .lbl--sm { font-size: 11px; fill: var(--color-text-muted); }
+
+    .paper { font-family: var(--font-mono); font-size: var(--fs-sm); background: var(--color-code-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); white-space: pre; overflow-x: auto; }
+
+    @media print {
+      .sp-header, .sp-footer, .no-print { display: none; }
+      .lab-step, .obs-table, .lab-verify { break-inside: avoid; }
+      .table-scroll { overflow: visible; }
+      .obs-table th, .obs-table td { font-size: 9px; padding: 3px; }
+      .obs-table td.fill, .obs-table td.fill--wide { min-width: 0; }
+      .obs-table td.given { white-space: normal; }
+      a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210L — Computer Organization &amp; Architecture Lab</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Lab 12 &rsaquo; <span>A Device at an Address</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Lab 12 — A Device at an Address: Memory-Mapped I/O in Logisim and in MARS</h1>
+
+    <div class="lab-meta">
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Lab Session</span>
+        <span class="lab-meta__value">Tuesday, Nov 3, 2026</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">In-Class Time</span>
+        <span class="lab-meta__value">90 minutes &mdash; ~40 Logisim, ~40 MARS, ~10 Quiz 2 review</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Format</span>
+        <span class="lab-meta__value">Live on Zoom</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Today's build</span>
+        <span class="lab-meta__value"><code>MMIO_BENCH</code> and <code>lab12_yourname.asm</code></span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Assignment</span>
+        <span class="lab-meta__value">Completion Check 12 &mdash; 10 pts</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Due</span>
+        <span class="lab-meta__value lab-meta__value--due">Sun, Nov 8 &middot; 11:59 PM</span>
+      </div>
+    </div>
+
+    <div class="callout callout--aha">
+      <div class="callout__title">What This Session Is, and What It Is Not</div>
+      <p><strong>This lab does not connect your CPU to its RAM.</strong> Putting the MAR and the RAM on your CPU&rsquo;s bus is Week 13&rsquo;s Checkpoint 6, built from that week&rsquo;s pages. And it does not add a memory data register: your CPU has none, and page 2 of this week explains why.</p>
+      <p><strong>What we build here is a device that lives at a memory address</strong> &mdash; the idea at the centre of page 3, built with your own RAM and one register, so that &ldquo;a store to this address goes to the screen instead&rdquo; is something you wired rather than something you read. Then, in MARS, you write a program that talks to a keyboard and a display through addresses alone, and count how much of its time it spends asking.</p>
+    </div>
+
+    <div class="callout callout--hook">
+      <div class="callout__title">The Question Today Answers</div>
+      <p><strong>What you have:</strong> A RAM with its MAR from Week 8, a <code>MEM_8BIT</code> from Week 5, and this week&rsquo;s pages on the memory bus and on memory-mapped I/O (<cite>The Memory Bus</cite>, <cite>Input and Output</cite>).</p>
+      <p><strong>What you cannot do yet:</strong> Say what decides whether a store goes to memory or to a device, or what happens when that decision is made carelessly.</p>
+      <p><strong>What you can do after today:</strong> Build an address decoder that steals one address for a device, break it two ways that real computers have shipped with, and write a MARS program that echoes the keyboard to the display by polling.</p>
+    </div>
+
+    <section id="sec-outcomes">
+      <h2>What You Will Be Able to Do</h2>
+      <ol>
+        <li><strong>Map an output device to one address</strong> of your RAM&rsquo;s address space, with a decoder you design.</li>
+        <li><strong>Break the address decoding</strong> two ways, and explain aliasing and shadowing.</li>
+        <li><strong>Write a polling program</strong> for MARS&rsquo;s keyboard and display, from a specification.</li>
+        <li><strong>Measure polling&rsquo;s cost</strong> in your own program, and compare it with <code>syscall</code>.</li>
+      </ol>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">CS301 Reference</div>
+        <p>Memory-mapped I/O and polling are covered in Saylor CS301 <strong>Unit 5: Designing a Processor</strong>. Log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> and open it as supporting reading.</p>
+      </div>
+    </section>
+
+    <section id="sec-before">
+      <h2>Before You Arrive</h2>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Bring a Working <code>RAM_16X16</code> and <code>MEM_8BIT</code></div>
+        <p>Today&rsquo;s bench <strong>instantiates</strong> your Week 8 <code>RAM_16X16</code> once and your Week 5 <code>MEM_8BIT</code> once. <strong>Nothing from Checkpoints 4, 5 or 6 is needed.</strong></p>
+        <p>Your RAM must store and read back a byte at an address in rows 0 and 1, and float on a read from row 2 or above &mdash; its Week 8 verification table. If it does not, fix it first: Week 13 puts it on your CPU&rsquo;s bus.</p>
+      </div>
+
+      <p><strong>Read sections 12.2 and 12.4 of <cite>The Memory Bus</cite></strong> and <strong>sections 12.10 and 12.12 of <cite>Input and Output</cite></strong> in this week&rsquo;s Canvas module. The pages are named rather than linked, because each learning page is embedded in its own Canvas page.</p>
+
+      <p><strong>Bring your <code>CSC210_YourName.circ</code> file, and MARS.</strong> Print this page, or have it open on a second screen. The observation sheet and your <code>.asm</code> file are what you submit.</p>
+    </section>
+
+    <section id="sec-scope">
+      <h2>What Is Here, and What Is Elsewhere</h2>
+      <div class="table-scroll">
+      <table class="scope-table">
+        <thead><tr><th>Work</th><th>Where it happens</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>The MAR and RAM on your CPU&rsquo;s bus; fetch</td>
+            <td class="scope-solo">Week 13, Checkpoint 6 &mdash; not here</td>
+            <td>Next week&rsquo;s assignment page.</td>
+          </tr>
+          <tr>
+            <td>Assignment 12 and Quiz 2</td>
+            <td class="scope-solo">Canvas quizzes</td>
+            <td>Nothing on this page is a question from either.</td>
+          </tr>
+          <tr>
+            <td><strong><code>MMIO_BENCH</code></strong></td>
+            <td class="scope-lab"><strong>Built here, and only here</strong></td>
+            <td>Your RAM with one address taken over by an output register.</td>
+          </tr>
+          <tr>
+            <td><strong>The keyboard echo program</strong></td>
+            <td class="scope-lab"><strong>Written here, and only here</strong></td>
+            <td>A specification, not a program to copy. Different from page 3&rsquo;s display program.</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+    </section>
+
+    <!-- ============================================================ Part 1 -->
+    <section id="sec-part-1">
+      <h2>Part 1 — File Check <span class="points-badge">~3 min</span><span class="live-tag live-tag--together">Together</span></h2>
+      <div class="lab-step">
+        <div class="lab-step__num">1</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Thirty-second file check</div>
+          <p>Open <code>CSC210_YourName.circ</code>. <code>RAM_16X16</code> and <code>MEM_8BIT</code> are tabs in this one file. Create today&rsquo;s tab, named exactly:</p>
+          <pre><code>MMIO_BENCH</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ Part 2 -->
+    <section id="sec-part-2">
+      <h2>Part 2 — Build <code>MMIO_BENCH</code> <span class="points-badge">~17 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <p>One RAM, one 8-bit register called <strong>DISPLAY</strong>, and an <strong>address decoder</strong> that watches the address. When the address is <code>0x1F</code> &mdash; the last populated byte of your RAM &mdash; a write goes to DISPLAY instead of to memory. Everywhere else, nothing changes. That is all memory-mapped I/O is.</p>
+
+      <svg class="bench-sketch" viewBox="0 0 660 300" role="img" aria-labelledby="mm-title mm-desc">
+        <title id="mm-title">MMIO_BENCH: a RAM and a DISPLAY register sharing one address space</title>
+        <desc id="mm-desc">Input pins address and data are at the top left. The address runs right into a box labelled RAM_16X16, whose sa input is tied to a constant 1, and also down into a box labelled io decoder. The data pin runs into the RAM's i input and on to a box labelled DISPLAY, a MEM_8BIT, at the right, whose output goes to an output pin display. The RAM's o goes to an output pin o. Below, input pins wr and rd and the decoder's output io feed three AND gates: wr AND NOT io drives the RAM's s; rd AND NOT io drives the RAM's e; wr AND io drives DISPLAY's Set. A dashed outline around the first two gates is marked: NOT io removed in break B.</desc>
+        <line class="stub" x1="10" y1="40" x2="40" y2="40"></line><text class="lbl lbl--sm" x="10" y="33">address</text>
+        <line class="stub" x1="10" y1="80" x2="40" y2="80"></line><text class="lbl lbl--sm" x="10" y="73">data</text>
+        <line class="wire" x1="40" y1="40" x2="330" y2="40"></line>
+        <line class="wire" x1="40" y1="80" x2="330" y2="80"></line>
+        <rect class="box" x="330" y="20" width="130" height="90" rx="4"></rect>
+        <text class="lbl" x="395" y="62" text-anchor="middle">RAM_16X16</text>
+        <text class="lbl lbl--sm" x="395" y="80" text-anchor="middle">sa = 1</text>
+        <text class="lbl lbl--sm" x="340" y="44">address</text><text class="lbl lbl--sm" x="340" y="84">i</text>
+        <line class="stub" x1="460" y1="60" x2="510" y2="60"></line><text class="lbl lbl--sm" x="518" y="64">o</text>
+        <!-- data on to DISPLAY -->
+        <line class="wire" x1="300" y1="80" x2="300" y2="126"></line><line class="wire" x1="300" y1="126" x2="560" y2="126"></line><line class="wire" x1="560" y1="126" x2="560" y2="160"></line>
+        <rect class="box" x="510" y="160" width="110" height="56" rx="4"></rect>
+        <text class="lbl" x="565" y="185" text-anchor="middle">DISPLAY</text>
+        <text class="lbl lbl--sm" x="565" y="202" text-anchor="middle">MEM_8BIT</text>
+        <line class="stub" x1="600" y1="216" x2="600" y2="240"></line><text class="lbl lbl--sm" x="600" y="254" text-anchor="middle">display</text>
+        <!-- decoder -->
+        <line class="wire" x1="120" y1="40" x2="120" y2="140"></line>
+        <rect class="box" x="70" y="140" width="100" height="34" rx="4"></rect>
+        <text class="lbl" x="120" y="162" text-anchor="middle">io decoder</text>
+        <line class="wire" x1="170" y1="157" x2="210" y2="157"></line><text class="lbl lbl--sm" x="190" y="151" text-anchor="middle">io</text>
+        <line class="wire" x1="210" y1="157" x2="210" y2="276"></line><line class="wire" x1="210" y1="276" x2="420" y2="276"></line>
+        <!-- wr, rd -->
+        <line class="stub" x1="10" y1="200" x2="40" y2="200"></line><text class="lbl lbl--sm" x="10" y="193">wr</text>
+        <line class="wire" x1="40" y1="200" x2="250" y2="200"></line>
+        <line class="stub" x1="10" y1="240" x2="40" y2="240"></line><text class="lbl lbl--sm" x="10" y="233">rd</text>
+        <line class="wire" x1="40" y1="240" x2="250" y2="240"></line>
+        <line class="wire" x1="140" y1="200" x2="140" y2="290"></line><line class="wire" x1="140" y1="290" x2="420" y2="290"></line>
+        <circle cx="210" cy="208" r="3"></circle><circle cx="210" cy="248" r="3"></circle><circle cx="140" cy="200" r="3"></circle><line class="wire" x1="210" y1="208" x2="250" y2="208"></line><line class="wire" x1="210" y1="248" x2="250" y2="248"></line>
+        <!-- gates -->
+        <rect class="det" x="235" y="186" width="110" height="78" rx="6"></rect>
+        <rect class="box" x="250" y="192" width="80" height="24" rx="4"></rect><text class="lbl lbl--sm" x="290" y="208" text-anchor="middle">wr·NOT io</text>
+        <rect class="box" x="250" y="232" width="80" height="24" rx="4"></rect><text class="lbl lbl--sm" x="290" y="248" text-anchor="middle">rd·NOT io</text>
+        <text class="lbl lbl--sm" x="290" y="178" text-anchor="middle">NOT io removed in break B</text>
+        <line class="wire" x1="330" y1="204" x2="360" y2="204"></line><line class="wire" x1="360" y1="204" x2="360" y2="110"></line><text class="lbl lbl--sm" x="366" y="124">s</text>
+        <line class="wire" x1="330" y1="244" x2="420" y2="244"></line><line class="wire" x1="420" y1="244" x2="420" y2="110"></line><text class="lbl lbl--sm" x="426" y="124">e</text>
+        <rect class="box" x="420" y="270" width="70" height="24" rx="4"></rect><text class="lbl lbl--sm" x="455" y="286" text-anchor="middle">wr·io</text>
+        <line class="wire" x1="490" y1="282" x2="530" y2="282"></line><line class="wire" x1="530" y1="282" x2="530" y2="216"></line><text class="lbl lbl--sm" x="536" y="240">Set</text>
+      </svg>
+
+      <ol class="logisim-steps">
+        <li>Place <strong>one <code>RAM_16X16</code> instance</strong>. Input pins <code>address</code> and <code>data</code> (8 bits) to its <code>address</code> and <code>i</code>. Tie its <code>sa</code> to a <strong>constant 1</strong>, so the MAR simply follows <code>address</code>, and its <code>reset</code> to a constant 0. Its <code>o</code> to an 8-bit output pin <code>o</code>.</li>
+        <li>Place <strong>one <code>MEM_8BIT</code> instance</strong>, labelled <em>DISPLAY</em>. Its <code>i</code> from <code>data</code>; its <code>o</code> to an 8-bit output pin <code>display</code>.</li>
+        <li><strong>Design the address decoder</strong>: an output <code>io</code> that is 1 when <code>address</code> is exactly <code>00011111</code> and 0 for every other address. Split the address into its eight bits; you need one gate with eight inputs, and some NOTs. Bring <code>io</code> out to an output pin.</li>
+        <li>Input pins <code>wr</code> and <code>rd</code>. Three AND gates: <code>wr</code> AND NOT <code>io</code> into the RAM&rsquo;s <code>s</code>; <code>rd</code> AND NOT <code>io</code> into the RAM&rsquo;s <code>e</code>; <code>wr</code> AND <code>io</code> into DISPLAY&rsquo;s <code>s</code>. Every input pin pull-down.</li>
+      </ol>
+
+      <details class="lab-troubleshoot">
+        <summary>Open if your decoder will not come out right: the gate</summary>
+        <p><code>0x1F</code> is <code>0001 1111</code>: bits 7, 6 and 5 are 0 and bits 4 to 0 are 1. One AND gate with eight inputs: bits 4, 3, 2, 1 and 0 straight in, bits 7, 6 and 5 through NOT gates. It is one row of the <code>DECODER_4TO16</code> idea, done for all eight bits at once.</p>
+      </details>
+
+      <div class="lab-verify">
+        <div class="lab-verify__title">How to store and load on this bench</div>
+        <p><strong>Store:</strong> set <code>address</code> and <code>data</code> first, then pulse <code>wr</code>. <strong>Load:</strong> set <code>address</code>, raise <code>rd</code>, read <code>o</code>, drop <code>rd</code>. Never change <code>address</code> while <code>wr</code> is high: with <code>sa</code> tied to 1 the MAR follows it, which is the Week 8 hazard.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ Part 3 -->
+    <section id="sec-part-3">
+      <h2>Part 3 — Six Accesses <span class="points-badge">~8 min</span><span class="live-tag live-tag--solo">Your own, then compare</span></h2>
+
+      <div class="lab-step">
+        <div class="lab-step__num">2</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Store, store, store, load, load, store</div>
+          <p>In order, recording <code>io</code>, <code>display</code> and <code>o</code> after each, and whether any RAM byte changed (look inside the RAM instance, or load it back):</p>
+          <ol>
+            <li>Store <code>0x41</code> at <code>0x05</code>.</li>
+            <li>Store <code>0x48</code> at <code>0x1F</code>.</li>
+            <li>Store <code>0x69</code> at <code>0x1F</code>.</li>
+            <li>Load from <code>0x05</code>.</li>
+            <li>Load from <code>0x1F</code>.</li>
+            <li>Store <code>0x21</code> at <code>0xFF</code>.</li>
+          </ol>
+          <p>Which of the six reached a device, which reached memory, and which reached nothing at all?</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ Part 4 -->
+    <section id="sec-part-4">
+      <h2>Part 4 — Break the Decoder <span class="points-badge">~12 min</span><span class="live-tag live-tag--solo">Your own, then compare</span></h2>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Compare With the Room &mdash; before break A</div>
+        <p>A cheaper decoder looks only at bits 4 to 0, and ignores bits 7, 6 and 5. <strong>With that decoder, where does a store of <code>0x21</code> at <code>0xFF</code> go?</strong> Everybody answers before anyone rewires.</p>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">A</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Partial decoding</div>
+          <p>Disconnect bits 7, 6 and 5 from your decoder&rsquo;s AND gate (a five-input AND of bits 4 to 0). Repeat access 6: store <code>0x21</code> at <code>0xFF</code>. Then store <code>0x7E</code> at <code>0x3F</code>. Record <code>display</code> both times.</p>
+          <p><strong>How many different addresses now reach DISPLAY?</strong> List them in hex.</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">B</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Forget to block the memory</div>
+          <p>Restore the full decoder. Now wire the RAM&rsquo;s <code>s</code> straight from <code>wr</code> and its <code>e</code> straight from <code>rd</code>, leaving out NOT <code>io</code>. Store <code>0x5A</code> at <code>0x1F</code>, then load from <code>0x1F</code>. Record <code>display</code> and <code>o</code>.</p>
+          <p>A program that writes to the screen and then reads the same address back &mdash; what does it get, and where did it come from?</p>
+        </div>
+      </div>
+
+      <details class="lab-troubleshoot">
+        <summary>Open after you have recorded both breaks: the names for what you saw</summary>
+        <p><strong>Break A is aliasing.</strong> A decoder that ignores some address bits answers to every address that matches on the bits it does look at: with three bits ignored, eight addresses all reach the same device. Early home computers often decoded this way to save gates, and their manuals listed the &ldquo;mirror&rdquo; addresses.</p>
+        <p><strong>Break B is a shadow.</strong> The store reached both the device and the RAM byte underneath it, so a later load reads memory&rsquo;s copy and the program believes it read the device. A memory-mapped device has to <em>take</em> its address from memory, not share it.</p>
+      </details>
+
+      <p><strong>Restore the full decoder and the NOT <code>io</code> inputs before you submit.</strong></p>
+    </section>
+
+    <!-- ============================================================ Part 5 -->
+    <section id="sec-part-5">
+      <h2>Part 5 — MARS: Echo the Keyboard <span class="points-badge">~40 min</span><span class="live-tag live-tag--solo">Your own</span></h2>
+
+      <p>You write this program; nobody hands it to you. Page 3 showed a program that prints a fixed string by polling the display. Yours reads from the <strong>keyboard</strong> too.</p>
+
+      <div class="lab-step">
+        <div class="lab-step__num">3</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">The specification</div>
+          <ol>
+            <li>Wait for a key: poll the <strong>receiver control</strong> register until its ready bit is 1. Count every poll that finds it <em>not</em> ready, in a register you choose.</li>
+            <li>Read the character from the <strong>receiver data</strong> register.</li>
+            <li>If the character is <code>.</code> (period, ASCII 46), stop echoing.</li>
+            <li>Otherwise wait for the display: poll the <strong>transmitter control</strong> register until ready, then store the character in the <strong>transmitter data</strong> register. Count the characters echoed.</li>
+            <li>Repeat from 1.</li>
+            <li>After the period: using <code>syscall</code>, print the number of characters echoed, a newline, and the number of not-ready keyboard polls; then exit.</li>
+          </ol>
+          <p>Save it as <code>lab12_yourname.asm</code>. Comment every line that touches a device register.</p>
+        </div>
+      </div>
+
+<div class="paper">Reference card
+  receiver control     0xffff0000   bit 0 = 1: a key is waiting
+  receiver data        0xffff0004   the key, low byte; reading it clears the ready bit
+  transmitter control  0xffff0008   bit 0 = 1: the display is ready
+  transmitter data     0xffff000c   store a character here to show it
+  li   $s0, 0xffff0000              MARS expands this into two instructions
+  lw   $t0, 0($s0)    andi $t0, $t0, 1    beq / bne
+  syscall:  1 print integer ($a0)   11 print character ($a0)   10 exit
+  Rules: .data before .text if you have one; no main:, no .globl</div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">4</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Run it</div>
+          <ol>
+            <li>Assemble. Open <em>Tools &rarr; Keyboard and Display MMIO Simulator</em> and click <strong>Connect to MIPS</strong>.</li>
+            <li>Run. Click in the tool&rsquo;s lower box (the keyboard) and type <code>hello.</code> at your normal speed. Each letter should appear in the upper box (the display).</li>
+            <li>Record what the console prints. Run it again, typing <code>hello.</code> as fast as you can, and record the counts again.</li>
+          </ol>
+          <p>If nothing appears, check that the tool says it is connected, and press its <em>Reset</em> button between runs.</p>
+        </div>
+      </div>
+
+      <h3>Three questions &mdash; answer them in comments at the end of your <code>.asm</code></h3>
+
+      <div class="lab-step">
+        <div class="lab-step__num">Q1</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">What polling cost</div>
+          <p>How many not-ready polls did each run make, for six keys? Divide by the characters echoed. Why did typing faster change the count, and what was the processor doing the rest of the time?</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">Q2</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Your store, on your bench</div>
+          <p>Your <code>sw</code> to <code>0xffff000c</code> is MARS&rsquo;s version of which access in Part 3? What, in MARS, plays the part of your <code>io</code> decoder?</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">Q3</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">What syscall hides</div>
+          <p>Rewrite the echo step with <code>syscall</code> 11 instead of the transmitter registers, in a comment. What do you no longer write, and on a real computer, who does that work instead (page 4)?</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ Part 6 -->
+    <section id="sec-part-6">
+      <h2>Last Ten Minutes — Quiz 2 Sweep <span class="points-badge">~10 min</span><span class="live-tag live-tag--together">Together</span></h2>
+      <p>One idea per week, out loud, walking up Phase 3: the loop (Week 9), one bus and one driver (Week 10), the clock, stepper and table (Week 11), the bus to memory and the world (Week 12). Bring your questions about the Quiz 2 guide. Nothing here is a quiz question, and nothing is collected.</p>
+    </section>
+
+    <!-- ============================================================ Observation sheet -->
+    <section id="sec-observations">
+      <h2>Observation Sheet</h2>
+      <p>Fill this in as you go &mdash; it is what Completion Check 12 collects with your <code>.asm</code>. <strong>Write what your bench showed, not what you expected.</strong></p>
+
+      <div class="table-scroll">
+      <table class="obs-table" id="obs-access">
+        <caption>Part 3 — six accesses</caption>
+        <thead><tr><th>Access</th><th>io</th><th>display</th><th>o</th><th>Reached: device, memory, or nothing</th></tr></thead>
+        <tbody>
+          <tr><td class="given">store 0x41 at 0x05</td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td class="given">store 0x48 at 0x1F</td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td class="given">store 0x69 at 0x1F</td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td class="given">load 0x05</td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td class="given">load 0x1F</td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td class="given">store 0x21 at 0xFF</td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="table-scroll">
+      <table class="obs-table" id="obs-breaks">
+        <caption>Part 4 — two breaks</caption>
+        <thead><tr><th>Break</th><th>What you did</th><th>display</th><th>o</th></tr></thead>
+        <tbody>
+          <tr><td>Room vote: 0x21 at 0xFF with a partial decoder</td><td class="fill" colspan="3"></td></tr>
+          <tr><td class="given">A</td><td class="given">store 0x21 at 0xFF</td><td class="fill"></td><td>&mdash;</td></tr>
+          <tr><td class="given">A</td><td class="given">store 0x7E at 0x3F</td><td class="fill"></td><td>&mdash;</td></tr>
+          <tr><td>A: every address that reaches DISPLAY</td><td class="fill fill--wide" colspan="3"></td></tr>
+          <tr><td class="given">B</td><td class="given">store 0x5A at 0x1F, load 0x1F</td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>B: what the program reads back, and from where</td><td class="fill fill--wide" colspan="3"></td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="table-scroll">
+      <table class="obs-table" id="obs-mars">
+        <caption>Part 5 — two runs typing hello.</caption>
+        <thead><tr><th>Run</th><th>Characters echoed</th><th>Not-ready keyboard polls</th><th>Polls per character</th></tr></thead>
+        <tbody>
+          <tr><td class="given">normal speed</td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td class="given">fast</td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+        </tbody>
+      </table>
+      </div>
+    </section>
+
+    <!-- ============================================================ Assignment -->
+    <section id="sec-assignment">
+      <h2>Assignment: Completion Check 12</h2>
+
+      <div class="lab-meta">
+        <div class="lab-meta__item"><span class="lab-meta__label">Points</span><span class="lab-meta__value">10</span></div>
+        <div class="lab-meta__item"><span class="lab-meta__label">Due</span><span class="lab-meta__value lab-meta__value--due">Sunday, Nov 8, 2026 &middot; 11:59 PM</span></div>
+        <div class="lab-meta__item"><span class="lab-meta__label">Submit via</span><span class="lab-meta__value">Canvas &mdash; Lab 12 Completion Check</span></div>
+        <div class="lab-meta__item"><span class="lab-meta__label">Assesses</span><span class="lab-meta__value">CSLO 1, CSLO 3</span></div>
+      </div>
+
+      <p>This is a CSC210L grade and it collects <strong>nothing that Assignment 12 or Quiz 2 collects</strong>. Nothing in CSC210 depends on your attendance in this room.</p>
+
+      <h3>What to Submit</h3>
+      <ol>
+        <li><strong>Your <code>.circ</code> file.</strong> Only the <code>MMIO_BENCH</code> tab is looked at, with the full decoder and both NOT <code>io</code> inputs restored.</li>
+        <li><strong>Your observation sheet</strong> &mdash; a photo of the printout, or the same tables typed up.</li>
+        <li><strong><code>lab12_yourname.asm</code></strong> &mdash; the file, not a screenshot &mdash; with Q1 to Q3 in comments at the end.</li>
+      </ol>
+
+      <h3>Grading Rubric</h3>
+      <table>
+        <thead><tr><th>Criterion</th><th>Points</th><th>Full credit requires</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>MMIO_BENCH</code> built and working</td>
+            <td>3</td>
+            <td>A tab named exactly <code>MMIO_BENCH</code>: an instance of your own <code>RAM_16X16</code> and of your own <code>MEM_8BIT</code>, a full eight-bit decoder for <code>0x1F</code>, and the three AND gates; pins named as on this page. Wiring and Gates components only.</td>
+          </tr>
+          <tr>
+            <td>Observation sheet, Parts 3 and 4</td>
+            <td>3</td>
+            <td>All six accesses and both breaks recorded, with the vote and the alias list. Being wrong costs nothing here; leaving it blank does.</td>
+          </tr>
+          <tr>
+            <td>The echo program</td>
+            <td>2</td>
+            <td>Assembles and runs to the period; polls both control registers; counts and prints as specified; device lines commented.</td>
+          </tr>
+          <tr>
+            <td>Part 5 runs and Q1&ndash;Q3</td>
+            <td>2</td>
+            <td>Both runs recorded on the sheet, and the three questions answered in the <code>.asm</code>.</td>
+          </tr>
+          <tr class="rubric-total"><td>Total</td><td>10</td><td>&nbsp;</td></tr>
+        </tbody>
+      </table>
+
+      <p style="font-size:var(--fs-sm);color:var(--color-text-muted);"><strong>CSLO alignment.</strong> Supports <strong>CSLO&nbsp;1</strong> (describe the organization and architecture of a computer system) through the address decoder and its failures, and <strong>CSLO&nbsp;3</strong> (write, execute and debug assembly programs) through the echo program.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">If You Could Not Finish</div>
+        <p>This lab is sized to <strong>complete in class</strong>. If the MARS half runs over, the echo program is about twenty lines; finish it before Sunday. The room vote needs the room; if you missed it, write your own answer and say so.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ Checklist -->
+    <section id="sec-checklist">
+      <h2>Pre-Submission Checklist</h2>
+      <p>Two minutes before you upload. Check an item only after you have actually verified it.</p>
+      <div class="widget-card" id="widget-checklist">
+        <div class="widget-card__title">Pre-Submission Checklist</div>
+        <div class="widget-card__subtitle">Nothing here is saved &mdash; it is a thinking prompt, not a record.</div>
+        <ul class="lab-checklist" id="ck-list">
+          <li><input type="checkbox" id="ck-1"><label for="ck-1">My file has a tab named exactly <code>MMIO_BENCH</code>, using instances of my own <code>RAM_16X16</code> and <code>MEM_8BIT</code> &mdash; nothing from Plexers, Arithmetic or Memory.</label></li>
+          <li><input type="checkbox" id="ck-2"><label for="ck-2">My decoder looks at all eight address bits, and <code>io</code> is 1 only at <code>0x1F</code>.</label></li>
+          <li><input type="checkbox" id="ck-3"><label for="ck-3">Both breaks are undone: NOT <code>io</code> blocks the RAM&rsquo;s <code>s</code> and <code>e</code> again.</label></li>
+          <li><input type="checkbox" id="ck-4"><label for="ck-4">All six accesses are recorded.</label></li>
+          <li><input type="checkbox" id="ck-5"><label for="ck-5">Both breaks are recorded, with every alias address listed.</label></li>
+          <li><input type="checkbox" id="ck-6"><label for="ck-6">My <code>.asm</code> assembles, and its device lines are commented.</label></li>
+          <li><input type="checkbox" id="ck-7"><label for="ck-7">It stops at the period and prints both counts with <code>syscall</code>.</label></li>
+          <li><input type="checkbox" id="ck-8"><label for="ck-8">Both runs are recorded on the sheet.</label></li>
+          <li><input type="checkbox" id="ck-9"><label for="ck-9">Q1, Q2 and Q3 are answered at the end of the <code>.asm</code>.</label></li>
+          <li><input type="checkbox" id="ck-10"><label for="ck-10">I am submitting the <code>.asm</code> file itself, not a screenshot.</label></li>
+        </ul>
+        <div class="checklist-status" id="ck-status" role="status" aria-live="polite">0 of 10 verified</div>
+      </div>
+    </section>
+
+    <!-- ============================================================ Next -->
+    <section id="sec-next">
+      <h2>What Comes Next</h2>
+      <p>Today you gave a device an address and watched what careless decoding does. Next week your RAM joins your CPU&rsquo;s bus for real, and your CPU starts fetching its own instructions.</p>
+
+      <div class="progression">
+        <div class="progression__item completed">
+          <div class="progression__label">Lab 11 &mdash; Races and Tables</div>
+          <div class="progression__detail"><code>RACE_BENCH</code>, <code>MICRO_ROM</code></div>
+        </div>
+        <div class="progression__item active">
+          <div class="progression__label">Lab 12 &mdash; A Device at an Address</div>
+          <div class="progression__detail">Memory-mapped output &mdash; <code>MMIO_BENCH</code>, and the MARS keyboard echo</div>
+        </div>
+        <div class="progression__item">
+          <div class="progression__label">Lab 13 &mdash; First Instructions Execute</div>
+          <div class="progression__detail">Fetch, and a debugging method</div>
+        </div>
+      </div>
+      <p>Bring your file next Tuesday.</p>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC210L — Computer Organization &amp; Architecture Lab &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <script>
+  /* ============================================================
+     Pre-Submission Checklist -- a count, and nothing more. No
+     persistence, deliberately. No shared kernel is loaded: an
+     on-page bench would fill in the observation sheet.
+     ============================================================ */
+  (function () {
+    'use strict';
+    var boxes = document.querySelectorAll('#ck-list input[type="checkbox"]');
+    var total = boxes.length;
+    function update() {
+      var count = 0, i;
+      for (i = 0; i < boxes.length; i++) {
+        if (boxes[i].checked) { count++; boxes[i].parentNode.classList.add('checked'); }
+        else { boxes[i].parentNode.classList.remove('checked'); }
+      }
+      var status = document.getElementById('ck-status');
+      if (count === total) {
+        status.className = 'checklist-status checklist-status--ready';
+        status.innerHTML = '&#10004; All ' + total + ' verified &mdash; you are ready to submit.';
+      } else {
+        status.className = 'checklist-status';
+        status.textContent = count + ' of ' + total + ' verified';
+      }
+    }
+    Array.prototype.forEach.call(boxes, function (b) { b.addEventListener('change', update); });
+  })();
+  </script>
+</body>
+</html>
