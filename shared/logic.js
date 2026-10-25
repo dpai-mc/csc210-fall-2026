@@ -1631,6 +1631,512 @@
   }
 
   /* ============================================================
+     WEEK 12 -- The memory bus, I/O and syscall (CSCLogic.sys)
+     ============================================================
+     Added 2026-10-25.
+
+     WHAT THIS MODELS.
+
+       1. LD and ST on the course CPU, as Fall 2025's control unit runs
+          them (circuits-control-load-and-store, its transcript):
+            LD RA, RB   step 4: RA -> bus, MAR captures;  step 5: RAM -> bus, RB captures
+            ST RA, RB   step 4: RA -> bus, MAR captures;  step 5: RB -> bus, RAM captures
+          The RAM is Week 8's memRam (RAM_16X16 with its MAR), not a new
+          model, so an unpopulated address floats exactly as Week 8 taught.
+          These are taught in Week 12 and WIRED in Week 14.
+
+       2. Memory timing: how many wait states a synchronous bus needs,
+          and whether a read fits in one of the course CPU's quarters.
+
+       3. The MARS Keyboard and Display MMIO Simulator: four device
+          registers at 0xffff0000-0xffff000c, and a polling program that
+          prints a string through the transmitter. A small interpreter
+          for exactly that program's instructions, so the widget and the
+          quiz verifier count the same polls.
+
+     NOT MODELLED (Dave, 2026-10-25): the course CPU's I/O instructions
+     are taught as a concept. IND, INA, OUTD and OUTA are named; no byte
+     encoding is given or decoded here. core.decodeByte keeps calling
+     0111 xxxx "I/O" without fields.
+
+     NO MDR. The course CPU has none -- answered here because Week 9 left
+     it to Week 12: RAM's output drives the bus directly for the whole of
+     step 5, and the destination captures inside that transfer.
+
+     NAMING. Every helper is sys-prefixed (the Week 6 shadowing rule).
+     ============================================================ */
+
+  var SYS_LDST = [
+    { cls: 'LD', syntax: 'LD RA, RB', meaning: 'RB ← RAM[RA]', steps: [
+      { step: 4, enable: 'RA', set: 'MAR', rtl: 'MAR ← RA' },
+      { step: 5, enable: 'RAM', set: 'RB', rtl: 'RB ← RAM[MAR]' } ] },
+    { cls: 'ST', syntax: 'ST RA, RB', meaning: 'RAM[RA] ← RB', steps: [
+      { step: 4, enable: 'RA', set: 'MAR', rtl: 'MAR ← RA' },
+      { step: 5, enable: 'RB', set: 'RAM', rtl: 'RAM[MAR] ← RB' } ] }
+  ];
+
+  var SYS_IO = [
+    { m: 'IND',  dir: 'in',  kind: 'data',    says: 'input a data byte from the selected device into RB' },
+    { m: 'INA',  dir: 'in',  kind: 'address', says: 'input an address-type byte from the I/O bus into RB' },
+    { m: 'OUTD', dir: 'out', kind: 'data',    says: 'output the data byte in RB to the selected device' },
+    { m: 'OUTA', dir: 'out', kind: 'address', says: 'output the device address in RB, selecting that device' }
+  ];
+
+  /* MARS Keyboard and Display MMIO Simulator. */
+  var SYS_MMIO = [
+    { addr: 0xFFFF0000, off: 0,  name: 'receiver control',    use: 'bit 0 = 1 when a key has been typed and not yet read' },
+    { addr: 0xFFFF0004, off: 4,  name: 'receiver data',       use: 'the typed character, in the low byte; reading it clears the ready bit' },
+    { addr: 0xFFFF0008, off: 8,  name: 'transmitter control', use: 'bit 0 = 1 when the display is ready for a character' },
+    { addr: 0xFFFF000C, off: 12, name: 'transmitter data',    use: 'store a character here and the display shows it' }
+  ];
+
+  /* Week 5's syscall table, plus the two character services Week 12 uses. */
+  var SYS_CALLS = MIPS_SYSCALLS.concat([
+    { service: 'print character', code: 11, args: '$a0 = the character, in the low byte' },
+    { service: 'read character',  code: 12, args: 'returns the character in $v0' }
+  ]).sort(function (a, b) { return a.code - b.code; });
+
+  /* LD/ST on registers R0-R3 and the Week 8 RAM. */
+  function sysMemCpu(init) {
+    init = init || {};
+    var R = [0, 1, 2, 3].map(function (k) { return init['R' + k] === undefined ? null : init['R' + k]; });
+    var ram = memRam();
+    (init.ram || []).forEach(function (v, a) {
+      if (v === null || v === undefined) { return; }
+      ram.step({ address: a, sa: 1 }); ram.step({ sa: 0, i: v, s: 1 }); ram.step({});
+    });
+
+    /* run('LD R3, R1') or run({cls:'LD', ra:3, rb:1}) -> the two transfers */
+    function run(ins) {
+      var cls, ra, rb, m;
+      if (typeof ins === 'string') {
+        m = /^\s*(LD|ST)\s+R([0-3])\s*,\s*R([0-3])\s*$/i.exec(ins);
+        if (!m) { throw new Error('LD or ST only: ' + ins); }
+        cls = m[1].toUpperCase(); ra = +m[2]; rb = +m[3];
+      } else { cls = ins.cls; ra = ins.ra & 3; rb = ins.rb & 3; }
+      var out = [];
+      /* step 4: RA -> MAR */
+      var a = R[ra];
+      if (a === null) {
+        out.push({ step: 4, ok: false, error: 'R' + ra + ' has never been written, so it drives EEEEEEEE: there is no address.' });
+        return { ok: false, transfers: out, state: state() };
+      }
+      var r4 = ram.step({ address: a, sa: 1 }); ram.step({ sa: 0 });
+      out.push({ step: 4, ok: true, enable: 'R' + ra, set: 'MAR', bus: a, mar: r4.mar, row: r4.where.row, col: r4.where.col,
+                 populated: r4.selected !== null, rtl: 'MAR ← R' + ra });
+      /* step 5 */
+      if (cls === 'LD') {
+        var r5 = ram.step({ e: 1 }); ram.step({});
+        if (r5.oState !== 'driven') {
+          out.push({ step: 5, ok: false, enable: 'RAM', set: 'R' + rb, bus: null, busState: r5.oState,
+                     error: r5.oState === 'float'
+                       ? 'Address ' + coreHex2(a) + ' is in an unpopulated row: no byte is selected, the bus floats, and R' + rb + ' would capture nothing.'
+                       : 'The selected byte has never been written: it drives EEEEEEEE.' });
+          return { ok: false, transfers: out, state: state() };
+        }
+        R[rb] = r5.o;
+        out.push({ step: 5, ok: true, enable: 'RAM', set: 'R' + rb, bus: r5.o, rtl: 'R' + rb + ' ← RAM[' + coreHex2(a) + ']' });
+      } else {
+        var v = R[rb];
+        if (v === null) {
+          out.push({ step: 5, ok: false, error: 'R' + rb + ' has never been written, so it drives EEEEEEEE.' });
+          return { ok: false, transfers: out, state: state() };
+        }
+        var w = ram.step({ i: v, s: 1 }); ram.step({});
+        out.push({ step: 5, ok: true, enable: 'R' + rb, set: 'RAM', bus: v, wrote: w.wrote.slice(), populated: w.wrote.length > 0,
+                   rtl: 'RAM[' + coreHex2(a) + '] ← R' + rb + (w.wrote.length ? '' : ' -- an unpopulated address: nothing is stored') });
+      }
+      return { ok: true, transfers: out, state: state() };
+    }
+    function state() {
+      var bytes = [];
+      for (var a = 0; a < MEM_GEOMETRY.populated; a++) { bytes.push(ram.peek(a)); }
+      return { R0: R[0], R1: R[1], R2: R[2], R3: R[3], ram: bytes, mar: ram.state.mar };
+    }
+    function peek(a) { return a < MEM_GEOMETRY.populated ? ram.peek(a) : undefined; }
+    return { run: run, state: state, peek: peek };
+  }
+
+  /* Timing. A synchronous bus gives memory one cycle; a slower memory
+     needs extra cycles -- wait states. */
+  function sysWaitStates(accessNs, cycleNs) {
+    if (!(accessNs > 0) || !(cycleNs > 0)) { throw new Error('positive times only'); }
+    return Math.max(0, Math.ceil(accessNs / cycleNs - 1e-9) - 1);
+  }
+  /* The course CPU: RAM_E rises at the start of quarter 1 of step 5 and
+     the destination's set rises one quarter later, so the RAM has one
+     quarter to put its byte on the bus. */
+  function sysQuarterFits(accessNs, quarterNs) {
+    return accessNs <= quarterNs;
+  }
+
+  /* The MMIO polling program, and an interpreter for exactly its
+     instructions. delay: the display's ready bit is 0 for this many
+     instructions after the one that stores a character (MARS lets you
+     set a delay in the tool). */
+  var SYS_MMIO_SOURCE = [
+    '        .data',
+    'msg:    .asciiz "Hi"',
+    '        .text',
+    '        li   $s0, 0xffff0000   # base of the device registers',
+    '        la   $s1, msg',
+    'next:   lbu  $t0, 0($s1)       # the next character',
+    '        beq  $t0, $zero, done',
+    'wait:   lw   $t1, 8($s0)       # transmitter control',
+    '        andi $t1, $t1, 1       # keep only the ready bit',
+    '        beq  $t1, $zero, wait  # not ready: ask again',
+    '        sw   $t0, 12($s0)      # transmitter data: the display shows it',
+    '        addi $s1, $s1, 1',
+    '        j    next',
+    'done:   li   $v0, 10',
+    '        syscall'
+  ];
+
+  function sysMmioRun(text, delay, limit) {
+    text = String(text === undefined ? 'Hi' : text);
+    delay = Math.max(0, delay | 0);
+    limit = limit || 2000;
+    /* line indexes into SYS_MMIO_SOURCE */
+    var L_LI = 3, L_LA = 4, L_LBU = 5, L_BEQ0 = 6, L_LW = 7, L_ANDI = 8, L_BEQ1 = 9, L_SW = 10, L_ADDI = 11, L_J = 12, L_DONE = 13, L_SYS = 14;
+    var reg = { s0: 0, s1: 0, t0: 0, t1: 0, v0: 0 };
+    var busy = 0, ready = 1, out = '', polls = 0, notReady = 0, trace = [], pc = L_LI, n = 0, done = false;
+    var MSG = 0x10010000;
+    function mem(a) { var i = a - MSG; return i >= 0 && i < text.length ? text.charCodeAt(i) & 255 : 0; }
+    function tick() { if (busy > 0) { busy--; if (busy === 0) { ready = 1; } } }
+    while (!done && n < limit) {
+      var line = pc, note = '';
+      switch (pc) {
+        case L_LI:   reg.s0 = 0xFFFF0000; pc = L_LA; break;
+        case L_LA:   reg.s1 = MSG; pc = L_LBU; break;
+        case L_LBU:  reg.t0 = mem(reg.s1); pc = L_BEQ0; break;
+        case L_BEQ0: pc = reg.t0 === 0 ? L_DONE : L_LW; break;
+        case L_LW:   reg.t1 = ready; polls++; if (!ready) { notReady++; } note = 'transmitter control = ' + ready; pc = L_ANDI; break;
+        case L_ANDI: reg.t1 = reg.t1 & 1; pc = L_BEQ1; break;
+        case L_BEQ1: pc = reg.t1 === 0 ? L_LW : L_SW; break;
+        case L_SW:   out += String.fromCharCode(reg.t0); note = 'display shows "' + String.fromCharCode(reg.t0) + '"';
+                     if (delay > 0) { ready = 0; busy = delay; } pc = L_ADDI; break;
+        case L_ADDI: reg.s1 = reg.s1 + 1; pc = L_J; break;
+        case L_J:    pc = L_LBU; break;
+        case L_DONE: reg.v0 = 10; pc = L_SYS; break;
+        case L_SYS:  done = true; note = 'exit'; break;
+      }
+      n++;
+      if (line !== L_SW) { tick(); }
+      trace.push({ n: n, line: line, src: SYS_MMIO_SOURCE[line], note: note, ready: ready, out: out,
+                   t0: reg.t0, t1: reg.t1, s1: reg.s1 });
+    }
+    return { done: done, output: out, instructions: n, polls: polls, notReady: notReady, trace: trace };
+  }
+
+  /* ============================================================
+     WEEK 11 -- The control unit: clock, stepper, decoding (CSCLogic.ctl)
+     ============================================================
+     Added 2026-10-25.
+
+     WHAT THIS MODELS. The three circuits that replace the student as
+     the control unit, as Dave's Fall 2025 build pages define them:
+
+       CLOCK  (circuits-clock, manual-clock-circuit.png). A built-in
+              J-K flip-flop, J = K = 1, clocked by the input clk_in, so
+              Q toggles on every RISING edge of clk_in. Q is clk.
+                clk_s = NOT NAND(clk_in, Q)       = clk_in AND clk
+                clk_e = NAND(clk_in, NOT Q)       = NOT (clk_in AND NOT clk)
+              Starting from clk_in = 0, clk = 0, four toggles of clk_in
+              walk through: e | e+s | e | nothing. The set pulse sits
+              inside the enable pulse -- Week 5's transfer, made by a
+              circuit instead of a hand.
+
+       STEPPER (circuits-stepper, stepper-chain.png, both stepper
+              videos). Twelve MEM_1BIT cells in pairs. The first cell of
+              every pair is set by (reset OR clk), the second by (reset
+              OR NOT clk), so each pair is the master-slave arrangement
+              Week 4 described. The first cell's input is NOT reset; each
+              later cell's input is the previous cell's output.
+                step1 = reset OR NOT Q2
+                stepK = Q(2K-2) AND NOT Q(2K)      K = 2..6
+                step7 = Q12
+              Ones pour in from the left one pair per clk cycle -- a
+              thermometer -- and the lit step is where the ones end.
+              The control unit wires step7 back to reset, so step 7 is a
+              momentary pulse that empties the chain and lights step 1.
+              The step advances when clk FALLS, which is the quarter in
+              which clk_e drops: the step never changes while anything
+              is enabled.
+
+       CONTROL_UNIT (circuits-control-alu-instruction, control-alu-
+              diagram.jpg, clear-flags-control-unit.jpg). Every enable
+              line is ANDed with clk_e, every set line with clk_s. An
+              instruction class is a line: b7 is ALU; NOT b7 gates a bank
+              of eight ANDs on a DECODER_3TO8 of b6-b4, whose output 6 is
+              CLF. Each control line is an OR of (step AND class) terms,
+              listed in CTL_TABLE below and nowhere else.
+
+     SCOPE (Dave, 2026-10-25). Week 11's control unit runs the ALU class
+     (steps 4-6; CMP skips 6) and CLF (step 4). Steps 1-3 are fetch,
+     taught and tabulated (CTL_FETCH) but not wired until PC, IR and RAM
+     join the bus in Week 13. Until then the student sets the instruction
+     on an 8-bit input pin, ir, while the stepper is on steps 1-3 --
+     which is exactly when Week 13's fetch will load the IR.
+
+     TWO MODELLING DECISIONS, both from the build pages:
+
+       1. The opcode lines are IR b6-b4 ANDed with (step5 AND ALU), so the
+          ALU sees 000 -- ADD -- at every other moment. CLF needs that
+          (it adds 0 + 1 at step 4) and so will fetch's PC + 1 in Week 13.
+       2. CLF captures the flags while nothing drives the bus. The ALU's
+          A pin is set to pull-down (Fall 2025, final CPU "pull down
+          behavior"), so A reads 00000000: 0 + 1 gives C=0 A=0 E=0 Z=0.
+          The CPU model below builds core.machine with pullDownA.
+
+     STARTUP. After Simulate -> Reset the stepper is on step 1 with every
+     cell 0. That is Dave's observation of his own Fall 2025 build (asked
+     2026-10-25), recorded as observed, not derived: on paper every
+     MEM_1BIT starts at E. The model starts where the circuit does.
+
+     NAMING. Every helper is ctl-prefixed (the Week 6 shadowing rule).
+     ============================================================ */
+
+  var CTL_QUARTERS = [
+    { n: 0, name: 'enable on',  e: 1, s: 0, say: 'enable high: the source drives the bus' },
+    { n: 1, name: 'set on',     e: 1, s: 1, say: 'set high: the destination follows the bus' },
+    { n: 2, name: 'set off',    e: 1, s: 0, say: 'set low: the destination holds the value' },
+    { n: 3, name: 'enable off', e: 0, s: 0, say: 'enable low: the bus is released, and the stepper moves on' }
+  ];
+
+  /* The Week 11 control lines, in the order the pages list them. */
+  var CTL_LINES = ['regb_e', 'tmp_s', 'rega_e', 'acc_s', 'flags_s', 'acc_e', 'regb_s', 'bus1'];
+
+  /* when: the class condition, as a name the pages print and a test. */
+  var CTL_WHEN = {
+    'ALU':          function (d) { return d.alu; },
+    'ALU, not CMP': function (d) { return d.alu && !d.cmp; },
+    'CLF':          function (d) { return d.clf; }
+  };
+
+  /* THE control table. gate: which clock phase the line is ANDed with
+     (null: not a bus enable or set, so not clock-gated). */
+  var CTL_TABLE = [
+    { line: 'regb_e',  gate: 'clk_e', drives: 'RB drives the bus',          terms: [{ step: 4, when: 'ALU' }] },
+    { line: 'tmp_s',   gate: 'clk_s', drives: 'TMP captures',               terms: [{ step: 4, when: 'ALU' }] },
+    { line: 'rega_e',  gate: 'clk_e', drives: 'RA drives the bus',          terms: [{ step: 5, when: 'ALU' }] },
+    { line: 'acc_s',   gate: 'clk_s', drives: 'ACC captures the ALU result', terms: [{ step: 5, when: 'ALU' }] },
+    { line: 'flags_s', gate: 'clk_s', drives: 'FLAGS captures C A E Z',     terms: [{ step: 5, when: 'ALU' }, { step: 4, when: 'CLF' }] },
+    { line: 'acc_e',   gate: 'clk_e', drives: 'ACC drives the bus',         terms: [{ step: 6, when: 'ALU, not CMP' }] },
+    { line: 'regb_s',  gate: 'clk_s', drives: 'RB captures',                terms: [{ step: 6, when: 'ALU, not CMP' }] },
+    { line: 'bus1',    gate: null,    drives: 'BUS1 forces B to 00000001',  terms: [{ step: 4, when: 'CLF' }] }
+  ];
+
+  /* Fetch, steps 1-3, for the pages' tables. NOT wired this week. */
+  var CTL_FETCH = [
+    { step: 1, enable: ['PC'],  set: ['MAR', 'ACC'], bus1: 1, rtl: 'MAR ← PC;  ACC ← PC + 1' },
+    { step: 2, enable: ['RAM'], set: ['IR'],         bus1: 0, rtl: 'IR ← RAM[MAR]' },
+    { step: 3, enable: ['ACC'], set: ['PC'],         bus1: 0, rtl: 'PC ← ACC' }
+  ];
+
+  /* decode(ir) -- what the control unit's gates see in an IR byte. Purely
+     bitwise, as the circuit is: 0xCF is AND R3, R3 to this control unit
+     (END is detected in Week 14). */
+  function ctlDecode(ir) {
+    ir = ir & 255;
+    var b7 = (ir >> 7) & 1, hi = (ir >> 4) & 7;
+    var cls = [], k;
+    for (k = 0; k < 8; k++) { cls.push((k === hi && !b7) ? 1 : 0); }
+    return {
+      ir: ir, alu: !!b7, op: hi, ra: (ir >> 2) & 3, rb: ir & 3,
+      cmp: !!b7 && hi === 7,
+      clf: !!cls[6],
+      classLines: cls,   /* outputs of the NOT-b7-gated 3x8 bank: LD ST DATA JMPR JMP JIF CLF IO */
+      name: b7 ? CORE_ALU_MNEMONICS[hi] : ['LD', 'ST', 'DATA', 'JMPR', 'JMP', 'JIF', 'CLF', 'IO'][hi]
+    };
+  }
+
+  /* The raw (ungated) lines a step raises for an IR byte. */
+  function ctlRaised(ir, step) {
+    var d = ctlDecode(ir), out = {};
+    CTL_TABLE.forEach(function (row) {
+      out[row.line] = row.terms.some(function (t) { return t.step === step && CTL_WHEN[t.when](d); }) ? 1 : 0;
+    });
+    out.opcode = (step === 5 && d.alu) ? d.op : 0;
+    return out;
+  }
+
+  /* lines(ir, steps, clkE, clkS) -- the control unit's outputs. steps is
+     the 7-element array from the stepper (index 0 = step 1). */
+  function ctlLines(ir, steps, clkE, clkS) {
+    var d = ctlDecode(ir), out = {}, st = 0, k;
+    for (k = 0; k < 6; k++) { if (steps[k]) { st = k + 1; } }
+    var raw = st ? ctlRaised(ir, st) : null;
+    CTL_TABLE.forEach(function (row) {
+      var v = raw ? raw[row.line] : 0;
+      if (row.gate === 'clk_e') { v = v & (clkE ? 1 : 0); }
+      if (row.gate === 'clk_s') { v = v & (clkS ? 1 : 0); }
+      out[row.line] = v;
+    });
+    out.opcode = raw ? raw.opcode : 0;
+    out.ra = d.ra; out.rb = d.rb;
+    out.step = st;
+    return out;
+  }
+
+  /* CLOCK -- gate level. */
+  function ctlClock() {
+    var st = { clkIn: 0, q: 0 };
+    function out() {
+      var clk = st.q, nq = 1 - st.q;
+      var clkS = 1 - (1 - (st.clkIn & clk));      /* NAND then NOT */
+      var clkE = 1 - (st.clkIn & nq);             /* NAND */
+      var quarter = (st.clkIn === 0 && clk === 0) ? 0 : (st.clkIn === 1 && clk === 1) ? 1 : (st.clkIn === 0) ? 2 : 3;
+      return { clkIn: st.clkIn, clk: clk, q: clk, qBar: nq, clkS: clkS, clkE: clkE, quarter: quarter };
+    }
+    return {
+      toggle: function () {
+        var rising = st.clkIn === 0;
+        st.clkIn = 1 - st.clkIn;
+        if (rising) { st.q = 1 - st.q; }   /* J = K = 1: toggle on the rising edge */
+        return out();
+      },
+      reset: function () { st.clkIn = 0; st.q = 0; return out(); },
+      state: out
+    };
+  }
+
+  /* STEPPER -- gate level, twelve MEM_1BIT cells.
+     settle(clk, reset, loop7): loop7 = true wires step7 back to reset, as
+     the control unit does. Returns { cells, steps (7), reset, pulsed7 }. */
+  function ctlStepper() {
+    var q = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    function stepsOf(reset) {
+      var s = [reset | (1 - q[1])];
+      for (var k = 2; k <= 6; k++) { s.push(q[2 * k - 3] & (1 - q[2 * k - 1])); }
+      s.push(q[11]);
+      return s;
+    }
+    function settle(clk, extReset, loop7) {
+      var pulsed7 = 0, guard = 0, reset, changed, i, inp, set, s1, s2;
+      do {
+        reset = (extReset ? 1 : 0) | (loop7 ? q[11] : 0);
+        if (loop7 && q[11]) { pulsed7 = 1; }
+        s1 = reset | (clk ? 1 : 0);
+        s2 = reset | (clk ? 0 : 1);
+        changed = false;
+        for (i = 0; i < 12; i++) {           /* in order, so a transparent run propagates */
+          inp = (i === 0) ? (1 - reset) : q[i - 1];
+          set = (i % 2 === 0) ? s1 : s2;
+          if (set && q[i] !== inp) { q[i] = inp; changed = true; }
+        }
+        if (++guard > 40) { throw new Error('stepper did not settle'); }
+      } while (changed || (loop7 && q[11]));
+      reset = (extReset ? 1 : 0) | (loop7 ? q[11] : 0);
+      return { cells: q.slice(), steps: stepsOf(reset), reset: reset, pulsed7: pulsed7 };
+    }
+    return {
+      settle: settle,
+      powerUp: function () { q = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; return { cells: q.slice(), steps: stepsOf(0), reset: 0, pulsed7: 0 }; },
+      cells: function () { return q.slice(); }
+    };
+  }
+
+  /* cpu(init) -- the Week 11 CPU tab: CLOCK + CONTROL_UNIT (with its
+     STEPPER) driving the Week 10 core through REG_SELECT.
+       init: registers as for core.machine, plus ir (0-255).
+     toggle()        one click of clk_in; returns what happened
+     testPort(v)     data = v, data_e = 1, pulse data_s, data_e = 0:
+                     writes v into register RB of the current ir
+     setIr(b)        the ir input pin
+     runInstruction() 24 toggles: one instruction from step 1 back to step 1 */
+  function ctlCpu(init) {
+    init = init || {};
+    var mInit = {}, k;
+    for (k in init) { if (Object.prototype.hasOwnProperty.call(init, k)) { mInit[k] = init[k]; } }
+    mInit.pullDownA = true;
+    var m = coreMachine(mInit);
+    var clock = ctlClock(), stepper = ctlStepper();
+    var ir = (init.ir | 0) & 255, ci = init.ci ? 1 : 0;
+    var clk = clock.reset(), stp = stepper.powerUp(), toggles = 0, log = [];
+
+    function linesNow() { return ctlLines(ir, stp.steps, clk.clkE, clk.clkS); }
+
+    /* Translate control-unit lines into core.machine's enable/set lists,
+       through REG_SELECT exactly as the CPU tab wires it. */
+    function busLines(l, extra) {
+      extra = extra || {};
+      var rs = coreRegSelect({ ra: l.ra, rb: l.rb, regaE: l.rega_e, regbE: l.regb_e, regbS: l.regb_s || extra.dataS });
+      var en = [], set = [], i;
+      for (i = 0; i < 4; i++) { if (rs.e[i]) { en.push('R' + i); } if (rs.s[i]) { set.push('R' + i); } }
+      if (l.acc_e) { en.push('ACC'); }
+      if (extra.dataE) { en.push('DATA'); }
+      if (l.tmp_s) { set.push('TMP'); }
+      if (l.acc_s) { set.push('ACC'); }
+      if (l.flags_s) { set.push('FLAGS'); }
+      return { enable: en, set: set, opcode: l.opcode, bus1: l.bus1, ci: ci, data: extra.data, regSelect: rs };
+    }
+
+    function snapshot(extra) {
+      var l = linesNow(), bl = busLines(l), ev = m.evaluate(bl);
+      var o = { toggles: toggles, clk: clk, quarter: clk.quarter, quarterName: CTL_QUARTERS[clk.quarter].name,
+                steps: stp.steps.slice(), step: l.step, cells: stp.cells.slice(), ir: ir, decoded: ctlDecode(ir),
+                lines: l, enable: bl.enable, set: bl.set, bus: ev.bus, alu: ev.alu, state: m.state() };
+      if (extra) { for (k in extra) { if (Object.prototype.hasOwnProperty.call(extra, k)) { o[k] = extra[k]; } } }
+      return o;
+    }
+
+    function toggle() {
+      clk = clock.toggle();
+      stp = stepper.settle(clk.clk, 0, true);
+      toggles++;
+      var l = linesNow(), bl = busLines(l), res = null;
+      if (bl.set.length) { res = m.transfer(bl); }
+      var snap = snapshot({ pulsed7: stp.pulsed7, wrote: res && res.ok ? res.wrote : [], error: res && !res.ok ? res.error : null,
+                            warning: res ? res.warning : null });
+      log.push(snap);
+      return snap;
+    }
+
+    return {
+      toggle: toggle,
+      run: function (n) { var r = []; for (var i = 0; i < n; i++) { r.push(toggle()); } return r; },
+      runInstruction: function () { var r = []; for (var i = 0; i < 24; i++) { r.push(toggle()); } return r; },
+      toStep: function (step, quarter) {
+        var r = [], guard = 0;
+        while (!(linesNow().step === step && clk.quarter === (quarter | 0))) {
+          r.push(toggle()); if (++guard > 48) { throw new Error('never reached step ' + step); }
+        }
+        return r;
+      },
+      setIr: function (b) { ir = b & 255; return snapshot(); },
+      setCi: function (v) { ci = v ? 1 : 0; },
+      testPort: function (v) {
+        var l = linesNow(), bl = busLines(l, { dataE: 1, dataS: 1, data: v & 255 });
+        var res = m.transfer(bl);
+        return snapshot({ wrote: res.ok ? res.wrote : [], error: res.ok ? null : res.error });
+      },
+      reset: function () { clk = clock.reset(); stp = stepper.powerUp(); toggles = 0; log = []; return snapshot(); },
+      snapshot: snapshot,
+      state: function () { return m.state(); },
+      log: function () { return log.slice(); }
+    };
+  }
+
+  /* microcode(classes) -- the control table as a ROM would hold it: one
+     word per (class, step), bits in CTL_LINES order, plus the opcode. */
+  function ctlMicrocode() {
+    var CLASSES = [
+      { name: 'ALU (ADD-XOR)', ir: 0x80 },
+      { name: 'CMP', ir: 0xF0 },
+      { name: 'CLF', ir: 0x60 }
+    ];
+    var rows = [];
+    CLASSES.forEach(function (c) {
+      for (var st = 4; st <= 6; st++) {
+        var r = ctlRaised(c.ir, st);
+        rows.push({ cls: c.name, step: st, bits: CTL_LINES.map(function (n) { return r[n]; }),
+                    word: CTL_LINES.map(function (n) { return r[n]; }).join(''), opcodeFromIr: st === 5 && c.ir >= 0x80 });
+      }
+    });
+    return { lines: CTL_LINES.slice(), rows: rows };
+  }
+
+  /* ============================================================
      WEEK 10 -- The CPU core on one bus (CSCLogic.core)
      ============================================================
      Added 2026-10-18.
@@ -1945,6 +2451,7 @@
     if (init.ACC !== undefined) { st.ACC = init.ACC; }
     if (init.flags) { CORE_FLAG_NAMES.forEach(function (f) { if (init.flags[f] !== undefined) { st.F[f] = init.flags[f]; } }); }
     var count = 0;
+    var pullDownA = !!init.pullDownA;
 
     function valueOf(name, data) {
       if (name === 'ACC') { return st.ACC; }
@@ -1982,11 +2489,18 @@
       var b1 = lines.bus1 ? 1 : 0;
       var bIn = null;
       if (b1) { bIn = 1; } else if (tmpNow !== null) { bIn = tmpNow; }
+      /* aIn is the ALU's A input. Normally it is the bus, and a floating
+         bus gives the ALU nothing to work on. With init.pullDownA (Week
+         11: the ALU's A pin set to pull-down, as Fall 2025's final CPU
+         does) a floating bus reads 00000000 at A -- which is what CLF
+         relies on. Registers capturing from a floating bus are still
+         refused either way: the pull-down is on the ALU's pin, not the bus. */
+      var aIn = bus.state === 'driven' ? bus.value : ((pullDownA && bus.state === 'float') ? 0 : null);
       var alu = null;
-      if (bus.state === 'driven' && bIn !== null) {
-        var ev = aluEvaluate((lines.opcode | 0) & 7, intToWord(bus.value, 8),
+      if (aIn !== null && bIn !== null) {
+        var ev = aluEvaluate((lines.opcode | 0) & 7, intToWord(aIn, 8),
                              b1 ? coreBus1(intToWord(tmpNow || 0, 8), 1) : intToWord(bIn, 8), lines.ci ? 1 : 0);
-        alu = { a: bus.value, b: b1 ? 1 : bIn, c: ev.out ? wordToInt(ev.out) : null,
+        alu = { a: aIn, b: b1 ? 1 : bIn, c: ev.out ? wordToInt(ev.out) : null,
                 C: ev.cout ? 1 : 0, A: ev.al ? 1 : 0, E: ev.eq ? 1 : 0, Z: ev.z === null ? null : (ev.z ? 1 : 0),
                 op: CORE_ALU_MNEMONICS[(lines.opcode | 0) & 7] };
       }
@@ -1999,7 +2513,10 @@
       }
       var needsBus = set.filter(function (n) { return n !== 'ACC' && n !== 'FLAGS'; });
       var needsAlu = set.filter(function (n) { return n === 'ACC' || n === 'FLAGS'; });
-      if (!error && (needsBus.length || needsAlu.length) && bus.state !== 'driven') {
+      if (!error && needsBus.length && bus.state !== 'driven') {
+        error = 'Nothing to capture: ' + bus.why + '.';
+      }
+      if (!error && needsAlu.length && aIn === null) {
         error = 'Nothing to capture: ' + bus.why + '.';
       }
       if (!error && needsAlu.length && bIn === null) {
@@ -2921,6 +3438,37 @@
       aluSteps: coreAluSteps,
       machine: coreMachine,
       runAlu: coreRunAlu
+    },
+
+    /* Week 12 additions -- the memory bus, I/O and syscall. Every helper
+       is sys-prefixed; see the block comment. */
+    sys: {
+      LDST: SYS_LDST,
+      IO: SYS_IO,
+      MMIO: SYS_MMIO,
+      MMIO_SOURCE: SYS_MMIO_SOURCE,
+      CALLS: SYS_CALLS,
+      memCpu: sysMemCpu,
+      waitStates: sysWaitStates,
+      quarterFits: sysQuarterFits,
+      mmioRun: sysMmioRun
+    },
+
+    /* Week 11 additions -- the control unit: clock, stepper, decoding.
+       Every helper is ctl-prefixed; see the block comment. */
+    ctl: {
+      QUARTERS: CTL_QUARTERS,
+      LINES: CTL_LINES,
+      TABLE: CTL_TABLE,
+      FETCH: CTL_FETCH,
+      WHEN: CTL_WHEN,
+      decode: ctlDecode,
+      raised: ctlRaised,
+      lines: ctlLines,
+      clock: ctlClock,
+      stepper: ctlStepper,
+      cpu: ctlCpu,
+      microcode: ctlMicrocode
     },
 
     /* Week 9 additions -- the multi-cycle MIPS datapath. Every helper
