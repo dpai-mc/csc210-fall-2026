@@ -55,7 +55,7 @@
   <main class="sp-main sp-main--full">
 
     <h1>From Bits to Lines: the Control Unit</h1>
-    <p><strong>Sections 11.9 – 11.12</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1.25 hours</p>
+    <p><strong>Sections 11.9 – 11.12</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1.75 hours, including two videos</p>
 
     <section id="sec-11-9">
       <h2>11.9 &nbsp; Enables down the left, sets down the right</h2>
@@ -126,6 +126,44 @@
              alt="A Logisim control-unit circuit. A stepper block runs across the top with output 7 wired back to its reset. Outputs 4, 5 and 6 drop to three AND gates in the middle, each also fed by bit 0 of an IR IN pin at the bottom, which is the ALU-instruction bit in Fall 2025's numbering; the step 6 gate has a third input from a NOT gate whose input is a 3-input AND of the three opcode bits. The three AND outputs fan out through labelled tunnels to REGB_E and TMP_S, REGA_E and ACC_S, and ACC_E and REGB_S. Down the left, AND gates gated by clke drive the enable outputs; down the right, AND gates gated by clks drive the set outputs. In the lower left two 2-by-4 decoders labelled REG B and REG A select R0_E to R3_E, and on the right a third 2-by-4 decoder selects R0_S to R3_S. At the bottom left, three AND gates produce outputs ALU_0, ALU_1 and ALU_2 from the opcode bits.">
         <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s control unit for the ALU class, with <code>IR IN</code> = CMP. In the middle: <code>step4</code>, <code>step5</code> and <code>step6</code> each ANDed with the ALU bit; the CMP detector (3-input AND, then NOT) blocks step 6. Bottom left: the three opcode outputs, each through an AND. Fall 2025 numbers bits from the left starting at 0, so its &ldquo;bit 0&rdquo; is your <code>b7</code>.</figcaption>
       </figure>
+
+      <h3>Watch it run: one ADD on your instructor&rsquo;s control unit</h3>
+
+      <p>The circuit in the figure above, run one click at a time. Your instructor sets <code>R2</code> = 3 and <code>R3</code> = 6, sets the instruction to <code>1000 1011</code> &mdash; <code>ADD R2, R3</code> &mdash; and clicks: twelve clicks in which nothing happens (steps 1 to 3, four quarters each), then step 4 puts <code>R3</code> into TMP, step 5 puts <code>R2</code> on the bus into the ALU&rsquo;s A input and ACC captures 9, and step 6 puts ACC on the bus for <code>R3</code>. About twelve minutes. Watch it with the control table above in view and check each line against its row as it goes high.</p>
+
+      <div class="video-breakout">
+        <div class="video-transcript-row">
+          <div class="video-col">
+            <div class="video-frame" id="video-container-alu">
+              <iframe id="youtube-player-alu"
+                      src="https://www.youtube.com/embed/Ni2EHHkhHms?enablejsapi=1&amp;cc_load_policy=1&amp;iv_load_policy=3&amp;modestbranding=1&amp;rel=0"
+                      title="CSC210: The control unit for an ALU instruction"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allowfullscreen loading="lazy"></iframe>
+            </div>
+            <div class="video-caption">Closed captions available. Use the transcript panel to jump to any point in the video.</div>
+          </div>
+          <div class="transcript-col">
+            <h4 class="sr-only">Transcript: ALU instruction</h4>
+            <div class="transcript-panel" id="transcript-container-alu" role="region" aria-live="polite"
+                 aria-label="Transcript of the ALU instruction video. Select a line to jump to that point in the video. The line currently being spoken is announced as the video plays.">
+              <p class="transcript-loading">Loading transcript&hellip;</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">The demo is the same control unit, with four differences from your Checkpoint 5</div>
+        <ul>
+          <li><strong>It counts bits from the left.</strong> &ldquo;Bit 0 is 1&rdquo; in the video is your <code>b7</code>; its bits 1&ndash;3 are your <code>b6</code>&ndash;<code>b4</code>, its 4&ndash;5 your <code>b3</code>&ndash;<code>b2</code>, its 6&ndash;7 your <code>b1</code>&ndash;<code>b0</code>. Same bits in the same order; only the labels differ. <code>1000 1011</code> is <code>ADD R2, R3</code> in both.</li>
+          <li><strong>Its R2 and R3 are hand-set input pins</strong>, with their set lines tied to 1. So at step 6 the 9 has nowhere to go (10:40 in the video). Your registers are the Week 10 core on the bus, loaded by hand as Assignment 11 describes, and your step 6 really writes <code>R3</code> = <code>00001001</code>.</li>
+          <li><strong>It does not use FLAGS.</strong> Yours raises <code>flags_s</code> at step 5 of every ALU instruction, so FLAGS captures C A E Z each time.</li>
+          <li><strong>Its template also drives <code>BUS 1</code> and the program counter&rsquo;s enable at step 1</strong> (03:14). That is fetch, in &sect;11.12 below. In your Checkpoint 5, steps 1 to 3 raise nothing.</li>
+        </ul>
+        <p>Everything else matches your table: the three step terms ANDed with the ALU bit, the quarter order enable on, set on, set off, enable off, and the gate he describes at 04:10, which is the CMP detector &mdash; a 3-input AND of the opcode bits through a NOT, so step 6 is blocked only for <code>111</code>.</p>
+      </div>
 
       <h3>CLF: clearing the flags with an addition</h3>
 
@@ -213,6 +251,42 @@
              alt="A Logisim control-unit circuit for the fetch steps. Stepper output 1 is highlighted and runs to the BUS 1 output, the PC_E enable gate on the left, and the MAR_S and ACC_S set gates on the right. Stepper output 2 runs to the RAM_E enable gate and the IR_S set gate. Stepper output 3 runs to the ACC_E enable gate and the PC_S set gate. The remaining gates on both sides have one input grounded.">
         <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s fetch control unit, at step 1: <code>BUS 1</code>, <code>PC_E</code>, <code>MAR_S</code> and <code>ACC_S</code> all high. It is BUS1&rsquo;s reason for existing: ACC captures PC + 1 while the MAR captures PC. A preview of Week 13, not part of this week&rsquo;s checkpoint.</figcaption>
       </figure>
+
+      <h3>Watch it run: one fetch, on a fetch-only CPU</h3>
+
+      <p>Your instructor&rsquo;s fetch control unit wired to a CPU that does nothing but fetch, walking steps 1 to 3 one click at a time: the program counter&rsquo;s 0 goes to the MAR while the ALU adds 1 to it for ACC; RAM byte 0 goes to the instruction register; ACC&rsquo;s 1 goes back to the program counter. About thirteen and a half minutes. <strong>This is a preview</strong>: you wire fetch in Week 13, when the program counter, instruction register, MAR and RAM join your bus. Watch it now for the idea, and again when you build it.</p>
+
+      <div class="video-breakout">
+        <div class="video-transcript-row">
+          <div class="video-col">
+            <div class="video-frame" id="video-container-fetch">
+              <iframe id="youtube-player-fetch"
+                      src="https://www.youtube.com/embed/kkQDHYFo5Bo?enablejsapi=1&amp;cc_load_policy=1&amp;iv_load_policy=3&amp;modestbranding=1&amp;rel=0"
+                      title="CSC210: The fetch cycle on a fetch-only CPU"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allowfullscreen loading="lazy"></iframe>
+            </div>
+            <div class="video-caption">Closed captions available. Use the transcript panel to jump to any point in the video.</div>
+          </div>
+          <div class="transcript-col">
+            <h4 class="sr-only">Transcript: fetch cycle</h4>
+            <div class="transcript-panel" id="transcript-container-fetch" role="region" aria-live="polite"
+                 aria-label="Transcript of the fetch cycle video. Select a line to jump to that point in the video. The line currently being spoken is announced as the video plays.">
+              <p class="transcript-loading">Loading transcript&hellip;</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">The demo takes shortcuts that Week 13 removes</div>
+        <ul>
+          <li><strong>The program counter&rsquo;s set is tied to 1</strong> and its input pin is pull-down, so whenever nothing drives the bus it drops back to 0 (09:39). That is why the demo never counts 0, 1, 2 (11:58). In your CPU the program counter is set only at step 3 of fetch &mdash; and, from Week 14, by a jump.</li>
+          <li><strong>The RAM&rsquo;s input is a hand-set pin of all 1s, written on every set quarter</strong> (05:41), so the demo can put an instruction in byte 0 without a program. Your RAM is written only by a store.</li>
+          <li>&ldquo;Cycle 2&rdquo; and &ldquo;cycle 3&rdquo; in the video mean steps 2 and 3. The pull-down setting he explains at the start is the same pin attribute you set on <code>ALU_8BIT</code>&rsquo;s <code>A</code> pin this week.</li>
+        </ul>
+      </div>
 
       <p>Until then, you are the fetch. The instruction comes from an 8-bit input pin, <code>ir</code>, on your <code>CPU</code> tab. <strong>Set <code>ir</code> only while the stepper is on steps 1 to 3</strong> &mdash; right after Simulate &rarr; Reset, or after the 24th click of an instruction. That is exactly when Week 13&rsquo;s fetch will write the real instruction register (step 2), so the habit is the right one. Change <code>ir</code> in the middle of steps 4 to 6 and the control unit switches to the new instruction&rsquo;s lines immediately, part-way through the old one.</p>
 
@@ -435,6 +509,1110 @@
         if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
       });
     }());
+  })();
+  </script>
+
+  <!-- ============================================================
+       Two videos on this page: Procedure B (Standards section 10).
+       One TranscriptManager per video; one shared IFrame API callback.
+       Sources: Fall 2025 cpu-design/circuits-control-alu-instruction.html
+       (aluVttContent) and circuits-control-fetch.html (vttContent),
+       cleaned for Week 11 -- edits keyed by timestamp in
+       docs/CSC210-Week11-Video-Build-Record.md. Playing one video
+       pauses the other.
+       ============================================================ -->
+  <script>
+  (function () {
+    'use strict';
+    var VIDEOS = [
+      { key: 'alu', id: 'Ni2EHHkhHms', vtt: `WEBVTT
+
+00:00.000 --> 00:14.400
+Aloha. In this video here I'm going to walk through the ALU example basically
+
+00:14.400 --> 00:20.640
+controlling it using our instruction register. So what we really
+
+00:20.640 --> 00:25.640
+want to do, what we really need to do, at least one of the things we need to do, is
+
+00:25.640 --> 00:32.420
+we need to look at this ALU instruction. So we have an 8-bit instruction where
+
+00:32.420 --> 00:38.540
+bit 0 is 1, bit 1, 2, and 3 are the ALU instruction codes, and for this
+
+00:38.540 --> 00:42.840
+example we're going to use 0 0 0 for addition because we have these
+
+00:42.840 --> 00:48.080
+operations here 0 0 0 0 0 1, okay, for the different operations. Right now we're
+
+00:48.080 --> 00:52.320
+just going to do the addition. Since we just did addition we're going to do it
+
+00:52.320 --> 00:55.640
+using the instruction rather than hard-coding it
+
+00:55.640 --> 00:59.900
+just in the stepper. Okay, so now we're going to do the same kind of thing but
+
+00:59.900 --> 01:05.780
+we're going to control it using our instruction register. Okay, so we have
+
+01:05.780 --> 01:11.060
+those three and then we have bits 4 and 5 will be one register we're using and
+
+01:11.060 --> 01:17.360
+bit 6 and 7 will be a second register where we identify them as if I use 0 0
+
+01:17.360 --> 01:25.640
+it'll be R 0, 0 1 R 1, 1 0 R 2, 1 1 R 3. So in this case what we're going to do
+
+01:25.640 --> 01:35.840
+is we're going to use R 2 and R 3, okay, and so we're going to have to put this
+
+01:35.840 --> 01:40.700
+into our instruction register. So we've hard-coded our instruction register. I
+
+01:40.700 --> 01:47.920
+moved it off of the, I took off the set and set that to 1 and I made it a
+
+01:47.920 --> 01:53.000
+hard-code value so we want it to be an ALU so that means that first one has to
+
+01:53.000 --> 01:55.480
+be a 1 0 0 0.
+
+01:55.640 --> 02:09.080
+And then we want to use registers 2, 1 0 and 3, 1 1. Okay, so that matches our ALU
+
+02:09.080 --> 02:18.280
+instruction where reg A here is 1 0 for R 2 and reg B here is 1 1 for R 3. Okay,
+
+02:18.280 --> 02:24.440
+so we need to set that and then what we need to do also is we need to put, so I've
+
+02:24.440 --> 02:25.620
+taken the inputs off of the instruction register and I've put them in the
+
+02:25.620 --> 02:33.660
+off for R 2 and R 3 and so we need to put a values in for these. In order to do
+
+02:33.660 --> 02:39.720
+an addition we need to put these values in. So I'm going to have R 2 plus R 3. So
+
+02:39.720 --> 02:49.860
+R 2 is just 1 1 which is 3. R 3 is 1 1 0 which is 6. So 3 plus 6 is 9. So our
+
+02:49.860 --> 02:55.180
+result should be 9. Okay, so let's take a quick look at our
+
+02:55.180 --> 03:09.380
+control unit so that we see how this is wired up. So when we look at our control
+
+03:09.380 --> 03:14.900
+unit here it's gotten much more complicated. I'm using these tunnels. Okay,
+
+03:14.900 --> 03:22.680
+the initial starting point here is for 1 we're just sending 1 on bus 1. This is
+
+03:22.680 --> 03:24.220
+our program counter thing.
+
+03:25.180 --> 03:38.700
+Enabled comes down, right, and nothing else right now is enabled and we don't
+
+03:38.700 --> 03:43.800
+have anything for the registers. Now our instruction register we've plumbed. The
+
+03:43.800 --> 03:49.500
+initial one is this green line that comes up here and we're using, remember,
+
+03:49.500 --> 03:54.260
+using 4, 5, and 6 for addition. Okay, so we're taking stepper 4 and ANDing it,
+
+03:54.260 --> 03:58.520
+stepper 5 and ANDing it, and stepper 6 and ANDing it with the 1 saying this is
+
+03:58.520 --> 04:07.660
+an ALU instruction so we want to use you guys. Okay, and then we have this
+
+04:10.300 --> 04:18.260
+secondary code here. We have 0 0 0 for addition. Okay, so when there's 0 0 0 this
+
+04:18.260 --> 04:23.660
+will be 0 and this would be 1. In all of the cases it will be 0. Okay, so for only
+
+04:23.660 --> 04:31.180
+addition this becomes 1 and we're adding it in to this stepper 6 to set our
+
+04:31.180 --> 04:42.720
+Reg B. Okay, so what we're doing here is Reg A comes up. Okay, and we have a 1 0.
+
+04:42.720 --> 04:53.600
+Okay, so we put it into this 2 by 4 decoder. We have a 1 and a 0 which is register 2 so 2 is active and this
+
+04:53.600 --> 05:00.360
+going to so to and to enable and then whenever we enable reg a to say hey get
+
+05:00.360 --> 05:06.020
+the value from reg a the third one the third leg here will be enabled and we'll
+
+05:06.020 --> 05:15.720
+have register two will be out for register B we have they're both high so
+
+05:15.720 --> 05:21.940
+it's the third one and we're also going to use this as our output register okay
+
+05:21.940 --> 05:25.000
+so what we're going to do is we're going to take two and three add them together
+
+05:25.000 --> 05:38.620
+and write the result into three all right so let's go back to our CPU so two
+
+05:38.620 --> 05:42.880
+or three or write them together and we're going to stick it into three now
+
+05:42.880 --> 05:47.200
+when we get there we won't be able to stick it into three because three here
+
+05:47.200 --> 05:51.460
+is disconnected for the input side
+
+05:51.940 --> 05:57.700
+all right again when we look at our control unit again remember we don't do
+
+05:57.700 --> 06:00.720
+anything till four so that means we have twelve clock pulses before we do
+
+06:00.720 --> 06:09.660
+anything so we'll go back into our CPU and we'll start our clock pulses three
+
+06:09.660 --> 06:17.420
+four five six seven eight nine ten eleven twelve okay so 12 is our first
+
+06:17.420 --> 06:21.940
+step notice what it did is it enabled our three because that's our first one
+
+06:21.940 --> 06:32.740
+that we connect selected okay and enabled our three which was reg B okay
+
+06:32.740 --> 06:42.360
+because we connected reg B to step four reg A is connected to step four five
+
+06:42.360 --> 06:51.500
+okay and the result is connected to stepper six okay so reg B is three okay
+
+06:51.500 --> 06:59.120
+that's activated and temp s which is means set what's intent is activated so
+
+06:59.120 --> 07:03.260
+what this will do is I come to reg B it'll come down here and I'll find Oh
+
+07:03.260 --> 07:08.900
+reg B is our three it'll take the value of our three put it on the bus read it
+
+07:08.900 --> 07:15.140
+into temp s not yet but temp s is going to be on and when we hit select set
+
+07:15.140 --> 07:22.080
+remember enable set set enable when you turn set high then temp S will be high
+
+07:22.080 --> 07:33.920
+and we'll read temp S now we will put it into temp S okay so so on here we
+
+07:33.920 --> 07:42.940
+should be reading 0 1 1 or 6 0 1 1 so that's 6 it's on the bus when I clock
+
+07:42.940 --> 07:50.660
+again temp S will become high and that will take this 0 1 1 and stick it into
+
+07:50.660 --> 08:02.620
+ALU B okay then take the set off take the enable off right and now we're
+
+08:02.620 --> 08:12.700
+moved on to step 5 but nothing's enabled yet so I'll go to step 5
+
+08:12.940 --> 08:22.060
+but enable on well enable now it's grabbing the value in r2 putting that on
+
+08:22.060 --> 08:29.320
+the bus okay so everywhere it's on the bus r2 is on the bus everything on the
+
+08:29.320 --> 08:41.340
+bus goes into a automatically for the ALU so I have enable enable means r2
+
+08:41.340 --> 08:42.940
+because now we're
+
+08:42.940 --> 08:55.600
+on step 5 which is reg a so reg a is this bottom one okay which is set to 2 1 0 so
+
+08:55.600 --> 09:05.380
+2 is active so we're getting our 2 out onto the bus all right so when I clock
+
+09:05.380 --> 09:12.740
+again okay it's the set
+
+09:12.940 --> 09:23.740
+and then we have to use two find out so hopefully you have found this simple
+
+09:23.740 --> 09:31.740
+managing the timeanniar and check and I want you to also you can use a
+
+09:31.740 --> 09:37.660
+calculator and try it any others course in general too okay so now make sure you
+
+09:37.660 --> 09:39.640
+and make sure you use a calculator because you want to alu because here's
+
+09:39.640 --> 09:41.780
+we need to modify that type of thing over here we just need to saved to nine and
+
+09:41.780 --> 09:48.920
+we just choose when do we grab it and stick it in the accumulator okay so we
+
+09:48.920 --> 09:57.040
+have nine in the ALU we'll take the set off take the enable off and now we're
+
+09:57.040 --> 10:10.020
+gonna be on to step six which is really the output okay so and the enable the
+
+10:10.020 --> 10:15.600
+accumulator again to get the output so enable the accumulator to get what's in
+
+10:15.600 --> 10:20.420
+the accumulator on to the bus and then we set reg B to take what's on the bus
+
+10:20.420 --> 10:30.660
+and put it into reg B all right so clock this what's in the accumulator is 9 1
+
+10:30.660 --> 10:39.660
+plus 8 is 9 it puts it on the bus okay when we look we're gonna try to put it
+
+10:39.660 --> 10:40.000
+into reg B
+
+10:40.000 --> 10:46.240
+three okay which is already set for high we can't actually put it in because our
+
+10:46.240 --> 10:52.300
+input is disconnected but if we could put it in if this was just connected to
+
+10:52.300 --> 10:58.420
+the water to the bus directly rather than manually set then these values here
+
+10:58.420 --> 11:05.000
+would set to one and everything else would be zero do our clock pulse here
+
+11:05.000 --> 11:09.640
+comes set so this would be set this will be when it would read it again
+
+11:09.640 --> 11:14.080
+because we disconnected to do it manually it won't read it then we take
+
+11:14.080 --> 11:22.740
+set off it's all set taken able off and we're cycled back around to the beginning
+
+11:22.740 --> 11:32.520
+okay so that's how this ALU Operation works the input comes in and it defines
+
+11:32.520 --> 11:37.200
+ALU operations your risks or defends the code in this case we're just
+
+11:37.200 --> 11:39.040
+doing the addition not shift right
+
+11:39.640 --> 11:45.400
+not shift left all those kind of things we're just doing the addition okay and
+
+11:45.400 --> 11:52.720
+then we have two registers that we can identify the second register is also the
+
+11:52.720 --> 12:02.120
+output register okay and so that's how this ALU instruction can
+
+12:02.120 --> 12:08.240
+be read out into the instruction register and used to do a process within
+
+12:08.240 --> 12:10.780
+the CPU
+` },
+      { key: 'fetch', id: 'kkQDHYFo5Bo', vtt: `WEBVTT
+
+00:00.000 --> 00:15.240
+Aloha so this might take a while to go through but I wanted to walk through this fetch cycle so we
+
+00:15.240 --> 00:22.800
+want to do in our simulation at least the first thing that we should do in our simulation is I'm
+
+00:22.800 --> 00:28.280
+going to reset the simulation now what I do want to do is I want to show you something here this
+
+00:28.280 --> 00:37.900
+is my program counter or my next instruction okay and right now it's all zeros so if I go into this
+
+00:37.900 --> 00:46.940
+program counter I grab the input, there are different behaviors there's pull up pull down
+
+00:46.940 --> 00:53.540
+and unchanged so pull down means if there's something in it's all zeros pull up means
+
+00:53.540 --> 00:58.260
+there's nothing in its all ones and unchanged means uh you know in
+
+00:58.260 --> 01:12.320
+there's nothing in there so if I use pull down in my CPU then what's in there is all zeros if I
+
+01:12.320 --> 01:28.260
+were to change that behavior to pull up and if I go to my CPU simulation and then I reset it
+
+01:28.260 --> 01:36.720
+it's all ones so pull up makes it all ones pull down makes it all zeros until you change it okay
+
+01:36.720 --> 01:40.860
+so what we're going to do is we're going to set this to be pull down so this starts at all zeros
+
+01:40.860 --> 01:51.960
+and that means our first instruction is going to be in memory location zero all right so I take it
+
+01:51.960 --> 01:55.500
+out of this mode here
+
+01:58.260 --> 02:11.440
+sorry you go in here I'm going to change the behavior of this to pull down and then I'll go
+
+02:11.440 --> 02:24.480
+back to my CPU and now in simulate I'll simulate reset okay so all zeros everywhere okay I'm using
+
+02:24.480 --> 02:27.360
+this clock pulse I'm going to pulse my clock
+
+02:28.260 --> 02:37.500
+let me reset and go back so right now when you start your reset is that clock enable for one so
+
+02:37.500 --> 02:43.800
+if we look in our control system that means stepper one is on which means bus one is high
+
+02:43.800 --> 02:52.440
+and also program counter enable means grab what is in the program counter okay and put that on
+
+02:52.440 --> 02:58.260
+the bus so there's all zeros the bus should have zeros and the value
+
+02:58.260 --> 03:02.820
+going to bus one should be one meaning that our
+
+03:05.820 --> 03:15.540
+line into bus one is high which means if actually if we look at our alu you'll see that a is zero b
+
+03:15.540 --> 03:23.880
+is one because we've hardwired opcode of zero zero zero we're going to get the addition of a and b
+
+03:25.560 --> 03:26.640
+which would be one
+
+03:27.720 --> 03:28.080
+okay
+
+03:28.260 --> 03:31.740
+the accumulator right now has a one in it on the output side
+
+03:33.300 --> 03:33.780
+okay
+
+03:35.340 --> 03:40.920
+so and of course that's our next instruction so basically we're just going to walk through and
+
+03:40.920 --> 03:46.860
+go zero to one and then it should go one to two and then two to three but because we've
+
+03:47.820 --> 03:52.680
+disconnected a few things like we've taken set and made it high on our
+
+03:53.160 --> 03:57.720
+program counter just because we don't have everything working in our control unit
+
+03:57.720 --> 04:03.820
+we've also set our RAM in value rather than grabbing it off the bus we're going to manually
+
+04:03.820 --> 04:12.280
+set it so what we're going to do here is we're going to set let's set instead of X's or zeros
+
+04:12.280 --> 04:23.640
+we'll set all ones for our RAM input and what that's going to do is it's going to come in here
+
+04:23.640 --> 04:24.880
+and when we set our RAM
+
+04:24.880 --> 04:27.580
+okay
+
+04:27.580 --> 04:34.840
+What will happen is, in our RAM, it'll be address 0,
+
+04:34.840 --> 04:38.380
+and we'll stick it in this memory location.
+
+04:38.380 --> 04:43.700
+0 will be the instruction that we want to run, OK?
+
+04:43.700 --> 04:47.340
+And so that's what we'll grab as our instruction.
+
+04:47.340 --> 04:48.780
+So let's go back to our CPU.
+
+04:52.580 --> 04:56.700
+So 1 is in here, which means the accumulator output, ALU output,
+
+04:56.700 --> 04:58.500
+has 1.
+
+04:58.500 --> 05:00.540
+We haven't set it into our accumulator yet,
+
+05:00.540 --> 05:05.100
+so our ALU output is 1 if we grab it right now.
+
+05:05.100 --> 05:07.940
+If we change what's in A, then all things are different.
+
+05:07.940 --> 05:12.860
+But right now, that's what we have, OK?
+
+05:12.860 --> 05:17.200
+So we're going to cycle our clock pulse.
+
+05:17.200 --> 05:23.220
+So 1 pulse means basically turn the clock on,
+
+05:23.220 --> 05:26.320
+and also clock set, meaning set our memory
+
+05:26.320 --> 05:26.700
+address.
+
+05:26.700 --> 05:30.820
+So 1 pulse means set the memory address location.
+
+05:30.820 --> 05:32.100
+Set the accumulator.
+
+05:32.100 --> 05:35.820
+So we've taken that, what was in the accumulator,
+
+05:35.820 --> 05:40.200
+in the ALU of 1, and we're sticking it into the accumulator.
+
+05:40.200 --> 05:41.400
+OK, we're setting RAM.
+
+05:41.400 --> 05:45.420
+So the value that we have, notice that every time we enable,
+
+05:45.420 --> 05:50.580
+we set RAM to be whatever is in our RAM input, which is,
+
+05:50.580 --> 05:51.960
+right now, we set it to all 1.
+
+05:51.960 --> 05:54.600
+So we're setting RAM to 1.
+
+05:54.600 --> 05:56.580
+So that's what we do on that first pulse for set.
+
+05:56.580 --> 06:03.580
+So enable, set, and so we go enable high, set high, set low,
+
+06:03.580 --> 06:05.100
+enable low.
+
+06:05.100 --> 06:06.780
+That's the cycle we go through in order
+
+06:06.780 --> 06:11.020
+to enable and set stuff, OK?
+
+06:11.020 --> 06:16.920
+So if we go back to our CPU, all right, so we're setting RAM.
+
+06:16.920 --> 06:19.380
+So we should go into RAM, and the value
+
+06:19.380 --> 06:22.620
+that we've stuck into 0 should be all 1s because that's
+
+06:22.620 --> 06:23.660
+what we said our input was.
+
+06:26.580 --> 06:28.740
+So we're changing the accumulator.
+
+06:28.740 --> 06:31.060
+We're setting the accumulator.
+
+06:31.060 --> 06:33.660
+So if we go and view the accumulator,
+
+06:33.660 --> 06:35.100
+we've set the value to 1.
+
+06:35.100 --> 06:36.720
+That's what's stored in the accumulator.
+
+06:36.720 --> 06:38.800
+And then we're going to turn that off so we
+
+06:38.800 --> 06:44.080
+don't change the accumulator, OK?
+
+06:44.080 --> 06:46.260
+So we set our RAM.
+
+06:46.260 --> 06:49.820
+Our memory address was all 0s, so that's
+
+06:49.820 --> 06:53.260
+why it's looking for 0s, OK?
+
+06:53.260 --> 06:55.100
+Then we're going to cycle our clock.
+
+06:56.580 --> 06:58.340
+OK, it turns off all the sets.
+
+06:58.340 --> 06:59.880
+It doesn't change any of the values.
+
+06:59.880 --> 07:01.820
+It just turns off all the sets.
+
+07:01.820 --> 07:05.480
+And we cycle again, and it turns off all the enables.
+
+07:05.480 --> 07:08.360
+So the value stored that we stuck in those places
+
+07:08.360 --> 07:12.100
+is what was there, OK?
+
+07:12.100 --> 07:14.180
+So then let's cycle.
+
+07:14.180 --> 07:15.820
+If we look at our fetch control unit,
+
+07:15.820 --> 07:18.620
+we'll see now we've moved to cycle 2.
+
+07:18.620 --> 07:19.820
+So we've moved from stepper 1.
+
+07:19.820 --> 07:22.340
+Now we're to stepper 2, which is going
+
+07:22.340 --> 07:25.820
+to tie to RAM enable and our instruction register.
+
+07:25.820 --> 07:26.540
+And then we'll go in.
+
+07:26.580 --> 07:32.760
+Enable, set, we'll enable high, set high, set low, enable low.
+
+07:32.760 --> 07:38.600
+That will finish cycle 2 and move us to cycle 3, OK?
+
+07:38.600 --> 07:40.640
+So let's go back to our CPU.
+
+07:44.180 --> 07:48.140
+All right, so we're going to click to enable.
+
+07:48.140 --> 07:50.760
+Oh, look at that.
+
+07:50.760 --> 07:53.340
+So enable, RAM enable grabs whatever
+
+07:53.340 --> 07:55.380
+in memory location 0, which is all 1s.
+
+07:56.580 --> 07:59.340
+So we're taking all 1s and putting it on the bus.
+
+07:59.340 --> 08:01.680
+That's all we're doing.
+
+08:01.680 --> 08:06.360
+We haven't, set hasn't gone on yet, OK?
+
+08:06.360 --> 08:12.580
+So we've gotten what's stored in location 0, or RAM byte 0,
+
+08:12.580 --> 08:15.980
+which was all 1s, and we put it on the bus.
+
+08:15.980 --> 08:18.340
+So let's cycle again.
+
+08:18.340 --> 08:23.860
+We've done all our sets, OK?
+
+08:23.860 --> 08:26.280
+And notice.
+
+08:26.280 --> 08:29.940
+Because we've hardwired our program counter set
+
+08:29.940 --> 08:33.420
+to be all 1s, it sets it.
+
+08:33.420 --> 08:35.600
+Normally, it wouldn't if we had tied it together,
+
+08:35.600 --> 08:38.380
+but we don't have everything we need to make that work.
+
+08:38.380 --> 08:40.980
+So we just hardcoded that.
+
+08:40.980 --> 08:43.780
+But our instruction register, notice it's all 1s,
+
+08:43.780 --> 08:45.960
+because that's what's on the bus and we're trying
+
+08:45.960 --> 08:47.320
+to set our instruction register.
+
+08:47.320 --> 08:55.080
+So if we look at our control fetch, right, we have our set.
+
+08:55.080 --> 08:56.040
+Our RAM set is always.
+
+08:56.040 --> 08:59.160
+Whenever it sets high, we're setting RAM.
+
+08:59.160 --> 09:00.860
+But we've already set it to all 1s,
+
+09:00.860 --> 09:04.740
+so it's just setting it to all 1s still.
+
+09:04.740 --> 09:06.280
+We haven't changed the memory address.
+
+09:06.280 --> 09:08.720
+It's still all 0s.
+
+09:08.720 --> 09:10.820
+We're setting the instruction register.
+
+09:10.820 --> 09:14.300
+Notice in our little diagram, I stuck instruction register
+
+09:14.300 --> 09:16.040
+here just so that we knew what was in it.
+
+09:16.040 --> 09:18.360
+It's all 1s, OK?
+
+09:18.360 --> 09:20.340
+So now we're going to turn set off,
+
+09:20.340 --> 09:23.520
+and then we'll turn enable off.
+
+09:23.520 --> 09:24.160
+All right?
+
+09:24.160 --> 09:24.840
+So.
+
+09:25.340 --> 09:28.660
+Let's go back to CPU fetch.
+
+09:28.660 --> 09:29.620
+We'll cycle again.
+
+09:29.620 --> 09:30.700
+Set goes off.
+
+09:30.700 --> 09:32.940
+All the sets go off.
+
+09:32.940 --> 09:35.740
+And then when we cycle again, enable goes off,
+
+09:35.740 --> 09:39.340
+and we move to step 3, OK?
+
+09:39.340 --> 09:42.240
+When enable goes off, since there's no input for program
+
+09:42.240 --> 09:46.060
+counter and set's always 1, it pulls down to all 0s again.
+
+09:46.060 --> 09:50.200
+That's just a function of how we set that up.
+
+09:50.200 --> 09:50.760
+All right?
+
+09:50.760 --> 09:54.480
+So now we'll cycle again, and we should be right now,
+
+09:54.480 --> 09:55.340
+we should be on cycle.
+
+09:55.340 --> 09:56.360
+Cycle 3.
+
+09:56.360 --> 09:58.060
+So when we cycle again, we're going
+
+09:58.060 --> 09:59.500
+to enable the accumulator.
+
+09:59.500 --> 10:01.480
+So whatever's stored in the accumulator, which
+
+10:01.480 --> 10:05.680
+should be the 1 from way back, should go on the bus, OK?
+
+10:05.680 --> 10:10.180
+And then we're going to set the program counter.
+
+10:10.180 --> 10:12.940
+Will be all we set.
+
+10:12.940 --> 10:15.440
+OK?
+
+10:15.440 --> 10:17.140
+So we enable the 1.
+
+10:17.140 --> 10:21.660
+We'll set the program counter to be 1, all right?
+
+10:24.240 --> 10:24.740
+So.
+
+10:24.740 --> 10:27.920
+Let's go back to our CPU fetch.
+
+10:27.920 --> 10:32.460
+So when we enable our accumulator,
+
+10:32.460 --> 10:36.420
+which had a 1 in it, so 1 goes on the bus, OK?
+
+10:39.700 --> 10:43.080
+Because we have set, everything that's in the program counter
+
+10:43.080 --> 10:46.460
+is automatically set to be whatever it is.
+
+10:50.460 --> 10:53.320
+Turn all the sets on.
+
+10:53.320 --> 10:54.720
+So for anything that needs to be set,
+
+10:54.740 --> 11:04.080
+through our control fetch, we have RAM set and PC set.
+
+11:04.080 --> 11:04.580
+OK?
+
+11:04.580 --> 11:09.220
+So it's saying 1, OK?
+
+11:09.220 --> 11:11.200
+We're not changing the address to 1.
+
+11:11.200 --> 11:15.100
+So RAM set to RAM input, which is all 1s.
+
+11:15.100 --> 11:17.240
+Our memory address is still 0, because that's the only thing
+
+11:17.240 --> 11:20.180
+we've ever got from it.
+
+11:20.180 --> 11:22.240
+All right?
+
+11:22.240 --> 11:24.260
+And then that's pretty much the cycle.
+
+11:24.740 --> 11:29.380
+So we turn off our set.
+
+11:29.380 --> 11:32.740
+And then we turn off the enables.
+
+11:32.740 --> 11:34.840
+So there's nothing on the bus, which
+
+11:34.840 --> 11:37.500
+means program counter goes back to 0, even though it was 1.
+
+11:40.180 --> 11:41.280
+OK?
+
+11:41.280 --> 11:43.020
+So it would have been 1.
+
+11:43.020 --> 11:45.900
+And then we would cycle through all the 1s.
+
+11:45.900 --> 11:48.120
+Now, if I do a bunch of these cycles,
+
+11:48.120 --> 11:52.720
+nothing is going to happen, because we're
+
+11:52.720 --> 11:54.580
+going to have to go through 4, 5, 6, and 7.
+
+11:54.580 --> 11:58.520
+To get back to 1, OK?
+
+11:58.520 --> 12:00.520
+And because of the way we hardwired it,
+
+12:00.520 --> 12:03.080
+it won't actually go 0, 1, 2, 3.
+
+12:03.080 --> 12:05.040
+But when we're done, that's how it will work.
+
+12:05.040 --> 12:09.160
+It'll go 0, 1, 2, 3, to walk through different program
+
+12:09.160 --> 12:10.660
+codes.
+
+12:10.660 --> 12:12.200
+OK, so that's how control fetch works.
+
+12:12.200 --> 12:17.240
+It basically just uses that bus 1 to grab a thing,
+
+12:17.240 --> 12:21.900
+to add 1 to whatever the current memory location is
+
+12:21.900 --> 12:24.040
+that you're at, OK?
+
+12:24.040 --> 12:27.500
+Which is basically whatever's in the program counter.
+
+12:27.500 --> 12:31.160
+It takes the program counter, goes and grabs the instruction.
+
+12:31.160 --> 12:33.000
+It says, here's where the instruction,
+
+12:33.000 --> 12:34.440
+next instruction is.
+
+12:34.440 --> 12:36.060
+Grabs that instruction.
+
+12:40.020 --> 12:41.460
+Let's look at the view.
+
+12:41.460 --> 12:41.960
+OK?
+
+12:41.960 --> 12:44.640
+So whatever's in the program counter
+
+12:44.640 --> 12:47.960
+is the memory of the next address, OK?
+
+12:47.960 --> 12:49.760
+We go grab what is in that memory location.
+
+12:49.760 --> 12:53.060
+We stick it into the instruction register.
+
+12:53.060 --> 12:54.020
+We add 1.
+
+12:54.020 --> 12:58.640
+So whatever that memory address was, OK?
+
+12:58.640 --> 13:01.440
+Instruction register, as we cycle through the steps,
+
+13:01.440 --> 13:04.680
+goes through and does whatever the instruction register says
+
+13:04.680 --> 13:06.240
+to do.
+
+13:06.240 --> 13:10.060
+And then when it's done, we add 1 to the program counter.
+
+13:10.060 --> 13:15.160
+We go to memory and grab the next instruction register
+
+13:15.160 --> 13:16.520
+and cycle through again.
+
+13:16.520 --> 13:17.700
+So that's the fetch cycle.
+
+13:17.700 --> 13:22.960
+It's just basically, how do we get, how do we count the,
+
+13:22.960 --> 13:23.960
+how do we make the program?
+
+13:24.020 --> 13:30.400
+How do we counter, move up 1 and get the next instruction?
+
+13:30.400 --> 13:30.900
+OK?
+
+13:30.900 --> 13:32.060
+Play with it.
+
+13:32.060 --> 13:34.140
+Hopefully it works out for you, but play with it.
+
+13:34.140 --> 13:36.240
+See if you can make it work.
+` }
+    ];
+
+    function timeToSeconds(t) {
+      if (!t) return 0;
+      var p = t.trim().split(':');
+      if (p.length === 2) return (parseInt(p[0]) || 0) * 60 + (parseFloat(p[1]) || 0);
+      if (p.length === 3) return (parseInt(p[0]) || 0) * 3600 + (parseInt(p[1]) || 0) * 60 + (parseFloat(p[2]) || 0);
+      return 0;
+    }
+
+    function parseVtt(text) {
+      var out = [];
+      text.trim().split(/\n\n+/).forEach(function (block) {
+        if (block.indexOf('WEBVTT') === 0 || block.trim() === '') return;
+        var lines = block.trim().split('\n');
+        var tl = lines.filter(function (l) { return l.indexOf('-->') !== -1; })[0];
+        if (!tl) return;
+        var parts = tl.split(' --> ');
+        out.push({ start: timeToSeconds(parts[0]), end: timeToSeconds(parts[1]),
+                   text: lines.slice(lines.indexOf(tl) + 1).join(' ').trim() });
+      });
+      return out;
+    }
+
+    function TranscriptManager(v) {
+      this.v = v;
+      this.player = null;
+      this.timer = null;
+      this.frame = document.getElementById('video-container-' + v.key);
+      this.panel = document.getElementById('transcript-container-' + v.key);
+      this.cues = parseVtt(v.vtt);
+    }
+    TranscriptManager.prototype.populate = function () {
+      var self = this;
+      if (!this.panel) return;
+      this.panel.innerHTML = '';
+      this.cues.forEach(function (cue) {
+        var el = document.createElement('div');
+        el.className = 'transcript-line';
+        el.dataset.start = cue.start;
+        el.dataset.end = cue.end;
+        el.textContent = cue.text;
+        el.setAttribute('role', 'button');
+        el.setAttribute('tabindex', '0');
+        var seek = function () {
+          if (self.player && self.player.seekTo) { self.player.seekTo(cue.start, true); self.player.playVideo(); }
+        };
+        el.addEventListener('click', seek);
+        el.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); seek(); }
+        });
+        self.panel.appendChild(el);
+      });
+    };
+    TranscriptManager.prototype.highlight = function () {
+      if (!this.player || !this.player.getCurrentTime || !this.panel) return;
+      var t = this.player.getCurrentTime(), panel = this.panel;
+      panel.querySelectorAll('.transcript-line').forEach(function (line) {
+        var a = parseFloat(line.dataset.start), b = parseFloat(line.dataset.end);
+        if (t >= a && t < b) {
+          if (!line.classList.contains('active-transcript-line')) {
+            var prev = panel.querySelector('.active-transcript-line');
+            if (prev) prev.classList.remove('active-transcript-line');
+            line.classList.add('active-transcript-line');
+            // Scroll the panel only, never the page
+            panel.scrollTop = line.offsetTop - panel.offsetTop - panel.clientHeight / 2 + line.clientHeight / 2;
+          }
+        } else {
+          line.classList.remove('active-transcript-line');
+        }
+      });
+    };
+    TranscriptManager.prototype.syncHeight = function () {
+      if (!this.frame || !this.panel) return;
+      var vc = this.frame.closest('.video-col'), tc = this.panel.closest('.transcript-col');
+      var side = !!(vc && tc) && Math.abs(tc.getBoundingClientRect().top - vc.getBoundingClientRect().top) < 2;
+      var h = side ? this.frame.offsetHeight + 'px' : '24rem';
+      this.panel.style.height = h;
+      this.panel.style.maxHeight = h;
+    };
+
+    var managers = VIDEOS.map(function (v) { return new TranscriptManager(v); });
+
+    window.onYouTubeIframeAPIReady = function () {
+      managers.forEach(function (m) {
+        if (!document.getElementById('youtube-player-' + m.v.key)) return;
+        m.player = new YT.Player('youtube-player-' + m.v.key, {
+          videoId: m.v.id,
+          events: {
+            onStateChange: function (e) {
+              clearInterval(m.timer);
+              if (e.data === YT.PlayerState.PLAYING) {
+                managers.forEach(function (o) {
+                  if (o !== m && o.player && o.player.pauseVideo) { o.player.pauseVideo(); }
+                });
+                m.timer = setInterval(function () { m.highlight(); }, 300);
+              }
+            }
+          }
+        });
+      });
+    };
+
+    function start() {
+      managers.forEach(function (m) { m.populate(); });
+      setTimeout(function () { managers.forEach(function (m) { m.syncHeight(); }); }, 100);
+      if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+        var tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      } else {
+        window.onYouTubeIframeAPIReady();
+      }
+    }
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', start); } else { start(); }
+
+    var rt;
+    window.addEventListener('resize', function () {
+      clearTimeout(rt);
+      rt = setTimeout(function () { managers.forEach(function (m) { m.syncHeight(); }); }, 250);
+    });
   })();
   </script>
 </body>
