@@ -16,6 +16,7 @@
     .due > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
     .due h3 { margin-top: 0; font-size: var(--fs-base); }
     @media (max-width: 760px) { .due { grid-template-columns: 1fr; } }
+    .video-ts { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--color-text-muted); white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -102,6 +103,39 @@
       </div>
     </section>
 
+    <section id="sec-video">
+      <h2>Week 11 overview video</h2>
+      <p>About 15 minutes. Your instructor walks through the week in the order you build it: the clock <span class="video-ts">(from 01:22)</span>, the stepper <span class="video-ts">(04:12)</span>, and the control unit with its ALU and clear-flags examples <span class="video-ts">(05:01)</span>. The fetch control unit you will wire in Week 13 follows at 08:36, control units in general at 09:36, and this week&rsquo;s assignment from 10:45. Click any line of the transcript to jump there.</p>
+      <div class="callout callout--note">
+        <div class="callout__title">What to build</div>
+        <p>Around 11:36 the video says to build the fetch control unit, not the ALU one; at 13:01 it says to build what the assignment asks. <strong>Assignment 11 is the one to follow:</strong> your <code>CONTROL_UNIT</code> runs the ALU instructions and CLF, and fetch is wired in Week 13. The fetch control unit figure in the assignment is a guide to the shape of the appearance only.</p>
+      </div>
+
+      <div class="video-breakout">
+        <div class="video-transcript-row">
+          <div class="video-col">
+            <div class="video-frame" id="video-container">
+              <iframe id="youtube-player"
+                      src="https://www.youtube.com/embed/JtQJfDMLnxg?enablejsapi=1&amp;cc_load_policy=1&amp;iv_load_policy=3&amp;modestbranding=1&amp;rel=0"
+                      title="CSC210 Week 11 Orientation: The Control Unit"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allowfullscreen loading="lazy"></iframe>
+            </div>
+            <div class="video-caption">Closed captions available. Use the transcript panel to jump to any point in the video.</div>
+          </div>
+          <div class="transcript-col">
+            <h2 class="sr-only">Video transcript</h2>
+            <div class="transcript-panel" id="transcript-container" role="region"
+                 aria-live="polite"
+                 aria-label="Video transcript. Select a line to jump to that point in the video. The line currently being spoken is announced as the video plays.">
+              <p class="transcript-loading">Loading transcript&hellip;</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section id="sec-tools">
       <h2>Tools and reading</h2>
       <ul>
@@ -117,6 +151,554 @@
   <footer class="sp-footer">
     CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 11, Orientation
   </footer>
+  <script>
+  (function () {
+    'use strict';
+
+    /* ------------------------------------------------------------
+       Week 11 overview video. Procedure A -- one video on this page, so
+       no TranscriptManager. VIDEO_ID is the YouTube id; vttContent holds
+       the WEBVTT captions inline so the panel needs no second request
+       and works from the Canvas iframe without a CORS fetch. The script
+       below the VTT is Week 10's, unchanged.
+
+       The source VTT (csc210-wk11.vtt, Whisper) arrived with CRLF line
+       endings and 136 cues; the original is kept unchanged at
+       docs/video-raw/csc210-wk11.whisper.vtt. Deleted: three 20 ms
+       rolling-window cues at 00:58 ("if", "you", "have"), folded with the
+       cue after them into the 00:57.800 cue; a multilingual hallucination
+       at 03:25 (Cyrillic). Mis-heard terms repaired: J and K, clock set,
+       sets, instruction register set, BUS1 and temp S, quiz; Logisim, ALU,
+       CPU, MIPS, RAM. 131 cues out. The repaired file is csc210-wk11.vtt
+       in this folder. If the transcript is ever regenerated, re-run the
+       repair (keyed by cue start; it fails if an edit does not land).
+       ------------------------------------------------------------ */
+
+    var VIDEO_ID = 'JtQJfDMLnxg';
+    var vttContent = `WEBVTT
+
+00:00.160 --> 00:04.000
+Aloha, so this is week 11 and we are on the control unit
+
+00:04.000 --> 00:11.340
+and in this week what we need to do is primarily what we're
+
+00:11.340 --> 00:16.060
+going to look at is let's see the shape we have
+
+00:16.060 --> 00:22.300
+the assignment which is part a which will be some Logisim stuff
+
+00:22.300 --> 00:28.400
+and then part b will be a quiz all right and it's all posted it should
+
+00:28.400 --> 00:31.720
+be due next week but what we're going to do is first
+
+00:31.720 --> 00:36.020
+we'll go over the clock how to build the clock for our CPU sim
+
+00:36.020 --> 00:40.600
+and then a stepper and so the stepper is
+
+00:40.600 --> 00:45.640
+how we're going to cycle through the rising and falling edges
+
+00:45.640 --> 00:49.940
+of a normal clock in a computer it's how everything gets
+
+00:49.940 --> 00:57.000
+synchronized to each other okay and then talk about the control unit
+
+00:57.800 --> 01:06.140
+okay if you have some examples okay of specific uh pared-down parts of a control unit
+
+01:06.140 --> 01:09.860
+to help you hopefully understand it better and there's a couple videos in
+
+01:09.860 --> 01:13.300
+that one and then we'll talk about the control
+
+01:13.300 --> 01:18.060
+unit in general so i'll have other things beyond what we're doing in
+
+01:18.060 --> 01:22.220
+our CPU right so take let's take a quick look
+
+01:22.220 --> 01:28.020
+through all those things so the clock itself
+
+01:28.020 --> 01:31.560
+ends up being kind of like a trial architecture of ones that have been
+
+01:31.560 --> 01:41.220
+used in
+
+01:41.220 --> 01:47.400
+your first configuration and we will go there in a second
+
+01:47.400 --> 01:50.980
+so i'm going to walk through this whole um cycle so our cycle is always going to
+
+01:50.980 --> 01:57.980
+be so we start at zero our first step will be to set all the enables high and
+
+01:57.980 --> 02:03.500
+clock cycle we drop set down the next clock cycle we drop enable down and then
+
+02:03.500 --> 02:08.540
+we start that pattern over again on the next clock cycle okay so this is our one
+
+02:08.540 --> 02:16.140
+two three four quarters of our clock all right and so our circuit for our clock
+
+02:16.140 --> 02:21.020
+is gonna look like this we're gonna have a single input okay and we're gonna
+
+02:21.020 --> 02:25.980
+manually go click click click click make sure you look closely at where the dots
+
+02:25.980 --> 02:31.680
+are because this is connections so this clock in goes straight into the middle
+
+02:31.680 --> 02:41.600
+of this JK flip-flop and we're gonna use it off the says down here is that in the
+
+02:41.600 --> 02:46.260
+memory folder we're gonna use the JK flip-flop from Logisim direct okay you
+
+02:46.260 --> 02:53.100
+drag it in okay we send one to J and K we use clock in to the center
+
+02:53.100 --> 02:55.800
+between them we have a Q
+
+02:55.980 --> 03:08.980
+out and a secondary output at the bottom okay clock in also goes into
+
+03:08.980 --> 03:16.660
+these two NAND gates Q goes into the NAND gate for clock set this output goes
+
+03:16.660 --> 03:22.900
+to clock enable and Q itself is our clock okay so we have three we have
+
+03:22.900 --> 03:25.680
+clock in which we right now we're gonna do
+
+03:28.940 --> 03:33.280
+we click on it to cycle through then we have the clock signal the clock set in
+
+03:33.280 --> 03:38.380
+the clock enable okay and this is how we're going to go through our four
+
+03:38.380 --> 03:42.500
+circuits you know clock enable going first then clock set then clock set
+
+03:42.500 --> 03:45.960
+will go down the clock enable go down and then clock will go down and then
+
+03:45.960 --> 03:52.460
+we'll cycle through again all right so that's what this says just so I built it
+
+03:52.460 --> 03:54.880
+clock in
+
+03:55.980 --> 04:06.620
+the bottom in my design enables at the bottom it sets in the middle in my circuit you know
+
+04:06.620 --> 04:12.140
+appearance enables in the middle and sets at the bottom okay and that just matches it makes
+
+04:12.140 --> 04:21.180
+it easier when we do the integration with the control system okay now we also need a stepper
+
+04:21.180 --> 04:30.940
+or we're calling a stepper and what the stepper does is so this talks this shows you the design of
+
+04:30.940 --> 04:41.100
+the stepper and how to build it okay we build it's got seven steps one through seven we have a clock
+
+04:41.100 --> 04:49.980
+in clock and a reset our inputs and this is the you know not gate or gates or gate here and again
+
+04:49.980 --> 04:50.780
+and and and
+
+04:52.060 --> 05:01.020
+you know anyway so it goes through and talks about a wall and says hey this is what we have
+
+05:01.020 --> 05:08.060
+and then this is how we redraw it okay now in the next section which is the control section
+
+05:10.860 --> 05:12.940
+you will see this stepper here
+
+05:14.300 --> 05:21.020
+okay we also have our three clock inputs so clock goes into here into our stepper we have the six
+
+05:21.180 --> 05:28.780
+our seven steps one two three four five six and then seven and then seven goes to the reset input
+
+05:28.780 --> 05:34.460
+so it plumbs back around itself so that we can go around and go we go six it goes to seven goes back
+
+05:34.460 --> 05:43.260
+to one that's what reset does okay now we put all the sets vertically on one side all the
+
+05:43.260 --> 05:51.180
+enables vertically on the other side and we hook up all the enables to clock enable we hook up all
+
+05:51.180 --> 05:59.740
+the sets to clock set this is what we do so that um whenever the enable is decided one of the
+
+05:59.740 --> 06:05.340
+enables has to be on whenever the set whenever clock set is high one of the sets has to be on
+
+06:06.140 --> 06:12.140
+can be more than one but at least one wants to be on all right and then the stepper what the
+
+06:12.140 --> 06:23.340
+stepper does is it cycles through different systems okay so this one here lets me make this
+
+06:23.340 --> 06:39.100
+just a little smaller now sort of fits okay so this one this is the ALU control system for just
+
+06:39.100 --> 06:42.060
+the ALU things okay
+
+06:42.140 --> 06:48.140
+okay and if you look we only have this plum two obviously one but then four five and six
+
+06:49.340 --> 06:56.060
+two and three are not used all right and four five and six are used and you cycle through but
+
+06:56.060 --> 07:02.700
+you have to cycle through all these different things depending upon what you're doing what
+
+07:02.700 --> 07:12.140
+our ALU inputs are okay our outputs here but what our ALU from our instruction register in
+
+07:13.100 --> 07:18.620
+what we're doing are we adding are we shifting okay we have to be able to do all those things
+
+07:20.780 --> 07:28.060
+under four five six okay so this is what this system does is it chooses what register are we
+
+07:28.060 --> 07:33.660
+using what register are we putting a setting you know which one are we enabling which one
+
+07:33.660 --> 07:40.220
+are we setting to do the operations that we want to do all right so
+
+07:42.520 --> 07:50.560
+this is kind of a overall there is a video about constructing this and actually putting
+
+07:50.560 --> 07:59.020
+it i believe it puts it into the CPU itself so you can see an example okay
+
+08:02.120 --> 08:02.920
+now there is
+
+08:05.320 --> 08:12.140
+um clear flags with addition with an addition and so we have flags and so this
+
+08:12.140 --> 08:19.620
+would be like a circuit a control system circuit to just do that it doesn't do
+
+08:19.620 --> 08:25.080
+anything else it just does a clear flag with addition and you can see it's a
+
+08:25.080 --> 08:36.980
+different design here's the four flags okay different design and then fetch so
+
+08:36.980 --> 08:43.700
+you're gonna have to build fetch in week 13 as part of it and this is the
+
+08:43.700 --> 08:48.920
+control system for fetch okay it's simpler because we're just doing a
+
+08:48.920 --> 08:54.140
+fetch but again we'll have our enable our set and our clock in we have our
+
+08:54.140 --> 08:59.100
+stepper and then we have all our enables down one side we have all our set down
+
+08:59.100 --> 09:03.720
+the other and this one in fetch we're not going to use our instruction
+
+09:03.720 --> 09:06.980
+register we're just gonna hardwire it so that it does a fetch
+
+09:06.980 --> 09:15.020
+all right and then again with fetch there's a video how I built it how to
+
+09:15.020 --> 09:20.660
+integrate it with the CPU I mean in the control system okay and then also how to
+
+09:20.660 --> 09:28.400
+put it into a CPU which will be done in chapter 13 in week 13 excuse me in two
+
+09:28.400 --> 09:36.100
+weeks all right so this control system and then the last section for this week
+
+09:36.100 --> 09:36.500
+is
+
+09:36.980 --> 09:44.580
+is control in general meaning control units in general which goes beyond our
+
+09:44.580 --> 09:50.940
+simple simplified 8-bit CPU sim in our CPU sim for example we're not gonna use
+
+09:50.940 --> 10:01.340
+any micro programming okay we're gonna do it all through the physical circuit
+
+10:01.340 --> 10:05.160
+we're not gonna store anything in tables we're just gonna use step-by-step
+
+10:05.160 --> 10:06.980
+approach all right
+
+10:06.980 --> 10:10.700
+but this one I want you to go through it and understand understand that there
+
+10:10.700 --> 10:20.420
+is a another way or how you store multiple operations that you want to do
+
+10:20.420 --> 10:26.960
+okay using micro instructions and micro programming right we're doing hardwired
+
+10:26.960 --> 10:32.660
+stuff we're not doing micro program stuff but a true CPU does both all right
+
+10:32.660 --> 10:35.020
+so
+
+10:36.980 --> 10:45.540
+anyway so go through this it's not part of your CPU sim but it's part of
+
+10:45.540 --> 10:55.820
+understanding how CPUs work all right so then our assignment your assignment is
+
+10:55.820 --> 11:02.500
+in two parts part one is Logisim build the clock build a stepper in the control
+
+11:02.500 --> 11:06.700
+unit okay
+
+11:06.980 --> 11:08.840
+oh
+
+11:10.640 --> 11:18.720
+with your CPU core okay and then you have a sixteen question auto graded
+
+11:18.720 --> 11:24.300
+quiz on this week's material
+
+11:30.740 --> 11:35.360
+good
+
+11:35.360 --> 11:36.660
+all right so stepper control unit all right
+
+11:36.660 --> 11:47.040
+control unit use these pins these steps the fetch control unit so build the fetch
+
+11:47.040 --> 11:55.040
+control unit okay don't build the ALU unit just build the fetch control unit
+
+11:55.040 --> 12:01.220
+but you want to have once you've built that circuit diagram with all the wires
+
+12:01.220 --> 12:07.920
+and the stepper and the clock in what you need to do is you need to connect
+
+12:07.920 --> 12:14.760
+to redraw it so mine's a big rectangle and I have here's my four registers
+
+12:14.760 --> 12:22.480
+enable and set memory address registers set RAM enable RAM set instruction
+
+12:22.480 --> 12:30.460
+register set instruction register in this is the 8-bit input program counter
+
+12:30.460 --> 12:30.720
+set
+
+12:31.700 --> 12:38.340
+program counter enable accumulator set accumulator enable my three clocks my BUS1 and my temp S
+
+12:40.420 --> 12:45.860
+all right that's your control unit you'll see it in those fetch control videos too
+
+12:46.660 --> 12:49.060
+so if you watch those you'll see it in there as well
+
+12:55.700 --> 12:59.380
+all right this is again the ALU circuit
+
+13:01.220 --> 13:13.060
+so build what it asks you to build ALU or fetch we'll use them both eventually so they're both
+
+13:13.060 --> 13:31.220
+needed part b is the control unit quiz week 11 two tries it's a graded quiz it's on the
+
+13:31.220 --> 13:40.660
+line you just take it all right and then that's it for this week in terms of week 11
+
+13:44.900 --> 13:48.260
+okay which is a control unit and then next week week 12 will be memory
+
+13:48.820 --> 13:56.260
+and talking to the world which is really how do we um deal with memory and how do we talk
+
+13:56.260 --> 14:01.060
+to the world how we do input and output and then we'll also talk about system calls sys
+
+14:01.220 --> 14:10.340
+call and interrupts these are part of well sys calls are definitely part of our MIPS programming
+
+14:11.380 --> 14:20.340
+and interrupts are part of modern CPU design we will not be modeling interrupts in our simulation
+
+14:22.740 --> 14:26.420
+okay and then we'll get to that next week
+
+14:29.140 --> 14:30.740
+all right thanks for watching and
+
+14:31.220 --> 14:37.060
+i hope everything's going well talk to you soon bye`;
+
+    var player, timeUpdater, parsedTranscript = [];
+
+    function timeToSeconds(timeStr) {
+      if (!timeStr) return 0;
+      var parts = timeStr.trim().split(':');
+      if (parts.length === 2) {
+        return (parseInt(parts[0]) || 0) * 60 + (parseFloat(parts[1]) || 0);
+      } else if (parts.length === 3) {
+        return (parseInt(parts[0]) || 0) * 3600 + (parseInt(parts[1]) || 0) * 60 + (parseFloat(parts[2]) || 0);
+      }
+      return 0;
+    }
+
+    function parseVtt(vttText) {
+      var cues = vttText.trim().split(/\n\n+/);
+      var parsedCues = [];
+      cues.forEach(function (cueBlock) {
+        if (cueBlock.indexOf('WEBVTT') === 0 || cueBlock.trim() === '') return;
+        var lines = cueBlock.trim().split('\n');
+        var timeLine = lines.filter(function (l) { return l.indexOf('-->') !== -1; })[0];
+        if (!timeLine) return;
+        var parts = timeLine.split(' --> ');
+        var textLines = lines.slice(lines.indexOf(timeLine) + 1);
+        parsedCues.push({
+          start: timeToSeconds(parts[0]),
+          end: timeToSeconds(parts[1]),
+          text: textLines.join(' ').trim()
+        });
+      });
+      return parsedCues;
+    }
+
+    function populateTranscript() {
+      var container = document.getElementById('transcript-container');
+      if (!container) return;
+      container.innerHTML = '';
+      parsedTranscript.forEach(function (cue) {
+        var lineEl = document.createElement('div');
+        lineEl.className = 'transcript-line';
+        lineEl.dataset.start = cue.start;
+        lineEl.dataset.end = cue.end;
+        lineEl.textContent = cue.text;
+        lineEl.setAttribute('role', 'button');
+        lineEl.setAttribute('tabindex', '0');
+        var seekTo = function () {
+          if (player && player.seekTo) { player.seekTo(cue.start, true); player.playVideo(); }
+        };
+        lineEl.addEventListener('click', seekTo);
+        lineEl.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); seekTo(); }
+        });
+        container.appendChild(lineEl);
+      });
+    }
+
+    function highlightCurrentLine() {
+      if (!player || !player.getCurrentTime) return;
+      var currentTime = player.getCurrentTime();
+      var lines = document.querySelectorAll('#transcript-container .transcript-line');
+      lines.forEach(function (line) {
+        var start = parseFloat(line.dataset.start);
+        var end = parseFloat(line.dataset.end);
+        if (currentTime >= start && currentTime < end) {
+          if (!line.classList.contains('active-transcript-line')) {
+            var prev = document.querySelector('#transcript-container .active-transcript-line');
+            if (prev) prev.classList.remove('active-transcript-line');
+            line.classList.add('active-transcript-line');
+            line.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else {
+          line.classList.remove('active-transcript-line');
+        }
+      });
+    }
+
+    function syncTranscriptHeight() {
+      var videoContainer = document.getElementById('video-container');
+      var transcriptContainer = document.getElementById('transcript-container');
+      if (!videoContainer || !transcriptContainer) return;
+      var videoCol = videoContainer.closest('.video-col');
+      var transcriptCol = transcriptContainer.closest('.transcript-col');
+      var sideBySide = !!(videoCol && transcriptCol) && Math.abs(
+        transcriptCol.getBoundingClientRect().top - videoCol.getBoundingClientRect().top) < 2;
+      if (sideBySide) {
+        transcriptContainer.style.height = videoContainer.offsetHeight + 'px';
+        transcriptContainer.style.maxHeight = videoContainer.offsetHeight + 'px';
+      } else {
+        transcriptContainer.style.height = '24rem';
+        transcriptContainer.style.maxHeight = '24rem';
+      }
+    }
+
+    window.onYouTubeIframeAPIReady = function () {
+      if (!VIDEO_ID || !document.getElementById('youtube-player')) return;
+      player = new YT.Player('youtube-player', {
+        videoId: VIDEO_ID,
+        events: {
+          onStateChange: function (event) {
+            clearInterval(timeUpdater);
+            if (event.data === YT.PlayerState.PLAYING) {
+              timeUpdater = setInterval(highlightCurrentLine, 300);
+            }
+          }
+        }
+      });
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      if (!VIDEO_ID || !vttContent.trim()) { syncTranscriptHeight(); return; }
+
+      parsedTranscript = parseVtt(vttContent);
+      populateTranscript();
+      setTimeout(syncTranscriptHeight, 100);
+      if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+        var tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      } else {
+        window.onYouTubeIframeAPIReady();
+      }
+    });
+
+    var resizeTimeout;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(syncTranscriptHeight, 250);
+    });
+  })();
+  </script>
 
 </body>
 </html>
