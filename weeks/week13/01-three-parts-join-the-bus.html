@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w13-01">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 13: Three Parts Join the Bus</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .w-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-md); }
+    @media (max-width: 760px) { .w-grid { grid-template-columns: 1fr; } }
+    .w-panel { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-surface); min-width: 0; margin-top: var(--space-sm); }
+    .w-panel h3 { margin: 0 0 var(--space-xs); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .btn-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .steps { display: flex; flex-wrap: wrap; gap: 4px; }
+    .stp { min-width: 2.2rem; text-align: center; border: 2px solid var(--color-border); border-radius: 999px; padding: 1px 6px; font-weight: 700; font-size: var(--fs-sm); }
+    .stp--on { background: var(--color-accent); border-color: var(--color-accent-hov); color: #fff; }
+    .lines { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 4px; }
+    .ln { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .ln small { display: block; font-family: var(--font-sans); font-size: 11px; color: var(--color-text-muted); }
+    .ln--1 { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .ln--1 small { color: #dfe8f3; }
+    .ln--new { border-left: 4px solid var(--color-accent); }
+    .vals { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 4px; }
+    .val { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); background: var(--color-surface); overflow-wrap: anywhere; }
+    .val b { font-family: var(--font-sans); color: var(--color-primary); }
+    .val small { display: block; font-family: var(--font-sans); font-size: 11px; color: var(--color-text-muted); }
+    .val--wrote { border-color: var(--color-success); background: #f0faf4; }
+    .busline { font-family: var(--font-mono); border: 2px solid var(--color-primary); border-radius: var(--radius); padding: var(--space-xs) var(--space-sm); margin: var(--space-xs) 0; background: var(--color-code-bg); overflow-wrap: anywhere; }
+    .busline--float { border-style: dashed; border-color: var(--color-border); }
+    .busline--bad { border-color: var(--color-danger); background: #fdf0ef; }
+    .w-status { font-size: var(--fs-sm); min-height: 1.5em; margin: var(--space-xs) 0; }
+    .mono { font-family: var(--font-mono); }
+    .row-now { background: #fff7e0; }
+    .gen-table td:first-child { font-family: var(--font-mono); font-weight: 700; white-space: nowrap; }
+    .tag-new { display: inline-block; font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 999px; background: var(--color-accent); color: #fff; margin-left: 4px; font-family: var(--font-sans); }
+
+    .part-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+    .part-btn[aria-pressed="true"] { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .bus-map { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 6px; }
+    .bm { border: 2px solid var(--color-border); border-radius: var(--radius); padding: 4px 8px; font-size: var(--fs-sm); }
+    .bm b { display: block; font-family: var(--font-mono); }
+    .bm--both { border-color: var(--color-primary); background: #eef4fb; }
+    .bm--drv { border-color: var(--color-primary); background: #eef4fb; border-style: double; border-width: 3px; }
+    .bm--cap { border-color: var(--color-success); background: #f0faf4; }
+    .bm--none { border-style: dashed; color: var(--color-text-muted); }
+    .bm--sel { outline: 3px solid var(--color-accent); }
+
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 13 &rsaquo; <span>Page 1 — Three Parts Join the Bus</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Three Parts Join the Bus</h1>
+    <p><strong>Sections 13.1 – 13.4</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~45 minutes</p>
+
+    <section id="sec-13-1">
+      <h2>13.1 &nbsp; You are still the fetch</h2>
+
+      <p><strong>What you have.</strong> A CPU that executes one instruction on its own. You set an 8-bit pin, <code>ir</code>, click <code>clk_in</code> 24 times, and the clock, the stepper and the control unit move the right values between R0&ndash;R3, TMP, the ALU, ACC and FLAGS. In a separate tab sits a 32-byte RAM with its MAR, built in Week 8 and never connected to anything.</p>
+
+      <p><strong>What you can&rsquo;t do.</strong> Run a program. A program is a list of instructions in memory, and something has to read the next one, hand it to the control unit, and remember where the one after that is. Right now that something is you: you read the instruction, you type it into <code>ir</code>, and you decide which one comes next.</p>
+
+      <p><strong>What you can do by the end of this week.</strong> Put five bytes in your RAM, raise one pin, and click. The CPU reads its first instruction from address 0, executes it, reads the one at address 1, executes that, and carries on. Three parts make that possible, and every one of them is something you have already built:</p>
+
+      <ul>
+        <li>a <strong>program counter</strong>, PC, that holds the address of the next instruction &mdash; a <code>REGISTER_8BIT</code>, from Week 5;</li>
+        <li>an <strong>instruction register</strong>, IR, that holds the instruction being executed &mdash; a <code>MEM_8BIT</code>, also from Week 5;</li>
+        <li>the <strong>RAM</strong>, with its MAR &mdash; your <code>RAM_16X16</code>, whole, from Week 8.</li>
+      </ul>
+    </section>
+
+    <section id="sec-13-2">
+      <h2>13.2 &nbsp; The program counter</h2>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/program-counter.png" style="max-width:320px"
+             alt="A Logisim circuit appearance: a rectangle labelled PC. Two inputs, s and e, sit on the top edge. Two pins, i and o, sit on the bottom edge. One more pin sits on the left edge.">
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s appearance for the program counter: <code>s</code> and <code>e</code> on top, up to the control unit; <code>i</code> and <code>o</code> on the bottom, down to the bus; <code>reg</code>, the stored byte, on the left for a probe.</figcaption>
+      </figure>
+
+      <p>The program counter is a plain 8-bit register on the bus, exactly like R0. The only new thing is its appearance: it sits under the control unit, on the bottom run of the bus, so its <code>i</code> and <code>o</code> face down and its <code>s</code> and <code>e</code> face up. In your file it becomes a tab called <code>PC_REGISTER</code> &mdash; one <code>REGISTER_8BIT</code> inside, wired straight through, the same kind of wrapper as Week 10&rsquo;s <code>CPU_REGISTER</code> and <code>ACC_REGISTER</code>.</p>
+
+      <p>Its job is to hold an <strong>address</strong>: the RAM address the CPU will read its next instruction from. Two things happen to it in every instruction:</p>
+      <ul>
+        <li>at <strong>step 1</strong> it drives the bus, so the MAR can capture that address;</li>
+        <li>at <strong>step 3</strong> it captures a new value from the bus: its old value plus one.</li>
+      </ul>
+      <p>So by the time an instruction is executing (steps 4 to 6), the PC already points at the <em>next</em> instruction. That is why it is called the program counter and not the &ldquo;current instruction pointer&rdquo;: it counts ahead. Week 14&rsquo;s jumps work by giving it a different value instead of +1.</p>
+    </section>
+
+    <section id="sec-13-3">
+      <h2>13.3 &nbsp; The instruction register</h2>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/instruction-register.png" style="max-width:320px"
+             alt="A Logisim circuit appearance: a rectangle labelled IR. An output o sits on the top edge, an input i on the bottom edge, and an input s on the right edge.">
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s appearance for the instruction register: <code>i</code> on the bottom, from the bus; <code>o</code> on top, up into the control unit; <code>s</code> on the right. There is no <code>e</code>.</figcaption>
+      </figure>
+
+      <p>The instruction register holds the byte the control unit is decoding. Last week that byte came from your <code>ir</code> input pin. This week the pin goes, and the IR&rsquo;s output takes its wire: <code>IR</code> <code>o</code> &rarr; <code>CONTROL_UNIT</code> <code>ir</code>.</p>
+
+      <p>Notice what the IR is built from. It is a <code>MEM_8BIT</code> &mdash; eight one-bit cells and a shared set line &mdash; not a <code>REGISTER_8BIT</code>, because <strong>it never drives the bus</strong>. Its output goes to one place, the control unit, and nothing else ever needs that wire to let go. A register needs an enable and output buffers only if it shares an output wire. You have met this twice already: TMP (Week 10) feeds only BUS1, and the MAR (Week 8) feeds only the RAM&rsquo;s two decoders. Both are <code>MEM_8BIT</code> too.</p>
+
+      <p>One consequence matters next page. A <code>MEM_8BIT</code> is a transparent latch: while its <code>s</code> is high, its output follows its input. So while the IR is being written, the control unit sees its <code>ir</code> input change underneath it.</p>
+    </section>
+
+    <section id="sec-13-4">
+      <h2>13.4 &nbsp; The RAM joins whole</h2>
+
+      <p>Your <code>RAM_16X16</code> goes onto the <code>CPU</code> tab as one instance, unchanged. Its pins meet the bus in three places:</p>
+
+      <ul>
+        <li><code>address</code> &larr; the bus, into the MAR, captured when <code>sa</code> goes high &mdash; the control unit&rsquo;s new <code>mar_s</code> line;</li>
+        <li><code>i</code> &larr; the bus, written into the selected byte when <code>s</code> goes high &mdash; by hand this week, by ST in Week 14;</li>
+        <li><code>o</code> &rarr; the bus, driven only while <code>e</code> is high &mdash; the new <code>ram_e</code> line.</li>
+      </ul>
+
+      <p>In Week 8 you put a controlled buffer on the RAM&rsquo;s output and were told it was there so the RAM could let go of a shared wire later. This is later. With <code>ram_e</code> low, that buffer floats, and R0, ACC or the PC can use the bus. The RAM is a bus driver like any register, and the one-driver rule from Week 10 applies to it.</p>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/CPU_Overview.png"
+             alt="A block diagram of the whole CPU. A rectangular bus runs around the edge. Along the top: TMP, then four registers labelled R1 to R4, then MAR. On the left: bus1 under TMP, then the ALU with inputs A and B and outputs op1 to op3, Ci, Co, larger, equal and zero, and ACC below it. A clock block with outputs clks, clke and clk sits beside a large central block labelled Control Unit. On the right, below MAR, a tall block labelled RAM with s, e and o. Lines from the control unit run to every s and e.">
+        <figcaption class="circuit-canvas__caption">The whole machine, as your instructor drew it for Fall 2025. Your R1&ndash;R4 are called R0&ndash;R3, and the program counter and instruction register, not drawn here, sit on the bottom run of the bus. Every line out of the control unit is an enable or a set.</figcaption>
+      </figure>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/cpu-fetch-control-unit.jpg"
+             alt="A Logisim CPU circuit. An eight-wire bus loops around the edge in red. Along the top, TMP and four registers; on the left, bus1, the ALU and ACC; on the right, a tall block labelled MAR above RAM 256. A wide block in the middle reads FETCH CONTROL UNIT, with outputs to every register's s and e. Along the bottom, a block labelled PC and a block labelled IR, both wired to the bus; the IR's output runs up into the control unit's IR IN input. An 8-bit input labelled RAM_in feeds the RAM's i input.">
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s fetch-only CPU, the one in page 2&rsquo;s video. PC and IR on the bottom, RAM on the right. Two shortcuts here that your CPU does not take: the PC&rsquo;s <code>s</code> is tied to a constant, and the RAM&rsquo;s <code>i</code> comes from a hand-set pin, <code>RAM_in</code>, instead of the bus.</figcaption>
+      </figure>
+
+      <p>Here is every part on your <code>CPU</code> tab after this week, with the control lines that touch it and the steps that raise them. The table is generated from the same control table the widgets below run.</p>
+
+      <div class="table-scroll">
+        <table class="pin-table gen-table">
+          <thead><tr><th>Part</th><th>Built from</th><th>Drives the bus</th><th>Captures</th></tr></thead>
+          <tbody id="parts-body"><tr><td colspan="4"><em>Loading the table&hellip;</em></td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========== Widget 1 ========== -->
+    <section id="sec-touch">
+      <div class="widget-card" id="w-touch">
+        <div class="widget-card__title">Who Touches the Bus</div>
+        <div class="widget-card__subtitle">Pick a part. See whether it drives the bus, captures from it, or neither &mdash; and which control lines, at which steps, make it do so.</div>
+        <div class="part-btns" id="tb-btns" role="group" aria-label="Parts"></div>
+        <div class="w-panel">
+          <h3>The part</h3>
+          <div id="tb-detail" aria-live="polite"></div>
+        </div>
+        <div class="w-panel">
+          <h3>Everything on the CPU tab</h3>
+          <div class="bus-map" id="tb-map"></div>
+          <p class="w-status">Blue: drives the bus (double edge: no control line writes it this week). Green: captures only. Dashed: neither &mdash; it is wired to the bus or to a part on it, but never puts a value on it.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-check-a">
+      <p>Count the drivers: <strong>three parts and the register file</strong> &mdash; PC, RAM, ACC, and R0&ndash;R3 through REG_SELECT. Everything else captures, or only listens. That short list is the whole of what the control unit has to keep from colliding.</p>
+
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Three questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+
+      <p>For the program counter and instruction register in a second voice, log into your Saylor CS301 account at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 5: Designing a Processor</strong>. Its MIPS has a separate adder for PC + 4 and separate instruction and data paths; yours has one bus, and next page shows how it manages without the adder.</p>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>You know what the PC, IR and RAM are built from and how each meets the bus. Next page: the three transfers that use them to fetch an instruction.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 13, Page 1
+  </footer>
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['dp'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.dp) { return; }
+    var D = L.dp;
+
+    function b8(v) { return v === null || v === undefined ? 'EEEEEEEE' : ('0000000' + (v >>> 0).toString(2)).slice(-8); }
+    function h2(v) { return v === null || v === undefined ? 'EE' : ('0' + v.toString(16).toUpperCase()).slice(-2); }
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+    var STEPWORD = function (t) { return 'step ' + t.step + (t.when === 'every instruction' ? ' (every instruction)' : ' (' + t.when + ')'); };
+    function termsOf(line) {
+      var row = D.TABLE.filter(function (r) { return r.line === line; })[0];
+      return row ? row.terms.map(STEPWORD) : [];
+    }
+    var PARTS = [
+      { id: 'PC', built: 'REGISTER_8BIT, in PC_REGISTER', drive: ['pc_e'], set: ['pc_s'], note: 'Drives the address of the next instruction at step 1; captures PC + 1 at step 3.' },
+      { id: 'RAM', built: 'RAM_16X16 (Week 8)', drive: ['ram_e'], set: [], setNote: 'its s is pulsed by hand this week (data_ram); ST writes it from Week 14', note: 'Drives the selected byte when ram_e is high; its output buffer floats otherwise.' },
+      { id: 'MAR', built: 'MEM_8BIT, inside RAM_16X16', drive: [], set: ['mar_s'], note: 'Captures an address from the bus. Its output drives only the RAM\u2019s two decoders.' },
+      { id: 'IR', built: 'MEM_8BIT, in IR', drive: [], set: ['ir_s'], note: 'Captures the instruction at step 2. Its output drives only the control unit\u2019s ir input.' },
+      { id: 'R0\u2013R3', built: 'CPU_REGISTER \u00d7 4 + REG_SELECT', drive: ['rega_e', 'regb_e'], set: ['regb_s'], note: 'RA and RB come from IR bits 3\u20132 and 1\u20130; REG_SELECT turns them into one register\u2019s e or s.' },
+      { id: 'ACC', built: 'ACC_REGISTER', drive: ['acc_e'], set: ['acc_s'], note: 'Captures the ALU\u2019s result \u2014 PC + 1 in fetch, the answer in step 5 \u2014 and puts it back on the bus one step later.' },
+      { id: 'TMP', built: 'TMP (MEM_8BIT + input buffer)', drive: [], set: ['tmp_s'], note: 'Captures RB at step 4. Its output feeds BUS1, and BUS1 feeds the ALU\u2019s B input.' },
+      { id: 'FLAGS', built: 'FLAGS (four MEM_1BIT)', drive: [], set: ['flags_s'], note: 'Captures the ALU\u2019s C, A, E and Z outputs, not the bus.' },
+      { id: 'ALU', built: 'ALU_8BIT', drive: [], set: [], listen: true, note: 'Its A input is the bus and its result goes to ACC. It never drives the bus \u2014 that is the loop ACC exists to break (Week 10).' }
+    ];
+    function role(p) { return p.drive.length ? (p.set.length ? 'both' : 'drv') : (p.set.length ? 'cap' : 'none'); }
+
+    /* Generated parts table */
+    (function () {
+      var tb = document.getElementById('parts-body');
+      if (!tb) { return; }
+      tb.innerHTML = PARTS.map(function (p) {
+        var d = p.drive.length ? p.drive.map(function (l) { return '<code>' + l + '</code>: ' + termsOf(l).join(', '); }).join('<br>') : 'never';
+        var s = p.set.length ? p.set.map(function (l) { return '<code>' + l + '</code>: ' + termsOf(l).join(', '); }).join('<br>') : (p.setNote ? p.setNote : '\u2014');
+        return '<tr><td>' + p.id + '</td><td>' + esc(p.built) + '</td><td>' + d + '</td><td>' + s + '</td></tr>';
+      }).join('');
+    }());
+
+    /* ---------- Widget 1 — Who Touches the Bus ---------- */
+    (function () {
+      var btns = document.getElementById('tb-btns');
+      if (!btns) { return; }
+      var sel = 0;
+      btns.innerHTML = PARTS.map(function (p, i) {
+        return '<button type="button" class="widget-btn widget-btn--outline widget-btn--small part-btn" data-i="' + i + '" aria-pressed="false">' + p.id + '</button>';
+      }).join('');
+      function paint() {
+        var p = PARTS[sel], r = role(p);
+        btns.querySelectorAll('.part-btn').forEach(function (b) { b.setAttribute('aria-pressed', +b.dataset.i === sel ? 'true' : 'false'); });
+        var h = '<p><strong>' + p.id + '</strong> &mdash; ' + esc(p.built) + '. ';
+        h += r === 'both' ? 'It <strong>drives</strong> the bus and <strong>captures</strong> from it.' : r === 'drv' ? 'It <strong>drives</strong> the bus; this week no control line writes it.' : r === 'cap' ? 'It <strong>captures</strong> but never drives the bus.' : 'It <strong>neither drives nor captures</strong>.';
+        h += '</p><p>' + esc(p.note) + '</p><ul>';
+        p.drive.forEach(function (l) { h += '<li>enable <code>' + l + '</code> &mdash; ' + termsOf(l).join(', ') + ', in the enable quarters (<code>clk_e</code>)</li>'; });
+        p.set.forEach(function (l) { h += '<li>set <code>' + l + '</code> &mdash; ' + termsOf(l).join(', ') + ', in the set quarter (<code>clk_s</code>)</li>'; });
+        if (p.setNote) { h += '<li>' + esc(p.setNote) + '</li>'; }
+        if (!p.drive.length && !p.set.length) { h += '<li>no control line of its own; <code>opcode</code> and <code>bus1</code> shape what it computes</li>'; }
+        h += '</ul>';
+        document.getElementById('tb-detail').innerHTML = h;
+        document.getElementById('tb-map').innerHTML = PARTS.map(function (q, i) {
+          var rr = role(q);
+          return '<div class="bm bm--' + rr + (i === sel ? ' bm--sel' : '') + '"><b>' + q.id + '</b>' +
+            (rr === 'both' ? 'drives &amp; captures' : rr === 'drv' ? 'drives; written by hand' : rr === 'cap' ? 'captures' : 'listens only') + '</div>';
+        }).join('');
+      }
+      btns.addEventListener('click', function (e) { var b = e.target.closest('.part-btn'); if (b) { sel = +b.dataset.i; paint(); } });
+      paint();
+    }());
+
+    /* ---------- Self-check ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+  {
+    "q": "Which of these parts <strong>never</strong> drives the bus?",
+    "opts": [
+      "The program counter",
+      "The RAM",
+      "The instruction register",
+      "ACC"
+    ],
+    "correct": 2,
+    "why": "The IR&rsquo;s output goes only to the control unit, so it is a <code>MEM_8BIT</code> with no enable and no output buffer. The PC, the RAM and ACC all drive the bus at some step."
+  },
+  {
+    "q": "While an instruction is executing (steps 4 to 6), what does the PC hold?",
+    "opts": [
+      "The address of the instruction being executed",
+      "The address of the next instruction",
+      "The instruction itself",
+      "Nothing: it is cleared after fetch"
+    ],
+    "correct": 1,
+    "why": "Step 3 wrote PC + 1 into the PC before execution began, so it already points at the next instruction."
+  },
+  {
+    "q": "Why does the RAM&rsquo;s output have a controlled buffer at its edge?",
+    "opts": [
+      "To make the RAM faster",
+      "So the RAM can stop driving the bus while another part uses it",
+      "Because Logisim requires a buffer on every 8-bit output",
+      "To store the byte that was read"
+    ],
+    "correct": 1,
+    "why": "The RAM shares the bus with R0&ndash;R3, ACC and the PC. With <code>ram_e</code> low the buffer floats and lets another part drive. Week 8 promised exactly this use."
+  }
+];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p><div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi], okAns = (oi === item.correct), fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) { el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false'); });
+      }
+      host.addEventListener('click', function (e) { var t = e.target.closest('.quiz-option'); if (t) { answer(+t.dataset.q, +t.dataset.o); } });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+
+  })();
+  </script>
+</body>
+</html>

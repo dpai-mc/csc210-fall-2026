@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w13-04">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 13: When It Doesn't Work</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .w-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-md); }
+    @media (max-width: 760px) { .w-grid { grid-template-columns: 1fr; } }
+    .w-panel { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-surface); min-width: 0; margin-top: var(--space-sm); }
+    .w-panel h3 { margin: 0 0 var(--space-xs); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .btn-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .steps { display: flex; flex-wrap: wrap; gap: 4px; }
+    .stp { min-width: 2.2rem; text-align: center; border: 2px solid var(--color-border); border-radius: 999px; padding: 1px 6px; font-weight: 700; font-size: var(--fs-sm); }
+    .stp--on { background: var(--color-accent); border-color: var(--color-accent-hov); color: #fff; }
+    .lines { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 4px; }
+    .ln { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .ln small { display: block; font-family: var(--font-sans); font-size: 11px; color: var(--color-text-muted); }
+    .ln--1 { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .ln--1 small { color: #dfe8f3; }
+    .ln--new { border-left: 4px solid var(--color-accent); }
+    .vals { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 4px; }
+    .val { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); background: var(--color-surface); overflow-wrap: anywhere; }
+    .val b { font-family: var(--font-sans); color: var(--color-primary); }
+    .val small { display: block; font-family: var(--font-sans); font-size: 11px; color: var(--color-text-muted); }
+    .val--wrote { border-color: var(--color-success); background: #f0faf4; }
+    .busline { font-family: var(--font-mono); border: 2px solid var(--color-primary); border-radius: var(--radius); padding: var(--space-xs) var(--space-sm); margin: var(--space-xs) 0; background: var(--color-code-bg); overflow-wrap: anywhere; }
+    .busline--float { border-style: dashed; border-color: var(--color-border); }
+    .busline--bad { border-color: var(--color-danger); background: #fdf0ef; }
+    .w-status { font-size: var(--fs-sm); min-height: 1.5em; margin: var(--space-xs) 0; }
+    .mono { font-family: var(--font-mono); }
+    .row-now { background: #fff7e0; }
+    .gen-table td:first-child { font-family: var(--font-mono); font-weight: 700; white-space: nowrap; }
+    .tag-new { display: inline-block; font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 999px; background: var(--color-accent); color: #fff; margin-left: 4px; font-family: var(--font-sans); }
+
+    .trace td { font-family: var(--font-mono); font-size: var(--fs-sm); white-space: nowrap; }
+    .td-bad { background: #fdf0ef; }
+    .method { counter-reset: m; list-style: none; padding-left: 0; }
+    .method li { counter-increment: m; position: relative; padding-left: 2.2rem; margin-bottom: var(--space-sm); }
+    .method li::before { content: counter(m); position: absolute; left: 0; top: 0; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: var(--color-primary); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: var(--fs-sm); }
+    .ff-opts label { display: block; margin: 4px 0; font-size: var(--fs-sm); }
+
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 13 &rsaquo; <span>Page 4 — When It Doesn&rsquo;t Work</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>When It Doesn&rsquo;t Work</h1>
+    <p><strong>Sections 13.13 – 13.16</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~45 minutes</p>
+
+    <section id="sec-13-13">
+      <h2>13.13 &nbsp; Why everything can&rsquo;t happen at once</h2>
+
+      <p>Your CPU takes six transfers to do something as small as <code>ADD R1, R2</code>. A natural question is why the control unit doesn&rsquo;t just do it all in one go. The answer is the one fact this whole design is built round: <strong>the bus carries one value at a time</strong>.</p>
+      <ul>
+        <li><strong>Fetch has three values to move</strong>: an address to the MAR, an instruction to the IR, a new address to the PC. Each needs the bus to itself, and each depends on the one before &mdash; the RAM cannot put out the right byte until the MAR holds the address, and the PC cannot take PC + 1 until ACC has it.</li>
+        <li><strong>An ALU instruction has three more</strong>: RB to TMP, RA through the ALU to ACC, ACC to RB. The ALU needs two inputs and the bus supplies one, so TMP has to be loaded a step early.</li>
+        <li><strong>Inside each transfer, timing matters too.</strong> The source must be driving before the destination opens, and must keep driving until it closes: enable on, set on, set off, enable off (Week 11). The stepper only moves to the next step in the last quarter, when every enable is off, so no two steps&rsquo; drivers ever overlap.</li>
+      </ul>
+      <p>So the six steps are not slowness for its own sake. They are the minimum number of one-value transfers that the work needs on a single bus. Week 15 puts a number on what it costs, and on what real processors spend to avoid it.</p>
+    </section>
+
+    <section id="sec-13-14">
+      <h2>13.14 &nbsp; Systematic signal tracing</h2>
+
+      <p>Your Checkpoint 6 CPU has about a dozen tabs and hundreds of wires. When R2 ends up holding the wrong value, staring at the whole circuit will not find the cause. Tracing will. The idea is to start from the wrong value and walk <em>backwards</em>, one question at a time, until you reach a wire that is not what the control table says it should be.</p>
+
+      <ol class="method">
+        <li><strong>Find the first wrong value.</strong> Run one instruction (24 clicks) at a time and compare every register with a trace you trust &mdash; page 3&rsquo;s Program Runner gives you one for any program. The first instruction after which something differs is where to look; everything after it is a consequence.</li>
+        <li><strong>Find the step that wrote it.</strong> Every part is written by one set line, and the control table says at which steps: RB at step 6, ACC at steps 1 and 5, the PC at step 3, the IR at step 2. Click to that step&rsquo;s set quarter.</li>
+        <li><strong>Check the lines.</strong> At that quarter, is the right set line high, and is every other set line low? Is the right enable high, and only one? Put probes on the control unit&rsquo;s outputs if you have not.</li>
+        <li><strong>Check the bus.</strong> Is it the value that should be captured? If it shows <code>E</code>, two parts are driving it, or the one driving it holds <code>E</code>. If it floats, nothing is driving it.</li>
+        <li><strong>Check the driver.</strong> The part that should be driving: is its enable high, and does its <code>reg</code> probe show the right value? If its value is wrong, it was written wrongly earlier &mdash; go back to step 2 for <em>that</em> part.</li>
+      </ol>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Seeing inside a part in Logisim</div>
+        <p>The MAR and the 32 RAM bytes have no pins on your <code>CPU</code> tab. To see them while the circuit runs, right-click the <code>RAM_16X16</code> instance and choose <strong>View RAM_16X16</strong>: Logisim opens the subcircuit showing <em>this instance&rsquo;s</em> live values, and each <code>RAM_BYTE</code>&rsquo;s <code>mem</code> pin shows its byte. To get back, open <strong>Simulate &rarr; Go Out To State</strong>: it lists every circuit above the one you are viewing, so choose <code>CPU</code> to return to your <code>CPU</code> tab with its live values. If you went in more than one level, you can jump straight back to any of them. The same works for <code>CONTROL_UNIT</code> when you want to see its gates.</p>
+      </div>
+    </section>
+
+    <section id="sec-13-15">
+      <h2>13.15 &nbsp; Symptoms and their causes</h2>
+
+      <p>Most Checkpoint 6 faults are one wire in the wrong place, and each has a recognisable symptom. These are the ones to check first.</p>
+
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>You see</th><th>Likely cause</th><th>Check</th></tr></thead>
+          <tbody>
+            <tr><td>The bus shows <code>E</code> the moment you raise <code>run</code></td><td>The PC was never loaded, so it drives <code>EEEEEEEE</code> at step 1</td><td>Load the PC with <code>data_pc</code> before raising <code>run</code></td></tr>
+            <tr><td>The bus shows <code>E</code> while you are loading</td><td><code>run</code> is 1, so the control unit is driving the bus as well as the test port</td><td>Set <code>run</code> = 0 before raising <code>data_e</code></td></tr>
+            <tr><td>The IR shows <code>EEEEEEEE</code> after step 2</td><td>The RAM byte at that address was never written; or the bus floated because the MAR points at an unpopulated row</td><td>View the RAM&rsquo;s state; clear it with <code>ram_reset</code> first</td></tr>
+            <tr><td>The same instruction runs again and again; the PC never moves</td><td><code>pc_s</code> is not wired to the PC, or its step-3 AND is missing</td><td>Step 3, set quarter: <code>pc_s</code> should be 1</td></tr>
+            <tr><td>The PC counts 1, 2, 3, but every instruction executed is the same one</td><td><code>mar_s</code> is not wired: the MAR keeps the last address you loaded by hand</td><td>Step 1, set quarter: <code>mar_s</code> should be 1; view the MAR</td></tr>
+            <tr><td>The IR holds a small number like <code>00000001</code>, and nothing happens</td><td><code>ir_s</code> is on step 3, when ACC (PC + 1) is on the bus, not step 2</td><td>Step 2, set quarter: <code>ir_s</code> should be 1</td></tr>
+            <tr><td>The PC jumps by a strange amount, or goes to <code>EEEEEEEE</code></td><td><code>bus1</code> is missing from step 1, so the ALU adds TMP to the PC instead of 1</td><td>Step 1: <code>bus1</code> = 1 and ACC = PC + 1</td></tr>
+            <tr><td>A register gets the right answer one instruction late, or not at all</td><td>A set line on the wrong step, or ANDed with <code>clk_e</code> instead of <code>clk_s</code></td><td>The control table on page 2, line by line</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========== Widget 4 ========== -->
+    <section id="sec-fault">
+      <div class="widget-card" id="w-fault" data-fault="">
+        <div class="widget-card__title">Find the Fault</div>
+        <div class="widget-card__subtitle">This CPU has one wire wrong in its control unit. It is loaded with the Checkpoint 6 program. Run it, compare it with a CPU that works, and decide which wire it is.</div>
+        <div class="btn-row">
+          <button type="button" class="widget-btn widget-btn--primary" id="ff-new">new mystery fault</button>
+          <button type="button" class="widget-btn widget-btn--outline" id="ff-one">run one instruction</button>
+          <button type="button" class="widget-btn widget-btn--outline" id="ff-five">run all five</button>
+        </div>
+        <p class="w-status" id="ff-status" aria-live="polite"></p>
+        <div class="w-panel">
+          <h3>Faulty CPU against a working one</h3>
+          <div class="table-scroll"><table class="pin-table trace"><thead><tr><th>#</th><th>PC before</th><th>IR fetched</th><th>PC after</th><th>R2 after</th><th>Working CPU: IR, R2</th></tr></thead><tbody id="ff-trace"></tbody></table></div>
+        </div>
+        <div class="w-panel">
+          <h3>Your diagnosis</h3>
+          <div class="ff-opts" id="ff-opts" role="radiogroup" aria-label="Which wire is wrong"></div>
+          <div class="btn-row"><button type="button" class="widget-btn widget-btn--outline" id="ff-check">check</button></div>
+          <p class="w-status" id="ff-verdict" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-13-16">
+      <h2>13.16 &nbsp; Where you are</h2>
+
+      <p>Your CPU runs programs. It cannot yet make a decision: every program runs straight through, byte 0 to the end, and it cannot read or write data in memory. Week 14 adds the rest of the instruction set &mdash; LD, ST and DATA, the jumps that give the PC a value other than PC + 1, carry-in, and END to stop the clock &mdash; and a loader so that a program arrives from a file instead of your fingers. Then your CPU runs <code>MYSIM.txt</code>, and multiplies.</p>
+
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Three questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+
+      <p>For debugging hardware by tracing signals in a second voice, log into your Saylor CS301 account at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a>; Unit 5&rsquo;s datapath diagrams are drawn to be traced exactly this way, one control line at a time.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 13, Page 4
+  </footer>
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['dp', 'core'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.dp) { return; }
+    var D = L.dp, C = L.core;
+
+    function b8(v) { return v === null || v === undefined ? 'EEEEEEEE' : ('0000000' + (v >>> 0).toString(2)).slice(-8); }
+    function h2(v) { return v === null || v === undefined ? 'EE' : ('0' + v.toString(16).toUpperCase()).slice(-2); }
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+    /* ---------- Widget 4 — Find the Fault ---------- */
+    (function () {
+      var host = document.getElementById('w-fault');
+      if (!host) { return; }
+      var KEYS = Object.keys(D.FAULTS), fault = null, cpu, good, n;
+      var SPEC = { bytes: D.CHECKPOINT.bytes, regs: D.CHECKPOINT.regs, pc: 0 };
+      function $(id) { return document.getElementById(id); }
+      $('ff-opts').innerHTML = KEYS.map(function (k, i) {
+        return '<label><input type="radio" name="ff-pick" value="' + k + '"> ' + esc(D.FAULTS[k].name) + '</label>';
+      }).join('');
+      function start(k) {
+        fault = k; host.setAttribute('data-fault', k);
+        cpu = D.boot(SPEC, k); good = D.boot(SPEC, null); n = 0;
+        $('ff-trace').innerHTML = ''; $('ff-verdict').textContent = '';
+        host.querySelectorAll('input[name=ff-pick]').forEach(function (r) { r.checked = false; });
+        $('ff-status').textContent = 'A new CPU with one fault, loaded and running. Step through it.';
+      }
+      function pickNew() {
+        var options = KEYS.filter(function (k) { return k !== fault; });
+        start(options[Math.floor(Math.random() * options.length)]);
+      }
+      function one() {
+        if (n >= 5) { $('ff-status').textContent = 'All five instructions have run. Make your diagnosis, or start a new fault.'; return; }
+        var a = cpu.runInstruction(), b = good.runInstruction(); n++;
+        var badIr = a.ir !== b.ir, badR2 = a.state.R2 !== b.state.R2, badPc = a.state.PC !== b.state.PC;
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td>' + n + '</td><td>' + b8(a.pcBefore) + '</td><td' + (badIr ? ' class="td-bad"' : '') + '>' + b8(a.ir) + ' ' + esc(a.text) + '</td><td' + (badPc ? ' class="td-bad"' : '') + '>' + b8(a.state.PC) + '</td><td' + (badR2 ? ' class="td-bad"' : '') + '>' + b8(a.state.R2) + '</td><td>' + esc(b.text) + ', ' + b8(b.state.R2) + '</td>';
+        $('ff-trace').appendChild(tr);
+        $('ff-status').textContent = 'Instruction ' + n + ' run. Shaded cells differ from the working CPU.';
+      }
+      $('ff-new').addEventListener('click', pickNew);
+      $('ff-one').addEventListener('click', one);
+      $('ff-five').addEventListener('click', function () { while (n < 5) { one(); } });
+      $('ff-check').addEventListener('click', function () {
+        var r = host.querySelector('input[name=ff-pick]:checked');
+        if (!r) { $('ff-verdict').textContent = 'Pick a wire first.'; return; }
+        var f = D.FAULTS[fault];
+        $('ff-verdict').innerHTML = (r.value === fault ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> It was: ' + esc(f.name) + '. ') + esc(f.cause);
+      });
+      start(KEYS[Math.floor(Math.random() * KEYS.length)]);
+    }());
+
+    /* ---------- Self-check ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+  {
+    "q": "Why can&rsquo;t fetch&rsquo;s steps 1 and 2 be one transfer?",
+    "opts": [
+      "The PC and the RAM would both drive the bus, and the RAM cannot put out the right byte until the MAR holds the address",
+      "The stepper only has six steps",
+      "The IR is too slow",
+      "Steps 1 and 2 use different clocks"
+    ],
+    "correct": 0,
+    "why": "One bus, one value. Step 1 puts the PC&rsquo;s address into the MAR; only then does the RAM select the byte that step 2 puts on the bus."
+  },
+  {
+    "q": "Your CPU&rsquo;s PC counts 1, 2, 3, 4, 5 correctly, but R2 shows every instruction was <code>NOT R2, R2</code>. Which wire is the first to check?",
+    "opts": [
+      "<code>pc_s</code>",
+      "<code>mar_s</code>",
+      "<code>bus1</code>",
+      "<code>regb_s</code>"
+    ],
+    "correct": 1,
+    "why": "The PC is right, so fetch&rsquo;s step 3 works. The IR keeps getting the same byte, so the MAR is not following the PC: step 1&rsquo;s <code>mar_s</code>."
+  },
+  {
+    "q": "R2 is wrong at the end of a five-instruction program. What do you do first?",
+    "opts": [
+      "Rebuild the control unit",
+      "Run one instruction at a time and find the first one after which a register differs from a trace you trust",
+      "Check the clock",
+      "Clear the RAM and run it again"
+    ],
+    "correct": 1,
+    "why": "Everything after the first wrong value is a consequence of it. Find it, then work backwards from the step that wrote it."
+  }
+];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p><div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi], okAns = (oi === item.correct), fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) { el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false'); });
+      }
+      host.addEventListener('click', function (e) { var t = e.target.closest('.quiz-option'); if (t) { answer(+t.dataset.q, +t.dataset.o); } });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w13-assign">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Assignment 13: The Whole Machine</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .q-pts { font-size: var(--fs-sm); color: var(--color-text-muted); }
+    .inside { font-size: var(--fs-sm); margin: var(--space-xs) 0 var(--space-md); }
+    #verify-table td:nth-child(2) { font-size: var(--fs-sm); }
+    .ctl-mini td:first-child { font-family: var(--font-mono); font-weight: 700; white-space: nowrap; }
+    .load-list li { margin-bottom: 4px; }
+
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 13 &rsaquo; <span>Assignment 13</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Assignment 13 — The Whole Machine</h1>
+    <p><span class="points-badge">100 points</span> &nbsp;|&nbsp; Week 13 &nbsp;|&nbsp; Logisim Checkpoint 6 + Canvas quiz &nbsp;|&nbsp; <strong>Due Sunday 11/15, 11:59 pm</strong></p>
+
+    <section id="overview">
+      <h2>What you submit</h2>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Part</th><th>What it is</th><th>How</th><th>Points</th></tr></thead>
+          <tbody>
+            <tr><td><strong>A</strong></td><td>Logisim Checkpoint 6 &mdash; the program counter, instruction register and RAM on the bus, fetch wired, and the week&rsquo;s program running from RAM</td><td><code>.circ</code> file + 10 screenshots + the program in your submission comment</td><td>60</td></tr>
+            <tr><td><strong>B</strong></td><td>Canvas quiz on the four Week 13 pages</td><td>in Canvas: 10 questions, auto-graded</td><td>40</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART A
+         ============================================================ -->
+    <section id="part-a">
+      <h2>Part A &mdash; Logisim Checkpoint 6 <span class="q-pts">(60 points)</span></h2>
+
+      <p>Two small new tabs, a few new lines in <code>CONTROL_UNIT</code>, and changes to your <code>CPU</code> tab so that the CPU fetches its own instructions. Pages 1&ndash;3 of this week explain every wire; read them first.</p>
+
+      <div class="callout callout--aha">
+        <div class="callout__title">Almost everything is already in your file</div>
+        <p><code>REGISTER_8BIT</code> and <code>MEM_8BIT</code> from <strong>Week 5</strong>; <code>RAM_16X16</code> from <strong>Week 8</strong>; the bus, R0&ndash;R3, ACC, TMP, BUS1, FLAGS and REG_SELECT from <strong>Week 10</strong>; <code>CLOCK</code>, <code>STEPPER</code> and <code>CONTROL_UNIT</code> from <strong>Week 11</strong>. <strong>Instantiate them. Do not rebuild them.</strong></p>
+      </div>
+
+      <h3>Tab <code>PC_REGISTER</code> (new) &mdash; these pin names are exact</h3>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Position and meaning</th></tr></thead>
+          <tbody>
+<tr><td><code class="pin-table__name">s</code></td><td>1</td><td>in</td><td>top &mdash; set, from the control unit</td></tr>
+<tr><td><code class="pin-table__name">e</code></td><td>1</td><td>in</td><td>top &mdash; enable, from the control unit</td></tr>
+<tr><td><code class="pin-table__name">i</code></td><td>8</td><td>in</td><td>bottom &mdash; from the bus</td></tr>
+<tr><td><code class="pin-table__name">o</code></td><td>8</td><td>out</td><td>bottom &mdash; to the bus</td></tr>
+<tr><td><code class="pin-table__name">reg</code></td><td>8</td><td>out</td><td>left &mdash; the stored byte, for a probe</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="inside"><strong>Inside:</strong> one <code>REGISTER_8BIT</code> instance, each pin wired straight to the matching one. Edit the appearance so <code>s</code> and <code>e</code> sit on top and <code>i</code> and <code>o</code> on the bottom, as in the figure on page 1 &mdash; the same kind of wrapper as Week 10&rsquo;s <code>CPU_REGISTER</code>.</p>
+
+      <h3>Tab <code>IR</code> (new) &mdash; these pin names are exact</h3>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Position and meaning</th></tr></thead>
+          <tbody>
+<tr><td><code class="pin-table__name">i</code></td><td>8</td><td>in</td><td>bottom &mdash; from the bus</td></tr>
+<tr><td><code class="pin-table__name">s</code></td><td>1</td><td>in</td><td>right &mdash; set</td></tr>
+<tr><td><code class="pin-table__name">o</code></td><td>8</td><td>out</td><td>top &mdash; to the control unit&rsquo;s <code>ir</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="inside"><strong>Inside:</strong> one <code>MEM_8BIT</code> instance. No enable and no output buffer: the IR never drives the bus (page 1, &sect;13.3).</p>
+
+      <h3>Tab <code>CONTROL_UNIT</code> &mdash; what changes</h3>
+      <p>Add five outputs, <code>pc_e</code>, <code>pc_s</code>, <code>mar_s</code>, <code>ram_e</code> and <code>ir_s</code> (1 bit each), and give three existing lines a fetch term. The whole table, with the changes in bold:</p>
+      <div class="table-scroll">
+        <table class="pin-table ctl-mini">
+          <thead><tr><th>Output</th><th>=</th></tr></thead>
+          <tbody>
+            <tr><td><strong>pc_e</strong></td><td><strong><code>step1</code> AND <code>clk_e</code></strong></td></tr>
+            <tr><td><strong>mar_s</strong></td><td><strong><code>step1</code> AND <code>clk_s</code></strong></td></tr>
+            <tr><td><strong>ram_e</strong></td><td><strong><code>step2</code> AND <code>clk_e</code></strong></td></tr>
+            <tr><td><strong>ir_s</strong></td><td><strong><code>step2</code> AND <code>clk_s</code></strong></td></tr>
+            <tr><td><strong>pc_s</strong></td><td><strong><code>step3</code> AND <code>clk_s</code></strong></td></tr>
+            <tr><td>regb_e</td><td><code>step4</code> AND ALU AND <code>clk_e</code></td></tr>
+            <tr><td>tmp_s</td><td><code>step4</code> AND ALU AND <code>clk_s</code></td></tr>
+            <tr><td>rega_e</td><td><code>step5</code> AND ALU AND <code>clk_e</code></td></tr>
+            <tr><td>acc_s</td><td>( <strong><code>step1</code></strong> OR (<code>step5</code> AND ALU) ) AND <code>clk_s</code></td></tr>
+            <tr><td>flags_s</td><td>( (<code>step5</code> AND ALU) OR (<code>step4</code> AND CLF) ) AND <code>clk_s</code></td></tr>
+            <tr><td>acc_e</td><td>( <strong><code>step3</code></strong> OR (<code>step6</code> AND ALU AND NOT CMP) ) AND <code>clk_e</code></td></tr>
+            <tr><td>regb_s</td><td><code>step6</code> AND ALU AND NOT CMP AND <code>clk_s</code></td></tr>
+            <tr><td>bus1</td><td><strong><code>step1</code></strong> OR (<code>step4</code> AND CLF)</td></tr>
+            <tr><td>opcode</td><td><code>ir</code> bits 6&ndash;4, each AND (<code>step5</code> AND ALU) &mdash; unchanged</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="inside">Five new ANDs and three new OR inputs. No fetch gate takes an <code>ir</code> bit (page 2, &sect;13.7). Put the new outputs where their wires want to go: the PC&rsquo;s lines toward the bottom, the RAM&rsquo;s toward the right.</p>
+
+      <h3>Tab <code>CPU</code> &mdash; what changes</h3>
+      <ul>
+        <li><strong>Place</strong> one <code>PC_REGISTER</code> on the bottom run of the bus (<code>i</code> and <code>o</code> to the loops, bit 0 innermost), one <code>IR</code> beside it (<code>i</code> from the bus), and your <code>RAM_16X16</code> on the right (<code>address</code> and <code>i</code> from the bus, <code>o</code> to the bus).</li>
+        <li><strong>Delete</strong> the <code>ir</code> input pin. Wire <code>IR</code>&rsquo;s <code>o</code> to <code>CONTROL_UNIT</code>&rsquo;s <code>ir</code>.</li>
+        <li><strong>Wire</strong> <code>pc_e</code> to the PC&rsquo;s <code>e</code> and <code>ram_e</code> to the RAM&rsquo;s <code>e</code>.</li>
+        <li><strong>Add the <code>run</code> gate:</strong> a new input <code>run</code>; <code>CLOCK</code>&rsquo;s <code>clk_e</code> and <code>clk_s</code> each pass through an AND with <code>run</code> on their way to <code>CONTROL_UNIT</code>. <code>clk</code> goes straight to the control unit as before.</li>
+        <li><strong>Add the loading pins</strong> and ORs: the PC&rsquo;s <code>s</code> = <code>pc_s</code> OR <code>data_pc</code>; the IR&rsquo;s <code>s</code> = <code>ir_s</code> OR <code>data_ir</code>; the RAM&rsquo;s <code>sa</code> = <code>mar_s</code> OR <code>data_mar</code>; the RAM&rsquo;s <code>s</code> = <code>data_ram</code>; the RAM&rsquo;s <code>reset</code> = <code>ram_reset</code>. Keep <code>data</code>, <code>data_e</code>, <code>data_s</code> and <code>ci</code> (still 0) from Weeks 10&ndash;11.</li>
+        <li><strong>Every new input pin is 1 bit with pull-down</strong>: <code>run</code>, <code>data_pc</code>, <code>data_ir</code>, <code>data_mar</code>, <code>data_ram</code>, <code>ram_reset</code>.</li>
+        <li><strong>Probes</strong> on the PC&rsquo;s <code>reg</code> and the IR&rsquo;s <code>o</code>, as well as everything you probed in Week 11.</li>
+      </ul>
+
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/cpu-fetch-control-unit.jpg"
+             alt="Your instructor's fetch-only CPU: the eight-wire bus around the edge, TMP and four registers along the top, bus1, the ALU and ACC on the left, MAR above RAM 256 on the right, the fetch control unit in the middle, and the PC and IR on the bottom run of the bus with the IR's output running up into the control unit.">
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s fetch-only CPU, for placement. Yours differs in three ways: the PC&rsquo;s <code>s</code> comes from <code>pc_s</code> OR <code>data_pc</code>, not a constant; the RAM&rsquo;s <code>i</code> comes from the bus, not a pin; and <code>clk_e</code> and <code>clk_s</code> pass through the <code>run</code> ANDs.</figcaption>
+      </figure>
+
+      <h3>The program</h3>
+      <p>MOV R0, R2 then SUB R1, R2 &mdash; copy R0 into R2, then subtract R1 from it (page 3, &sect;13.11). With R0 = 7, R1 = 3 and R2 = 0 to start, R2 ends at 4.</p>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Address</th><th>Byte</th><th>Instruction</th><th>Part of</th></tr></thead>
+          <tbody>
+            <tr><td>0x00</td><td><code>10110010</code></td><td><code>NOT R0, R2</code></td><td>MOV R0, R2</td></tr>
+            <tr><td>0x01</td><td><code>10111010</code></td><td><code>NOT R2, R2</code></td><td>MOV R0, R2</td></tr>
+            <tr><td>0x02</td><td><code>10111010</code></td><td><code>NOT R2, R2</code></td><td>SUB R1, R2</td></tr>
+            <tr><td>0x03</td><td><code>10000110</code></td><td><code>ADD R1, R2</code></td><td>SUB R1, R2</td></tr>
+            <tr><td>0x04</td><td><code>10111010</code></td><td><code>NOT R2, R2</code></td><td>SUB R1, R2</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Loading it, with <code>run</code> = 0</h3>
+      <ol class="load-list">
+        <li><code>data</code> = <code>00000000</code>, <code>data_e</code> = 1, pulse <code>ram_reset</code> &mdash; every RAM byte is now 0.</li>
+        <li>For each address: <code>data</code> = the address, pulse <code>data_mar</code>; <code>data</code> = the byte, pulse <code>data_ram</code>. Five times.</li>
+        <li><code>data</code> = <code>00000000</code>, pulse <code>data_pc</code>.</li>
+        <li><code>data</code> = <code>10000000</code>, pulse <code>data_ir</code>; <code>data</code> = <code>00000111</code>, pulse <code>data_s</code> &mdash; R0 = 7. Then <code>10000001</code> / <code>00000011</code> for R1 = 3, and <code>10000010</code> / <code>00000000</code> for R2 = 0.</li>
+        <li><code>data_e</code> = 0. Then <code>run</code> = 1.</li>
+      </ol>
+      <p>Page 3 lists the same sequence pin by pin. Load registers and the PC only while <code>run</code> is 0.</p>
+
+      <h3>Verify, and screenshot each step</h3>
+      <p>Every input starts at 0. &ldquo;Click <code>clk_in</code>&rdquo; means change it once. <code>steps</code> reads with step 1 at the right. Each step continues from the one before.</p>
+      <div class="table-scroll">
+        <table class="pin-table" id="verify-table">
+          <thead><tr><th>#</th><th>Do</th><th>Expect</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Simulate &rarr; Reset; <code>run</code> = 0</td><td><code>steps</code> = <code>0000001</code>; PC, IR and R0&ndash;R3 show <code>EEEEEEEE</code></td></tr>
+            <tr><td>2</td><td>Load the program and registers as above</td><td>PC = <code>00000000</code>; R0 = <code>00000111</code>; R1 = <code>00000011</code>; R2 = <code>00000000</code>; IR = <code>10000010</code></td></tr>
+            <tr><td>3</td><td>Right-click <code>RAM_16X16</code> &rarr; View RAM_16X16</td><td>bytes 0x00&ndash;0x04 show <code>10110010</code> <code>10111010</code> <code>10111010</code> <code>10000110</code> <code>10111010</code>. Then Simulate &rarr; Go Out To State &rarr; <code>CPU</code> to return</td></tr>
+            <tr><td>4</td><td><code>run</code> = 1</td><td>bus = <code>00000000</code> (the PC driving); <code>clk_e</code> = 1</td></tr>
+            <tr><td>5</td><td>Click <code>clk_in</code> once</td><td>ACC = <code>00000001</code></td></tr>
+            <tr><td>6</td><td>4 more clicks (5 in all)</td><td><code>steps</code> = <code>0000010</code>; IR = <code>10110010</code>; bus = <code>10110010</code></td></tr>
+            <tr><td>7</td><td>4 more (9 in all)</td><td><code>steps</code> = <code>0000100</code>; PC = <code>00000001</code>; bus = <code>00000001</code></td></tr>
+            <tr><td>8</td><td>15 more (24 in all)</td><td><code>steps</code> = <code>0000001</code>; R2 = <code>11111000</code></td></tr>
+            <tr><td>9</td><td>24 more (48 in all)</td><td>R2 = <code>00000111</code> &mdash; MOV done; PC = <code>00000010</code></td></tr>
+            <tr><td>10</td><td>72 more (120 in all)</td><td>R2 = <code>00000100</code> &mdash; SUB done; PC = <code>00000101</code>; R0 = <code>00000111</code>; R1 = <code>00000011</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>If a value is wrong, do not click on: page 4&rsquo;s tracing method and symptom table will find it faster.</p>
+
+      <h3>In your Canvas submission comment</h3>
+      <p>List the five bytes you loaded, in hex, each with its instruction &mdash; for example <code>0x00: B2 NOT R0, R2</code>.</p>
+
+      <h3>Points</h3>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Criterion</th><th>Points</th></tr></thead>
+          <tbody>
+            <tr><td><code>PC_REGISTER</code>: five pins exactly, one <code>REGISTER_8BIT</code>, appearance edited</td><td>4</td></tr>
+            <tr><td><code>IR</code>: three pins exactly, one <code>MEM_8BIT</code>, no enable</td><td>4</td></tr>
+            <tr><td><code>CONTROL_UNIT</code>: the five new outputs and the three new fetch terms exactly as in the table, enables with <code>clk_e</code>, sets with <code>clk_s</code>, no <code>ir</code> bit in a fetch gate</td><td>16</td></tr>
+            <tr><td><code>CPU</code> tab: PC, IR and RAM on the bus; <code>ir</code> pin replaced by the IR; the <code>run</code> ANDs; the loading pins and their ORs; pull-downs; probes</td><td>22</td></tr>
+            <tr><td>Ten verification screenshots, matching the table</td><td>10</td></tr>
+            <tr><td>The program listing in your submission comment</td><td>2</td></tr>
+            <tr><td>Single file; only Wiring and Gates components, plus Week 11&rsquo;s one J-K flip-flop</td><td>2</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Before you submit</div>
+        <ul>
+          <li>One <code>.circ</code> file &mdash; the same file you have added to since Week 2, now with <code>PC_REGISTER</code> and <code>IR</code> tabs.</li>
+          <li>Pin names exactly as listed; every new input pull-down.</li>
+          <li>Ten screenshots, numbered to match the table.</li>
+          <li>The five-byte listing in your comment.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART B
+         ============================================================ -->
+    <section id="part-b">
+      <h2>Part B &mdash; Canvas quiz <span class="q-pts">(40 points)</span></h2>
+      <p>Ten questions on the four Week 13 pages, 4 points each, auto-graded. No time limit. <strong>Two attempts; your higher score counts.</strong> Each question is drawn from two parallel versions, so a second attempt will usually look different. Opens Monday 11/09; closes Sunday 11/15, 11:59 pm.</p>
+      <p>The questions follow the pages in order: which parts drive the bus; the fetch steps and their lines; how PC + 1 is made; why fetch ignores the IR; register values after a few clicks or a few instructions; MOV and SUB as sequences; why one transfer at a time; and a symptom traced to its wire. The widgets on each page are the best practice.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 13, Assignment 13
+  </footer>
+</body>
+</html>

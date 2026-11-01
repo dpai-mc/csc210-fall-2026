@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w13-00">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 13 Orientation: The Whole Machine</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .split-bar { display: flex; height: 2.2rem; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--color-border); margin: var(--space-sm) 0; }
+    .split-bar > div { display: flex; align-items: center; justify-content: center; font-size: var(--fs-xs); font-weight: 700; color: #fff; text-align: center; padding: 0 2px; overflow: hidden; }
+    .split-bar .sb-pg { background: var(--color-primary); }
+    .split-bar .sb-cp { background: var(--color-accent-hov); }
+    .split-bar .sb-qz { background: var(--color-success); }
+    .split-legend { display: flex; justify-content: space-between; font-size: var(--fs-xs); color: var(--color-text-muted); gap: var(--space-sm); }
+    .due { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-md); margin: var(--space-md) 0; }
+    .due > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
+    .due h3 { margin-top: 0; font-size: var(--fs-base); }
+    @media (max-width: 760px) { .due { grid-template-columns: 1fr; } }
+
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 13 &rsaquo; <span>Orientation</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Week 13 — The Whole Machine</h1>
+    <p><strong>The program counter, the instruction register and your RAM join the bus; fetch; your first program</strong> &nbsp;|&nbsp; <strong>11/09 – 11/15</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~7.75 hours</p>
+
+    <section id="sec-gap">
+      <div class="callout callout--hook">
+        <div class="callout__title">Nobody sets <code>ir</code> any more.</div>
+        <p>Last week&rsquo;s control unit ran an instruction by itself, but only after you had typed that instruction into an input pin. You were still the part of the computer that decides what happens next. And your RAM, built in Week 8, has sat in its own tab ever since, connected to nothing.</p>
+        <p>This week three parts join your bus &mdash; a <strong>program counter</strong>, an <strong>instruction register</strong> and the <strong>RAM</strong> &mdash; and three steps join your control table. Then you put five bytes in memory, raise one pin, and click. The CPU reads an instruction, does it, reads the next, and does that. You will watch it compute 7 &minus; 3 with no subtract instruction anywhere in it.</p>
+      </div>
+    </section>
+
+    <section id="sec-shape">
+      <h2>The shape of the week</h2>
+      <div class="split-bar" role="img" aria-label="Of about seven and three quarter hours this week: about three and three quarter hours on the orientation and the four pages, about three and a half hours on Checkpoint 6, and about half an hour on the Canvas quiz.">
+        <div class="sb-pg" style="flex:3.75">Week 13 pages</div>
+        <div class="sb-cp" style="flex:3.5">Checkpoint 6</div>
+        <div class="sb-qz" style="flex:0.5">Quiz</div>
+      </div>
+      <div class="split-legend"><span>~3.75 hrs</span><span>~3.5 hrs</span><span>~0.5</span></div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">A short week</div>
+        <p>Wednesday 11/11 is Veterans Day and the campus is closed. The week is planned lighter for it: the quiz is ten questions, and Checkpoint 6 adds two small tabs and wires parts you already own.</p>
+      </div>
+
+      <div class="due">
+        <div>
+          <h3>Assignment 13, Part A &mdash; Checkpoint 6</h3>
+          <p>Your <code>.circ</code> file with the complete CPU, ten screenshots of it running the week&rsquo;s program, and the program&rsquo;s five bytes in your submission comment &mdash; 60 points, graded by your instructor.</p>
+        </div>
+        <div>
+          <h3>Assignment 13, Part B &mdash; Canvas quiz</h3>
+          <p>Ten questions on the four Week 13 pages &mdash; 40 points, auto-graded. No time limit, two attempts, higher score kept.</p>
+        </div>
+      </div>
+      <p><strong>Both are due Sunday 11/15, 11:59 pm.</strong></p>
+    </section>
+
+    <section id="sec-path">
+      <h2>This week&rsquo;s learning path</h2>
+      <div class="spa-card-grid">
+        <div class="spa-card">
+          <div class="spa-card__number">Page 1</div>
+          <div class="spa-card__title">Three Parts Join the Bus</div>
+          <div class="spa-card__time">~45 min &nbsp;|&nbsp; Sections 13.1–13.4</div>
+          <div class="spa-card__desc">The program counter, the instruction register and the RAM: what each one is built from, and which of them may drive the bus.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+        <div class="spa-card">
+          <div class="spa-card__number">Page 2</div>
+          <div class="spa-card__title">Fetch</div>
+          <div class="spa-card__time">~1 hr &nbsp;|&nbsp; Sections 13.5–13.8</div>
+          <div class="spa-card__desc">Three transfers that read the next instruction, the same for every instruction; how the ALU makes PC + 1; and a video of fetch running.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+        <div class="spa-card">
+          <div class="spa-card__number">Page 3</div>
+          <div class="spa-card__title">Running a Program</div>
+          <div class="spa-card__time">~1 hr &nbsp;|&nbsp; Sections 13.9–13.12</div>
+          <div class="spa-card__desc">Loading memory by hand, the six steps of every instruction, and MOV and SUB built from instructions your CPU does have.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+        <div class="spa-card">
+          <div class="spa-card__number">Page 4</div>
+          <div class="spa-card__title">When It Doesn&rsquo;t Work</div>
+          <div class="spa-card__time">~45 min &nbsp;|&nbsp; Sections 13.13–13.16</div>
+          <div class="spa-card__desc">Why one transfer at a time, how to trace a wrong value back to the wire that caused it, and a CPU with a fault for you to find.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-tools">
+      <h2>Tools and reading</h2>
+      <ul>
+        <li><strong>Logisim 2.7.1</strong> &mdash; needed for Checkpoint 6. Open your one course file; every part this week is already in it except two small wrapper tabs.</li>
+        <li><strong>MARS</strong> &mdash; not needed this week.</li>
+        <li><strong>Saylor CS301</strong> &mdash; log in at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 5: Designing a Processor</strong> for fetch, decode and execute in a second voice. It describes MIPS, whose program counter has its own adder; yours borrows the ALU.</li>
+      </ul>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 13, Orientation
+  </footer>
+</body>
+</html>

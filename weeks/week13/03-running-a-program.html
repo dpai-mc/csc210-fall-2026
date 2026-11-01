@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w13-03">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 13: Running a Program</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .w-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-md); }
+    @media (max-width: 760px) { .w-grid { grid-template-columns: 1fr; } }
+    .w-panel { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-surface); min-width: 0; margin-top: var(--space-sm); }
+    .w-panel h3 { margin: 0 0 var(--space-xs); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .btn-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .steps { display: flex; flex-wrap: wrap; gap: 4px; }
+    .stp { min-width: 2.2rem; text-align: center; border: 2px solid var(--color-border); border-radius: 999px; padding: 1px 6px; font-weight: 700; font-size: var(--fs-sm); }
+    .stp--on { background: var(--color-accent); border-color: var(--color-accent-hov); color: #fff; }
+    .lines { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 4px; }
+    .ln { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .ln small { display: block; font-family: var(--font-sans); font-size: 11px; color: var(--color-text-muted); }
+    .ln--1 { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .ln--1 small { color: #dfe8f3; }
+    .ln--new { border-left: 4px solid var(--color-accent); }
+    .vals { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 4px; }
+    .val { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); background: var(--color-surface); overflow-wrap: anywhere; }
+    .val b { font-family: var(--font-sans); color: var(--color-primary); }
+    .val small { display: block; font-family: var(--font-sans); font-size: 11px; color: var(--color-text-muted); }
+    .val--wrote { border-color: var(--color-success); background: #f0faf4; }
+    .busline { font-family: var(--font-mono); border: 2px solid var(--color-primary); border-radius: var(--radius); padding: var(--space-xs) var(--space-sm); margin: var(--space-xs) 0; background: var(--color-code-bg); overflow-wrap: anywhere; }
+    .busline--float { border-style: dashed; border-color: var(--color-border); }
+    .busline--bad { border-color: var(--color-danger); background: #fdf0ef; }
+    .w-status { font-size: var(--fs-sm); min-height: 1.5em; margin: var(--space-xs) 0; }
+    .mono { font-family: var(--font-mono); }
+    .row-now { background: #fff7e0; }
+    .gen-table td:first-child { font-family: var(--font-mono); font-weight: 700; white-space: nowrap; }
+    .tag-new { display: inline-block; font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 999px; background: var(--color-accent); color: #fff; margin-left: 4px; font-family: var(--font-sans); }
+
+    .pr-src { width: 100%; min-height: 8.5rem; font-family: var(--font-mono); font-size: var(--fs-sm); border: 1px solid var(--color-border); border-radius: 4px; padding: 6px; box-sizing: border-box; }
+    .pr-regs { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px; }
+    .pr-regs label { font-size: var(--fs-sm); font-weight: 700; display: flex; flex-direction: column; gap: 2px; }
+    .pr-regs input { font-family: var(--font-mono); padding: 2px 6px; border: 1px solid var(--color-border); border-radius: 4px; width: 100%; box-sizing: border-box; }
+    .pr-sel { font-size: var(--fs-sm); padding: 2px 6px; border: 1px solid var(--color-border); border-radius: 4px; max-width: 100%; }
+    .trace td, .listing td { font-family: var(--font-mono); font-size: var(--fs-sm); white-space: nowrap; }
+    .alg { font-family: var(--font-mono); background: var(--color-code-bg); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); overflow-x: auto; }
+    .alg div { white-space: nowrap; }
+    .pr-err { color: var(--color-danger); font-weight: 700; }
+
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 13 &rsaquo; <span>Page 3 — Running a Program</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Running a Program</h1>
+    <p><strong>Sections 13.9 – 13.12</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1 hour</p>
+
+    <section id="sec-13-9">
+      <h2>13.9 &nbsp; Loading a program by hand</h2>
+
+      <p>A program in your CPU is bytes in RAM, starting at address 0, with the PC set to 0. Fall 2025&rsquo;s finished CPU loads a program from a file with a counter and a second RAM; that loader arrives in Week 14. This week you load the bytes yourself, through the test port you have used since Week 10: the 8-bit <code>data</code> pin and its <code>data_e</code> buffer onto the bus.</p>
+
+      <p><strong>First problem: the bus is not free.</strong> After Simulate &rarr; Reset the stepper is on step 1 and <code>clk_e</code> is 1 (Week 11). With fetch wired, that means <code>pc_e</code> is already high, and a PC that has never been written drives <code>EEEEEEEE</code> onto the bus. Raise <code>data_e</code> and you have two drivers. So your <code>CPU</code> tab gets one more input, <strong><code>run</code></strong>, and <code>clk_e</code> and <code>clk_s</code> reach the control unit only through an AND with it. Every enable and every set the control unit produces is ANDed with one of those two, so with <code>run</code> = 0 the control unit drives nothing at all and the bus is yours. Week 14&rsquo;s <code>END</code> instruction will stop the CPU the same way.</p>
+
+      <p><strong>Second problem: nothing sets the PC, the IR, the MAR or the RAM except the control unit.</strong> So, like Week 11&rsquo;s <code>data_s</code>, four set pins of your own, each ORed with the control unit&rsquo;s line, and one for the RAM&rsquo;s <code>reset</code>:</p>
+
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Pin</th><th>ORed into</th><th>Use</th></tr></thead>
+          <tbody>
+            <tr><td><code class="pin-table__name">data_pc</code></td><td>the PC&rsquo;s <code>s</code></td><td>set the PC to the start address, 0</td></tr>
+            <tr><td><code class="pin-table__name">data_mar</code></td><td>the RAM&rsquo;s <code>sa</code></td><td>choose the address to write</td></tr>
+            <tr><td><code class="pin-table__name">data_ram</code></td><td>the RAM&rsquo;s <code>s</code> (no control-unit line yet: ST is Week 14)</td><td>write the byte</td></tr>
+            <tr><td><code class="pin-table__name">data_ir</code></td><td>the IR&rsquo;s <code>s</code></td><td>put <code>100000nn</code> in the IR so <code>data_s</code> reaches register R<em>n</em></td></tr>
+            <tr><td><code class="pin-table__name">ram_reset</code></td><td>the RAM&rsquo;s <code>reset</code></td><td>write the bus into all 32 bytes at once &mdash; with <code>00000000</code> on the bus, a clear</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>The register trick changes a little. Last week you chose a register by setting the <code>ir</code> pin; that pin is gone. Now you put a byte whose last two bits name the register onto the bus and pulse <code>data_ir</code>, so the IR holds it and REG_SELECT reads RB from it; then you put the value on the bus and pulse <code>data_s</code>. Fetch overwrites the IR at step 2 anyway, so what you leave there does not matter.</p>
+
+      <p>Here is the whole sequence for this week&rsquo;s program, generated from the model the widgets run. Every line is done with <code>run</code> = 0; <code>data_e</code> stays at 1 until the last line.</p>
+
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>#</th><th>What</th><th>Pins</th></tr></thead>
+          <tbody id="load-body"><tr><td colspan="3"><em>Loading the table&hellip;</em></td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="sec-13-10">
+      <h2>13.10 &nbsp; One datapath, every instruction</h2>
+
+      <p>Every instruction takes six steps. The first three are always fetch; the last three depend on the class decoded from the IR. Here is each class as transfers &mdash; who drives the bus and who captures &mdash; generated from your control table.</p>
+
+      <h3><code>ADD R1, R2</code> &mdash; and every ALU instruction except CMP</h3>
+      <div class="table-scroll"><table class="pin-table gen-table"><thead><tr><th>Step</th><th>Drives</th><th>Captures</th><th>Note</th></tr></thead><tbody id="dp-alu"></tbody></table></div>
+
+      <h3><code>CMP R1, R2</code></h3>
+      <div class="table-scroll"><table class="pin-table gen-table"><thead><tr><th>Step</th><th>Drives</th><th>Captures</th><th>Note</th></tr></thead><tbody id="dp-cmp"></tbody></table></div>
+
+      <h3><code>CLF</code></h3>
+      <div class="table-scroll"><table class="pin-table gen-table"><thead><tr><th>Step</th><th>Drives</th><th>Captures</th><th>Note</th></tr></thead><tbody id="dp-clf"></tbody></table></div>
+
+      <h3>Any other byte, this week &mdash; for example <code>00000000</code>, <code>LD R0, R0</code></h3>
+      <div class="table-scroll"><table class="pin-table gen-table"><thead><tr><th>Step</th><th>Drives</th><th>Captures</th><th>Note</th></tr></thead><tbody id="dp-other"></tbody></table></div>
+      <p>LD, ST, DATA and the jumps get their steps 4 to 6 in Week 14. Until then your CPU fetches them and does nothing. That includes the zeros after your program: if you keep clicking, the CPU fetches <code>00000000</code> again and again and the PC counts up, which is harmless.</p>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">Load every register your program touches</div>
+        <p>Step 4 copies RB into TMP for <strong>every</strong> ALU instruction &mdash; even NOT, SHR and SHL, which never use TMP. The control table has no exception for them, and adding one would cost gates for no gain. So if your program writes a register you never loaded, step 4 moves <code>EEEEEEEE</code> into TMP and the ALU. This week&rsquo;s program writes R2, so you load R2 = 0 before running it.</p>
+      </div>
+    </section>
+
+    <section id="sec-13-11">
+      <h2>13.11 &nbsp; MOV and SUB are not instructions</h2>
+
+      <p>The course syllabus says this week&rsquo;s CPU implements MOV, ADD and SUB. Look at your instruction set from Week 10: ADD is there, and MOV and SUB are not. You have been here before. In Week 7 you learned that MIPS has no <code>blt</code> instruction: the assembler turns <code>blt</code> into <code>slt</code> plus <code>bne</code>, and you wrote that pair by hand. A missing instruction is a <strong>sequence</strong> of instructions that the machine does have.</p>
+
+      <div class="table-scroll">
+        <table class="pin-table gen-table">
+          <thead><tr><th>Write</th><th>Means</th><th>Is really</th><th>Why it works</th></tr></thead>
+          <tbody id="seq-body"><tr><td colspan="4"><em>Loading the table&hellip;</em></td></tr></tbody>
+        </table>
+      </div>
+
+      <p><strong>MOV</strong> uses NOT twice. NOT reads only RA (Week 10), so <code>NOT RA, RB</code> puts the inverse of RA into RB, and <code>NOT RB, RB</code> inverts it back. Two instructions, 48 clicks.</p>
+
+      <p><strong>SUB</strong> uses a fact from Week 1. In two&rsquo;s complement, inverting every bit of <em>x</em> gives &minus;<em>x</em> &minus; 1. So:</p>
+      <div class="alg">
+        <div>NOT b               = &minus;b &minus; 1</div>
+        <div>NOT b + a          = a &minus; b &minus; 1</div>
+        <div>NOT (NOT b + a)    = &minus;(a &minus; b &minus; 1) &minus; 1  =  b &minus; a</div>
+      </div>
+      <p>Three instructions, and the answer is exact for every pair of bytes, modulo 256, because your carry-in is 0. With R2 = 7 and R1 = 3, <code>SUB R1, R2</code> runs <code>NOT R2, R2</code> (R2 = <code>11111000</code>), <code>ADD R1, R2</code> (R2 = <code>11111011</code>), <code>NOT R2, R2</code> (R2 = <code>00000100</code>, which is 4).</p>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Two things the sequences do not do</div>
+        <ul>
+          <li><strong>SUB needs two different registers.</strong> The first NOT changes RB. If RA <em>is</em> RB, it has changed RA too, and the ADD adds the wrong number.</li>
+          <li><strong>The flags are not a subtraction&rsquo;s.</strong> FLAGS captures at step 5 of every ALU instruction, so after SUB they are the last NOT&rsquo;s. To compare two numbers, use CMP.</li>
+        </ul>
+      </div>
+
+      <p>This week&rsquo;s Checkpoint 6 program is MOV and SUB, back to back: copy R0 into R2, then subtract R1 from it. Five bytes:</p>
+      <div class="table-scroll">
+        <table class="pin-table listing">
+          <thead><tr><th>Address</th><th>Byte</th><th>Hex</th><th>Instruction</th><th>Part of</th></tr></thead>
+          <tbody id="cp-listing"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========== Widget 3 ========== -->
+    <section id="sec-runner">
+      <div class="widget-card" id="w-runner">
+        <div class="widget-card__title">Program Runner</div>
+        <div class="widget-card__subtitle">Write a program &mdash; ALU instructions, CLF, and MOV or SUB, one per line &mdash; set the registers, load it, and run it on your CPU. A register left blank has never been written.</div>
+
+        <div class="btn-row">
+          <label for="pr-preset" style="font-size:var(--fs-sm);font-weight:700">Program</label>
+          <select id="pr-preset" class="pr-sel">
+            <option value="cp6">Checkpoint 6: MOV R0, R2 then SUB R1, R2</option>
+            <option value="mov">MOV only</option>
+            <option value="sub">SUB only</option>
+            <option value="neg">Negate R0 (NOT, then add a 1 kept in R3)</option>
+          </select>
+        </div>
+        <div class="w-grid">
+          <div class="w-panel">
+            <h3>Source</h3>
+            <label for="pr-src" class="sr-only">Program source, one instruction per line</label>
+            <textarea id="pr-src" class="pr-src" spellcheck="false"></textarea>
+          </div>
+          <div class="w-panel">
+            <h3>Registers before running (0&ndash;255)</h3>
+            <div class="pr-regs">
+              <label>R0 <input id="pr-r0" inputmode="numeric"></label>
+              <label>R1 <input id="pr-r1" inputmode="numeric"></label>
+              <label>R2 <input id="pr-r2" inputmode="numeric"></label>
+              <label>R3 <input id="pr-r3" inputmode="numeric"></label>
+            </div>
+            <div class="btn-row" style="margin-top:8px">
+              <button type="button" class="widget-btn widget-btn--primary" id="pr-load">load</button>
+              <button type="button" class="widget-btn widget-btn--outline" id="pr-one">run one instruction</button>
+              <button type="button" class="widget-btn widget-btn--outline" id="pr-all">run the program</button>
+            </div>
+          </div>
+        </div>
+        <p class="w-status" id="pr-status" aria-live="polite"></p>
+        <div class="w-panel">
+          <h3>In RAM</h3>
+          <div class="table-scroll"><table class="pin-table listing"><thead><tr><th>Address</th><th>Byte</th><th>Instruction</th><th>From</th></tr></thead><tbody id="pr-listing"></tbody></table></div>
+        </div>
+        <div class="w-panel">
+          <h3>Trace &mdash; one row per instruction, values after it</h3>
+          <div class="table-scroll"><table class="pin-table trace"><thead><tr><th>#</th><th>Address</th><th>Instruction</th><th>PC</th><th>R0</th><th>R1</th><th>R2</th><th>R3</th><th>C A E Z</th></tr></thead><tbody id="pr-trace"></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-13-12">
+      <h2>13.12 &nbsp; This is a computer</h2>
+
+      <p>Stop and look at what the Checkpoint 6 program does. Nobody touches the CPU between raising <code>run</code> and reading R2. It reads byte 0 from memory because its PC said 0; it decides what to do from the bits of that byte alone; it moves values between registers through one shared wire, one transfer at a time; it counts its PC on to the next byte and does it again. Every one of those actions is a gate you placed, and every gate is the NAND-built logic of Week 2. There is no other ingredient.</p>
+
+      <p>It is also the <strong>C tier</strong> of your final project, from Week 10: fetch plus every ALU-class instruction, running from RAM. B adds LD, ST and DATA, and A adds the jumps and CLF and runs <code>MYSIM.txt</code> &mdash; Week 14.</p>
+
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Four questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+
+      <p>For the fetch&ndash;decode&ndash;execute cycle as a whole in a second voice, log into your Saylor CS301 account at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 5: Designing a Processor</strong>. Its processor is MIPS, whose assembler makes up instructions the same way Week 7 described.</p>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>You can load a program by hand, say what every step of every instruction does, and turn MOV and SUB into instructions your CPU has. Last page: what to do when your Logisim CPU does something else.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 13, Page 3
+  </footer>
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['dp', 'core'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.dp) { return; }
+    var D = L.dp, C = L.core;
+
+    function b8(v) { return v === null || v === undefined ? 'EEEEEEEE' : ('0000000' + (v >>> 0).toString(2)).slice(-8); }
+    function h2(v) { return v === null || v === undefined ? 'EE' : ('0' + v.toString(16).toUpperCase()).slice(-2); }
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+    /* Generated tables */
+    (function () {
+      var lb = document.getElementById('load-body');
+      if (lb) {
+        lb.innerHTML = D.prepare({ bytes: D.CHECKPOINT.bytes, regs: D.CHECKPOINT.regs, pc: 0 }).map(function (s, i) {
+          return '<tr><td>' + (i + 1) + '</td><td>' + esc(s.what) + '</td><td><code>' + esc(s.pins) + '</code></td></tr>';
+        }).join('');
+      }
+      function dpRows(id, ir) {
+        var tb = document.getElementById(id);
+        if (!tb) { return; }
+        tb.innerHTML = D.datapath(ir).map(function (r) {
+          var note = r.step <= 3 ? 'fetch' : '';
+          if (r.bus1) { note += (note ? '; ' : '') + 'bus1: B = 00000001'; }
+          if (r.step === 5 && ir >= 0x80) { note += 'opcode = ' + ('00' + r.opcode.toString(2)).slice(-3) + ' (' + C.ALU_MNEMONICS[r.opcode] + ')'; }
+          if (r.idle) { note = 'nothing'; }
+          return '<tr><td>' + r.step + '</td><td>' + (r.drivers.join(', ') || '\u2014') + '</td><td>' + (r.captures.join(', ') || '\u2014') + '</td><td>' + note + '</td></tr>';
+        }).join('');
+      }
+      dpRows('dp-alu', 0x86); dpRows('dp-cmp', 0xF6); dpRows('dp-clf', 0x60); dpRows('dp-other', 0x00);
+      var sb = document.getElementById('seq-body');
+      if (sb) {
+        sb.innerHTML = D.SEQUENCES.map(function (s) {
+          return '<tr><td>' + s.syntax + '</td><td>' + s.means + '</td><td><code>' + s.expand('A', 'B').join('</code><br><code>') + '</code></td><td>' + esc(s.why) + '</td></tr>';
+        }).join('');
+      }
+      var cl = document.getElementById('cp-listing');
+      if (cl) {
+        var from = ['MOV R0, R2', 'MOV R0, R2', 'SUB R1, R2', 'SUB R1, R2', 'SUB R1, R2'];
+        cl.innerHTML = D.CHECKPOINT.bytes.map(function (b, a) {
+          return '<tr><td>0x' + h2(a) + '</td><td><code>' + b8(b) + '</code></td><td>' + h2(b) + '</td><td>' + esc(C.decodeByte(b).text) + '</td><td>' + from[a] + '</td></tr>';
+        }).join('');
+      }
+    }());
+
+    /* ---------- Widget 3 — Program Runner ---------- */
+    (function () {
+      var host = document.getElementById('w-runner');
+      if (!host) { return; }
+      var PRESETS = {
+        cp6: { src: 'MOV R0, R2\nSUB R1, R2', regs: [7, 3, 0, ''] },
+        mov: { src: 'MOV R1, R3', regs: ['', 42, '', 0] },
+        sub: { src: 'SUB R0, R1    ; R1 = R1 - R0', regs: [5, 12, '', ''] },
+        neg: { src: 'NOT R0, R0\nADD R3, R0    ; R0 = -R0', regs: [5, '', '', 1] }
+      };
+      var cpu = null, prog = null, done = 0;
+      function $(id) { return document.getElementById(id); }
+      function say(t, bad) { $('pr-status').innerHTML = bad ? '<span class="pr-err">' + esc(t) + '</span>' : esc(t); }
+      function preset(k) {
+        var p = PRESETS[k];
+        $('pr-src').value = p.src;
+        for (var i = 0; i < 4; i++) { $('pr-r' + i).value = p.regs[i]; }
+        load();
+      }
+      function assemble(text) {
+        var bytes = [], from = [], lines = text.split('\n'), i, t, e, mn;
+        for (i = 0; i < lines.length; i++) {
+          t = lines[i].replace(/;.*$/, '').trim();
+          if (!t) { continue; }
+          mn = t.split(/\s+/)[0].toUpperCase();
+          if (!/^(ADD|SHR|SHL|NOT|AND|OR|XOR|CMP|CLF|MOV|SUB)$/.test(mn)) {
+            return { ok: false, error: 'Line ' + (i + 1) + ': ' + mn + ' does not run on this week\u2019s CPU. ALU instructions, CLF, MOV and SUB only; LD, ST, DATA and the jumps arrive in Week 14.' };
+          }
+          e = D.expand(t);
+          if (!e.ok) { return { ok: false, error: 'Line ' + (i + 1) + ': ' + e.error }; }
+          e.bytes.forEach(function (b) { bytes.push(b); from.push(t.toUpperCase().replace(/\s*,\s*/g, ', ').replace(/\s+/g, ' ')); });
+        }
+        if (!bytes.length) { return { ok: false, error: 'Nothing to load.' }; }
+        if (bytes.length > 32) { return { ok: false, error: bytes.length + ' bytes: your RAM has 32.' }; }
+        return { ok: true, bytes: bytes, from: from };
+      }
+      function regs() {
+        var r = {}, i, v;
+        for (i = 0; i < 4; i++) {
+          v = $('pr-r' + i).value.trim();
+          if (v === '') { continue; }
+          if (!/^\d+$/.test(v) || +v > 255) { return { error: 'R' + i + ' must be 0\u2013255, or blank.' }; }
+          r['R' + i] = +v;
+        }
+        return { regs: r };
+      }
+      function load() {
+        var a = assemble($('pr-src').value), r = regs();
+        $('pr-trace').innerHTML = ''; done = 0; cpu = null;
+        if (!a.ok) { say(a.error, true); $('pr-listing').innerHTML = ''; return; }
+        if (r.error) { say(r.error, true); return; }
+        prog = a;
+        cpu = D.boot({ bytes: a.bytes, regs: r.regs, pc: 0 });
+        $('pr-listing').innerHTML = a.bytes.map(function (b, i) {
+          return '<tr><td>0x' + h2(i) + '</td><td>' + b8(b) + '</td><td>' + esc(C.decodeByte(b).text) + '</td><td>' + esc(a.from[i]) + '</td></tr>';
+        }).join('');
+        say('Loaded ' + a.bytes.length + ' byte' + (a.bytes.length === 1 ? '' : 's') + ' at 0x00, PC = 0, run = 1. Each instruction is 24 clicks.');
+      }
+      function one() {
+        if (!cpu) { load(); if (!cpu) { return; } }
+        if (done >= prog.bytes.length) { say('The program has finished. Keep going and the CPU fetches the 00000000 bytes after it, which do nothing this week. Load again to restart.'); return; }
+        var r = cpu.runInstruction(), st = r.state, f = st.flags;
+        done++;
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td>' + done + '</td><td>0x' + h2(r.pcBefore) + '</td><td>' + esc(r.text) + '</td><td>' + b8(st.PC) + '</td><td>' + b8(st.R0) + '</td><td>' + b8(st.R1) + '</td><td>' + b8(st.R2) + '</td><td>' + b8(st.R3) + '</td><td>' + f.C + ' ' + f.A + ' ' + f.E + ' ' + f.Z + '</td>';
+        $('pr-trace').appendChild(tr);
+        if (r.errors.length) { say('Instruction ' + done + ' (' + r.text + '): ' + r.errors[0], true); }
+        else if (done === prog.bytes.length) { say('Done: ' + done + ' instructions, ' + done * 24 + ' clicks. R0 = ' + b8(st.R0) + ', R1 = ' + b8(st.R1) + ', R2 = ' + b8(st.R2) + ', R3 = ' + b8(st.R3) + '.'); }
+        else { say('Instruction ' + done + ' of ' + prog.bytes.length + ': ' + r.text + '. PC is now ' + b8(st.PC) + '.'); }
+      }
+      $('pr-preset').addEventListener('change', function () { preset(this.value); });
+      $('pr-load').addEventListener('click', load);
+      $('pr-one').addEventListener('click', one);
+      $('pr-all').addEventListener('click', function () { if (!cpu) { load(); } if (!cpu) { return; } while (done < prog.bytes.length) { one(); } });
+      preset('cp6');
+    }());
+
+    /* ---------- Self-check ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+  {
+    "q": "Which sequence does <code>MOV R1, R3</code> stand for?",
+    "opts": [
+      "<code>NOT R1, R3</code> then <code>NOT R3, R3</code>",
+      "<code>NOT R3, R3</code> then <code>NOT R1, R3</code>",
+      "<code>XOR R1, R3</code>",
+      "<code>ADD R1, R3</code> then <code>NOT R3, R3</code>"
+    ],
+    "correct": 0,
+    "why": "MOV RA, RB means RB &larr; RA. <code>NOT R1, R3</code> puts the inverse of R1 in R3; <code>NOT R3, R3</code> inverts it back."
+  },
+  {
+    "q": "R0 = 10 and R1 = 4. The CPU runs the sequence for <code>SUB R1, R0</code>. What is in R0 afterwards?",
+    "opts": [
+      "14",
+      "6",
+      "&minus;6, which is <code>11111010</code>",
+      "4"
+    ],
+    "correct": 1,
+    "why": "SUB RA, RB means RB &larr; RB &minus; RA, so R0 &larr; 10 &minus; 4 = 6. The sequence is <code>NOT R0, R0</code>, <code>ADD R1, R0</code>, <code>NOT R0, R0</code>."
+  },
+  {
+    "q": "Why can&rsquo;t <code>SUB R2, R2</code> be done with the three-instruction sequence?",
+    "opts": [
+      "The ALU cannot add a register to itself",
+      "The first <code>NOT R2, R2</code> changes RA as well as RB, so the ADD adds the wrong value",
+      "The carry-in would be 1",
+      "R2 is reserved for the result"
+    ],
+    "correct": 1,
+    "why": "The sequence needs RA unchanged after the first NOT. If RA is RB, it has just been inverted. (For a zero, <code>XOR R2, R2</code> is one instruction.)"
+  },
+  {
+    "q": "A program&rsquo;s first instruction is <code>NOT R0, R3</code>, and R3 was never loaded. What goes wrong first?",
+    "opts": [
+      "Nothing: NOT reads only RA",
+      "Step 4 copies R3 into TMP, so <code>EEEEEEEE</code> reaches TMP and the ALU",
+      "Fetch fails at step 2",
+      "The PC is not incremented"
+    ],
+    "correct": 1,
+    "why": "Step 4 copies RB into TMP for every ALU instruction, NOT included. That is why you load every register a program touches."
+  }
+];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p><div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi], okAns = (oi === item.correct), fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) { el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false'); });
+      }
+      host.addEventListener('click', function (e) { var t = e.target.closest('.quiz-option'); if (t) { answer(+t.dataset.q, +t.dataset.o); } });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+
+  })();
+  </script>
+</body>
+</html>
