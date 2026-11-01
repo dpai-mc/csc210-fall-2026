@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="lab-13">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210L — Lab 13: Instruments for a Running CPU</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    /* ---------- File-specific ----------
+       .live-tag, .obs-table, .bench-sketch and .paper are copies of
+       lab-10's, not promoted: promoting them means editing published
+       pages, and past content is never modified (Dave, 2026-09-15).
+
+       Copied from lab-12 for Lab 13 (2026-11-01). This page loads no
+       shared kernel and has no widget: an on-page bench would fill in
+       the observation sheet. */
+
+    cite { font-style: normal; font-weight: 600; color: var(--color-text); }
+
+    .live-tag {
+      display: inline-block; font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 700;
+      text-transform: uppercase; letter-spacing: .04em; padding: 2px var(--space-sm); border-radius: 999px;
+      vertical-align: middle; margin-left: var(--space-sm);
+    }
+    .live-tag--together { background: var(--color-success); color: #fff; }
+    .live-tag--solo     { background: var(--color-danger, #b3261e); color: #fff; }
+
+    .obs-table { width: 100%; border-collapse: collapse; margin: var(--space-md) 0; }
+    .obs-table th, .obs-table td { border: 1px solid var(--color-border); padding: var(--space-sm); text-align: left; vertical-align: top; font-size: var(--fs-sm); }
+    .obs-table th { background: var(--color-code-bg); font-weight: 700; }
+    .obs-table td.fill { background: var(--color-code-bg); min-width: 64px; height: 40px; }
+    .obs-table td.fill--wide { min-width: 110px; }
+    .obs-table td.given { font-family: var(--font-mono); white-space: nowrap; }
+    .obs-table caption { caption-side: top; text-align: left; font-weight: 700; padding-bottom: var(--space-sm); }
+
+    .bench-sketch { width: 100%; max-width: 660px; height: auto; display: block; margin: var(--space-md) auto; }
+    .bench-sketch .wire { stroke: var(--color-text); stroke-width: 2; fill: none; }
+    .bench-sketch .box  { fill: var(--color-surface); stroke: var(--color-text); stroke-width: 2; }
+    .bench-sketch .det  { fill: var(--color-code-bg); stroke: var(--color-text-muted); stroke-width: 2; stroke-dasharray: 5 3; }
+    .bench-sketch .stub { stroke: var(--color-text-muted); stroke-width: 2; fill: none; }
+    .bench-sketch .lbl  { font-family: var(--font-mono); font-size: 13px; fill: var(--color-text); }
+    .bench-sketch .lbl--sm { font-size: 11px; fill: var(--color-text-muted); }
+
+    .paper { font-family: var(--font-mono); font-size: var(--fs-sm); background: var(--color-code-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); white-space: pre; overflow-x: auto; }
+
+    @media print {
+      .sp-header, .sp-footer, .no-print { display: none; }
+      .lab-step, .obs-table, .lab-verify { break-inside: avoid; }
+      .table-scroll { overflow: visible; }
+      .obs-table th, .obs-table td { font-size: 9px; padding: 3px; }
+      .obs-table td.fill, .obs-table td.fill--wide { min-width: 0; }
+      .obs-table td.given { white-space: normal; }
+      a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210L — Computer Organization &amp; Architecture Lab</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Lab 13 &rsaquo; <span>Instruments for a Running CPU</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Lab 13 — Instruments for a Running CPU: a Bus Watchdog, a Step Counter, and Project Time</h1>
+
+    <div class="lab-meta">
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Lab Session</span>
+        <span class="lab-meta__value">Tuesday, Nov 10, 2026</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">In-Class Time</span>
+        <span class="lab-meta__value">90 minutes &mdash; ~40 building, ~45 on your project, ~5 to close</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Format</span>
+        <span class="lab-meta__value">Live on Zoom</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Today's build</span>
+        <span class="lab-meta__value"><code>BUS_WATCH</code> and <code>STEP_NUM</code></span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Assignment</span>
+        <span class="lab-meta__value">Completion Check 13 &mdash; 10 pts</span>
+      </div>
+      <div class="lab-meta__item">
+        <span class="lab-meta__label">Due</span>
+        <span class="lab-meta__value lab-meta__value--due">Sun, Nov 15 &middot; 11:59 PM</span>
+      </div>
+    </div>
+
+    <div class="callout callout--aha">
+      <div class="callout__title">What This Session Is, and What It Is Not</div>
+      <p><strong>This lab does not wire your CPU&rsquo;s fetch.</strong> Putting the program counter, the instruction register and the RAM on your bus is Checkpoint 6, built from this week&rsquo;s pages. Nothing here repeats its steps.</p>
+      <p><strong>From this week on, the structured part of lab is shorter</strong> &mdash; about forty minutes &mdash; and the rest of the session is yours, to work on your CPU with your instructor in the room. Today&rsquo;s forty minutes build two small instruments that make that work faster: a <strong>watchdog</strong> that lights the instant two parts drive your bus at once, and a <strong>step counter</strong> that turns the stepper&rsquo;s seven lines into a number you can read at a glance. Neither is graded by CSC210, and both stay useful until the day you submit your final project.</p>
+    </div>
+
+    <div class="callout callout--hook">
+      <div class="callout__title">The Question Today Answers</div>
+      <p><strong>What you have:</strong> A CPU that runs instructions from a stepper and a control table (Week 11), and this week&rsquo;s pages on fetch and on tracing faults (<cite>Fetch</cite>, <cite>When It Doesn&rsquo;t Work</cite>).</p>
+      <p><strong>What you cannot do yet:</strong> See a bus conflict the moment it happens, or tell which step your CPU is on without decoding seven probe bits in your head.</p>
+      <p><strong>What you can do after today:</strong> Design a two-or-more detector and a one-hot-to-binary encoder from gates, put both on your CPU, and spend the rest of the session moving your project forward.</p>
+    </div>
+
+    <section id="sec-outcomes">
+      <h2>What You Will Be Able to Do</h2>
+      <ol>
+        <li><strong>Design a &ldquo;two or more&rdquo; detector</strong> for eight lines, and say why it is shaped like a ripple-carry adder.</li>
+        <li><strong>Design an encoder</strong> &mdash; the decoder run backwards &mdash; that turns a one-hot step into a step number.</li>
+        <li><strong>Use both</strong> to watch your own CPU, and plan your next project step.</li>
+      </ol>
+      <div class="callout callout--forward">
+        <div class="callout__title">CS301 Reference</div>
+        <p>Encoders and decoders are covered in Saylor CS301&rsquo;s units on combinational logic. Log into your <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">CS301 course page</a> and open them as supporting reading.</p>
+      </div>
+    </section>
+
+    <section id="sec-before">
+      <h2>Before You Arrive</h2>
+      <div class="callout callout--warn">
+        <div class="callout__title">Bring your file and your project plan</div>
+        <p>Today&rsquo;s two tabs need <strong>nothing but gates</strong> &mdash; no earlier circuit is instantiated &mdash; so you can build them wherever your CPU stands. Part 4 attaches them to your <code>CPU</code> tab if it has a control unit; that is the Week 11 CPU or later.</p>
+        <p>Also bring your <strong>CPU Project Plan</strong> from Week 10. The second half of the session starts from it.</p>
+      </div>
+      <p><strong>Read section 13.13 of <cite>When It Doesn&rsquo;t Work</cite></strong> in this week&rsquo;s Canvas module. The pages are named rather than linked, because each learning page is embedded in its own Canvas page.</p>
+      <p><strong>Bring your <code>CSC210_YourName.circ</code> file.</strong> Print this page, or have it open on a second screen. MARS is not needed.</p>
+    </section>
+
+    <section id="sec-scope">
+      <h2>What Is Here, and What Is Elsewhere</h2>
+      <div class="table-scroll">
+      <table class="scope-table">
+        <thead><tr><th>Work</th><th>Where it happens</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>PC, IR and RAM on your bus; fetch; the MOV/SUB program</td>
+            <td class="scope-solo">Week 13, Checkpoint 6 &mdash; not here</td>
+            <td>This week&rsquo;s assignment page.</td>
+          </tr>
+          <tr>
+            <td><strong><code>BUS_WATCH</code></strong> and <strong><code>STEP_NUM</code></strong></td>
+            <td class="scope-lab"><strong>Built here, and only here</strong></td>
+            <td>Debugging instruments. Checkpoint 6 neither needs nor grades them.</td>
+          </tr>
+          <tr>
+            <td>Your final project</td>
+            <td class="scope-lab"><strong>Worked on here, with help</strong></td>
+            <td>The second half of the session. A three-line log is all that is collected.</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+    </section>
+
+    <!-- ============================================================ Part 1 -->
+    <section id="sec-part-1">
+      <h2>Part 1 — File Check <span class="points-badge">~3 min</span><span class="live-tag live-tag--together">Together</span></h2>
+      <div class="lab-step">
+        <div class="lab-step__num">1</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Thirty-second file check</div>
+          <p>Open <code>CSC210_YourName.circ</code>. Every circuit you have built is a tab in this one file. Create today&rsquo;s two tabs, named exactly:</p>
+          <pre><code>BUS_WATCH
+STEP_NUM</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ Part 2 -->
+    <section id="sec-part-2">
+      <h2>Part 2 — Design <code>BUS_WATCH</code> <span class="points-badge">~20 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <p>Your bus has one rule: <strong>exactly one driver at a time</strong> (Week 10). Break it and Logisim shows <code>E</code> on the bus &mdash; but only on the bus, and only if you are looking at it at that instant. A watchdog looks every instant for you.</p>
+
+      <p>Every part that can drive your bus has an enable line, and all of them are visible on your <code>CPU</code> tab: the four register enables coming out of REG_SELECT, ACC&rsquo;s, the test port&rsquo;s and, from Checkpoint 6, the PC&rsquo;s and the RAM&rsquo;s. <code>BUS_WATCH</code> takes those eight lines and answers two questions.</p>
+
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><code class="pin-table__name">r0_e</code> <code class="pin-table__name">r1_e</code> <code class="pin-table__name">r2_e</code> <code class="pin-table__name">r3_e</code></td><td>1 each</td><td>in</td><td>the four register enables, from REG_SELECT</td></tr>
+            <tr><td><code class="pin-table__name">acc_e</code> <code class="pin-table__name">pc_e</code> <code class="pin-table__name">ram_e</code> <code class="pin-table__name">data_e</code></td><td>1 each</td><td>in</td><td>ACC, the PC, the RAM, the test port</td></tr>
+            <tr><td><code class="pin-table__name">conflict</code></td><td>1</td><td>out</td><td>1 when <strong>two or more</strong> inputs are 1</td></tr>
+            <tr><td><code class="pin-table__name">idle</code></td><td>1</td><td>out</td><td>1 when <strong>none</strong> is 1 &mdash; the bus is floating</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">2</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title"><code>idle</code> first &mdash; one gate</div>
+          <p>&ldquo;None of eight is 1&rdquo; is a single gate with eight inputs. Logisim gates take up to 32 inputs: set the gate&rsquo;s <em>Number of Inputs</em> attribute. Which gate?</p>
+        </div>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">3</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title"><code>conflict</code> &mdash; your design</div>
+          <p>&ldquo;Two or more of eight&rdquo; is harder. There are two honest designs, and you may build either.</p>
+          <ul>
+            <li><strong>Every pair.</strong> Two or more lines are high exactly when some <em>pair</em> of lines is high. How many pairs are there among eight lines, and what goes after the ANDs?</li>
+            <li><strong>A chain.</strong> Walk the lines one at a time, keeping two running facts: <em>at least one so far</em> and <em>at least two so far</em>. Work out how each fact changes when the next line arrives. Then count your gates and compare with the pair design.</li>
+          </ul>
+        </div>
+      </div>
+
+      <svg class="bench-sketch" viewBox="0 0 660 230" role="img" aria-labelledby="bw-title bw-desc">
+        <title id="bw-title">The chain design for conflict, one stage</title>
+        <desc id="bw-desc">A row of identical stages runs left to right. Each stage takes the next enable line from above and two running signals from the stage on its left, labelled at least one so far and at least two so far, and passes updated versions of both to the stage on its right. The last stage's at least two so far output is the conflict pin. The inside of each stage is left blank for the student to design.</desc>
+        <rect class="box" x="60" y="80" width="110" height="80"></rect>
+        <rect class="box" x="250" y="80" width="110" height="80"></rect>
+        <rect class="det" x="440" y="80" width="110" height="80"></rect>
+        <text class="lbl" x="95" y="125">stage</text><text class="lbl" x="285" y="125">stage</text><text class="lbl lbl--sm" x="462" y="125">&hellip; stage 8</text>
+        <line class="wire" x1="115" y1="30" x2="115" y2="80"></line><text class="lbl lbl--sm" x="95" y="24">next line</text>
+        <line class="wire" x1="305" y1="30" x2="305" y2="80"></line><text class="lbl lbl--sm" x="285" y="24">next line</text>
+        <line class="wire" x1="495" y1="30" x2="495" y2="80"></line>
+        <line class="wire" x1="20" y1="100" x2="60" y2="100"></line><line class="wire" x1="20" y1="140" x2="60" y2="140"></line>
+        <line class="wire" x1="170" y1="100" x2="250" y2="100"></line><line class="wire" x1="170" y1="140" x2="250" y2="140"></line>
+        <line class="wire" x1="360" y1="100" x2="440" y2="100"></line><line class="wire" x1="360" y1="140" x2="440" y2="140"></line>
+        <line class="wire" x1="550" y1="140" x2="640" y2="140"></line>
+        <text class="lbl lbl--sm" x="180" y="94">&ge;1 so far</text><text class="lbl lbl--sm" x="180" y="158">&ge;2 so far</text>
+        <text class="lbl" x="575" y="132">conflict</text>
+        <text class="lbl lbl--sm" x="60" y="200">The inside of a stage is yours to design &mdash; two gates of one kind and one of another.</text>
+      </svg>
+
+      <details>
+        <summary>Hint, after you have tried: the chain stage</summary>
+        <p>With <em>x</em> the next line, <em>one</em> and <em>two</em> the running facts: <code>two&rsquo; = two OR (one AND x)</code>, and <code>one&rsquo; = one OR x</code>. The first stage starts with <em>one</em> = <em>x</em> and <em>two</em> = 0. It is the same shape as the carry in your Week 3 ripple-carry adder: a fact that is passed down the line and updated at every position.</p>
+      </details>
+      <details>
+        <summary>Hint, after you have tried: counting</summary>
+        <p>Eight lines make 8 &times; 7 / 2 = 28 pairs: 28 two-input ANDs and one OR with 28 inputs. The chain needs 7 ANDs and 12 ORs, 19 gates, and grows in step with the number of lines rather than with its square.</p>
+      </details>
+    </section>
+
+    <!-- ============================================================ Part 3 -->
+    <section id="sec-part-3">
+      <h2>Part 3 — Test It, and Build <code>STEP_NUM</code> <span class="points-badge">~12 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <div class="lab-step">
+        <div class="lab-step__num">4</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Eight patterns</div>
+          <p>Poke the patterns in the observation sheet&rsquo;s Part 3 table into <code>BUS_WATCH</code> and record <code>idle</code> and <code>conflict</code> for each. Before you poke the last row, take the room vote below.</p>
+          <p><strong>Room vote:</strong> in a correctly built CPU, running a correct program, at which steps does <code>conflict</code> light? Write your answer on the sheet before anyone says theirs.</p>
+        </div>
+      </div>
+
+      <p><code>STEP_NUM</code> is the reverse of a decoder. Your <code>DECODER_3TO8</code> (Week 3) turns a 3-bit number into one line out of eight; an <strong>encoder</strong> turns one line out of seven back into a number.</p>
+
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><code class="pin-table__name">steps</code></td><td>7</td><td>in</td><td>the control unit&rsquo;s <code>steps</code> output, <code>step1</code> as bit 0</td></tr>
+            <tr><td><code class="pin-table__name">n</code></td><td>3</td><td>out</td><td>the step number, 1 to 7 &mdash; put a probe on it in decimal</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="lab-step">
+        <div class="lab-step__num">5</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">Three gates</div>
+          <p>Split <code>steps</code> into seven lines. Bit 0 of <code>n</code> is 1 for steps 1, 3, 5 and 7. Write the rule for bits 1 and 2 yourself, then build it: one gate per output bit. Which gate, and why is it safe here when it was not safe on a bus?</p>
+          <p>Test it with the four inputs in the observation sheet. Then answer Q1 there.</p>
+        </div>
+      </div>
+
+      <details>
+        <summary>Hint, after you have tried</summary>
+        <p><code>n1</code> = step2 OR step3 OR step6 OR step7; <code>n2</code> = step4 OR step5 OR step6 OR step7. An OR is safe because the stepper guarantees exactly one step line is high &mdash; exclusivity by structure, as in your ALU&rsquo;s output stage (Week 6), not by buffers, as on the bus.</p>
+      </details>
+    </section>
+
+    <!-- ============================================================ Part 4 -->
+    <section id="sec-part-4">
+      <h2>Part 4 — Put Them to Work <span class="points-badge">~5 min</span><span class="live-tag live-tag--together">Together</span></h2>
+
+      <div class="lab-step">
+        <div class="lab-step__num">6</div>
+        <div class="lab-step__body">
+          <div class="lab-step__title">On your <code>CPU</code> tab</div>
+          <p>If your <code>CPU</code> tab has a control unit, place one <code>STEP_NUM</code> on its <code>steps</code> output and one <code>BUS_WATCH</code> on its enable lines. Tie any input your CPU does not have yet &mdash; <code>pc_e</code> and <code>ram_e</code> before Checkpoint 6 &mdash; to a constant 0. Click <code>clk_in</code> through one instruction and watch the step number count 1 to 6 while <code>conflict</code> stays dark.</p>
+          <p>Then, with your CPU on step 1 and <code>clk_e</code> = 1, raise <code>data_e</code>. If you have Checkpoint 6&rsquo;s <code>run</code> pin, raise <code>run</code> first. Record what <code>conflict</code> does &mdash; and lower <code>data_e</code> again.</p>
+          <p>These instruments change nothing that Checkpoint 6 checks. If you would rather not touch your <code>CPU</code> tab before you submit Checkpoint 6, attach them afterwards.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ Part 5 -->
+    <section id="sec-part-5">
+      <h2>Part 5 — Project Time <span class="points-badge">~45 min</span><span class="live-tag live-tag--solo">Your own</span></h2>
+
+      <p>The rest of the session is yours, with your instructor available for one-on-one help. Open your Week 10 project plan and pick <strong>one</strong> next step you can finish today. Good choices, depending on where you are:</p>
+      <ul>
+        <li><strong>Your Week 11 CPU is not running yet:</strong> get one ALU instruction through all six steps. Your new step counter tells you where it stops.</li>
+        <li><strong>Your CPU runs instructions:</strong> start Checkpoint 6, or hand-assemble one of your plan&rsquo;s test programs into bytes and write the register values you expect after each instruction.</li>
+        <li><strong>Checkpoint 6 runs:</strong> hand-assemble a test program for every class your target tier needs, and run the ALU-class ones from RAM.</li>
+      </ul>
+      <p>Bring questions to your instructor early rather than at minute 85. With ten minutes left, write the three-line project log in the observation sheet.</p>
+    </section>
+
+    <!-- ============================================================ Close -->
+    <section id="sec-part-6">
+      <h2>Last Five Minutes — Close <span class="points-badge">~5 min</span><span class="live-tag live-tag--together">Together</span></h2>
+      <p>One sentence each, out loud or in chat: what you finished today, and what you will do before Tuesday. Nothing here is collected beyond the log.</p>
+    </section>
+
+    <!-- ============================================================ Observation sheet -->
+    <section id="sec-observations">
+      <h2>Observation Sheet</h2>
+      <p>Fill this in as you go &mdash; it is what Completion Check 13 collects. <strong>Write what your circuit showed, not what you expected.</strong></p>
+
+      <div class="table-scroll">
+      <table class="obs-table" id="obs-watch">
+        <caption>Part 3 — <code>BUS_WATCH</code>, eight patterns (every line not listed is 0)</caption>
+        <thead><tr><th>#</th><th>Lines at 1</th><th>idle</th><th>conflict</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td class="given">none</td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>2</td><td class="given">pc_e</td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>3</td><td class="given">pc_e, ram_e</td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>4</td><td class="given">r2_e, data_e</td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>5</td><td class="given">acc_e</td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>6</td><td class="given">r0_e, r1_e, r3_e</td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>7</td><td class="given">data_e</td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td>8</td><td class="given">all eight</td><td class="fill"></td><td class="fill"></td></tr>
+          <tr><td colspan="2">Your design: pairs or chain, and how many gates</td><td class="fill fill--wide" colspan="2"></td></tr>
+          <tr><td colspan="2">Room vote: at which steps does <code>conflict</code> light in a correct CPU?</td><td class="fill fill--wide" colspan="2"></td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="table-scroll">
+      <table class="obs-table" id="obs-step">
+        <caption>Part 3 — <code>STEP_NUM</code> (steps written step7 &hellip; step1)</caption>
+        <thead><tr><th>steps</th><th>n (decimal)</th></tr></thead>
+        <tbody>
+          <tr><td class="given">0000001</td><td class="fill"></td></tr>
+          <tr><td class="given">0000100</td><td class="fill"></td></tr>
+          <tr><td class="given">0100000</td><td class="fill"></td></tr>
+          <tr><td class="given">1000000</td><td class="fill"></td></tr>
+          <tr><td><strong>Q1.</strong> Step 7 lasts only an instant (Week 11). When will your probe ever show 7, and what does an <code>n</code> of 0 mean?</td><td class="fill fill--wide"></td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="table-scroll">
+      <table class="obs-table" id="obs-cpu">
+        <caption>Part 4 — on your CPU (skip a row if your CPU is not there yet, and say so)</caption>
+        <thead><tr><th>What you did</th><th>What you saw</th></tr></thead>
+        <tbody>
+          <tr><td>Clicked through one instruction</td><td class="fill fill--wide"></td></tr>
+          <tr><td>Raised <code>data_e</code> at step 1, <code>clk_e</code> = 1 (with <code>run</code> = 1 if you have it)</td><td class="fill fill--wide"></td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="table-scroll">
+      <table class="obs-table" id="obs-log">
+        <caption>Part 5 — project log</caption>
+        <tbody>
+          <tr><td>What I worked on today</td><td class="fill fill--wide"></td></tr>
+          <tr><td>What I will do next, before Tuesday</td><td class="fill fill--wide"></td></tr>
+          <tr><td>One question I still have</td><td class="fill fill--wide"></td></tr>
+        </tbody>
+      </table>
+      </div>
+    </section>
+
+    <!-- ============================================================ Assignment -->
+    <section id="sec-assignment">
+      <h2>Assignment: Completion Check 13</h2>
+      <div class="lab-meta">
+        <div class="lab-meta__item"><span class="lab-meta__label">Points</span><span class="lab-meta__value">10</span></div>
+        <div class="lab-meta__item"><span class="lab-meta__label">Due</span><span class="lab-meta__value lab-meta__value--due">Sunday, Nov 15, 2026 &middot; 11:59 PM</span></div>
+        <div class="lab-meta__item"><span class="lab-meta__label">Submit via</span><span class="lab-meta__value">Canvas &mdash; Lab 13 Completion Check</span></div>
+        <div class="lab-meta__item"><span class="lab-meta__label">Assesses</span><span class="lab-meta__value">CSLO 1</span></div>
+      </div>
+      <p>This is a CSC210L grade and it collects <strong>nothing that Assignment 13 collects</strong>. Nothing in CSC210 depends on your attendance in this room.</p>
+
+      <h3>What to Submit</h3>
+      <ol>
+        <li><strong>Your <code>.circ</code> file.</strong> Only the <code>BUS_WATCH</code> and <code>STEP_NUM</code> tabs are looked at.</li>
+        <li><strong>Your observation sheet</strong> &mdash; a photo of the printout, or the same tables typed up.</li>
+      </ol>
+
+      <h3>Grading Rubric</h3>
+      <table>
+        <thead><tr><th>Criterion</th><th>Points</th><th>Full credit requires</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>BUS_WATCH</code> built and working</td>
+            <td>4</td>
+            <td>A tab named exactly <code>BUS_WATCH</code> with the ten pins named as on this page; <code>idle</code> and <code>conflict</code> correct for all eight patterns. Either design. Wiring and Gates components only.</td>
+          </tr>
+          <tr>
+            <td><code>STEP_NUM</code> built and working</td>
+            <td>2</td>
+            <td>A tab named exactly <code>STEP_NUM</code>, pins <code>steps</code> (7) and <code>n</code> (3), correct for every one-hot input.</td>
+          </tr>
+          <tr>
+            <td>Observation sheet, Parts 3 and 4</td>
+            <td>2</td>
+            <td>Both tables, your design and gate count, the vote, Q1, and Part 4 &mdash; or a note that your CPU is not there yet. Being wrong costs nothing here; leaving it blank does.</td>
+          </tr>
+          <tr>
+            <td>Project log</td>
+            <td>2</td>
+            <td>Three lines, honestly filled in. It is read for the question, not graded for progress.</td>
+          </tr>
+          <tr class="rubric-total"><td>Total</td><td>10</td><td>&nbsp;</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:var(--fs-sm);color:var(--color-text-muted);"><strong>CSLO alignment.</strong> Supports <strong>CSLO&nbsp;1</strong> (describe the organization and architecture of a computer system) through combinational design for observing a bus and a sequencer.</p>
+
+      <div class="callout callout--forward">
+        <div class="callout__title">If You Could Not Finish</div>
+        <p>The two builds are sized to <strong>complete in class</strong> with time to spare. If you missed the session, both are short; the room vote needs the room, so write your own answer and say so.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ Checklist -->
+    <section id="sec-checklist">
+      <h2>Pre-Submission Checklist</h2>
+      <p>Two minutes before you upload. Check an item only after you have actually verified it.</p>
+      <div class="widget-card" id="widget-checklist">
+        <div class="widget-card__title">Pre-Submission Checklist</div>
+        <div class="widget-card__subtitle">Nothing here is saved &mdash; it is a thinking prompt, not a record.</div>
+        <ul class="lab-checklist" id="ck-list">
+          <li><input type="checkbox" id="ck-1"><label for="ck-1">My file has tabs named exactly <code>BUS_WATCH</code> and <code>STEP_NUM</code> &mdash; anything from Wiring or Gates; nothing from Plexers, Arithmetic or Memory.</label></li>
+          <li><input type="checkbox" id="ck-2"><label for="ck-2"><code>BUS_WATCH</code> has all eight enable inputs and both outputs, named as on this page.</label></li>
+          <li><input type="checkbox" id="ck-3"><label for="ck-3">All eight patterns are recorded, with my design, its gate count and the vote.</label></li>
+          <li><input type="checkbox" id="ck-4"><label for="ck-4"><code>STEP_NUM</code> gives 1, 3, 6 and 7 for the four test inputs, and Q1 is answered.</label></li>
+          <li><input type="checkbox" id="ck-5"><label for="ck-5">Part 4 is recorded, or I have written that my CPU is not there yet.</label></li>
+          <li><input type="checkbox" id="ck-6"><label for="ck-6">My three-line project log is filled in.</label></li>
+        </ul>
+        <div class="checklist-status" id="ck-status" role="status" aria-live="polite">0 of 6 verified</div>
+      </div>
+    </section>
+
+    <!-- ============================================================ Next -->
+    <section id="sec-next">
+      <h2>What Comes Next</h2>
+      <p>Today you built two instruments and pointed them at your own CPU. Next week your CPU learns to jump, load and store; keep both instruments on your <code>CPU</code> tab, because that is when buses start to collide.</p>
+
+      <div class="progression">
+        <div class="progression__item completed">
+          <div class="progression__label">Lab 12 &mdash; A Device at an Address</div>
+          <div class="progression__detail"><code>MMIO_BENCH</code>, and the MARS keyboard echo</div>
+        </div>
+        <div class="progression__item active">
+          <div class="progression__label">Lab 13 &mdash; Instruments for a Running CPU</div>
+          <div class="progression__detail"><code>BUS_WATCH</code>, <code>STEP_NUM</code>, and project time</div>
+        </div>
+        <div class="progression__item">
+          <div class="progression__label">Lab 14 &mdash; Branches, Jumps and Memory</div>
+          <div class="progression__detail">A short build, then project time</div>
+        </div>
+      </div>
+      <p>Bring your file and your project plan next Tuesday.</p>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC210L — Computer Organization &amp; Architecture Lab &nbsp;|&nbsp; Fall 2026 &nbsp;|&nbsp; Mendocino College<br>
+    <span style="opacity:.7;">Instructor: David Pai</span>
+  </footer>
+
+  <script>
+  /* ============================================================
+     Pre-Submission Checklist -- a count, and nothing more. No
+     persistence, deliberately. No shared kernel is loaded: an
+     on-page bench would fill in the observation sheet.
+     ============================================================ */
+  (function () {
+    'use strict';
+    var boxes = document.querySelectorAll('#ck-list input[type="checkbox"]');
+    var total = boxes.length;
+    function update() {
+      var count = 0, i;
+      for (i = 0; i < boxes.length; i++) {
+        if (boxes[i].checked) { count++; boxes[i].parentNode.classList.add('checked'); }
+        else { boxes[i].parentNode.classList.remove('checked'); }
+      }
+      var status = document.getElementById('ck-status');
+      if (count === total) {
+        status.className = 'checklist-status checklist-status--ready';
+        status.innerHTML = '&#10004; All ' + total + ' verified &mdash; you are ready to submit.';
+      } else {
+        status.className = 'checklist-status';
+        status.textContent = count + ' of ' + total + ' verified';
+      }
+    }
+    Array.prototype.forEach.call(boxes, function (b) { b.addEventListener('change', update); });
+  })();
+  </script>
+</body>
+</html>
