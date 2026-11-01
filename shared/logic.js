@@ -1631,6 +1631,490 @@
   }
 
   /* ============================================================
+     WEEK 13 -- The whole CPU: PC, IR and RAM on the bus (CSCLogic.dp)
+     ============================================================
+     Added 2026-11-01.
+
+     WHAT THIS MODELS. Checkpoint 6: the Week 11 CPU tab with the three
+     parts that let it fetch its own instructions, as Dave's Fall 2025
+     build pages define them (circuits-control-fetch, cpu-fetch-control-
+     unit.jpg, circuits-additional-circuits-needed, program-counter.png,
+     instruction-register.png):
+
+       PC   a REGISTER_8BIT (PC_REGISTER tab) on the bus: drives it at
+            step 1, captures from it at step 3.
+       IR   a MEM_8BIT (IR tab). It captures from the bus at step 2 and
+            NEVER drives it: its output is wired straight to the control
+            unit's ir input, replacing Week 11's ir pin.
+       RAM  the student's Week 8 RAM_16X16, whole: address <- bus (into
+            the MAR, set by mar_s), i <- bus, o -> bus through its own
+            output buffer (driven only while ram_e is high). Populated
+            0x00-0x1F; an address in rows 2-15 selects nothing and the
+            RAM's output floats (Week 8).
+
+     FETCH (Fall 2025, "Stepper 1 connects to BUS 1, PC_E, MAR_S and
+     ACC_S; Stepper 2 to RAM_E and IR_S; Stepper 3 to ACC_E and PC_S"):
+       step 1   PC -> bus;  MAR <- bus;  ACC <- bus + 1 (bus1, ADD)
+       step 2   RAM -> bus; IR <- bus
+       step 3   ACC -> bus; PC <- bus
+     The ALU adds at step 1 because the opcode lines are gated by
+     (step 5 AND ALU) -- the Week 11 decision that made this possible.
+
+     THE CONTROL TABLE. DP_TABLE is Week 11's CTL_TABLE plus five new
+     lines and four new fetch terms. It is BUILT from CTL_TABLE rather
+     than copied, so the two cannot drift; the suite asserts the result
+     against a hand-written table.
+
+     RULINGS (Dave, 2026-11-01):
+       - Carry-in stays a 0 pin. Ctmp arrives in Week 14.
+       - Programs are hand-loaded through the test port. The CPU tab gains
+         a run pin (clk_e and clk_s reach the control unit only through
+         an AND with run) and manual set pins ORed into the PC, IR, MAR
+         and RAM sets, plus ram_reset. Week 14's loader replaces them.
+       - The clock stays a clicked pin: 24 clicks per instruction.
+       - MOV and SUB are not instructions. They are taught as sequences
+         of ALU instructions (DP_SEQUENCES), Week 7's "blt is not an
+         instruction" lesson on the course CPU.
+
+     WHY run EXISTS. After Simulate -> Reset the stepper is on step 1
+     with clk_e = 1, so the moment fetch is wired, PC_E is high and the
+     never-written PC drives EEEEEEEE onto the bus. The test port cannot
+     drive the bus while anything else does. With run = 0 every enable
+     and set the control unit produces is 0 (all of them are ANDed with
+     clk_e or clk_s), so the bus is the test port's.
+
+     NAMING. Every helper is dp-prefixed (the Week 6 shadowing rule).
+     ============================================================ */
+
+  /* Fetch terms, added to Week 11's lines or carried by the new ones. */
+  var DP_FETCH_TERMS = { pc_e: [1], mar_s: [1], acc_s: [1], bus1: [1], ram_e: [2], ir_s: [2], acc_e: [3], pc_s: [3] };
+  var DP_NEW_LINES = [
+    { line: 'pc_e',  gate: 'clk_e', drives: 'PC drives the bus' },
+    { line: 'mar_s', gate: 'clk_s', drives: 'the MAR captures the address' },
+    { line: 'ram_e', gate: 'clk_e', drives: 'RAM drives the bus' },
+    { line: 'ir_s',  gate: 'clk_s', drives: 'IR captures the instruction' },
+    { line: 'pc_s',  gate: 'clk_s', drives: 'PC captures' }
+  ];
+  var DP_EVERY = 'every instruction';
+
+  function dpBuildTable(fault) {
+    var rows = [];
+    if (!CTL_TABLE) { throw new Error('dpBuildTable before Week 11 loaded'); }
+    DP_NEW_LINES.forEach(function (n) {
+      rows.push({ line: n.line, gate: n.gate, drives: n.drives, isNew: true,
+                  terms: DP_FETCH_TERMS[n.line].map(function (s) { return { step: s, when: DP_EVERY }; }) });
+    });
+    CTL_TABLE.forEach(function (r) {
+      var extra = (DP_FETCH_TERMS[r.line] || []).map(function (s) { return { step: s, when: DP_EVERY }; });
+      rows.push({ line: r.line, gate: r.gate, drives: r.drives, isNew: false, grew: extra.length > 0,
+                  terms: extra.concat(r.terms.map(function (t) { return { step: t.step, when: t.when }; })) });
+    });
+    if (fault) { DP_FAULTS[fault].apply(rows); }
+    return rows;
+  }
+
+  /* Four wiring mistakes, for page 4's Find the Fault. Each is a
+     believable slip, and each has a different symptom. */
+  var DP_FAULTS = {
+    pc_s_missing: {
+      name: 'pc_s never wired',
+      symptom: 'The same instruction runs again and again; PC never moves from where you loaded it.',
+      cause: 'The control unit’s pc_s output is not connected to the PC (or its step-3 AND is missing), so step 3 puts PC + 1 on the bus and nothing captures it.',
+      apply: function (rows) { rows.forEach(function (r) { if (r.line === 'pc_s') { r.terms = []; } }); }
+    },
+    ir_s_step3: {
+      name: 'ir_s on step 3 instead of step 2',
+      symptom: 'The IR holds PC + 1 instead of the instruction, so the CPU executes the wrong byte — here, LD R0, R1 or LD R0, R2, which do nothing this week.',
+      cause: 'ir_s is ANDed with step 3, when ACC (PC + 1) is on the bus, instead of step 2, when RAM is.',
+      apply: function (rows) { rows.forEach(function (r) { if (r.line === 'ir_s') { r.terms = [{ step: 3, when: DP_EVERY }]; } }); }
+    },
+    bus1_fetch_missing: {
+      name: 'bus1 missing from step 1',
+      symptom: 'PC jumps by a strange amount after the first instruction, or reads EEEEEEEE.',
+      cause: 'Without bus1 at step 1 the ALU adds PC to whatever TMP holds instead of to 1, so ACC, and then PC, get the wrong address.',
+      apply: function (rows) { rows.forEach(function (r) { if (r.line === 'bus1') { r.terms = r.terms.filter(function (t) { return t.step !== 1; }); } }); }
+    },
+    mar_s_missing: {
+      name: 'mar_s never wired',
+      symptom: 'PC counts up correctly, but every instruction executed is the same one: the byte at the last address you loaded by hand.',
+      cause: 'The MAR is never set by step 1, so it keeps the address from hand-loading and step 2 reads that byte every time.',
+      apply: function (rows) { rows.forEach(function (r) { if (r.line === 'mar_s') { r.terms = []; } }); }
+    }
+  };
+
+  /* This block sits ABOVE Week 11's in the file (so Week 11's slice stays
+     clean), and CTL_TABLE, CTL_WHEN and CTL_FETCH are assigned when
+     Week 11's block runs -- after this one. So everything built from
+     them is built once, on first use, by dpInit(). */
+  var DP_TABLE = null, DP_LINES = null, DP_WHEN = null, DP_FETCH = null;
+  function dpInit() {
+    if (DP_TABLE) { return; }
+    DP_WHEN = {};
+    DP_WHEN[DP_EVERY] = function () { return true; };
+    DP_WHEN.ALU = CTL_WHEN.ALU;
+    DP_WHEN['ALU, not CMP'] = CTL_WHEN['ALU, not CMP'];
+    DP_WHEN.CLF = CTL_WHEN.CLF;
+    DP_FETCH = CTL_FETCH;
+    DP_TABLE = dpBuildTable(null);
+    DP_LINES = DP_TABLE.map(function (r) { return r.line; });
+  }
+
+  /* Which part each enable puts on the bus, and which part each set
+     line writes. */
+  var DP_DRIVER_OF = { pc_e: 'PC', ram_e: 'RAM', acc_e: 'ACC', rega_e: 'RA', regb_e: 'RB' };
+  var DP_TARGET_OF = { mar_s: 'MAR', acc_s: 'ACC', ir_s: 'IR', pc_s: 'PC', tmp_s: 'TMP', flags_s: 'FLAGS', regb_s: 'RB' };
+
+  function dpRaised(ir, step, table) {
+    dpInit();
+    table = table || DP_TABLE;
+    var d = ctlDecode(ir), out = {};
+    table.forEach(function (row) {
+      out[row.line] = row.terms.some(function (t) { return t.step === step && DP_WHEN[t.when](d); }) ? 1 : 0;
+    });
+    out.opcode = (step === 5 && d.alu) ? d.op : 0;
+    return out;
+  }
+
+  /* lines(ir, steps, clkE, clkS, run) -- the control unit's outputs, with
+     the CPU tab's run gate applied to clk_e and clk_s first. */
+  function dpLines(ir, steps, clkE, clkS, run, table) {
+    dpInit();
+    table = table || DP_TABLE;
+    var d = ctlDecode(ir), out = {}, st = 0, k;
+    if (run === undefined) { run = 1; }
+    for (k = 0; k < 6; k++) { if (steps[k]) { st = k + 1; } }
+    var e = (clkE && run) ? 1 : 0, s = (clkS && run) ? 1 : 0;
+    var raw = st ? dpRaised(ir, st, table) : null;
+    table.forEach(function (row) {
+      var v = raw ? raw[row.line] : 0;
+      if (row.gate === 'clk_e') { v = v & e; }
+      if (row.gate === 'clk_s') { v = v & s; }
+      out[row.line] = v;
+    });
+    out.opcode = raw ? raw.opcode : 0;
+    out.ra = d.ra; out.rb = d.rb; out.step = st;
+    return out;
+  }
+
+  /* datapath(ir) -- the six steps of one instruction as transfers: who
+     drives the bus and who captures. For page 3's table. */
+  function dpDatapath(ir) {
+    dpInit();
+    var d = ctlDecode(ir), rows = [], st;
+    for (st = 1; st <= 6; st++) {
+      var r = dpRaised(ir, st), drv = [], cap = [];
+      Object.keys(DP_DRIVER_OF).forEach(function (l) {
+        if (r[l]) { drv.push(DP_DRIVER_OF[l] === 'RA' ? 'R' + d.ra : DP_DRIVER_OF[l] === 'RB' ? 'R' + d.rb : DP_DRIVER_OF[l]); }
+      });
+      Object.keys(DP_TARGET_OF).forEach(function (l) {
+        if (r[l]) { cap.push(DP_TARGET_OF[l] === 'RB' ? 'R' + d.rb : DP_TARGET_OF[l]); }
+      });
+      rows.push({ step: st, drivers: drv, captures: cap, bus1: !!r.bus1, opcode: r.opcode, idle: !drv.length && !cap.length });
+    }
+    return rows;
+  }
+
+  /* MOV and SUB, as the course CPU does them. ~x = -x - 1 (Week 1), so
+     NOT(NOT b + a) = b - a exactly, modulo 256, with carry-in 0. */
+  var DP_SEQUENCES = [
+    { name: 'MOV', syntax: 'MOV RA, RB', means: 'RB ← RA',
+      expand: function (a, b) { return ['NOT R' + a + ', R' + b, 'NOT R' + b + ', R' + b]; },
+      why: 'NOT RA, RB puts the inverse of RA in RB; NOT RB, RB inverts it back.',
+      caveat: 'Two instructions, 48 clicks. The flags are left as the second NOT set them.' },
+    { name: 'SUB', syntax: 'SUB RA, RB', means: 'RB ← RB − RA',
+      expand: function (a, b) { return ['NOT R' + b + ', R' + b, 'ADD R' + a + ', R' + b, 'NOT R' + b + ', R' + b]; },
+      why: 'NOT b = −b − 1, so NOT(NOT b + a) = −(−b − 1 + a) − 1 = b − a.',
+      caveat: 'RA and RB must be different registers: the first NOT changes RB, and if RA is RB it changes RA too. The flags are the last NOT’s, not a subtraction’s; use CMP to compare.' }
+  ];
+
+  /* expand('SUB R1, R2') -> { ok, lines: ['NOT R2, R2', ...], bytes: [...] } */
+  function dpExpand(text) {
+    var t = String(text).trim().toUpperCase().replace(/\s+/g, ' ');
+    var m = /^(MOV|SUB)\s+R([0-3])\s*,\s*R([0-3])$/.exec(t);
+    if (!m) {
+      var e = coreEncode(t);
+      return e.ok ? { ok: true, lines: [t.replace(/\s*,\s*/g, ', ')], bytes: e.bytes } : { ok: false, error: e.error };
+    }
+    var a = +m[2], b = +m[3];
+    if (m[1] === 'SUB' && a === b) {
+      return { ok: false, error: 'SUB needs two different registers: the first NOT would change RA as well as RB.' };
+    }
+    var seq = DP_SEQUENCES[m[1] === 'MOV' ? 0 : 1], lines = seq.expand(a, b);
+    return { ok: true, lines: lines, bytes: lines.map(function (l) { return coreEncode(l).bytes[0]; }) };
+  }
+
+  /* The Checkpoint 6 program: MOV R0, R2 then SUB R1, R2, from R0 = 7,
+     R1 = 3. R2 ends at 7 - 3 = 4. R2 is loaded too (with 0): step 4 of
+     EVERY ALU instruction copies RB into TMP -- even NOT, which never
+     uses it -- so a never-written RB would put EEEEEEEE into TMP. */
+  var DP_CHECKPOINT = {
+    regs: { R0: 7, R1: 3, R2: 0 },
+    source: ['MOV R0, R2', 'SUB R1, R2'],
+    bytes: [0xB2, 0xBA, 0xBA, 0x86, 0xBA]
+  };
+
+  /* cpu(init) -- the Week 13 CPU tab.
+       init: R0-R3, TMP, ACC, flags, PC, IR (null = never written, E),
+             ram (array of bytes from 0x00, written directly -- the
+             widgets' shortcut; the checkpoint loads by hand), run,
+             fault (a DP_FAULTS key).
+     toggle()          one click of clk_in
+     runInstruction()  24 clicks
+     hand(op)          the test port: { data, set: 'reg'|'pc'|'ir'|'mar'|'ram'|'reset' }
+     loadByte, clearRam, setPc, setReg, prepare  -- hand() sequences
+     setRun(v)         the run pin */
+  function dpCpu(init) {
+    dpInit();
+    init = init || {};
+    var table = dpBuildTable(init.fault || null);
+    var R = [0, 1, 2, 3].map(function (k) { return init['R' + k] === undefined ? null : init['R' + k]; });
+    var TMP = init.TMP === undefined ? null : init.TMP, ACC = init.ACC === undefined ? null : init.ACC;
+    var F = { C: 0, A: 0, E: 0, Z: 0 };
+    if (init.flags) { CORE_FLAG_NAMES.forEach(function (f) { if (init.flags[f] !== undefined) { F[f] = init.flags[f]; } }); }
+    var PC = init.PC === undefined ? null : init.PC, IR = init.IR === undefined ? null : init.IR;
+    var ram = memRam();
+    (init.ram || []).forEach(function (v, a) {
+      if (v === null || v === undefined || a >= MEM_GEOMETRY.populated) { return; }
+      ram.step({ address: a, sa: 1 }); ram.step({ i: v & 255, s: 1 }); ram.step({});
+    });
+    if (init.ram && init.ram.length) { ram.step({ address: 0, sa: 1 }); ram.step({}); }
+    if (init.MAR !== undefined) { ram.step({ address: init.MAR, sa: 1 }); ram.step({}); }
+    var run = init.run ? 1 : 0;
+    var clock = ctlClock(), stepper = ctlStepper();
+    var clk = clock.reset(), stp = stepper.powerUp(), toggles = 0, instructions = 0;
+
+    function irByte() { return IR === null ? 0 : IR; }
+    function linesNow() {
+      var l = dpLines(irByte(), stp.steps, clk.clkE, clk.clkS, run, table);
+      l.irUnknown = IR === null;
+      return l;
+    }
+
+    /* evaluate(l, x): the bus, the ALU and the writes for lines l plus the
+       test port x = { data, dataE, set }. Changes nothing. */
+    function evaluate(l, x) {
+      x = x || {};
+      var unknown = l.irUnknown && (l.step >= 4);
+      var rs = coreRegSelect({ ra: l.ra, rb: l.rb, regaE: l.rega_e, regbE: l.regb_e, regbS: l.regb_s || (x.set === 'reg' ? 1 : 0) });
+      var drivers = [], i, why = null;
+      for (i = 0; i < 4; i++) { if (rs.e[i]) { drivers.push({ name: 'R' + i, value: R[i] }); } }
+      if (l.acc_e) { drivers.push({ name: 'ACC', value: ACC }); }
+      if (l.pc_e) { drivers.push({ name: 'PC', value: PC }); }
+      var ramOut = null;
+      if (l.ram_e) {
+        ramOut = ram.step({ e: 1 });
+        if (ramOut.oState === 'driven') { drivers.push({ name: 'RAM', value: ramOut.o }); }
+        else if (ramOut.oState === 'E') { drivers.push({ name: 'RAM', value: null }); }
+        else { why = ramOut.mar === null
+          ? 'RAM is enabled, but the MAR has never been set, so no byte is selected'
+          : 'RAM is enabled, but address ' + coreHex2(ramOut.mar) + ' is in an unpopulated row, so no byte drives the bus'; }
+      }
+      if (x.dataE) { drivers.push({ name: 'DATA', value: (x.data | 0) & 255 }); }
+
+      var bus;
+      if (drivers.length > 1) {
+        bus = { state: 'conflict', value: null, drivers: drivers.map(function (d) { return d.name; }),
+                why: drivers.map(function (d) { return d.name; }).join(' and ') + ' are both driving the bus' };
+      } else if (drivers.length === 1 && drivers[0].value === null) {
+        bus = { state: 'error', value: null, drivers: [drivers[0].name],
+                why: drivers[0].name + ' has never been written, so it drives EEEEEEEE' };
+      } else if (drivers.length === 1) {
+        bus = { state: 'driven', value: drivers[0].value, drivers: [drivers[0].name] };
+      } else {
+        bus = { state: 'float', value: null, drivers: [], why: why || 'nothing is driving the bus' };
+      }
+
+      var tmpNow = (l.tmp_s && bus.state === 'driven') ? bus.value : TMP;
+      var b1 = l.bus1 ? 1 : 0;
+      var aIn = bus.state === 'driven' ? bus.value : (bus.state === 'float' ? 0 : null);   /* A is pulled down */
+      var bIn = b1 ? 1 : tmpNow;
+      var alu = null;
+      if (aIn !== null && bIn !== null) {
+        var ev = aluEvaluate((l.opcode | 0) & 7, intToWord(aIn, 8),
+                             b1 ? coreBus1(intToWord(tmpNow || 0, 8), 1) : intToWord(bIn, 8), 0);
+        alu = { a: aIn, b: bIn, c: ev.out ? wordToInt(ev.out) : null,
+                C: ev.cout ? 1 : 0, A: ev.al ? 1 : 0, E: ev.eq ? 1 : 0, Z: ev.z === null ? null : (ev.z ? 1 : 0),
+                op: CORE_ALU_MNEMONICS[(l.opcode | 0) & 7] };
+      }
+
+      var sets = [];
+      for (i = 0; i < 4; i++) { if (rs.s[i]) { sets.push('R' + i); } }
+      if (l.tmp_s) { sets.push('TMP'); }
+      if (l.acc_s) { sets.push('ACC'); }
+      if (l.flags_s) { sets.push('FLAGS'); }
+      if (l.pc_s || x.set === 'pc') { sets.push('PC'); }
+      if (l.ir_s || x.set === 'ir') { sets.push('IR'); }
+      if (l.mar_s || x.set === 'mar') { sets.push('MAR'); }
+      if (x.set === 'ram') { sets.push('RAM'); }
+      if (x.set === 'reset') { sets.push('RAM*'); }
+
+      /* Each target is judged on its own, as each latch is: the MAR can
+         capture a good address in the same quarter that ACC captures E. */
+      var needBus = sets.filter(function (n) { return n !== 'ACC' && n !== 'FLAGS'; });
+      var needAlu = sets.filter(function (n) { return n === 'ACC' || n === 'FLAGS'; });
+      var busOk = bus.state === 'driven';
+      var aluOk = !!alu && bus.state !== 'conflict' && bus.state !== 'error' && !(l.acc_e && l.acc_s);
+      var errors = [];
+      if (unknown && (sets.length || drivers.length)) { errors.push('The IR has never been written, so the control unit is decoding EEEEEEEE.'); }
+      if (l.acc_e && l.acc_s) { errors.push('ACC is driving the bus and capturing at the same time.'); }
+      if (needBus.length && !busOk) { errors.push(needBus.join(', ') + ': nothing to capture — ' + bus.why + '.'); }
+      if (needAlu.length && !aluOk && !(l.acc_e && l.acc_s)) {
+        errors.push(needAlu.join(' and ') + ': ' + (bIn === null && aIn !== null
+          ? 'the ALU’s B input comes from TMP, and TMP has never been written.'
+          : 'the ALU has nothing to work on — ' + (bus.why || 'the bus is not driven') + '.'));
+      }
+      var bad = {};
+      needBus.forEach(function (n) { if (!busOk) { bad[n] = 1; } });
+      needAlu.forEach(function (n) { if (!aluOk) { bad[n] = 1; } });
+      return { ok: errors.length === 0, error: errors.length ? errors.join(' ') : null, bad: bad,
+               bus: bus, alu: alu, sets: sets, drivers: drivers.map(function (d) { return d.name; }),
+               regSelect: rs, ramOut: ramOut };
+    }
+
+    function apply(ev) {
+      var wrote = [];
+      ev.sets.forEach(function (n) {
+        var r = /^R([0-3])$/.exec(n);
+        if (r) { R[+r[1]] = ev.bus.value; }
+        else if (n === 'TMP') { TMP = ev.bus.value; }
+        else if (n === 'ACC') { ACC = ev.alu.c; }
+        else if (n === 'FLAGS') { CORE_FLAG_NAMES.forEach(function (f) { F[f] = ev.alu[f]; }); }
+        else if (n === 'PC') { PC = ev.bus.value; }
+        else if (n === 'IR') { IR = ev.bus.value; }
+        else if (n === 'MAR') { ram.step({ address: ev.bus.value, sa: 1 }); ram.step({}); }
+        else if (n === 'RAM') { var w = ram.step({ i: ev.bus.value, s: 1 }); ram.step({}); if (!w.wrote.length) { n = 'RAM (nothing stored: no byte selected)'; } }
+        else if (n === 'RAM*') { ram.step({ i: ev.bus.value, reset: 1 }); ram.step({}); n = 'every RAM byte'; }
+        wrote.push(n);
+      });
+      return wrote;
+    }
+
+    /* A latch whose set goes high while its input is E, contested or
+       floating captures E: that is what Logisim shows, and what the
+       student must learn to trace back. The MAR and FLAGS are left alone
+       (the model cannot hold a part-E address; FLAGS needs the ALU). */
+    function applyE(ev) {
+      var wrote = [];
+      ev.sets.forEach(function (n) {
+        var r = /^R([0-3])$/.exec(n);
+        if (r) { R[+r[1]] = null; wrote.push(n + ' = E'); }
+        else if (n === 'TMP') { TMP = null; wrote.push('TMP = E'); }
+        else if (n === 'ACC') { ACC = null; wrote.push('ACC = E'); }
+        else if (n === 'PC') { PC = null; wrote.push('PC = E'); }
+        else if (n === 'IR') { IR = null; wrote.push('IR = E'); }
+      });
+      return wrote;
+    }
+
+    function state() {
+      var bytes = [], a;
+      for (a = 0; a < MEM_GEOMETRY.populated; a++) { bytes.push(ram.peek(a)); }
+      return { R0: R[0], R1: R[1], R2: R[2], R3: R[3], TMP: TMP, ACC: ACC,
+               flags: { C: F.C, A: F.A, E: F.E, Z: F.Z }, PC: PC, IR: IR, MAR: ram.state.mar, ram: bytes, run: run };
+    }
+
+    function snapshot(extra) {
+      var l = linesNow(), ev = evaluate(l);
+      var o = { toggles: toggles, instructions: instructions, clk: clk, quarter: clk.quarter,
+                quarterName: CTL_QUARTERS[clk.quarter].name, steps: stp.steps.slice(), step: l.step,
+                lines: l, bus: ev.bus, alu: ev.alu, drivers: ev.drivers, sets: ev.sets, state: state(),
+                decoded: IR === null ? null : ctlDecode(IR) };
+      if (extra) { for (var k in extra) { if (Object.prototype.hasOwnProperty.call(extra, k)) { o[k] = extra[k]; } } }
+      return o;
+    }
+
+    function toggle() {
+      clk = clock.toggle();
+      stp = stepper.settle(clk.clk, 0, true);
+      toggles++;
+      if (stp.pulsed7) { instructions++; }
+      var l = linesNow(), ev = evaluate(l), wrote = [];
+      if (ev.sets.length) {
+        var good = ev.sets.filter(function (n) { return !ev.bad[n]; }), badOnes = ev.sets.filter(function (n) { return ev.bad[n]; });
+        wrote = apply({ sets: good, bus: ev.bus, alu: ev.alu }).concat(applyE({ sets: badOnes }));
+      }
+      return snapshot({ pulsed7: stp.pulsed7, wrote: wrote, error: ev.sets.length && !ev.ok ? ev.error : (ev.bus.state === 'conflict' ? ev.bus.why : null) });
+    }
+
+    function hand(op) {
+      var l = linesNow(), ev = evaluate(l, { data: op.data, dataE: 1, set: op.set });
+      var wrote = ev.ok ? apply(ev) : [];
+      return { ok: ev.ok, error: ev.error, wrote: wrote, bus: ev.bus, state: state() };
+    }
+
+    var api = {
+      toggle: toggle,
+      run: function (n) { var r = []; for (var i = 0; i < n; i++) { r.push(toggle()); } return r; },
+      runInstruction: function () {
+        var before = { PC: PC }, r = [];
+        for (var i = 0; i < 24; i++) { r.push(toggle()); }
+        var errs = r.filter(function (s) { return s.error; }).map(function (s) { return 'click ' + s.toggles + ': ' + s.error; });
+        return { pcBefore: before.PC, ir: IR, text: IR === null ? '?' : coreDecodeByte(IR).text, errors: errs, clicks: r, state: state() };
+      },
+      hand: hand,
+      setRun: function (v) { run = v ? 1 : 0; return snapshot(); },
+      loadByte: function (addr, v) {
+        var a = hand({ data: addr, set: 'mar' }), b = hand({ data: v, set: 'ram' });
+        return { ok: a.ok && b.ok, error: a.error || b.error };
+      },
+      clearRam: function () { return hand({ data: 0, set: 'reset' }); },
+      setPc: function (v) { return hand({ data: v, set: 'pc' }); },
+      setReg: function (n, v) {
+        var a = hand({ data: 0x80 | (n & 3), set: 'ir' }), b = hand({ data: v, set: 'reg' });
+        return { ok: a.ok && b.ok, error: a.error || b.error };
+      },
+      reset: function () {
+        clk = clock.reset(); stp = stepper.powerUp(); toggles = 0; instructions = 0;
+        R = [null, null, null, null]; TMP = null; ACC = null; PC = null; IR = null;
+        F = { C: 0, A: 0, E: 0, Z: 0 }; ram = memRam(); run = 0;
+        return snapshot();
+      },
+      snapshot: snapshot,
+      state: state,
+      table: function () { return table; }
+    };
+    return api;
+  }
+
+  /* prepare(spec) -- the hand-loading sequence, as the steps a student
+     performs, each with its pins. spec: { bytes, regs: {R0: v, ...}, pc } */
+  function dpPrepare(spec) {
+    var steps = [], bytes = spec.bytes || [], regs = spec.regs || {};
+    steps.push({ what: 'Clear the RAM', pins: 'data = 00000000, data_e = 1, pulse ram_reset', set: 'reset', data: 0 });
+    bytes.forEach(function (b, a) {
+      steps.push({ what: 'Address ' + coreHex2(a), pins: 'data = ' + coreBits(a, 8) + ', pulse data_mar', set: 'mar', data: a });
+      steps.push({ what: 'Byte ' + coreHex2(b) + ' (' + coreDecodeByte(b).text + ')', pins: 'data = ' + coreBits(b, 8) + ', pulse data_ram', set: 'ram', data: b });
+    });
+    steps.push({ what: 'PC = ' + coreHex2(spec.pc | 0), pins: 'data = ' + coreBits(spec.pc | 0, 8) + ', pulse data_pc', set: 'pc', data: spec.pc | 0 });
+    Object.keys(regs).sort().forEach(function (k) {
+      var n = +k.slice(1);
+      steps.push({ what: 'Name ' + k + ' in the IR', pins: 'data = ' + coreBits(0x80 | n, 8) + ', pulse data_ir', set: 'ir', data: 0x80 | n });
+      steps.push({ what: k + ' = ' + coreBits(regs[k], 8), pins: 'data = ' + coreBits(regs[k], 8) + ', pulse data_s', set: 'reg', data: regs[k] });
+    });
+    steps.push({ what: 'Release the bus and run', pins: 'data_e = 0, then run = 1', set: null });
+    return steps;
+  }
+
+  /* boot(spec) -- a CPU after Simulate -> Reset with spec hand-loaded and
+     run = 1, ready for click 1. */
+  function dpBoot(spec, fault) {
+    var c = dpCpu({ fault: fault });
+    dpPrepare(spec).forEach(function (s) { if (s.set) { c.hand({ data: s.data, set: s.set }); } });
+    c.setRun(1);
+    return c;
+  }
+
+  /* trace(spec, n) -- run n instructions; one row per instruction. */
+  function dpTrace(spec, n, fault) {
+    var c = dpBoot(spec, fault), rows = [];
+    for (var i = 0; i < n; i++) {
+      var r = c.runInstruction();
+      rows.push({ n: i + 1, pcBefore: r.pcBefore, ir: r.ir, text: r.text, errors: r.errors, state: r.state });
+    }
+    return rows;
+  }
+
+  /* ============================================================
      WEEK 12 -- The memory bus, I/O and syscall (CSCLogic.sys)
      ============================================================
      Added 2026-10-25.
@@ -3439,6 +3923,30 @@
       machine: coreMachine,
       runAlu: coreRunAlu
     },
+
+    /* Week 13 additions -- the whole CPU: PC, IR and RAM on the bus,
+       fetch, MOV and SUB as sequences. Every helper is dp-prefixed; see
+       the block comment. */
+    dp: (dpInit(), {
+      TABLE: DP_TABLE,
+      LINES: DP_LINES,
+      NEW_LINES: DP_NEW_LINES,
+      FETCH_TERMS: DP_FETCH_TERMS,
+      FETCH: DP_FETCH,
+      WHEN: DP_WHEN,
+      FAULTS: DP_FAULTS,
+      SEQUENCES: DP_SEQUENCES,
+      CHECKPOINT: DP_CHECKPOINT,
+      table: dpBuildTable,
+      raised: dpRaised,
+      lines: dpLines,
+      datapath: dpDatapath,
+      expand: dpExpand,
+      cpu: dpCpu,
+      prepare: dpPrepare,
+      boot: dpBoot,
+      trace: dpTrace
+    }),
 
     /* Week 12 additions -- the memory bus, I/O and syscall. Every helper
        is sys-prefixed; see the block comment. */
