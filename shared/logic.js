@@ -1631,6 +1631,383 @@
   }
 
   /* ============================================================
+     WEEK 14 -- The finished CPU (CSCLogic.fin)
+     ============================================================
+     Added 2026-11-01.
+
+     WHAT THIS MODELS. Checkpoint 7: the Week 13 CPU with every class of
+     the course ISA wired, as Dave's Fall 2025 build pages define them
+     (circuits-control-load-and-store, -data-instruction, -jump-register,
+     -jump-address, -jump-if, -final-cpu-carry-in, -final-cpu-load-mars-
+     end, -final-cpu-clock-input, -final-cpu-counter-256, -final-cpu-ram-
+     input-mux, circuits-top-level-cpu, and the 2022 "Running our 8-bit
+     CPU simulator" video):
+
+       LD RA,RB    4: RA -> MAR             5: RAM -> RB
+       ST RA,RB    4: RA -> MAR             5: RB -> RAM
+       DATA RB,n   4: PC -> MAR, ACC<-PC+1  5: RAM -> RB      6: ACC -> PC
+       JMPR RB     4: RB -> PC
+       JMP a       4: PC -> MAR             5: RAM -> PC
+       Jcaez a     4: PC -> MAR, ACC<-PC+1  5: ACC -> PC      6: if taken RAM -> PC
+       (ALU, CMP, CLF as Week 11; fetch as Week 13)
+
+       Carry-in: CTMP, one MEM_1BIT, captures FLAGS.C when TMP is set
+       (step 4); the ALU's ci = CTMP AND the control line c, and c =
+       step5 AND ALU. Fetch's PC+1 and CLF therefore add with ci = 0.
+
+       END: the IR holding 11001111. The CPU tab ANDs NOT end into the
+       clock, so the CPU stops the moment the IR captures it.
+
+       The loader (Fall 2025, a named Standards 4.1 exception, Dave
+       2026-11-01): COUNTER_256 wraps Logisim's built-in Counter (8 bits,
+       falling edge, stay at value). On the CPU tab one instance, clocked
+       by clk AND load, drives the bus through a buffer enabled by load;
+       the RAM's input comes from a Multiplexor (load selects ram_input);
+       the RAM's s gains load AND clk_s; data_mar is held at 1 (Fall
+       2025's MARS) so the MAR follows the counter. On CPU_TEST a second
+       instance, clocked by clkl, addresses the external built-in RAM.
+
+     ARCHITECT'S DECISIONS (flagged in the spec):
+       1. run (Week 13) now gates clk as well as clk_e and clk_s into the
+          control unit. With run = 0 the stepper holds step 1 and no line
+          is high, which is what Fall 2025's LOAD-gated stepper clock and
+          NOT-LOAD step-1 mask achieved.
+       2. RESET without pull-downs. Fall 2025 pulls every bus-facing pin
+          down and ORs RESET into every set line, so a floating bus writes
+          0 everywhere. Here reset drives 00000000 onto the bus through a
+          buffer and is ORed into the sets of everything that captures
+          from the bus: R0-R3, TMP, IR, the MAR and the PC. It is pressed
+          before loading, as in Fall 2025's video. MYSIM.txt needs it:
+          its XOR R2, R2 clears R2 only if R2 already holds a value.
+       3. c = step5 AND ALU. Fall 2025's final control-unit figure does
+          not show which terms feed C legibly; this is the reading
+          consistent with its carry-in page and with MYSIM.txt.
+
+     NAMING. Every helper is fin-prefixed.
+     ============================================================ */
+
+  var FIN_EVERY = 'every instruction';
+  /* Class terms added to the Week 13 table, by line. */
+  var FIN_ADDED = {
+    rega_e: [[4, 'LD'], [4, 'ST']],
+    regb_e: [[5, 'ST'], [4, 'JMPR']],
+    pc_e:   [[4, 'DATA'], [4, 'JMP'], [4, 'JIF']],
+    ram_e:  [[5, 'LD'], [5, 'DATA'], [5, 'JMP'], [6, 'JIF taken']],
+    acc_e:  [[6, 'DATA'], [5, 'JIF']],
+    mar_s:  [[4, 'LD'], [4, 'ST'], [4, 'DATA'], [4, 'JMP'], [4, 'JIF']],
+    acc_s:  [[4, 'DATA'], [4, 'JIF']],
+    regb_s: [[5, 'LD'], [5, 'DATA']],
+    pc_s:   [[6, 'DATA'], [4, 'JMPR'], [5, 'JMP'], [5, 'JIF'], [6, 'JIF taken']],
+    bus1:   [[4, 'DATA'], [4, 'JIF']]
+  };
+  var FIN_NEW_LINES = [
+    { line: 'ram_s', gate: 'clk_s', drives: 'RAM captures (ST)', terms: [[5, 'ST']] },
+    { line: 'c',     gate: null,    drives: 'carry-in enabled: ci = CTMP AND c', terms: [[5, 'ALU']] }
+  ];
+  var FIN_CLASS_INDEX = { LD: 0, ST: 1, DATA: 2, JMPR: 3, JMP: 4, JIF: 5 };
+
+  var FIN_TABLE = null, FIN_LINES = null;
+  function finInit() {
+    if (FIN_TABLE) { return; }
+    dpInit();
+    FIN_TABLE = finBuildTable();
+    FIN_LINES = FIN_TABLE.map(function (r) { return r.line; });
+  }
+  function finBuildTable() {
+    var rows = DP_TABLE.map(function (r) {
+      var add = (FIN_ADDED[r.line] || []).map(function (t) { return { step: t[0], when: t[1] }; });
+      return { line: r.line, gate: r.gate, drives: r.drives, isNew: false, grew: add.length > 0,
+               terms: r.terms.map(function (t) { return { step: t.step, when: t.when }; }).concat(add) };
+    });
+    FIN_NEW_LINES.forEach(function (n) {
+      rows.push({ line: n.line, gate: n.gate, drives: n.drives, isNew: true, grew: false,
+                  terms: n.terms.map(function (t) { return { step: t[0], when: t[1] }; }) });
+    });
+    return rows;
+  }
+
+  /* flags: { C, A, E, Z } with null = E (never written). */
+  function finTaken(ir, flags) {
+    var f = flags || {}, m = 0, unknown = false;
+    [['C', 8], ['A', 4], ['E', 2], ['Z', 1]].forEach(function (p) {
+      if (ir & p[1]) { if (f[p[0]] === null || f[p[0]] === undefined) { unknown = true; } else if (f[p[0]]) { m = 1; } }
+    });
+    return { taken: m, unknown: unknown && !m };
+  }
+  function finWhen(when, d, ir, flags) {
+    if (when === FIN_EVERY) { return true; }
+    if (when === 'ALU') { return d.alu; }
+    if (when === 'ALU, not CMP') { return d.alu && !d.cmp; }
+    if (when === 'CLF') { return d.clf; }
+    if (when === 'JIF taken') { return !!d.classLines[5] && finTaken(ir, flags).taken === 1; }
+    if (FIN_CLASS_INDEX[when] !== undefined) { return !!d.classLines[FIN_CLASS_INDEX[when]]; }
+    throw new Error('unknown class ' + when);
+  }
+  function finRaised(ir, step, flags) {
+    finInit();
+    var d = ctlDecode(ir), out = {};
+    FIN_TABLE.forEach(function (row) {
+      out[row.line] = row.terms.some(function (t) { return t.step === step && finWhen(t.when, d, ir, flags); }) ? 1 : 0;
+    });
+    out.opcode = (step === 5 && d.alu) ? d.op : 0;
+    out.end = (ir & 255) === 0xCF ? 1 : 0;
+    return out;
+  }
+  function finLines(ir, steps, clkE, clkS, flags) {
+    finInit();
+    var d = ctlDecode(ir), st = 0, k, out = {};
+    for (k = 0; k < 6; k++) { if (steps[k]) { st = k + 1; } }
+    var raw = st ? finRaised(ir, st, flags) : null;
+    FIN_TABLE.forEach(function (row) {
+      var v = raw ? raw[row.line] : 0;
+      if (row.gate === 'clk_e') { v = v & (clkE ? 1 : 0); }
+      if (row.gate === 'clk_s') { v = v & (clkS ? 1 : 0); }
+      out[row.line] = v;
+    });
+    out.opcode = raw ? raw.opcode : 0;
+    out.ra = d.ra; out.rb = d.rb; out.step = st;
+    out.end = (ir & 255) === 0xCF ? 1 : 0;
+    return out;
+  }
+
+  /* datapath(ir, flags): drivers -> captures for steps 1-6. */
+  function finDatapath(ir, flags) {
+    finInit();
+    var d = ctlDecode(ir), rows = [], st;
+    var DRV = { pc_e: 'PC', ram_e: 'RAM', acc_e: 'ACC', rega_e: 'RA', regb_e: 'RB' };
+    var CAP = { mar_s: 'MAR', acc_s: 'ACC', ir_s: 'IR', pc_s: 'PC', tmp_s: 'TMP', flags_s: 'FLAGS', regb_s: 'RB', ram_s: 'RAM' };
+    for (st = 1; st <= 6; st++) {
+      var r = finRaised(ir, st, flags), drv = [], cap = [];
+      Object.keys(DRV).forEach(function (l) { if (r[l]) { drv.push(DRV[l] === 'RA' ? 'R' + d.ra : DRV[l] === 'RB' ? 'R' + d.rb : DRV[l]); } });
+      Object.keys(CAP).forEach(function (l) { if (r[l]) { cap.push(CAP[l] === 'RB' ? 'R' + d.rb : CAP[l]); } });
+      rows.push({ step: st, drivers: drv, captures: cap, bus1: !!r.bus1, c: !!r.c, opcode: r.opcode, idle: !drv.length && !cap.length });
+    }
+    return rows;
+  }
+
+  /* assemble(lines) -- course mnemonics plus Week 13's MOV/SUB sequences.
+     Returns { ok, bytes, rows:[{addr, bytes, text, from}] } or an error. */
+  function finAssemble(src) {
+    var lines = Array.isArray(src) ? src : String(src).split('\n'), bytes = [], rows = [], i, t, e;
+    for (i = 0; i < lines.length; i++) {
+      t = String(lines[i]).replace(/;.*$/, '').trim();
+      if (!t) { continue; }
+      if (/^(MOV|SUB)\b/i.test(t)) { e = dpExpand(t); if (!e.ok) { return { ok: false, line: i + 1, error: e.error }; } }
+      else { e = coreEncode(t); if (!e.ok) { return { ok: false, line: i + 1, error: e.error }; } e = { ok: true, bytes: e.bytes }; }
+      rows.push({ addr: bytes.length, bytes: e.bytes.slice(), text: t.toUpperCase().replace(/\s+/g, ' ').replace(/\s*,\s*/g, ', ').replace(/0X/g, '0x') });
+      e.bytes.forEach(function (b) { bytes.push(b); });
+    }
+    if (bytes.length > 32) { return { ok: false, error: bytes.length + ' bytes: the RAM has 32 populated bytes.' }; }
+    return { ok: true, bytes: bytes, rows: rows };
+  }
+
+  /* cpu(init) -- the Week 14 CPU tab and CPU_TEST.
+       init: R0-R3, TMP, ACC, flags (default all E), PC, IR, ctmp,
+             ram (written directly: a widget shortcut), ext (the external
+             RAM's contents), run, load, mars.
+     toggle(): one tick of the Logisim Clock (one toggle of clk_in), unless
+       END has stopped the clock. */
+  function finCpu(init) {
+    finInit();
+    init = init || {};
+    var R = [0, 1, 2, 3].map(function (k) { return init['R' + k] === undefined ? null : init['R' + k]; });
+    var TMP = init.TMP === undefined ? null : init.TMP, ACC = init.ACC === undefined ? null : init.ACC;
+    var F = { C: null, A: null, E: null, Z: null };
+    if (init.flags) { ['C', 'A', 'E', 'Z'].forEach(function (f) { if (init.flags[f] !== undefined) { F[f] = init.flags[f]; } }); }
+    var PC = init.PC === undefined ? null : init.PC, IR = init.IR === undefined ? null : init.IR;
+    var CT = init.ctmp === undefined ? null : init.ctmp;
+    var ram = memRam(), ext = [], a;
+    for (a = 0; a < 256; a++) { ext.push(0); }
+    (init.ext || []).forEach(function (v, i) { ext[i] = v & 255; });
+    (init.ram || []).forEach(function (v, i) { if (v !== null && v !== undefined && i < 32) { ram.step({ address: i, sa: 1 }); ram.step({ i: v & 255, s: 1 }); ram.step({}); } });
+    var pins = { run: init.run ? 1 : 0, load: init.load ? 1 : 0, mars: init.mars ? 1 : 0 };
+    var clock = ctlClock(), stepper = ctlStepper();
+    var clk = clock.reset(), stp = stepper.powerUp(), toggles = 0, instructions = 0, counter = 0, ended = false, lastClkl = 0;
+
+    function irByte() { return IR === null ? 0 : IR; }
+    function linesNow() {
+      var l = finLines(irByte(), stp.steps, pins.run ? clk.clkE : 0, pins.run ? clk.clkS : 0, F);
+      l.irUnknown = IR === null;
+      return l;
+    }
+
+    function evaluate(l, x) {
+      x = x || {};
+      var rs = coreRegSelect({ ra: l.ra, rb: l.rb, regaE: l.rega_e, regbE: l.regb_e, regbS: l.regb_s || (x.set === 'reg' ? 1 : 0) });
+      var drivers = [], i, why = null;
+      for (i = 0; i < 4; i++) { if (rs.e[i]) { drivers.push({ name: 'R' + i, value: R[i] }); } }
+      if (l.acc_e) { drivers.push({ name: 'ACC', value: ACC }); }
+      if (l.pc_e) { drivers.push({ name: 'PC', value: PC }); }
+      if (l.ram_e) {
+        var ro = ram.step({ e: 1 });
+        if (ro.oState === 'driven') { drivers.push({ name: 'RAM', value: ro.o }); }
+        else if (ro.oState === 'E') { drivers.push({ name: 'RAM', value: null }); }
+        else { why = ro.mar === null ? 'RAM is enabled but the MAR was never set' : 'RAM is enabled, but address ' + coreHex2(ro.mar) + ' is in an unpopulated row'; }
+      }
+      if (pins.load) { drivers.push({ name: 'COUNT', value: counter }); }
+      if (x.reset) { drivers.push({ name: 'RESET', value: 0 }); }
+      if (x.dataE) { drivers.push({ name: 'DATA', value: (x.data | 0) & 255 }); }
+      var bus;
+      if (drivers.length > 1) { bus = { state: 'conflict', value: null, drivers: drivers.map(function (d) { return d.name; }), why: drivers.map(function (d) { return d.name; }).join(' and ') + ' are both driving the bus' }; }
+      else if (drivers.length === 1 && drivers[0].value === null) { bus = { state: 'error', value: null, drivers: [drivers[0].name], why: drivers[0].name + ' has never been written, so it drives EEEEEEEE' }; }
+      else if (drivers.length === 1) { bus = { state: 'driven', value: drivers[0].value, drivers: [drivers[0].name] }; }
+      else { bus = { state: 'float', value: null, drivers: [], why: why || 'nothing is driving the bus' }; }
+
+      var tmpNow = (l.tmp_s && bus.state === 'driven') ? bus.value : TMP;
+      var ctNow = l.tmp_s ? F.C : CT;
+      var b1 = l.bus1 ? 1 : 0;
+      var aIn = bus.state === 'driven' ? bus.value : (bus.state === 'float' ? 0 : null);
+      var bIn = b1 ? 1 : tmpNow;
+      var op = (l.opcode | 0) & 7, usesCi = (op === 0 || op === 1 || op === 2);
+      var ci = l.c ? ctNow : 0, alu = null, ciBad = l.c && ctNow === null && usesCi;
+      if (aIn !== null && bIn !== null && !ciBad) {
+        var ev = aluEvaluate(op, intToWord(aIn, 8), b1 ? coreBus1(intToWord(tmpNow || 0, 8), 1) : intToWord(bIn, 8), ci ? 1 : 0);
+        alu = { a: aIn, b: bIn, ci: ci ? 1 : 0, c: ev.out ? wordToInt(ev.out) : null,
+                C: ev.cout ? 1 : 0, A: ev.al ? 1 : 0, E: ev.eq ? 1 : 0, Z: ev.z === null ? null : (ev.z ? 1 : 0), op: CORE_ALU_MNEMONICS[op] };
+      }
+      var sets = [];
+      for (i = 0; i < 4; i++) { if (rs.s[i]) { sets.push('R' + i); } }
+      if (l.tmp_s) { sets.push('TMP'); }
+      if (l.acc_s) { sets.push('ACC'); }
+      if (l.flags_s) { sets.push('FLAGS'); }
+      if (l.pc_s || x.set === 'pc' || x.reset) { sets.push('PC'); }
+      if (l.ir_s || x.set === 'ir') { sets.push('IR'); }
+      if (l.mar_s || pins.mars || x.set === 'mar' || x.reset) { sets.push('MAR'); }
+      if (x.reset) {
+        ['R0', 'R1', 'R2', 'R3', 'TMP', 'IR'].forEach(function (n) { if (sets.indexOf(n) < 0) { sets.push(n); } });
+      }
+      var loadWrite = pins.load && clk.clkS;
+      if (l.ram_s || x.set === 'ram' || loadWrite) { sets.push('RAM'); }
+      var needBus = sets.filter(function (n) { return n !== 'ACC' && n !== 'FLAGS' && !(n === 'RAM' && pins.load); });
+      var needAlu = sets.filter(function (n) { return n === 'ACC' || n === 'FLAGS'; });
+      var busOk = bus.state === 'driven';
+      var aluOk = !!alu && bus.state !== 'conflict' && bus.state !== 'error' && !(l.acc_e && l.acc_s);
+      var errors = [], bad = {};
+      if (l.irUnknown && l.step >= 4 && (sets.length || drivers.length)) { errors.push('The IR has never been written.'); }
+      if (bus.state === 'conflict') { errors.push(bus.why + '.'); }
+      if (needBus.length && !busOk) { errors.push(needBus.join(', ') + ': nothing to capture — ' + bus.why + '.'); needBus.forEach(function (n) { bad[n] = 1; }); }
+      if (needAlu.length && !aluOk) {
+        errors.push(needAlu.join(' and ') + ': ' + (ciBad ? 'the carry-in is E: CTMP was set from a FLAGS C that was never written (run CLF first).' : 'the ALU has nothing to work on.'));
+        needAlu.forEach(function (n) { bad[n] = 1; });
+      }
+      if (!l.irUnknown && l.step === 6 && ctlDecode(irByte()).classLines[5] && finTaken(irByte(), F).unknown) { errors.push('The jump tests a flag that was never written.'); }
+      return { ok: errors.length === 0, error: errors.length ? errors.join(' ') : null, bad: bad, bus: bus, alu: alu, sets: sets,
+               drivers: drivers.map(function (d) { return d.name; }), ctNow: ctNow, ramIn: pins.load ? ext[counter] : (busOk ? bus.value : null) };
+    }
+
+    function apply(ev) {
+      var wrote = [];
+      ev.sets.forEach(function (n) {
+        var badOne = ev.bad[n], r = /^R([0-3])$/.exec(n), v = ev.bus.value;
+        if (r) { R[+r[1]] = badOne ? null : v; }
+        else if (n === 'TMP') { TMP = badOne ? null : v; CT = ev.ctNow; }
+        else if (n === 'ACC') { ACC = badOne ? null : ev.alu.c; }
+        else if (n === 'FLAGS') { ['C', 'A', 'E', 'Z'].forEach(function (f) { F[f] = badOne ? null : ev.alu[f]; }); }
+        else if (n === 'PC') { PC = badOne ? null : v; }
+        else if (n === 'IR') { IR = badOne ? null : v; }
+        else if (n === 'MAR') { if (!badOne) { ram.step({ address: v, sa: 1 }); ram.step({}); } }
+        else if (n === 'RAM') { if (!badOne && ev.ramIn !== null) { ram.step({ i: ev.ramIn, s: 1 }); ram.step({}); } }
+        wrote.push(badOne ? n + ' = E' : n);
+      });
+      return wrote;
+    }
+
+    function state() {
+      var bytes = [], i;
+      for (i = 0; i < 32; i++) { bytes.push(ram.peek(i)); }
+      return { R0: R[0], R1: R[1], R2: R[2], R3: R[3], TMP: TMP, ACC: ACC, flags: { C: F.C, A: F.A, E: F.E, Z: F.Z },
+               PC: PC, IR: IR, MAR: ram.state.mar, CTMP: CT, ram: bytes, counter: counter, end: ended ? 1 : 0,
+               run: pins.run, load: pins.load, mars: pins.mars };
+    }
+    function snapshot(extra) {
+      var l = linesNow(), ev = evaluate(l), o = { toggles: toggles, instructions: instructions, clk: clk, quarter: clk.quarter,
+        quarterName: CTL_QUARTERS[clk.quarter].name, steps: stp.steps.slice(), step: l.step, lines: l, bus: ev.bus, alu: ev.alu,
+        drivers: ev.drivers, sets: ev.sets, state: state(), ended: ended };
+      if (extra) { for (var k in extra) { if (Object.prototype.hasOwnProperty.call(extra, k)) { o[k] = extra[k]; } } }
+      return o;
+    }
+
+    function toggle() {
+      if (ended) { return snapshot({ wrote: [], error: null, stopped: true }); }
+      clk = clock.toggle();
+      stp = stepper.settle(pins.run ? clk.clk : 0, 0, true);
+      toggles++;
+      if (stp.pulsed7 && pins.run) { instructions++; }
+      var clkl = clk.clk & pins.load;
+      if (lastClkl && !clkl && counter < 255) { counter++; }     /* falling edge, stay at 255 */
+      lastClkl = clkl;
+      var l = linesNow(), ev = evaluate(l), wrote = [];
+      if (ev.sets.length) { wrote = apply(ev); }
+      if (IR === 0xCF && pins.run && !ended) {
+        ended = true;
+        if (clk.clkIn) { clk = clock.toggle(); }   /* clock AND NOT end: clk_in falls; no J-K edge */
+        /* that half-toggle is not a tick; the clock is now stopped */
+      }
+      return snapshot({ wrote: wrote, error: ev.error, pulsed7: stp.pulsed7 });
+    }
+
+    function hand(op) {
+      var l = linesNow(), ev = evaluate(l, { data: op.data, dataE: op.set !== undefined && !op.reset, set: op.set, reset: op.reset });
+      var wrote = ev.ok ? apply(ev) : [];
+      return { ok: ev.ok, error: ev.error, wrote: wrote, state: state() };
+    }
+
+    return {
+      toggle: toggle,
+      run: function (n) { var r = []; for (var i = 0; i < n && !ended; i++) { r.push(toggle()); } return r; },
+      runInstruction: function () {
+        var pcBefore = PC, irs = [], errs = [], s, n = 0;
+        do { s = toggle(); n++; if (s.error) { errs.push('tick ' + s.toggles + ': ' + s.error); } } while (n < 24 && !ended);
+        return { pcBefore: pcBefore, ir: IR, text: IR === null ? '?' : coreDecodeByte(IR).text, errors: errs, ended: ended, state: state() };
+      },
+      runToEnd: function (max) {
+        max = max || 20000; var errs = [], s, n = 0;
+        while (!ended && n < max) { s = toggle(); n++; if (s.error) { errs.push('tick ' + s.toggles + ': ' + s.error); } }
+        return { ended: ended, ticks: n, instructions: instructions, errors: errs, state: state() };
+      },
+      hand: hand,
+      pressReset: function () { return hand({ reset: true }); },
+      setPins: function (p) { ['run', 'load', 'mars'].forEach(function (k) { if (p[k] !== undefined) { pins[k] = p[k] ? 1 : 0; } }); return snapshot(); },
+      setExt: function (bytes) { for (var i = 0; i < 256; i++) { ext[i] = (bytes[i] || 0) & 255; } },
+      tickToQuarter: function (q) { var n = 0; while (clk.quarter !== q && n < 8) { toggle(); n++; } return n; },
+      snapshot: snapshot,
+      state: state,
+      ext: function () { return ext.slice(); }
+    };
+  }
+
+  /* boot(bytes) -- the Week 14 load-and-run procedure, as the student does
+     it on CPU_TEST, ending with run = 1 at step 1, quarter 1:
+       Simulate -> Reset; run = 0; RESET (PC, R0-R3, TMP, IR, MAR = 0);
+       LOAD = 1 and MARS = 1 before any tick; the external RAM holds the
+       program; Ticks Enabled until the bus reads FF and byte 255's write
+       has passed; ticks off; Tick Once to clk 0, clk_e 1, clk_s 0;
+       LOAD = 0, MARS = 0; run = 1. */
+  function finBoot(bytes) {
+    var c = finCpu({ ext: bytes });
+    var log = { loadTicks: 0 };
+    c.setPins({ run: 0 });
+    log.reset = c.pressReset();
+    c.setPins({ load: 1, mars: 1 });
+    var guard = 0;
+    while (!(c.state().counter === 255 && c.snapshot().quarter === 3) && guard < 3000) { c.toggle(); guard++; }
+    log.loadTicks = guard;
+    log.toQ1 = c.tickToQuarter(0);
+    c.setPins({ load: 0, mars: 0 });
+    c.setPins({ run: 1 });
+    log.cpu = c;
+    return log;
+  }
+
+  /* run(src) -- assemble, boot, run to END (or max ticks). */
+  function finRunProgram(src, max) {
+    var a = finAssemble(src);
+    if (!a.ok) { return { ok: false, error: a.error }; }
+    var b = finBoot(a.bytes), r = b.cpu.runToEnd(max);
+    return { ok: true, bytes: a.bytes, loadTicks: b.loadTicks, ended: r.ended, ticks: r.ticks, instructions: r.instructions, errors: r.errors, state: r.state };
+  }
+
+  /* ============================================================
      WEEK 13 -- The whole CPU: PC, IR and RAM on the bus (CSCLogic.dp)
      ============================================================
      Added 2026-11-01.
@@ -3923,6 +4300,24 @@
       machine: coreMachine,
       runAlu: coreRunAlu
     },
+
+    /* Week 14 additions -- the finished CPU: every class, carry-in,
+       END, the loader. Every helper is fin-prefixed; see the block
+       comment. */
+    fin: (finInit(), {
+      TABLE: FIN_TABLE,
+      LINES: FIN_LINES,
+      ADDED: FIN_ADDED,
+      NEW_LINES: FIN_NEW_LINES,
+      taken: finTaken,
+      raised: finRaised,
+      lines: finLines,
+      datapath: finDatapath,
+      assemble: finAssemble,
+      cpu: finCpu,
+      boot: finBoot,
+      runProgram: finRunProgram
+    }),
 
     /* Week 13 additions -- the whole CPU: PC, IR and RAM on the bus,
        fetch, MOV and SUB as sequences. Every helper is dp-prefixed; see
