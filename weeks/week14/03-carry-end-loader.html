@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w14-03">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 14: Carry, END and the Loader</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .w-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-md); }
+    @media (max-width: 760px) { .w-grid { grid-template-columns: 1fr; } }
+    .w-panel { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-surface); min-width: 0; margin-top: var(--space-sm); }
+    .w-panel h3 { margin: 0 0 var(--space-xs); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .btn-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .steps { display: flex; flex-wrap: wrap; gap: 4px; }
+    .stp { min-width: 2.2rem; text-align: center; border: 2px solid var(--color-border); border-radius: 999px; padding: 1px 6px; font-weight: 700; font-size: var(--fs-sm); }
+    .stp--on { background: var(--color-accent); border-color: var(--color-accent-hov); color: #fff; }
+    .lines { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 4px; }
+    .ln { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .ln small { display: block; font-family: var(--font-sans); font-size: 11px; color: var(--color-text-muted); }
+    .ln--1 { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .ln--1 small { color: #dfe8f3; }
+    .ln--new { border-left: 4px solid var(--color-accent); }
+    .vals { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 4px; }
+    .val { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); background: var(--color-surface); overflow-wrap: anywhere; }
+    .val b { font-family: var(--font-sans); color: var(--color-primary); }
+    .val small { display: block; font-family: var(--font-sans); font-size: 11px; color: var(--color-text-muted); }
+    .val--wrote { border-color: var(--color-success); background: #f0faf4; }
+    .busline { font-family: var(--font-mono); border: 2px solid var(--color-primary); border-radius: var(--radius); padding: var(--space-xs) var(--space-sm); margin: var(--space-xs) 0; background: var(--color-code-bg); overflow-wrap: anywhere; }
+    .busline--float { border-style: dashed; border-color: var(--color-border); }
+    .busline--bad { border-color: var(--color-danger); background: #fdf0ef; }
+    .w-status { font-size: var(--fs-sm); min-height: 1.5em; margin: var(--space-xs) 0; }
+    .mono { font-family: var(--font-mono); }
+    .row-now { background: #fff7e0; }
+    .gen-table td:first-child { font-family: var(--font-mono); font-weight: 700; white-space: nowrap; }
+    .tag-new { display: inline-block; font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 999px; background: var(--color-accent); color: #fff; margin-left: 4px; font-family: var(--font-sans); }
+
+    .lr-sel { font-size: var(--fs-sm); padding: 2px 6px; border: 1px solid var(--color-border); border-radius: 4px; }
+    .lr-bar { height: .7rem; border-radius: 999px; background: var(--color-code-bg); border: 1px solid var(--color-border); overflow: hidden; }
+    .lr-bar > div { height: 100%; background: var(--color-primary); width: 0; }
+    .lr-end { display: inline-block; width: 1rem; height: 1rem; border-radius: 50%; background: #ccc; vertical-align: middle; margin-right: 6px; border: 1px solid var(--color-border); }
+    .lr-end--on { background: #d93025; }
+    .proc li { margin-bottom: 4px; }
+
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 14 &rsaquo; <span>Page 3 — Carry, END and the Loader</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Carry, END and the Loader</h1>
+    <p><strong>Sections 14.9 – 14.12</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~1 hour, with the video</p>
+
+    <section id="sec-14-9">
+      <h2>14.9 &nbsp; The carry that comes back</h2>
+      <p>Since Week 10 your ALU&rsquo;s carry-in, <code>ci</code>, has been a pin you held at 0. The finished CPU feeds it from the C flag, so that an addition can include the carry out of the previous one &mdash; how an 8-bit machine adds 16-bit numbers &mdash; and a shift can bring a bit in from the last one.</p>
+      <p>It cannot be the C flag directly. At step 5 of an ALU instruction FLAGS is being set, so its C output is changing in the very transfer that would read it: the loop ACC exists to break, one bit wide. So the flag is copied a step earlier into a one-bit latch, <strong>CTMP</strong>, set at the same moment as TMP (step 4), while FLAGS holds still:</p>
+      <ul>
+        <li><code>CTMP</code> = one <code>MEM_1BIT</code>: input FLAGS C, set <code>tmp_s</code>.</li>
+        <li>ALU <code>ci</code> = CTMP AND <code>c</code>, a new control line, <code>c</code> = <code>step5</code> AND ALU.</li>
+      </ul>
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/carry-in-details.jpg" style="max-width:420px"
+             alt="A small Logisim circuit: inputs S and C feed a one-bit memory block whose output goes to a single output pin.">
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s CTMP: one bit of memory, set with TMP, holding the carry flag.</figcaption>
+      </figure>
+      <p>Because <code>c</code> is high only at step 5 of an ALU instruction, every other addition &mdash; fetch&rsquo;s PC + 1, <code>DATA</code> and the conditional jump&rsquo;s PC + 1, and CLF&rsquo;s 0 + 1 &mdash; still adds with a carry-in of 0. Only ADD, SHR and SHL ever read <code>ci</code>. The price is that <strong>an ADD or shift picks up whatever carry the last ALU instruction left</strong>, which is why <code>MYSIM.txt</code> runs <code>CLF</code> before each one that must start clean.</p>
+    </section>
+
+    <section id="sec-14-10">
+      <h2>14.10 &nbsp; END, and the final clock</h2>
+      <p><code>END</code> is the byte <code>11001111</code> &mdash; the byte that would otherwise be <code>AND R3, R3</code>. The control unit detects it with one gate: an AND of the IR&rsquo;s eight bits, with b5 and b4 inverted. Its output, <code>end</code>, goes back to the clock.</p>
+      <p>Until now you clicked <code>clk_in</code> 24 times per instruction. <code>MYSIM.txt</code> runs 77 instructions &mdash; about 1,850 clicks &mdash; so the finished CPU replaces the clicks with Logisim&rsquo;s <strong>Clock</strong> component (Wiring folder) and lets Logisim tick it. The CPU tab&rsquo;s clock input becomes:</p>
+      <div class="table-scroll"><table class="pin-table"><tbody><tr><td><code>CLOCK</code>&rsquo;s <code>clk_in</code> = <code>clock</code> AND NOT <code>end</code></td></tr></tbody></table></div>
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/clockin-new.png" style="max-width:360px"
+             alt="A Logisim circuit: an input labelled clock and a tunnel labelled END through a NOT gate feed an AND gate, whose output drives the C input of the clock block. The clock block's clk, clke and clks outputs run to the bus area and to output pins, and clk is also tapped as clkl.">
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s final clock input: the moment the IR holds END, the AND stops the clock.</figcaption>
+      </figure>
+      <p><strong>Simulate &rarr; Tick Once</strong> (Ctrl-T) is now one click. <strong>Simulate &rarr; Ticks Enabled</strong> (Ctrl-K) runs at the speed set under <strong>Tick Frequency</strong>, until END stops it. The CPU stops in the middle of fetching END, with END in the IR and the PC still holding END&rsquo;s address.</p>
+      <p><code>run</code> changes once more: it now gates <code>clk</code> into the control unit as well as <code>clk_e</code> and <code>clk_s</code>. With <code>run</code> = 0 the stepper holds step 1 however long the clock runs &mdash; which the loader needs.</p>
+    </section>
+
+    <section id="sec-14-11">
+      <h2>14.11 &nbsp; The loader: three built-ins, by exception</h2>
+      <p>Your RAM has 32 bytes and no file input. Typing <code>MYSIM.txt</code> in by hand is 23 bytes, 46 pulses &mdash; and every test program after it the same. Your instructor&rsquo;s finished CPU loads a program the way a real computer boots: a counter walks the addresses, and at each one a byte is copied from somewhere that can read a file. Three parts do it, and <strong>all three are Logisim built-ins you are otherwise not allowed to use</strong>:</p>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Built-in</th><th>Folder</th><th>Allowed only</th><th>Job</th></tr></thead>
+          <tbody>
+            <tr><td>Counter</td><td>Memory</td><td>inside a tab called <code>COUNTER_256</code></td><td>walks 0 to 255 and stays there</td></tr>
+            <tr><td>RAM</td><td>Memory</td><td>on <code>CPU_TEST</code>, as the external RAM</td><td>holds the program file (Edit Contents &rarr; Open)</td></tr>
+            <tr><td>Multiplexor</td><td>Plexers</td><td>at your RAM&rsquo;s input, selected by <code>load</code></td><td>feeds your RAM from the file instead of the bus</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Why the exception is fair: none of them is part of the computer. They are a test harness &mdash; the equivalent of the boot loader and the disk. Your CPU&rsquo;s registers, ALU, RAM and control unit are still entirely yours, and nothing your CPU computes passes through a built-in.</p>
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/clk256-circuit-overview.jpg" style="max-width:520px"
+             alt="A Logisim fragment: a LOAD tunnel and a clkl tunnel feed an AND gate into the clock input of a block labelled clk 256. The block's 8-bit output passes through a controlled buffer enabled by LOAD and fans out onto the eight bus wires.">
+        <figcaption class="circuit-canvas__caption">On the CPU tab: <code>COUNTER_256</code> clocked by <code>clkl</code> AND <code>load</code>, driving the bus through a buffer that only <code>load</code> opens.</figcaption>
+      </figure>
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/clk256-counter.jpg" style="max-width:520px"
+             alt="Logisim's attribute table for a Counter: data bits 8, maximum value 0xff, action on overflow Stay at value, trigger Falling edge, and the remaining attributes at their defaults.">
+        <figcaption class="circuit-canvas__caption">The Counter&rsquo;s attributes: 8 data bits, <em>Stay at value</em> on overflow, <em>Falling edge</em> trigger.</figcaption>
+      </figure>
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/ram-input-mux.jpg"
+             alt="A Logisim fragment at the RAM's input: a two-input multiplexor whose input 0 comes from the bus and whose input 1 comes from an 8-bit input pin labelled RAM INPUT; a LOAD tunnel drives its select line, and its output goes to the RAM's input.">
+        <figcaption class="circuit-canvas__caption">At your RAM&rsquo;s <code>i</code>: a Multiplexor, select = <code>load</code>. Input 0 is the bus; input 1 is <code>ram_input</code>, from the external RAM.</figcaption>
+      </figure>
+      <p>While <code>load</code> is 1, each turn of the clock does one byte: the counter puts address <em>k</em> on the bus, the MAR follows it (you hold <code>data_mar</code> at 1 &mdash; your instructor&rsquo;s <strong>MARS</strong> pin), and in the set quarter <code>load</code> AND <code>clk_s</code> raises your RAM&rsquo;s <code>s</code>, writing byte <em>k</em> of the file. The counter moves on when <code>clk</code> falls, in a quarter when nothing is being written. On <code>CPU_TEST</code> a second <code>COUNTER_256</code>, clocked by <code>clkl</code>, gives the external RAM the same address.</p>
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/CPU_TopSim.jpg"
+             alt="Your instructor's top-level CPU_TEST circuit. Along the top, eight pairs of hex digit displays labelled BUS, ACC, PC, IR, R0, R1, R2 and R3. In the middle, a large block labelled CPU with pins around it: PC, END, BUS OUTPUT, CLK, CLKL and RAM INPUT on the left; LOAD, RESET, R0 to R3, IR and ACC on the right; MARS, IO pins, CLKE and CLKS along the bottom. To the right, inputs LOAD, a RESET button and MARS, an END LED, and CLKL, CLKE, CLKS readouts showing 0, 1, 0 above a clock component. Below, the external RAM with its clk 256 counter.">
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s <code>CPU_TEST</code>: hex displays across the top, the CPU in the middle, LOAD, RESET and MARS beside it, the clock, and the external RAM below. Your CPU has a <code>run</code> input too, and no I/O pins.</figcaption>
+      </figure>
+    </section>
+
+    <section id="sec-14-12">
+      <h2>14.12 &nbsp; Load and run</h2>
+      <p>The procedure, in your instructor&rsquo;s order. Every step matters; the ones people skip are marked.</p>
+      <ol class="proc" id="proc">
+        <li><strong>Simulate &rarr; Reset.</strong> Both counters are now 0.</li>
+        <li><code>run</code> = 0. Pulse <strong>RESET</strong>: PC, R0&ndash;R3, TMP, IR and the MAR become 0. <em>MYSIM needs this: its <code>XOR R2, R2</code> clears R2 only if R2 already holds a value.</em></li>
+        <li><strong>LOAD = 1 and MARS = 1, before any tick.</strong> <em>A tick with LOAD off moves the external RAM&rsquo;s counter and not the CPU&rsquo;s, and every byte lands one address late.</em></li>
+        <li>Right-click the external RAM &rarr; <strong>Edit Contents</strong> &rarr; <strong>Open</strong> your program (or type its bytes), and close the editor.</li>
+        <li><strong>Ticks Enabled</strong> until the bus reads <code>FF</code>; then turn ticks off. Check your RAM&rsquo;s bytes (right-click &rarr; View).</li>
+        <li><strong>Tick Once until <code>clkl</code> = 0, <code>clk_e</code> = 1, <code>clk_s</code> = 0</strong> (<code>clkl</code> is the clock&rsquo;s <code>clk</code>). <em>Start in any other quarter and step 1&rsquo;s set quarter can be skipped, so the first fetch reads the wrong byte.</em></li>
+        <li>LOAD = 0, MARS = 0, then <code>run</code> = 1.</li>
+        <li><strong>Ticks Enabled.</strong> The program runs until END lights; then turn ticks off and read the registers.</li>
+      </ol>
+
+      <h3>Watch it: loading and running <code>MYSIM.txt</code></h3>
+      <p>Your instructor loads and runs the finished simulator, from &ldquo;turn LOAD on and reset&rdquo; to R2 = 19 in hex. About ten minutes; recorded in 2022.</p>
+      <div class="video-breakout">
+        <div class="video-transcript-row">
+          <div class="video-col">
+            <div class="video-frame" id="video-container-run1">
+              <iframe id="youtube-player-run1"
+                      src="https://www.youtube.com/embed/-UPmtT8e21g?enablejsapi=1&amp;cc_load_policy=1&amp;iv_load_policy=3&amp;modestbranding=1&amp;rel=0"
+                      title="CSC210: Loading and running the final CPU simulation"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allowfullscreen loading="lazy"></iframe>
+            </div>
+            <div class="video-caption">Closed captions available. Use the transcript panel to jump to any point in the video.</div>
+          </div>
+          <div class="transcript-col">
+            <h4 class="sr-only">Transcript: loading and running</h4>
+            <div class="transcript-panel" id="transcript-container-run1" role="region" aria-live="polite"
+                 aria-label="Transcript of the loading and running video. Select a line to jump to that point in the video. The line currently being spoken is announced as the video plays.">
+              <p class="transcript-loading">Loading transcript&hellip;</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="callout callout--note">
+        <div class="callout__title">Where the video differs from your Checkpoint 7</div>
+        <ul>
+          <li><strong>RESET.</strong> His CPU pulls every bus pin down, so RESET writes 0 everywhere, the RAM included &mdash; hence &ldquo;check the hex outputs are all zeros&rdquo; and replacing a RAM byte that shows an X (01:35). Your RESET clears the PC, R0&ndash;R3, TMP, IR and the MAR, and the loader writes every RAM byte.</li>
+          <li><strong>You have a <code>run</code> pin.</strong> His LOAD froze the stepper; your <code>run</code> = 0 does that, so set it before RESET and raise it only after LOAD is off.</li>
+          <li><strong>&ldquo;Set our MARS&rdquo;</strong> (03:24) is the MARS pin &mdash; memory address register set &mdash; not the MIPS simulator. Yours is <code>data_mar</code>, labelled MARS on <code>CPU_TEST</code>.</li>
+          <li>The 0, 1, 0 check of step 6 above is not shown; his top-level page asks for it.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ========== Widget 3 ========== -->
+    <section id="sec-lr">
+      <div class="widget-card" id="w-load">
+        <div class="widget-card__title">Load and Run</div>
+        <div class="widget-card__subtitle">The procedure above on a model of your finished CPU. Do the steps in order.</div>
+        <div class="btn-row">
+          <label for="lr-prog" style="font-size:var(--fs-sm);font-weight:700">Program</label>
+          <select id="lr-prog" class="lr-sel">
+            <option value="mysim">MYSIM.txt (5 &times; 5)</option>
+            <option value="a">Test A &mdash; memory</option>
+            <option value="b">Test B &mdash; jumps</option>
+            <option value="c">Test C &mdash; flags and carry</option>
+          </select>
+        </div>
+        <div class="btn-row" style="margin-top:6px">
+          <button type="button" class="widget-btn widget-btn--outline" id="lr-1">1&ndash;4: reset, RESET, LOAD + MARS, open file</button>
+          <button type="button" class="widget-btn widget-btn--outline" id="lr-2">5: ticks until FF</button>
+          <button type="button" class="widget-btn widget-btn--outline" id="lr-3">6&ndash;7: to 0, 1, 0; LOAD off; run on</button>
+          <button type="button" class="widget-btn widget-btn--primary" id="lr-4">8: ticks until END</button>
+        </div>
+        <p class="w-status" id="lr-status" aria-live="polite"></p>
+        <div class="w-panel">
+          <h3>Loader</h3>
+          <div class="lr-bar" aria-hidden="true"><div id="lr-bar"></div></div>
+          <div class="vals" id="lr-loader" style="margin-top:6px"></div>
+        </div>
+        <div class="w-panel">
+          <h3>CPU</h3>
+          <p><span class="lr-end" id="lr-end"></span><strong>END</strong></p>
+          <div class="vals" id="lr-vals"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-check-c">
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Four questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+      <p>For how real computers start up from storage, log into your Saylor CS301 account at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a>; its units on memory and input/output describe the same idea at full size.</p>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>Your CPU can load a file, run it, and stop. Next page: proving it does the right thing, one class of instruction at a time.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 14, Page 3
+  </footer>
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['fin', 'core'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.fin) { return; }
+    var F = L.fin, C = L.core;
+
+    function b8(v) { return v === null || v === undefined ? 'EEEEEEEE' : ('0000000' + (v >>> 0).toString(2)).slice(-8); }
+    function h2(v) { return v === null || v === undefined ? 'EE' : ('0' + v.toString(16).toUpperCase()).slice(-2); }
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+    /* ---------- Widget 3 — Load and Run ---------- */
+    (function () {
+      var host = document.getElementById('w-load'); if (!host) { return; }
+      var PROGS = {
+        mysim: C.MYSIM.slice(),
+        a: F.assemble(['DATA R0, 0x1E', 'DATA R1, 0x5A', 'ST R0, R1', 'LD R0, R2', 'END']).bytes,
+        b: F.assemble(['DATA R3, 0x07', 'JMPR R3', 'DATA R0, 0xAA', 'END', 'END', 'JMP 0x0B', 'DATA R0, 0xBB', 'DATA R1, 0x01', 'END']).bytes,
+        c: F.assemble(['CLF', 'DATA R0, 0xFF', 'DATA R1, 0x01', 'ADD R0, R1', 'JC 0x0A', 'DATA R2, 0xEE', 'ADD R2, R3', 'JZ 0x0F', 'DATA R2, 0x22', 'END']).bytes
+      };
+      var cpu = null, stage = 0, loadTicks = 0;
+      function $(id) { return document.getElementById(id); }
+      function say(t) { $('lr-status').textContent = t; }
+      function paint() {
+        if (!cpu) { $('lr-vals').innerHTML = ''; $('lr-loader').innerHTML = ''; $('lr-bar').style.width = '0'; $('lr-end').className = 'lr-end'; return; }
+        var s = cpu.snapshot(), st = s.state;
+        $('lr-bar').style.width = (st.counter / 255 * 100) + '%';
+        $('lr-loader').innerHTML = '<div class="val"><b>counter</b> ' + h2(st.counter) + '</div><div class="val"><b>LOAD</b> ' + st.load + '</div><div class="val"><b>MARS</b> ' + st.mars + '</div><div class="val"><b>run</b> ' + st.run + '</div>' +
+          '<div class="val"><b>bus</b> ' + (s.bus.state === 'driven' ? h2(s.bus.value) : s.bus.state) + '</div><div class="val"><b>clk clk_e clk_s</b> ' + s.clk.clk + ' ' + s.clk.clkE + ' ' + s.clk.clkS + '</div>';
+        var f = st.flags;
+        $('lr-vals').innerHTML = [['PC', st.PC], ['IR', st.IR], ['R0', st.R0], ['R1', st.R1], ['R2', st.R2], ['R3', st.R3]].map(function (c) {
+          return '<div class="val"><b>' + c[0] + '</b> ' + b8(c[1]) + '<small>' + h2(c[1]) + '</small></div>';
+        }).join('') + '<div class="val"><b>C A E Z</b> ' + ['C', 'A', 'E', 'Z'].map(function (k) { return f[k] === null ? 'E' : f[k]; }).join(' ') + '</div>' +
+          '<div class="val"><b>RAM 00&ndash;07</b> ' + st.ram.slice(0, 8).map(h2).join(' ') + '</div>';
+        $('lr-end').className = 'lr-end' + (st.end ? ' lr-end--on' : '');
+      }
+      function step1() {
+        var bytes = PROGS[$('lr-prog').value];
+        cpu = F.cpu({ ext: bytes }); cpu.setPins({ run: 0 }); cpu.pressReset(); cpu.setPins({ load: 1, mars: 1 });
+        stage = 1; loadTicks = 0;
+        say('Simulate \u2192 Reset; run = 0; RESET pulsed; LOAD = 1 and MARS = 1; the external RAM holds ' + bytes.length + ' bytes: ' + bytes.map(h2).join(' ') + '.');
+        paint();
+      }
+      function step2() {
+        if (stage < 1) { step1(); }
+        var n = 0;
+        while (!(cpu.state().counter === 255 && cpu.snapshot().quarter === 3) && n < 3000) { cpu.toggle(); n++; }
+        loadTicks += n; stage = 2;
+        say('Ticks enabled for ' + loadTicks + ' ticks: the bus reads FF, every RAM byte has been written. Ticks off.');
+        paint();
+      }
+      function step3() {
+        if (stage < 2) { step2(); }
+        var n = cpu.tickToQuarter(0);
+        cpu.setPins({ load: 0, mars: 0 }); cpu.setPins({ run: 1 }); stage = 3;
+        say('Tick Once ' + n + ' time' + (n === 1 ? '' : 's') + ' to clk 0, clk_e 1, clk_s 0. LOAD = 0, MARS = 0, run = 1: step 1, and the PC drives 00 onto the bus.');
+        paint();
+      }
+      function step4() {
+        if (stage < 3) { step3(); }
+        var r = cpu.runToEnd(30000); stage = 4;
+        var st = r.state;
+        say(r.ended ? 'END after ' + r.instructions + ' instructions and ' + r.ticks + ' ticks. R2 = ' + b8(st.R2) + ' (' + h2(st.R2) + ' hex, ' + st.R2 + ' decimal).' + (r.errors.length ? ' Problems: ' + r.errors[0] : '') : 'Stopped without END after ' + r.ticks + ' ticks.');
+        paint();
+      }
+      $('lr-1').addEventListener('click', step1); $('lr-2').addEventListener('click', step2);
+      $('lr-3').addEventListener('click', step3); $('lr-4').addEventListener('click', step4);
+      $('lr-prog').addEventListener('change', function () { cpu = null; stage = 0; say('Program changed: start again at step 1.'); paint(); });
+      say('Choose a program and start at step 1.');
+      paint();
+    }());
+
+    /* ---------- Self-check ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+  {
+    "q": "Why is the carry copied into CTMP at step 4 instead of feeding FLAGS C straight into <code>ci</code>?",
+    "opts": [
+      "At step 5 FLAGS is being set, so C would change during the transfer that reads it",
+      "CTMP is faster than FLAGS",
+      "FLAGS has no C output",
+      "So that CLF does not clear it"
+    ],
+    "correct": 0,
+    "why": "FLAGS captures at step 5. If <code>ci</code> came straight from it, the carry would chase itself round a loop while <code>flags_s</code> is high &mdash; the ACC problem, one bit wide."
+  },
+  {
+    "q": "Which of these additions can ever see a carry-in of 1?",
+    "opts": [
+      "Fetch&rsquo;s PC + 1",
+      "CLF&rsquo;s 0 + 1",
+      "The ADD at step 5 of an ADD instruction",
+      "DATA&rsquo;s PC + 1"
+    ],
+    "correct": 2,
+    "why": "<code>c</code> is high only at step 5 of an ALU instruction, and only ADD, SHR and SHL read <code>ci</code>."
+  },
+  {
+    "q": "The program ends with <code>CF</code> at address 0x16. Where is the PC when the clock stops?",
+    "opts": [
+      "0x16",
+      "0x17",
+      "0x00",
+      "0xFF"
+    ],
+    "correct": 0,
+    "why": "END is caught as the IR captures it, at step 2 of its fetch. Step 3, which would add 1 to the PC, never happens."
+  },
+  {
+    "q": "You forget to turn LOAD on before the first tick, and tick once with it off. What happens to the load?",
+    "opts": [
+      "Nothing: the counters reset when LOAD goes on",
+      "Every byte lands one address late, because the external RAM&rsquo;s counter moved and the CPU&rsquo;s did not",
+      "The CPU runs the program early",
+      "The bus shows a conflict"
+    ],
+    "correct": 1,
+    "why": "The external RAM&rsquo;s counter is clocked by <code>clkl</code> alone; the CPU&rsquo;s by <code>clkl</code> AND <code>load</code>. Only LOAD on from the first tick keeps them in step."
+  }
+];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p><div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi], okAns = (oi === item.correct), fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) { el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false'); });
+      }
+      host.addEventListener('click', function (e) { var t = e.target.closest('.quiz-option'); if (t) { answer(+t.dataset.q, +t.dataset.o); } });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+
+  })();
+  </script>
+
+  <script>
+  (function () {
+    'use strict';
+    var VIDEOS = [
+      { key: 'run1', id: '-UPmtT8e21g', vtt: `WEBVTT
+
+00:00.000 --> 00:07.080
+ok I'm going to do that right now
+
+00:07.080 --> 00:11.280
+let me share my screen
+
+00:11.280 --> 00:24.180
+ok so to run you get to this point and
+
+00:24.180 --> 00:29.720
+you want to run it right the first thing
+
+00:29.720 --> 00:39.980
+you want to do is put the simulation on
+
+00:39.980 --> 00:44.780
+sorry is you want to reset everything
+
+00:44.780 --> 00:51.160
+and you know sometimes I have to load
+
+00:51.160 --> 00:55.520
+normally what I do is I turn it hit the
+
+00:55.520 --> 00:57.900
+load on and then reset just push the
+
+00:57.900 --> 00:59.540
+reset button that you put in there
+
+00:59.540 --> 01:03.740
+ok and then what you want to do is you
+
+01:03.740 --> 01:06.860
+want to look at all your hex output to
+
+01:06.860 --> 01:08.300
+make sure they're all zeros
+
+01:08.300 --> 01:12.020
+ok and then what you really want to do
+
+01:12.020 --> 01:16.740
+is you want to go into your CPU and you
+
+01:16.740 --> 01:20.780
+want to really look into RAM and you
+
+01:20.780 --> 01:22.460
+want to make sure that all these RAM
+
+01:22.460 --> 01:26.720
+inputs you know we have the first two
+
+01:26.720 --> 01:29.540
+rows that are filled in with actual RAM
+
+01:29.540 --> 01:31.400
+bytes you want to make sure they're all
+
+01:31.400 --> 01:35.000
+zeros and you don't get some kind of X
+
+01:35.000 --> 01:38.900
+in there ok if you have an X in one of
+
+01:38.900 --> 01:40.700
+those that means there's an error and
+
+01:40.700 --> 01:48.440
+the easiest thing to do is to just go out
+
+01:48.440 --> 01:51.300
+of simulation click on the one that has
+
+01:51.300 --> 01:52.640
+an arrow just click on the box because
+
+01:52.640 --> 01:54.860
+you made that hopefully you made it as a
+
+01:54.860 --> 01:59.180
+box you can delete the box and then grab
+
+01:59.180 --> 02:04.780
+one that's has the right rear all zeros
+
+02:04.780 --> 02:08.300
+duplicate it control D can duplicate and
+
+02:08.300 --> 02:11.480
+then you can just drag it into the same
+
+02:11.480 --> 02:18.200
+spot it wasn't okay all right so you
+
+02:18.200 --> 02:19.040
+just want to make sure those are all
+
+02:19.040 --> 02:26.640
+zeros and then
+
+02:26.640 --> 02:34.460
+what you have to do is you want to
+
+02:34.460 --> 02:37.760
+there's two steps you have to do and you
+
+02:37.760 --> 02:43.140
+can either set your MARS
+
+02:43.140 --> 02:44.940
+ok so there's two things wanna do first
+
+02:44.940 --> 02:46.500
+we want to load the program into
+
+02:46.500 --> 02:47.880
+external RAM
+
+02:47.880 --> 02:50.580
+ok so we're going to right-click on
+
+02:50.580 --> 02:54.440
+external ram and click edit content
+
+02:54.440 --> 02:56.640
+which will go
+
+02:56.640 --> 03:03.480
+give us this hex editor so it's all in hex so we're gonna do is open and we're
+
+03:03.480 --> 03:12.180
+gonna select that file I posted for the program say open and you'll see in here
+
+03:12.180 --> 03:19.280
+that the values change to hex values okay and then you can just close window
+
+03:19.280 --> 03:24.240
+so our external RAM now doesn't have all zeros in it it has some value just start
+
+03:24.240 --> 03:32.860
+with 2005 okay and then what we need to do is we need to set our MARS to say
+
+03:32.860 --> 03:43.920
+we're gonna basically we're gonna set the internal clock in the CPU okay we're
+
+03:43.920 --> 03:48.560
+gonna let because we set MARS we're gonna use every
+
+03:52.860 --> 03:53.980
+this little clock
+
+03:54.240 --> 03:58.200
+this 256 clock down here everything that cycles through what it's gonna do is
+
+03:58.200 --> 04:04.140
+gonna change the memory address and RAM we're using okay that's why we want to
+
+04:04.140 --> 04:11.320
+select MARS for memory address register set so that we can take what's in
+
+04:11.320 --> 04:17.520
+external RAM right we're gonna take what's in this external RAM and we're
+
+04:17.520 --> 04:24.220
+gonna put it into our CPU into RAM of our CPU okay and to do that what we go
+
+04:24.220 --> 04:29.080
+all we have to do is go to simulate select our tick frequency of whatever we
+
+04:29.080 --> 04:37.480
+want okay and then I'm going to cycle up here so we can see the bus and then
+
+04:37.480 --> 04:46.840
+we'll go tick tick enabled and it'll cycle through and run and whenever my bus
+
+04:46.840 --> 04:51.220
+gets the FF that's 255 it means it's gone from 0 to 255 memory address
+
+04:51.220 --> 04:55.940
+locations okay if you look at your clock down here in the corner it's still
+
+04:55.940 --> 05:03.640
+cycling but nothing's happening because I've set that I've limited that internal
+
+05:03.640 --> 05:09.520
+bus clock to zero to 55 okay so then we go to simulate and we turn off tick
+
+05:09.520 --> 05:18.100
+enabled so it's no longer running and then we want to go into our CPU into our
+
+05:18.100 --> 05:26.600
+RAM and we want to see that memory some of these memory locations that now have
+
+05:26.600 --> 05:31.360
+values other than zero in them okay so this means we've loaded our program into
+
+05:31.360 --> 05:42.760
+RAM okay so our external programs in the RAM which means we no longer need to set
+
+05:42.760 --> 05:47.500
+memory address registers and we no longer need to load our program because
+
+05:47.500 --> 05:48.080
+our programs are running so we're going to run our program and we're going to
+
+05:48.080 --> 05:54.700
+see that it's already loaded okay for programs loaded and now we can run our
+
+05:54.700 --> 06:01.340
+program which is going to be five times five okay and we can watch all these and
+
+06:01.340 --> 06:07.340
+again we can set the frequency to lower if we wanted to happen slower or higher
+
+06:07.340 --> 06:12.020
+if we wanted to happen faster but again all we need to do is tick enabled and
+
+06:12.020 --> 06:17.480
+then we'll start running the program okay
+
+06:17.480 --> 06:22.100
+And it'll go through the whole program until it's done.
+
+06:25.100 --> 06:25.540
+Okay.
+
+06:25.940 --> 06:26.880
+So it's now done.
+
+06:29.280 --> 06:29.720
+Okay.
+
+06:30.060 --> 06:33.900
+And R2 is the answer, which is 1, 9, and I'll explain that in a minute.
+
+06:34.000 --> 06:35.940
+But it's 1, 9 or 25.
+
+06:37.660 --> 06:43.160
+Again, once it's done, we want to go deselect ticks enabled, and it's done running.
+
+06:44.040 --> 06:44.480
+Okay.
+
+06:44.720 --> 06:46.920
+And we know it's done because end is now red.
+
+06:47.480 --> 06:47.880
+Okay.
+
+06:50.800 --> 06:53.040
+Our little LED for end is now red.
+
+06:55.740 --> 06:56.100
+Okay.
+
+06:56.180 --> 06:57.340
+So that's how you run your program.
+
+06:59.380 --> 06:59.740
+Okay.
+
+06:59.780 --> 07:04.160
+If you want to try it again, you know, load, reset.
+
+07:08.660 --> 07:10.580
+I'm not sure why everything's FF.
+
+07:10.580 --> 07:16.580
+But we're looking to simulate reset.
+
+07:17.480 --> 07:31.700
+Oh, and then I'm going to enable simulation to solve zeros.
+
+07:32.940 --> 07:33.100
+Okay.
+
+07:39.100 --> 07:39.680
+All right.
+
+07:39.720 --> 07:40.680
+So any questions about how to run it?
+
+07:42.680 --> 07:46.920
+Now, another thing I did want to talk about.
+
+07:47.160 --> 07:47.460
+Let's see.
+
+07:47.480 --> 07:51.160
+This was how this multiplication happens.
+
+07:52.820 --> 07:53.260
+Okay.
+
+07:54.200 --> 07:55.980
+And we're doing 5 times 5.
+
+08:00.980 --> 08:01.420
+Okay.
+
+08:01.420 --> 08:03.420
+So how multiplication works.
+
+08:08.840 --> 08:13.700
+2, 3, 4, 5, 6, 7, 8.
+
+08:14.000 --> 08:14.200
+Okay.
+
+08:14.280 --> 08:14.920
+So that's 5.
+
+08:15.920 --> 08:16.980
+0, 0.
+
+08:17.460 --> 08:19.060
+0, 0, 0, 1, 0, 1.
+
+08:19.540 --> 08:29.120
+And so we're doing 5 times 5 times 0, 0, 0, 0, 0, 0, 1, 0.
+
+08:29.260 --> 08:29.460
+Oops.
+
+08:33.140 --> 08:33.540
+Okay.
+
+08:33.660 --> 08:34.760
+We're doing 5 times 5.
+
+08:40.180 --> 08:41.400
+And those are almost.
+
+08:42.040 --> 08:43.060
+Let me change these.
+
+08:43.060 --> 08:44.240
+Let me change this to.
+
+08:47.460 --> 08:50.520
+Something that's.
+
+08:54.520 --> 08:54.760
+Okay.
+
+08:57.340 --> 08:58.300
+So if we're doing this.
+
+08:58.880 --> 08:59.320
+Right.
+
+09:00.840 --> 09:02.260
+If we do multiplication.
+
+09:02.500 --> 09:02.640
+Right.
+
+09:02.880 --> 09:03.320
+1.
+
+09:03.480 --> 09:05.100
+We always start at the bottom on the right.
+
+09:05.200 --> 09:07.160
+And we multiply the first digit here.
+
+09:07.300 --> 09:08.120
+Which is this.
+
+09:08.840 --> 09:09.280
+1.
+
+09:11.060 --> 09:12.240
+Times everything above it.
+
+09:12.260 --> 09:12.460
+Right.
+
+09:13.180 --> 09:14.680
+Or the top times that first one.
+
+09:15.480 --> 09:17.000
+So that first one then would be.
+
+09:17.220 --> 09:17.340
+1.
+
+09:17.600 --> 09:17.840
+Times.
+
+09:19.000 --> 09:20.060
+All that would be.
+
+09:20.780 --> 09:23.160
+0, 0, 0, 0, 0, 0.
+
+09:23.780 --> 09:24.640
+1, 0, 1.
+
+09:25.380 --> 09:25.780
+Right.
+
+09:27.800 --> 09:29.200
+Let me make that underline.
+
+09:30.680 --> 09:31.100
+Okay.
+
+09:31.840 --> 09:33.220
+And then the next one would be.
+
+09:34.440 --> 09:36.300
+0 times everything above it would be.
+
+09:37.260 --> 09:40.040
+0, 2, 3, 4, 5, 6, 7, 8.
+
+09:40.220 --> 09:40.520
+Right.
+
+09:41.880 --> 09:42.620
+That's the.
+
+09:43.040 --> 09:44.460
+That's the 0 times.
+
+09:45.800 --> 09:46.460
+What's above it.
+
+09:46.540 --> 09:46.740
+Right.
+
+09:46.740 --> 09:50.380
+The next one would be 1 times what's above it.
+
+09:50.380 --> 10:00.740
+So we would come over one more, it would be 0, 2, 3, 4, 5, 1, 0, 1, right?
+` }
+    ];
+
+    function timeToSeconds(t) {
+      if (!t) return 0;
+      var p = t.trim().split(':');
+      if (p.length === 2) return (parseInt(p[0]) || 0) * 60 + (parseFloat(p[1]) || 0);
+      if (p.length === 3) return (parseInt(p[0]) || 0) * 3600 + (parseInt(p[1]) || 0) * 60 + (parseFloat(p[2]) || 0);
+      return 0;
+    }
+
+    function parseVtt(text) {
+      var out = [];
+      text.trim().split(/\n\n+/).forEach(function (block) {
+        if (block.indexOf('WEBVTT') === 0 || block.trim() === '') return;
+        var lines = block.trim().split('\n');
+        var tl = lines.filter(function (l) { return l.indexOf('-->') !== -1; })[0];
+        if (!tl) return;
+        var parts = tl.split(' --> ');
+        out.push({ start: timeToSeconds(parts[0]), end: timeToSeconds(parts[1]),
+                   text: lines.slice(lines.indexOf(tl) + 1).join(' ').trim() });
+      });
+      return out;
+    }
+
+    function TranscriptManager(v) {
+      this.v = v;
+      this.player = null;
+      this.timer = null;
+      this.frame = document.getElementById('video-container-' + v.key);
+      this.panel = document.getElementById('transcript-container-' + v.key);
+      this.cues = parseVtt(v.vtt);
+    }
+    TranscriptManager.prototype.populate = function () {
+      var self = this;
+      if (!this.panel) return;
+      this.panel.innerHTML = '';
+      this.cues.forEach(function (cue) {
+        var el = document.createElement('div');
+        el.className = 'transcript-line';
+        el.dataset.start = cue.start;
+        el.dataset.end = cue.end;
+        el.textContent = cue.text;
+        el.setAttribute('role', 'button');
+        el.setAttribute('tabindex', '0');
+        var seek = function () {
+          if (self.player && self.player.seekTo) { self.player.seekTo(cue.start, true); self.player.playVideo(); }
+        };
+        el.addEventListener('click', seek);
+        el.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); seek(); }
+        });
+        self.panel.appendChild(el);
+      });
+    };
+    TranscriptManager.prototype.highlight = function () {
+      if (!this.player || !this.player.getCurrentTime || !this.panel) return;
+      var t = this.player.getCurrentTime(), panel = this.panel;
+      panel.querySelectorAll('.transcript-line').forEach(function (line) {
+        var a = parseFloat(line.dataset.start), b = parseFloat(line.dataset.end);
+        if (t >= a && t < b) {
+          if (!line.classList.contains('active-transcript-line')) {
+            var prev = panel.querySelector('.active-transcript-line');
+            if (prev) prev.classList.remove('active-transcript-line');
+            line.classList.add('active-transcript-line');
+            // Scroll the panel only, never the page
+            panel.scrollTop = line.offsetTop - panel.offsetTop - panel.clientHeight / 2 + line.clientHeight / 2;
+          }
+        } else {
+          line.classList.remove('active-transcript-line');
+        }
+      });
+    };
+    TranscriptManager.prototype.syncHeight = function () {
+      if (!this.frame || !this.panel) return;
+      var vc = this.frame.closest('.video-col'), tc = this.panel.closest('.transcript-col');
+      var side = !!(vc && tc) && Math.abs(tc.getBoundingClientRect().top - vc.getBoundingClientRect().top) < 2;
+      var h = side ? this.frame.offsetHeight + 'px' : '24rem';
+      this.panel.style.height = h;
+      this.panel.style.maxHeight = h;
+    };
+
+    var managers = VIDEOS.map(function (v) { return new TranscriptManager(v); });
+
+    window.onYouTubeIframeAPIReady = function () {
+      managers.forEach(function (m) {
+        if (!document.getElementById('youtube-player-' + m.v.key)) return;
+        m.player = new YT.Player('youtube-player-' + m.v.key, {
+          videoId: m.v.id,
+          events: {
+            onStateChange: function (e) {
+              clearInterval(m.timer);
+              if (e.data === YT.PlayerState.PLAYING) {
+                managers.forEach(function (o) {
+                  if (o !== m && o.player && o.player.pauseVideo) { o.player.pauseVideo(); }
+                });
+                m.timer = setInterval(function () { m.highlight(); }, 300);
+              }
+            }
+          }
+        });
+      });
+    };
+
+    function start() {
+      managers.forEach(function (m) { m.populate(); });
+      setTimeout(function () { managers.forEach(function (m) { m.syncHeight(); }); }, 100);
+      if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+        var tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      } else {
+        window.onYouTubeIframeAPIReady();
+      }
+    }
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', start); } else { start(); }
+
+    var rt;
+    window.addEventListener('resize', function () {
+      clearTimeout(rt);
+      rt = setTimeout(function () { managers.forEach(function (m) { m.syncHeight(); }); }, 250);
+    });
+  })();
+  </script>
+</body>
+</html>

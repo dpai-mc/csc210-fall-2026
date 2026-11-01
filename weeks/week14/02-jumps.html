@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w14-02">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 14: Jumps</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .w-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-md); }
+    @media (max-width: 760px) { .w-grid { grid-template-columns: 1fr; } }
+    .w-panel { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-surface); min-width: 0; margin-top: var(--space-sm); }
+    .w-panel h3 { margin: 0 0 var(--space-xs); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .btn-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .steps { display: flex; flex-wrap: wrap; gap: 4px; }
+    .stp { min-width: 2.2rem; text-align: center; border: 2px solid var(--color-border); border-radius: 999px; padding: 1px 6px; font-weight: 700; font-size: var(--fs-sm); }
+    .stp--on { background: var(--color-accent); border-color: var(--color-accent-hov); color: #fff; }
+    .lines { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 4px; }
+    .ln { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .ln small { display: block; font-family: var(--font-sans); font-size: 11px; color: var(--color-text-muted); }
+    .ln--1 { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .ln--1 small { color: #dfe8f3; }
+    .ln--new { border-left: 4px solid var(--color-accent); }
+    .vals { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 4px; }
+    .val { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); background: var(--color-surface); overflow-wrap: anywhere; }
+    .val b { font-family: var(--font-sans); color: var(--color-primary); }
+    .val small { display: block; font-family: var(--font-sans); font-size: 11px; color: var(--color-text-muted); }
+    .val--wrote { border-color: var(--color-success); background: #f0faf4; }
+    .busline { font-family: var(--font-mono); border: 2px solid var(--color-primary); border-radius: var(--radius); padding: var(--space-xs) var(--space-sm); margin: var(--space-xs) 0; background: var(--color-code-bg); overflow-wrap: anywhere; }
+    .busline--float { border-style: dashed; border-color: var(--color-border); }
+    .busline--bad { border-color: var(--color-danger); background: #fdf0ef; }
+    .w-status { font-size: var(--fs-sm); min-height: 1.5em; margin: var(--space-xs) 0; }
+    .mono { font-family: var(--font-mono); }
+    .row-now { background: #fff7e0; }
+    .gen-table td:first-child { font-family: var(--font-mono); font-weight: 700; white-space: nowrap; }
+    .tag-new { display: inline-block; font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 999px; background: var(--color-accent); color: #fff; margin-left: 4px; font-family: var(--font-sans); }
+
+    .dp td { font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .tgl { min-width: 3.2rem; }
+    .tgl[aria-pressed="true"] { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .jl-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0; }
+    .jl-row .lbl { font-size: var(--fs-sm); font-weight: 700; min-width: 7rem; }
+    .verdict { font-weight: 700; }
+    .alg { font-family: var(--font-mono); background: var(--color-code-bg); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); overflow-x: auto; white-space: pre; font-size: var(--fs-sm); }
+
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 14 &rsaquo; <span>Page 2 — Jumps</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Jumps</h1>
+    <p><strong>Sections 14.5 – 14.8</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~45 minutes</p>
+
+    <section id="sec-14-5">
+      <h2>14.5 &nbsp; A jump is a write to the program counter</h2>
+      <p>Every instruction so far has left the PC where fetch put it: pointing at the next byte. A <strong>jump</strong> is any instruction that puts something else there. Since the PC is a register on the bus, a jump is just a transfer that ends in <code>pc_s</code>. The only question is where the new address comes from.</p>
+      <h3><code>JMPR R3</code> &mdash; from a register &mdash; byte <code>00110011</code></h3>
+      <div class="table-scroll"><table class="pin-table dp"><thead><tr><th>Step</th><th>Drives the bus</th><th>Captures</th></tr></thead><tbody id="dp-jmpr"></tbody></table></div>
+      <p>One transfer: R3 drives the bus, the PC captures it. Steps 5 and 6 are idle; the next fetch reads from wherever R3 pointed.</p>
+      <h3><code>JMP a</code> &mdash; from the next byte &mdash; bytes <code>01000000</code>, a</h3>
+      <div class="table-scroll"><table class="pin-table dp"><thead><tr><th>Step</th><th>Drives the bus</th><th>Captures</th></tr></thead><tbody id="dp-jmp"></tbody></table></div>
+      <p>Like <code>DATA</code>, the address lives in the byte after the instruction. Step 4 points the MAR at it (the PC already does); step 5 puts it straight into the PC. There is no need to add 1 to anything: the next instruction comes from <em>a</em>, not from after the address byte.</p>
+    </section>
+
+    <section id="sec-14-6">
+      <h2>14.6 &nbsp; J<em>caez</em>: jump only if a flag says so</h2>
+      <p>The conditional jump is <code>0101 caez</code>, followed by an address byte. Its four low bits each select one flag: C (carry), A (A larger), E (equal), Z (zero). The jump is taken if <strong>any selected flag is 1</strong>. So <code>JC</code> is <code>01011000</code>, <code>JZ</code> is <code>01010001</code>, and <code>JAE</code> (&ldquo;A larger or equal&rdquo;) is <code>01010110</code>.</p>
+      <h3><code>JC a</code> &mdash; bytes <code>01011000</code>, a &mdash; with C = 1</h3>
+      <div class="table-scroll"><table class="pin-table dp"><thead><tr><th>Step</th><th>Drives the bus</th><th>Captures</th></tr></thead><tbody id="dp-jif-t"></tbody></table></div>
+      <h3>The same instruction with C = 0</h3>
+      <div class="table-scroll"><table class="pin-table dp"><thead><tr><th>Step</th><th>Drives the bus</th><th>Captures</th></tr></thead><tbody id="dp-jif-n"></tbody></table></div>
+      <p>Look at steps 4 and 5: they are <code>DATA</code>&rsquo;s steps 4 and 6. By the end of step 5 the PC already points past the address byte &mdash; the instruction has been set up as <strong>not taken</strong>. Step 6 then decides. If the condition holds, the RAM (still pointed at the address byte by the MAR) drives the bus and the PC captures it. If not, step 6 does nothing, and the next fetch carries on after the address. &ldquo;Not taken&rdquo; costs nothing, and no gate has to choose between two addresses.</p>
+      <p>The condition is four ANDs and an OR, and the result is ANDed into step 6&rsquo;s two terms:</p>
+      <div class="alg">match  = (C AND b3) OR (A AND b2) OR (E AND b1) OR (Z AND b0)
+ram_e  += step6 AND JIF AND match       (with clk_e)
+pc_s   += step6 AND JIF AND match       (with clk_s)</div>
+      <p>The flags come from your FLAGS circuit &mdash; the four <code>MEM_1BIT</code>s set by the last ALU instruction or CLF. The control unit gets four new inputs for them.</p>
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/control-unit-jump-if.jpg"
+             alt="A Logisim control unit for the conditional jump. Across the bottom, inputs C, A, E and Z each go into an AND gate with one of the instruction's four low bits; the four ANDs feed an OR. The OR's output joins step 6 in an AND whose output raises RAM_E and a second PC set term. Step 4 raises PC_E, MAR_S and ACC_S; step 5 raises ACC_E and a first PC set term. The two PC set terms are ORed into PC_S.">
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s conditional-jump control unit: the flag ANDs and their OR along the bottom, and the step-6 AND that only fires on a match.</figcaption>
+      </figure>
+    </section>
+
+    <!-- ========== Widget 2 ========== -->
+    <section id="sec-lab">
+      <div class="widget-card" id="w-jump">
+        <div class="widget-card__title">Jump Lab</div>
+        <div class="widget-card__subtitle">Set the flags as the last ALU instruction left them, choose which flags the jump tests, and see whether it is taken and where the PC goes. The jump sits at address 0x10, so its address byte is at 0x11.</div>
+        <div class="jl-row"><span class="lbl">Flags now</span>
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small tgl" data-f="C" aria-pressed="false">C</button>
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small tgl" data-f="A" aria-pressed="false">A</button>
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small tgl" data-f="E" aria-pressed="false">E</button>
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small tgl" data-f="Z" aria-pressed="false">Z</button>
+        </div>
+        <div class="jl-row"><span class="lbl">Jump tests</span>
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small tgl" data-b="8" aria-pressed="false">c</button>
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small tgl" data-b="4" aria-pressed="false">a</button>
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small tgl" data-b="2" aria-pressed="false">e</button>
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small tgl" data-b="1" aria-pressed="false">z</button>
+          <label style="font-size:var(--fs-sm)">address byte <input id="jl-addr" class="mono" value="04" size="3" maxlength="2" aria-label="Address byte in hex"></label>
+        </div>
+        <div class="w-panel">
+          <h3>Result</h3>
+          <p id="jl-verdict" class="verdict" aria-live="polite"></p>
+          <div class="table-scroll"><table class="pin-table dp"><thead><tr><th>Step</th><th>Drives</th><th>Captures</th></tr></thead><tbody id="jl-steps"></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-14-7">
+      <h2>14.7 &nbsp; Which flags to test</h2>
+      <ul>
+        <li><strong>After CMP</strong>, only A and E mean anything (Week 11). <code>CMP RA, RB</code> compares RA with RB: <code>JA</code> jumps if RA &gt; RB, <code>JE</code> if they are equal, <code>JAE</code> if RA &ge; RB. Never <code>JZ</code> after CMP.</li>
+        <li><strong>After a shift</strong>, C is the bit that fell off the end. <code>MYSIM.txt</code> does <code>SHR R0, R0</code> then <code>JC</code> to ask &ldquo;was the lowest bit of R0 a 1?&rdquo;</li>
+        <li><strong>After ADD</strong>, C is the carry out of bit 7 and Z says the 8-bit result is zero.</li>
+        <li><strong>A loop</strong> is a conditional jump backwards. Count a register down with <code>ADD</code> of 11111111 (that is &minus;1) and jump back while the result is not zero &mdash; for which you will need a flag that is 1 when you want to keep going. Page 4 builds one.</li>
+      </ul>
+    </section>
+
+    <section id="sec-14-8">
+      <h2>14.8 &nbsp; Branches and jumps</h2>
+      <p>The syllabus calls this week &ldquo;branch/jump implementation&rdquo;. In MIPS (Week 7) a <strong>branch</strong> such as <code>beq</code> is <em>PC-relative</em>: its 16-bit field is an offset, counted in instructions, added to PC + 4. Your CPU&rsquo;s conditional jump carries an <em>absolute</em> address in a whole byte. With 256 addresses, a whole byte reaches all of memory, so there is nothing to gain from an offset; MIPS, with a 32-bit address space and a 16-bit field, has no choice. The idea is the same in both: a conditional write to the PC, decided by a test the ALU has already made.</p>
+
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Four questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+      <p>For branches and jumps in MIPS hardware, log into your Saylor CS301 account at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 5: Designing a Processor</strong>; its datapath adds a second adder for the branch target.</p>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>You can trace all three jumps and say when a conditional one is taken. Next page: the carry that comes back, the instruction that stops the clock, and loading a program from a file.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 14, Page 2
+  </footer>
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['fin', 'core'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.fin) { return; }
+    var F = L.fin, C = L.core;
+
+    function b8(v) { return v === null || v === undefined ? 'EEEEEEEE' : ('0000000' + (v >>> 0).toString(2)).slice(-8); }
+    function h2(v) { return v === null || v === undefined ? 'EE' : ('0' + v.toString(16).toUpperCase()).slice(-2); }
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+    function fill(id, ir, flags) {
+      var tb = document.getElementById(id); if (!tb) { return; }
+      tb.innerHTML = F.datapath(ir, flags).map(function (r) {
+        return '<tr><td>' + r.step + '</td><td>' + (r.drivers.join(', ') || '\u2014') + '</td><td>' + (r.captures.join(', ') || '\u2014') + (r.bus1 ? ' (bus1: PC + 1)' : '') + '</td></tr>';
+      }).join('');
+    }
+    fill('dp-jmpr', 0x33, {}); fill('dp-jmp', 0x40, {});
+    fill('dp-jif-t', 0x58, { C: 1, A: 0, E: 0, Z: 0 }); fill('dp-jif-n', 0x58, { C: 0, A: 0, E: 0, Z: 0 });
+
+    /* ---------- Widget 2 — Jump Lab ---------- */
+    (function () {
+      var host = document.getElementById('w-jump'); if (!host) { return; }
+      var flags = { C: 0, A: 0, E: 0, Z: 0 }, cond = 0;
+      function paint() {
+        host.querySelectorAll('[data-f]').forEach(function (b) { b.setAttribute('aria-pressed', flags[b.dataset.f] ? 'true' : 'false'); });
+        host.querySelectorAll('[data-b]').forEach(function (b) { b.setAttribute('aria-pressed', (cond & +b.dataset.b) ? 'true' : 'false'); });
+        var a = parseInt(document.getElementById('jl-addr').value, 16); if (isNaN(a)) { a = 0; } a &= 255;
+        var ir = 0x50 | cond, t = F.taken(ir, flags).taken, name = C.decodeByte(ir, a).text;
+        var v = document.getElementById('jl-verdict');
+        if (!cond) { v.textContent = name + ' tests no flag, so it is never taken: the PC goes on to 0x12.'; }
+        else { v.textContent = name + ' (' + b8(ir) + '): ' + (t ? 'taken \u2014 step 6 puts 0x' + h2(a) + ' in the PC.' : 'not taken \u2014 no selected flag is 1, step 6 is idle, and the PC stays at 0x12.'); }
+        fill('jl-steps', ir, flags);
+      }
+      host.addEventListener('click', function (e) {
+        var b = e.target.closest('button'); if (!b) { return; }
+        if (b.dataset.f) { flags[b.dataset.f] ^= 1; }
+        if (b.dataset.b) { cond ^= +b.dataset.b; }
+        paint();
+      });
+      document.getElementById('jl-addr').addEventListener('input', paint);
+      paint();
+    }());
+
+    /* ---------- Self-check ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+  {
+    "q": "R2 holds 0x14. What does <code>JMPR R2</code> do?",
+    "opts": [
+      "PC &larr; 0x14",
+      "PC &larr; the byte after the instruction",
+      "R2 &larr; PC",
+      "Nothing unless a flag is set"
+    ],
+    "correct": 0,
+    "why": "One transfer at step 4: R2 drives the bus and the PC captures it. The next fetch reads address 0x14."
+  },
+  {
+    "q": "The flags are C = 0, A = 1, E = 0, Z = 0. Is <code>01010110</code> (JAE) taken?",
+    "opts": [
+      "Yes: A is selected and A = 1",
+      "No: E is selected and E = 0",
+      "No: C is 0",
+      "Only if Z = 1"
+    ],
+    "correct": 0,
+    "why": "The jump is taken if any selected flag is 1. JAE selects A and E; A is 1."
+  },
+  {
+    "q": "A conditional jump at 0x08 is not taken. Where does the next fetch read from?",
+    "opts": [
+      "0x08",
+      "0x09",
+      "0x0A",
+      "The address in the byte at 0x09"
+    ],
+    "correct": 2,
+    "why": "The jump is two bytes, 0x08 and 0x09. Steps 4 and 5 move the PC past the address byte to 0x0A; step 6 does nothing when the condition fails."
+  },
+  {
+    "q": "Why does <code>JMP</code> not need ACC, when <code>DATA</code> does?",
+    "opts": [
+      "JMP puts the address byte straight into the PC; there is no &lsquo;next instruction after the byte&rsquo; to compute",
+      "JMP is one byte long",
+      "ACC is busy during jumps",
+      "The ALU cannot add during a jump"
+    ],
+    "correct": 0,
+    "why": "DATA must skip its data byte, so it computes PC + 1 and puts it back. JMP replaces the PC with the address byte itself."
+  }
+];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p><div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi], okAns = (oi === item.correct), fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) { el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false'); });
+      }
+      host.addEventListener('click', function (e) { var t = e.target.closest('.quiz-option'); if (t) { answer(+t.dataset.q, +t.dataset.o); } });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+
+  })();
+  </script>
+</body>
+</html>

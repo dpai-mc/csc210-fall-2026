@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w14-assign">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Assignment 14: The Finished Machine</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .q-pts { font-size: var(--fs-sm); color: var(--color-text-muted); }
+    .inside { font-size: var(--fs-sm); margin: var(--space-xs) 0 var(--space-md); }
+    #verify-table td:nth-child(2), #verify-table td:nth-child(3) { font-size: var(--fs-sm); }
+    .ctl-mini { table-layout: auto; width: 100%; }
+    .ctl-mini td:first-child, .ctl-mini th:first-child { font-family: var(--font-mono); font-weight: 700; white-space: nowrap; width: 1%; }
+    .ctl-mini td:last-child { font-size: var(--fs-sm); white-space: normal; text-align: left; font-family: var(--font-sans); line-height: 1.7; }
+    .ctl-mini td:last-child strong code, .ctl-mini td:last-child strong { color: var(--color-primary); }
+    .load-list li { margin-bottom: 4px; }
+    .bytes { font-family: var(--font-mono); }
+
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 14 &rsaquo; <span>Assignment 14</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Assignment 14 — The Finished Machine</h1>
+    <p><span class="points-badge">100 points</span> &nbsp;|&nbsp; Week 14 &nbsp;|&nbsp; Logisim Checkpoint 7 + Canvas quiz + project status &nbsp;|&nbsp; <strong>Due Sunday 11/22, 11:59 pm</strong></p>
+
+    <section id="overview">
+      <h2>What you submit</h2>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Part</th><th>What it is</th><th>How</th><th>Points</th></tr></thead>
+          <tbody>
+            <tr><td><strong>A</strong></td><td>Logisim Checkpoint 7 &mdash; every class of instruction wired, the carry-in, END, the clock and the loader, and three test programs run</td><td><code>.circ</code> file + 6 screenshots</td><td>60</td></tr>
+            <tr><td><strong>B</strong></td><td>Canvas quiz on the four Week 14 pages</td><td>in Canvas: 10 questions, auto-graded</td><td>30</td></tr>
+            <tr><td><strong>C</strong></td><td>Project status &mdash; where your CPU stands, three weeks before the final project is due</td><td>the <em>Project Status</em> page, printed to PDF and uploaded</td><td>10, complete/incomplete</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout callout--note">
+        <div class="callout__title">Thanksgiving</div>
+        <p>Week 15 is light and has no Logisim checkpoint. If you finish Checkpoint 7 early, the time after it is yours for the final project.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART A
+         ============================================================ -->
+    <section id="part-a">
+      <h2>Part A &mdash; Logisim Checkpoint 7 <span class="q-pts">(60 points)</span></h2>
+
+      <p>Checkpoint 7 is graded on <strong>every class of instruction wired</strong>. Running <code>MYSIM.txt</code> is optional this week (and required for the A tier of the final project). Pages 1&ndash;3 explain every wire; read them first.</p>
+
+      <div class="callout callout--warn">
+        <div class="callout__title">The exception, exactly</div>
+        <p>Until now you have used only Wiring and Gates components, plus Week 11&rsquo;s J-K flip-flop. Checkpoint 7 allows <strong>three built-ins, and only in these places</strong>:</p>
+        <ul>
+          <li>the built-in <strong>Counter</strong> (Memory folder), only inside the tab <code>COUNTER_256</code>;</li>
+          <li>the built-in <strong>RAM</strong> (Memory folder), only on <code>CPU_TEST</code>, as the external RAM;</li>
+          <li>the built-in <strong>Multiplexor</strong> (Plexers folder), only at your <code>RAM_16X16</code>&rsquo;s <code>i</code>, selected by <code>load</code>.</li>
+        </ul>
+        <p>And the <strong>Clock</strong> (Wiring folder) on <code>CPU_TEST</code>. Any other built-in from Memory, Plexers or Arithmetic anywhere in the file costs the &ldquo;single file&rdquo; points.</p>
+      </div>
+
+      <h3>Tab <code>CONTROL_UNIT</code> &mdash; what changes</h3>
+      <p>Add four inputs, <code>fc</code>, <code>fa</code>, <code>fe</code> and <code>fz</code> (the flags, 1 bit each), and three outputs, <code>ram_s</code>, <code>c</code> and <code>end</code>. Wire five more outputs of the class decoder you placed in Week 11 (each ANDed with NOT b7, as CLF is): LD, ST, DATA, JMPR, JMP and J<em>caez</em>. The whole table, with this week&rsquo;s additions in bold:</p>
+      <div class="table-scroll">
+        <table class="pin-table ctl-mini">
+          <thead><tr><th>Output</th><th>=</th></tr></thead>
+          <tbody>
+<tr><td>pc_e</td><td>( <code>step1</code> OR <strong>(<code>step4</code> AND DATA)</strong> OR <strong>(<code>step4</code> AND JMP)</strong> OR <strong>(<code>step4</code> AND J<em>caez</em>)</strong> ) AND <code>clk_e</code></td></tr>
+<tr><td>mar_s</td><td>( <code>step1</code> OR <strong>(<code>step4</code> AND LD)</strong> OR <strong>(<code>step4</code> AND ST)</strong> OR <strong>(<code>step4</code> AND DATA)</strong> OR <strong>(<code>step4</code> AND JMP)</strong> OR <strong>(<code>step4</code> AND J<em>caez</em>)</strong> ) AND <code>clk_s</code></td></tr>
+<tr><td>ram_e</td><td>( <code>step2</code> OR <strong>(<code>step5</code> AND LD)</strong> OR <strong>(<code>step5</code> AND DATA)</strong> OR <strong>(<code>step5</code> AND JMP)</strong> OR <strong>(<code>step6</code> AND J<em>caez</em> AND match)</strong> ) AND <code>clk_e</code></td></tr>
+<tr><td>ir_s</td><td><code>step2</code> AND <code>clk_s</code></td></tr>
+<tr><td>pc_s</td><td>( <code>step3</code> OR <strong>(<code>step6</code> AND DATA)</strong> OR <strong>(<code>step4</code> AND JMPR)</strong> OR <strong>(<code>step5</code> AND JMP)</strong> OR <strong>(<code>step5</code> AND J<em>caez</em>)</strong> OR <strong>(<code>step6</code> AND J<em>caez</em> AND match)</strong> ) AND <code>clk_s</code></td></tr>
+<tr><td>regb_e</td><td>( (<code>step4</code> AND ALU) OR <strong>(<code>step5</code> AND ST)</strong> OR <strong>(<code>step4</code> AND JMPR)</strong> ) AND <code>clk_e</code></td></tr>
+<tr><td>tmp_s</td><td><code>step4</code> AND ALU AND <code>clk_s</code></td></tr>
+<tr><td>rega_e</td><td>( (<code>step5</code> AND ALU) OR <strong>(<code>step4</code> AND LD)</strong> OR <strong>(<code>step4</code> AND ST)</strong> ) AND <code>clk_e</code></td></tr>
+<tr><td>acc_s</td><td>( <code>step1</code> OR (<code>step5</code> AND ALU) OR <strong>(<code>step4</code> AND DATA)</strong> OR <strong>(<code>step4</code> AND J<em>caez</em>)</strong> ) AND <code>clk_s</code></td></tr>
+<tr><td>flags_s</td><td>( (<code>step5</code> AND ALU) OR (<code>step4</code> AND CLF) ) AND <code>clk_s</code></td></tr>
+<tr><td>acc_e</td><td>( <code>step3</code> OR (<code>step6</code> AND ALU AND NOT CMP) OR <strong>(<code>step6</code> AND DATA)</strong> OR <strong>(<code>step5</code> AND J<em>caez</em>)</strong> ) AND <code>clk_e</code></td></tr>
+<tr><td>regb_s</td><td>( (<code>step6</code> AND ALU AND NOT CMP) OR <strong>(<code>step5</code> AND LD)</strong> OR <strong>(<code>step5</code> AND DATA)</strong> ) AND <code>clk_s</code></td></tr>
+<tr><td>bus1</td><td><code>step1</code> OR (<code>step4</code> AND CLF) OR <strong>(<code>step4</code> AND DATA)</strong> OR <strong>(<code>step4</code> AND J<em>caez</em>)</strong></td></tr>
+<tr><td><strong>ram_s</strong></td><td><strong><code>step5</code> AND ST</strong> AND <code>clk_s</code></td></tr>
+<tr><td><strong>c</strong></td><td><strong><code>step5</code> AND ALU</strong></td></tr>
+            <tr><td>opcode</td><td><code>ir</code> bits 6&ndash;4, each AND (<code>step5</code> AND ALU) &mdash; unchanged</td></tr>
+            <tr><td><strong>end</strong></td><td><strong>the <code>ir</code> byte = <code>11001111</code>: one AND of all eight bits, b5 and b4 through NOTs</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="inside"><strong>match</strong> = (<code>fc</code> AND b3) OR (<code>fa</code> AND b2) OR (<code>fe</code> AND b1) OR (<code>fz</code> AND b0): four ANDs into one 4-input OR, used only at step 6 (page 2, &sect;14.6). Every other new term is a (step AND class) AND, ORed into a line that already exists.</p>
+
+      <h3>Tab <code>CTMP</code> (new) &mdash; these pin names are exact</h3>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Meaning</th></tr></thead>
+          <tbody>
+<tr><td><code class="pin-table__name">c</code></td><td>1</td><td>in</td><td>the carry flag, from FLAGS</td></tr>
+<tr><td><code class="pin-table__name">s</code></td><td>1</td><td>in</td><td>set &mdash; <code>tmp_s</code></td></tr>
+<tr><td><code class="pin-table__name">o</code></td><td>1</td><td>out</td><td>the copied carry</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="inside"><strong>Inside:</strong> one <code>MEM_1BIT</code> instance (page 3, &sect;14.9).</p>
+
+      <h3>Tab <code>COUNTER_256</code> (new, exception) &mdash; these pin names are exact</h3>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Pin</th><th>Width</th><th>Direction</th><th>Meaning</th></tr></thead>
+          <tbody>
+<tr><td><code class="pin-table__name">clk</code></td><td>1</td><td>in</td><td>the counter&rsquo;s clock</td></tr>
+<tr><td><code class="pin-table__name">count</code></td><td>8</td><td>out</td><td>0 to 255</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="inside"><strong>Inside:</strong> one built-in Counter: Data Bits 8, Maximum Value 0xff, Action On Overflow <em>Stay at value</em>, Trigger <em>Falling edge</em>; its load, clear and count-enable inputs left unconnected (page 3, &sect;14.11).</p>
+
+      <h3>Tab <code>CPU</code> &mdash; what changes</h3>
+      <ul>
+        <li><strong>Delete</strong> the <code>clk_in</code> and <code>ci</code> input pins.</li>
+        <li><strong>The clock:</strong> new input <code>clock</code>; <code>CLOCK</code>&rsquo;s <code>clk_in</code> = <code>clock</code> AND NOT <code>end</code>. <code>run</code> now passes <code>clk</code> to the control unit through an AND too, as well as <code>clk_e</code> and <code>clk_s</code>.</li>
+        <li><strong>The carry-in:</strong> place a <code>CTMP</code>; its <code>c</code> from FLAGS C, its <code>s</code> from <code>tmp_s</code>. ALU <code>ci</code> = CTMP <code>o</code> AND the control unit&rsquo;s <code>c</code>.</li>
+        <li><strong>Flags to the control unit:</strong> FLAGS C, A, E, Z to <code>fc</code>, <code>fa</code>, <code>fe</code>, <code>fz</code>.</li>
+        <li><strong>The RAM:</strong> its <code>s</code> = <code>ram_s</code> OR <code>data_ram</code> OR (<code>load</code> AND <code>clk_s</code>). Its <code>i</code> comes from a Multiplexor: select = <code>load</code>, input 0 = the bus, input 1 = new 8-bit input <code>ram_input</code>.</li>
+        <li><strong>The loader:</strong> new input <code>load</code>; a <code>COUNTER_256</code> whose <code>clk</code> = <code>clk</code> AND <code>load</code> (the clock&rsquo;s <code>clk</code>, before the <code>run</code> AND), its <code>count</code> onto the bus through a controlled buffer enabled by <code>load</code>.</li>
+        <li><strong>RESET:</strong> new input <code>reset</code>; a constant <code>00000000</code> onto the bus through a controlled buffer enabled by <code>reset</code>, and <code>reset</code> ORed into the sets of the PC, IR, MAR (the RAM&rsquo;s <code>sa</code>), TMP and R0&ndash;R3.</li>
+        <li><strong>New outputs:</strong> <code>end</code>, <code>clkl</code> (the clock&rsquo;s <code>clk</code>), <code>clk_e</code>, <code>clk_s</code>. Recommended, for hex displays on <code>CPU_TEST</code>: <code>bus</code>, <code>pc</code>, <code>ir</code>, <code>acc</code>, <code>r0</code>&ndash;<code>r3</code> (8 bits each).</li>
+        <li><strong>Keep</strong> Week 13&rsquo;s test port (<code>data</code>, <code>data_e</code>, <code>data_s</code>, <code>data_pc</code>, <code>data_ir</code>, <code>data_mar</code>, <code>data_ram</code>, <code>ram_reset</code>, all pull-down). Only <code>data_mar</code> is used from <code>CPU_TEST</code>.</li>
+      </ul>
+
+      <h3>Tab <code>CPU_TEST</code> (new)</h3>
+      <ul>
+        <li>One <code>CPU</code> instance. Edit the <code>CPU</code> tab&rsquo;s appearance so its pins are easy to wire, as your instructor&rsquo;s is on page 3.</li>
+        <li>A <strong>Clock</strong> to <code>clock</code>. Inputs <code>run</code>, <code>LOAD</code> (to <code>load</code>), <code>RESET</code> (a button, to <code>reset</code>) and <code>MARS</code> (to <code>data_mar</code>). An LED or output <code>END</code>; outputs showing <code>clkl</code>, <code>clk_e</code> and <code>clk_s</code>.</li>
+        <li><strong>The external RAM:</strong> a second <code>COUNTER_256</code>, its <code>clk</code> = <code>clkl</code>, its <code>count</code> to a built-in RAM&rsquo;s <code>A</code> (Address Bit Width 8, Data Bit Width 8). RAM <code>sel</code> = <code>LOAD</code>, clock = <code>clkl</code>, <code>ld</code> = constant 1, <code>clr</code> = constant 0, <code>D</code> to the CPU&rsquo;s <code>ram_input</code>.</li>
+        <li>Recommended: hex digit displays for the bus, PC, IR, ACC and R0&ndash;R3.</li>
+      </ul>
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img" src="images/CPU_ExternalRAM.jpg" style="max-width:520px"
+             alt="A Logisim fragment titled EXTERNAL RAM: a CLKL tunnel clocks a block labelled clk 256, whose output goes to the A input of a built-in RAM showing rows of 00 bytes. The RAM's sel input comes from a LOAD tunnel, its clock from CLKL, its ld from a constant 1 and its clr from ground; its D output goes to a RAM INPUT tunnel.">
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s external RAM on <code>CPU_TEST</code>.</figcaption>
+      </figure>
+
+      <h3>The three tests</h3>
+      <p>Type each program&rsquo;s bytes into the external RAM (right-click &rarr; Edit Contents), then load and run it by the procedure below. Page 4, &sect;14.13 traces all three.</p>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Test</th><th>Bytes (hex, from address 00)</th><th>At END</th></tr></thead>
+          <tbody>
+            <tr><td>A &mdash; memory and immediates</td><td class="bytes">20 1E 21 5A 11 02 CF</td><td>R0 1E &middot; R1 5A &middot; R2 5A &middot; RAM[1E] 5A &middot; PC 06</td></tr>
+            <tr><td>B &mdash; jumps</td><td class="bytes">23 07 33 20 AA CF CF 40 0B 20 BB 21 01 CF</td><td>R0 00 &middot; R1 01 &middot; R3 07 &middot; PC 0D</td></tr>
+            <tr><td>C &mdash; flags, J<em>caez</em>, carry-in</td><td class="bytes">60 20 FF 21 01 81 58 0A 22 EE 8B 51 0F 22 22 CF</td><td>R0 FF &middot; R1 00 &middot; R2 22 &middot; R3 01 &middot; C A E Z = 0 0 1 0 &middot; PC 0F</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Load and run, every time</h3>
+      <ol class="load-list">
+        <li>Simulate &rarr; Reset.</li>
+        <li><code>run</code> = 0. Press <code>RESET</code>.</li>
+        <li><code>LOAD</code> = 1 and <code>MARS</code> = 1, before any tick.</li>
+        <li>External RAM &rarr; Edit Contents: type the bytes (or Open a file).</li>
+        <li>Ticks Enabled until the bus reads <code>FF</code>; ticks off.</li>
+        <li>Tick Once until <code>clkl</code> = 0, <code>clk_e</code> = 1, <code>clk_s</code> = 0.</li>
+        <li><code>LOAD</code> = 0, <code>MARS</code> = 0, then <code>run</code> = 1.</li>
+        <li>Ticks Enabled until <code>END</code> lights; ticks off.</li>
+      </ol>
+
+      <h3>Screenshots</h3>
+      <div class="table-scroll">
+        <table class="pin-table" id="verify-table">
+          <thead><tr><th>#</th><th>When</th><th>Expect</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Test A: after step 2 (RESET)</td><td>PC, IR and R0&ndash;R3 all <code>00</code>; <code>END</code> off</td></tr>
+            <tr><td>2</td><td>Test A: after step 5, right-click <code>RAM_16X16</code> &rarr; View (then Simulate &rarr; Go Out To State to return)</td><td>bytes 00&ndash;06 = <code>20 1E 21 5A 11 02 CF</code>; the rest <code>00</code></td></tr>
+            <tr><td>3</td><td>Test A: after step 7</td><td><code>clkl</code>, <code>clk_e</code>, <code>clk_s</code> = 0, 1, 0; <code>LOAD</code> 0; <code>run</code> 1; bus = <code>00</code></td></tr>
+            <tr><td>4</td><td>Test A at END</td><td>as in the table above</td></tr>
+            <tr><td>5</td><td>Test B at END</td><td>as in the table above</td></tr>
+            <tr><td>6</td><td>Test C at END, with FLAGS visible (a probe, or the <code>CPU</code> tab)</td><td>as in the table above</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>Optional:</strong> a seventh screenshot of <code>MYSIM.txt</code> at END, R2 = <code>00011001</code>. Not graded this week; it is the A-tier proof for the final project.</p>
+      <p>If a test ends wrong, page 4 says what each wrong value points to, and the Test Bench there traces the program one instruction at a time for comparison.</p>
+
+      <h3>Points</h3>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Criterion</th><th>Points</th></tr></thead>
+          <tbody>
+            <tr><td><code>CONTROL_UNIT</code>: <code>fc fa fe fz</code> in; <code>ram_s</code>, <code>c</code>, <code>end</code> out; every class term as in the table; the match gated into step 6 only; <code>end</code> decoded</td><td>20</td></tr>
+            <tr><td><code>CTMP</code> (three pins, one <code>MEM_1BIT</code>) and the carry path: <code>ci</code> = CTMP AND <code>c</code></td><td>6</td></tr>
+            <tr><td>The loader on the <code>CPU</code> tab: <code>COUNTER_256</code> and its buffer, the RAM input Multiplexor, the RAM <code>s</code> OR</td><td>8</td></tr>
+            <tr><td><code>CPU</code> tab: clock AND NOT end; <code>run</code> on all three clock lines; RESET buffer and ORs; the new outputs</td><td>6</td></tr>
+            <tr><td><code>CPU_TEST</code>: Clock, the four inputs, <code>END</code>, the external RAM and its counter</td><td>6</td></tr>
+            <tr><td>Six screenshots, matching the table (2 each)</td><td>12</td></tr>
+            <tr><td>Single file; built-ins only where the exception names them</td><td>2</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout--note">
+        <div class="callout__title">Before you submit</div>
+        <ul>
+          <li>One <code>.circ</code> file &mdash; the same file you have added to since Week 2, now with <code>CTMP</code>, <code>COUNTER_256</code> and <code>CPU_TEST</code> tabs.</li>
+          <li>Pin names exactly as listed.</li>
+          <li>Six screenshots, numbered to match the table.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PART B
+         ============================================================ -->
+    <section id="part-b">
+      <h2>Part B &mdash; Canvas quiz <span class="q-pts">(30 points)</span></h2>
+      <p>Ten questions on the four Week 14 pages, 3 points each, auto-graded. No time limit. <strong>Two attempts; your higher score counts.</strong> Each question is drawn from two parallel versions, so a second attempt will usually look different. Opens Monday 11/16; closes Sunday 11/22, 11:59 pm.</p>
+      <p>The questions follow the pages in order: what LD and ST put on the bus; how DATA steps over its byte; which lines are high at a step; whether a conditional jump is taken; what JMPR and JMP do to the PC; the carry-in; END and the clock; the load-and-run procedure; encoding a jump; and the result of a short program. The widgets on each page are the best practice.</p>
+    </section>
+
+    <!-- ============================================================
+         PART C
+         ============================================================ -->
+    <section id="part-c">
+      <h2>Part C &mdash; Project status <span class="q-pts">(10 points, complete/incomplete)</span></h2>
+      <p>Open the <strong>Project Status</strong> page in this week&rsquo;s module. Say which tier you are aiming for now, which classes work, which tests you ran and what they gave, what is blocking you, and one question. Print it to PDF and upload it. It is complete when every section is answered, and you get written feedback on it either way. Honest answers get the most useful feedback: &ldquo;Test C gives R3 = 00&rdquo; is something your instructor can help with.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 14, Assignment 14
+  </footer>
+</body>
+</html>

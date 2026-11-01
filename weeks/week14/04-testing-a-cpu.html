@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w14-04">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 14: Testing a CPU</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .w-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-md); }
+    @media (max-width: 760px) { .w-grid { grid-template-columns: 1fr; } }
+    .w-panel { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-surface); min-width: 0; margin-top: var(--space-sm); }
+    .w-panel h3 { margin: 0 0 var(--space-xs); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .btn-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .steps { display: flex; flex-wrap: wrap; gap: 4px; }
+    .stp { min-width: 2.2rem; text-align: center; border: 2px solid var(--color-border); border-radius: 999px; padding: 1px 6px; font-weight: 700; font-size: var(--fs-sm); }
+    .stp--on { background: var(--color-accent); border-color: var(--color-accent-hov); color: #fff; }
+    .lines { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 4px; }
+    .ln { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .ln small { display: block; font-family: var(--font-sans); font-size: 11px; color: var(--color-text-muted); }
+    .ln--1 { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .ln--1 small { color: #dfe8f3; }
+    .ln--new { border-left: 4px solid var(--color-accent); }
+    .vals { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 4px; }
+    .val { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); background: var(--color-surface); overflow-wrap: anywhere; }
+    .val b { font-family: var(--font-sans); color: var(--color-primary); }
+    .val small { display: block; font-family: var(--font-sans); font-size: 11px; color: var(--color-text-muted); }
+    .val--wrote { border-color: var(--color-success); background: #f0faf4; }
+    .busline { font-family: var(--font-mono); border: 2px solid var(--color-primary); border-radius: var(--radius); padding: var(--space-xs) var(--space-sm); margin: var(--space-xs) 0; background: var(--color-code-bg); overflow-wrap: anywhere; }
+    .busline--float { border-style: dashed; border-color: var(--color-border); }
+    .busline--bad { border-color: var(--color-danger); background: #fdf0ef; }
+    .w-status { font-size: var(--fs-sm); min-height: 1.5em; margin: var(--space-xs) 0; }
+    .mono { font-family: var(--font-mono); }
+    .row-now { background: #fff7e0; }
+    .gen-table td:first-child { font-family: var(--font-mono); font-weight: 700; white-space: nowrap; }
+    .tag-new { display: inline-block; font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 999px; background: var(--color-accent); color: #fff; margin-left: 4px; font-family: var(--font-sans); }
+
+    .tb-src { display: block; width: 100%; box-sizing: border-box; font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.5; padding: var(--space-sm); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); color: var(--color-text); }
+    .tb-trace { font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .tb-trace td, .tb-trace th { padding: 2px 8px; white-space: nowrap; }
+    .tb-scroll { max-height: 22rem; overflow: auto; border: 1px solid var(--color-border); border-radius: 4px; }
+    .alg { font-family: var(--font-mono); background: var(--color-code-bg); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); overflow-x: auto; white-space: pre; font-size: var(--fs-sm); }
+    .exp td { font-family: var(--font-mono); font-size: var(--fs-sm); }
+
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 14 &rsaquo; <span>Page 4 — Testing a CPU</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Testing a CPU</h1>
+    <p><strong>Sections 14.13 – 14.16</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~45 minutes, with the video</p>
+
+    <section id="sec-14-13">
+      <h2>14.13 &nbsp; One test per class, with the answer written first</h2>
+      <p>A test is only a test if you know the answer before you run it. Each program below exercises one class of instruction, is short enough to trace by hand, and ends in a state that would be wrong if any one step of that class were wrong. These are Checkpoint 7&rsquo;s three tests. Trace each one before you load it.</p>
+
+      <h3>Test A &mdash; memory and immediates</h3>
+      <div class="table-scroll"><table class="pin-table exp"><thead><tr><th>Addr</th><th>Bytes</th><th>Instruction</th></tr></thead><tbody data-listing="a"></tbody></table></div>
+      <p>Two <code>DATA</code>s put an address (0x1E) in R0 and a value (0x5A) in R1. <code>ST R0, R1</code> writes 0x5A to address 0x1E, which the program never otherwise touches. <code>LD R0, R2</code> reads it back into R2. If R2 ends as 0x5A, the value went out to RAM and came back: both transfers, both MAR writes. <strong>Expect:</strong> R0 1E &middot; R1 5A &middot; R2 5A &middot; RAM[1E] 5A &middot; PC 06.</p>
+
+      <h3>Test B &mdash; jumps</h3>
+      <div class="table-scroll"><table class="pin-table exp"><thead><tr><th>Addr</th><th>Bytes</th><th>Instruction</th></tr></thead><tbody data-listing="b"></tbody></table></div>
+      <p>The program is built so that every wrong path ends early with a register you can see. If <code>JMPR R3</code> fails, the CPU runs <code>DATA R0, 0xAA</code> and stops at 0x05 with R0 = AA. If <code>JMP 0x0B</code> fails, it runs <code>DATA R0, 0xBB</code>. Only a CPU whose two jumps both work reaches 0x0B, loads R1 = 01 and stops at 0x0D with R0 still 00. <strong>Expect:</strong> R0 00 &middot; R1 01 &middot; R3 07 &middot; PC 0D.</p>
+
+      <h3>Test C &mdash; flags, conditional jumps and the carry-in</h3>
+      <div class="table-scroll"><table class="pin-table exp"><thead><tr><th>Addr</th><th>Bytes</th><th>Instruction</th></tr></thead><tbody data-listing="c"></tbody></table></div>
+      <p>0xFF + 0x01 = 0x100: R1 becomes 00 and C becomes 1, so <code>JC 0x0A</code> must jump, over <code>DATA R2, 0xEE</code>. At 0x0A, <code>ADD R2, R3</code> adds 0 + 0 &mdash; <em>plus the carry</em> CTMP copied at step 4 &mdash; so R3 = 01 proves the carry-in path. That addition has no carry out and a non-zero result, so <code>JZ 0x0F</code> must <em>not</em> jump, and <code>DATA R2, 0x22</code> runs. <strong>Expect:</strong> R0 FF &middot; R1 00 &middot; R2 22 &middot; R3 01 &middot; C A E Z = 0 0 1 0 &middot; PC 0F.</p>
+      <p>Read the failures as well as the passes. R2 = EE means <code>JC</code> fell through; R3 = 00 means no carry-in; R2 = 00 means <code>JZ</code> jumped when it should not have.</p>
+    </section>
+
+    <section id="sec-14-14">
+      <h2>14.14 &nbsp; From MIPS to your CPU</h2>
+      <p>In Week 7 you wrote loops in MIPS. Here is one that adds 5 + 4 + 3 + 2 + 1:</p>
+      <div class="alg">        addi $t0, $zero, 5      # n
+        addi $t1, $zero, 0      # sum
+loop:   add  $t1, $t1, $t0      # sum = sum + n
+        addi $t0, $t0, -1       # n = n - 1
+        bne  $t0, $zero, loop   # until n is 0</div>
+      <p>Translating it shows each difference between the two instruction sets:</p>
+      <ul>
+        <li><strong>No immediate add.</strong> <code>addi $t0, $t0, -1</code> becomes a register holding &minus;1 &mdash; 0xFF in two&rsquo;s complement, loaded once with <code>DATA R3, 0xFF</code> &mdash; and an <code>ADD</code>.</li>
+        <li><strong>Two operands, not three.</strong> <code>ADD RA, RB</code> writes RB. <code>add $t1, $t1, $t0</code> becomes <code>ADD R0, R1</code> (R1 = R0 + R1); the decrement becomes <code>ADD R3, R0</code> (R0 = R3 + R0).</li>
+        <li><strong>The carry comes back.</strong> Adding 0xFF carries out every time but the last, and the next ADD would add that 1. A <code>CLF</code> before each ADD keeps the arithmetic clean.</li>
+        <li><strong>No <code>bne</code>.</strong> J<em>caez</em> jumps when a flag is 1, and Z = 1 means &ldquo;zero&rdquo;. So &ldquo;branch if not zero&rdquo; becomes &ldquo;jump out if zero&rdquo; followed by an unconditional jump back.</li>
+        <li><strong>Absolute addresses.</strong> <code>bne</code>&rsquo;s target is an offset from the PC; <code>JZ</code> and <code>JMP</code> carry the address itself, so you count bytes &mdash; remembering that <code>DATA</code>, <code>JMP</code> and J<em>caez</em> are two bytes each.</li>
+      </ul>
+      <div class="table-scroll"><table class="pin-table exp"><thead><tr><th>Addr</th><th>Bytes</th><th>Instruction</th></tr></thead><tbody data-listing="loop"></tbody></table></div>
+      <p>R1 ends as 0x0F, which is 15. Load it into the Test Bench below and look at the trace: the loop body runs five times, and the fifth <code>ADD R3, R0</code> makes R0 zero, so <code>JZ</code> leaves.</p>
+    </section>
+
+    <section id="sec-14-15">
+      <h2>14.15 &nbsp; <code>MYSIM.txt</code>: multiplying with shifts and adds</h2>
+      <p>Your CPU has no multiply instruction. <code>MYSIM.txt</code> multiplies 5 &times; 5 the way you multiply by hand, one digit of the multiplier at a time &mdash; except that in binary each digit is 0 or 1, so each partial product is either the multiplicand or nothing:</p>
+      <div class="table-scroll"><table class="pin-table exp"><thead><tr><th>Addr</th><th>Bytes</th><th>Instruction</th></tr></thead><tbody data-listing="mysim"></tbody></table></div>
+      <ul>
+        <li>R0 is the multiplier. <code>SHR R0, R0</code> pushes its lowest bit out into C, and <code>JC 0x0D</code> adds only when that bit was 1.</li>
+        <li>R1 is the multiplicand. <code>SHL R1, R1</code> doubles it each time round: the next column&rsquo;s partial product.</li>
+        <li>R2 is the running total: <code>ADD R1, R2</code>, R2 = R1 + R2. It must start at 0, which <code>XOR R2, R2</code> does &mdash; if R2 holds a value. That is why the procedure presses RESET.</li>
+        <li>R3 is the counter: a 1 that <code>SHL R3, R3</code> walks left. After eight shifts it falls out into C, and <code>JC 0x16</code> reaches END.</li>
+        <li>Three <code>CLF</code>s, because every shift and ADD takes CTMP&rsquo;s carry in. There is no CLF before <code>SHL R3, R3</code>, so when <code>SHL R1, R1</code> carries out, that 1 enters R3 at the bottom. It never reaches the top in time to matter, but it is why R3 ends as 00000101, not 0.</li>
+      </ul>
+      <p>The run takes 77 instructions; R2 ends as 00011001, 25.</p>
+
+      <h3>Watch it: binary multiplication as shift-and-add</h3>
+      <p>Your instructor works 5 &times; 5 on paper, then the same steps as your CPU will do them. About ten minutes; recorded in 2022.</p>
+      <div class="video-breakout">
+        <div class="video-transcript-row">
+          <div class="video-col">
+            <div class="video-frame" id="video-container-run2">
+              <iframe id="youtube-player-run2"
+                      src="https://www.youtube.com/embed/QEZxFppWsaw?enablejsapi=1&amp;cc_load_policy=1&amp;iv_load_policy=3&amp;modestbranding=1&amp;rel=0"
+                      title="CSC210: Binary multiplication as shift-and-add"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allowfullscreen loading="lazy"></iframe>
+            </div>
+            <div class="video-caption">Closed captions available. Use the transcript panel to jump to any point in the video.</div>
+          </div>
+          <div class="transcript-col">
+            <h4 class="sr-only">Transcript: shift-and-add</h4>
+            <div class="transcript-panel" id="transcript-container-run2" role="region" aria-live="polite"
+                 aria-label="Transcript of the shift-and-add video. Select a line to jump to that point in the video. The line currently being spoken is announced as the video plays.">
+              <p class="transcript-loading">Loading transcript&hellip;</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="callout callout--note">
+        <div class="callout__title">Which register is which</div>
+        <p>In the video your instructor says he is not sure which of R0 and R1 is which, and talks through shifting R0 left and R1 right. In <code>MYSIM.txt</code> it is the other way round: <strong>R0 shifts right</strong> (the multiplier, read one bit at a time) and <strong>R1 shifts left</strong> (the multiplicand). With 5 &times; 5 the answer is the same either way.</p>
+      </div>
+    </section>
+
+    <!-- ========== Widget 4 ========== -->
+    <section id="sec-tb">
+      <div class="widget-card" id="w-bench">
+        <div class="widget-card__title">Test Bench</div>
+        <div class="widget-card__subtitle">Write a program, one instruction per line. It is loaded and run by the full procedure, and traced one instruction at a time. <code>MOV</code> and <code>SUB</code> are accepted and expanded.</div>
+        <div class="btn-row">
+          <button type="button" class="widget-btn widget-btn--outline" data-preset="a">Test A</button>
+          <button type="button" class="widget-btn widget-btn--outline" data-preset="b">Test B</button>
+          <button type="button" class="widget-btn widget-btn--outline" data-preset="c">Test C</button>
+          <button type="button" class="widget-btn widget-btn--outline" data-preset="loop">Sum loop</button>
+          <button type="button" class="widget-btn widget-btn--outline" data-preset="mysim">MYSIM.txt</button>
+        </div>
+        <label for="tb-src" class="sr-only">Program</label>
+        <textarea id="tb-src" class="tb-src" rows="10" spellcheck="false"></textarea>
+        <div class="btn-row" style="margin-top:6px">
+          <button type="button" class="widget-btn widget-btn--primary" id="tb-run">Load and run</button>
+        </div>
+        <p class="w-status" id="tb-status" aria-live="polite"></p>
+        <div class="w-panel"><h3>Bytes</h3><div class="vals" id="tb-bytes"></div></div>
+        <div class="w-panel"><h3>At END</h3><div class="vals" id="tb-final"></div></div>
+        <div class="w-panel">
+          <h3>Trace</h3>
+          <div class="tb-scroll"><table class="tb-trace"><thead><tr><th>#</th><th>Addr</th><th>Instruction</th><th>R0</th><th>R1</th><th>R2</th><th>R3</th><th>C A E Z</th><th>PC after</th></tr></thead><tbody id="tb-trace"></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-14-16">
+      <h2>14.16 &nbsp; Where you stand, and the project status</h2>
+      <p>Your final project, due <strong>12/11</strong>, is graded by what your finished CPU executes, from RAM, correctly:</p>
+      <div class="table-scroll">
+        <table class="pin-table">
+          <thead><tr><th>Tier</th><th>Your CPU executes</th><th>Shown by</th></tr></thead>
+          <tbody>
+            <tr><td><strong>C</strong></td><td>fetch, and every ALU instruction</td><td>an ALU test (Checkpoint 6)</td></tr>
+            <tr><td><strong>B</strong></td><td>C, plus LD, ST and DATA</td><td>Test A</td></tr>
+            <tr><td><strong>A</strong></td><td>B, plus JMPR, JMP, every J<em>caez</em> and CLF, and <code>MYSIM.txt</code> to R2 = 25</td><td>Tests B and C, and <code>MYSIM.txt</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Checkpoint 7 asks for every class wired, so by 11/22 your circuit is built for tier A even if some of it does not work yet. Running <code>MYSIM.txt</code> is optional this week. The <strong>project status</strong> (Part C) is where you say honestly which tests pass, which tier you are now aiming for, and what is in the way, so that the feedback you get back is about your circuit. It is graded complete/incomplete: answer every section and it is complete.</p>
+      <p>For how test programs are designed for real processors, log into your Saylor CS301 account at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a>.</p>
+    </section>
+
+    <section id="sec-check-d">
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Three questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>That is the week</h2>
+      <p>Open the assignment for Checkpoint 7, the quiz and the project status.</p>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 14, Page 4
+  </footer>
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['fin', 'core'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.fin) { return; }
+    var F = L.fin, C = L.core;
+
+    function b8(v) { return v === null || v === undefined ? 'EEEEEEEE' : ('0000000' + (v >>> 0).toString(2)).slice(-8); }
+    function h2(v) { return v === null || v === undefined ? 'EE' : ('0' + v.toString(16).toUpperCase()).slice(-2); }
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+    var TESTS = {"a": ["DATA R0, 0x1E", "DATA R1, 0x5A", "ST R0, R1", "LD R0, R2", "END"], "b": ["DATA R3, 0x07", "JMPR R3", "DATA R0, 0xAA", "END", "END", "JMP 0x0B", "DATA R0, 0xBB", "DATA R1, 0x01", "END"], "c": ["CLF", "DATA R0, 0xFF", "DATA R1, 0x01", "ADD R0, R1", "JC 0x0A", "DATA R2, 0xEE", "ADD R2, R3", "JZ 0x0F", "DATA R2, 0x22", "END"], "loop": ["DATA R0, 0x05", "DATA R1, 0x00", "DATA R3, 0xFF", "CLF", "ADD R0, R1", "CLF", "ADD R3, R0", "JZ 0x0E", "JMP 0x06", "END"]};
+    function dis(bytes) {
+      var rows = [], a = 0;
+      while (a < bytes.length) {
+        var d = C.decodeByte(bytes[a], bytes[a + 1]);
+        rows.push({ addr: a, bytes: bytes.slice(a, a + d.length), text: d.text });
+        a += d.length;
+      }
+      return rows;
+    }
+    function bytesOf(k) { return k === 'mysim' ? C.MYSIM.slice() : F.assemble(TESTS[k]).bytes; }
+
+    /* listings in the prose, generated from the same bytes */
+    Array.prototype.forEach.call(document.querySelectorAll('[data-listing]'), function (tb) {
+      tb.innerHTML = dis(bytesOf(tb.getAttribute('data-listing'))).map(function (r) {
+        return '<tr><td>' + h2(r.addr) + '</td><td>' + r.bytes.map(h2).join(' ') + '</td><td>' + esc(r.text) + '</td></tr>';
+      }).join('');
+    });
+
+    /* ---------- Widget 4 — Test Bench ---------- */
+    (function () {
+      var host = document.getElementById('w-bench'); if (!host) { return; }
+      function $(id) { return document.getElementById(id); }
+      function v(x) { return x === null || x === undefined ? 'E' : h2(x); }
+      function fl(f) { return ['C', 'A', 'E', 'Z'].map(function (k) { return f[k] === null ? 'E' : f[k]; }).join(' '); }
+      function preset(k) {
+        $('tb-src').value = k === 'mysim' ? dis(C.MYSIM).map(function (r) { return r.text; }).join('\n') : TESTS[k].join('\n');
+        $('tb-status').textContent = 'Loaded ' + (k === 'mysim' ? 'MYSIM.txt' : 'the program') + '. Press Load and run.';
+        $('tb-bytes').innerHTML = ''; $('tb-final').innerHTML = ''; $('tb-trace').innerHTML = '';
+      }
+      function run() {
+        var src = $('tb-src').value.split('\n').map(function (s) { return s.replace(/[;#].*$/, '').trim(); }).filter(function (s) { return s.length; });
+        var a = F.assemble(src);
+        if (!a.ok) { $('tb-status').textContent = 'Cannot assemble: ' + a.error; return; }
+        if (a.bytes.length > 32) { $('tb-status').textContent = 'The program is ' + a.bytes.length + ' bytes; your RAM holds 32.'; return; }
+        $('tb-bytes').innerHTML = '<div class="val"><b>' + a.bytes.length + ' bytes</b> ' + a.bytes.map(h2).join(' ') + '</div>';
+        var b = F.boot(a.bytes), cpu = b.cpu, rows = [], n = 0, errs = [];
+        while (!cpu.state().end && n < 400) {
+          var r = cpu.runInstruction(); n++;
+          errs = errs.concat(r.errors);
+          var s = r.state;
+          if (r.ended) { rows.push('<tr><td>' + n + '</td><td>' + v(r.pcBefore) + '</td><td>END</td><td colspan="6">clock stopped</td></tr>'); break; }
+          rows.push('<tr><td>' + n + '</td><td>' + v(r.pcBefore) + '</td><td>' + esc(r.text) + '</td><td>' + v(s.R0) + '</td><td>' + v(s.R1) + '</td><td>' + v(s.R2) + '</td><td>' + v(s.R3) + '</td><td>' + fl(s.flags) + '</td><td>' + v(s.PC) + '</td></tr>');
+        }
+        $('tb-trace').innerHTML = rows.join('');
+        var st = cpu.state();
+        $('tb-final').innerHTML = ['R0', 'R1', 'R2', 'R3', 'PC'].map(function (k) { return '<div class="val"><b>' + k + '</b> ' + (st[k] === null ? 'E' : b8(st[k])) + '<small>' + v(st[k]) + '</small></div>'; }).join('') +
+          '<div class="val"><b>C A E Z</b> ' + fl(st.flags) + '</div><div class="val"><b>RAM</b> ' + st.ram.map(h2).join(' ') + '</div>';
+        $('tb-status').textContent = (st.end ? 'END after ' + (n - 1) + ' instructions (load: ' + b.loadTicks + ' ticks).' : 'No END after ' + n + ' instructions: stopped. Is there a loop with no way out?') +
+          (errs.length ? ' Problem: ' + errs[0] : '');
+      }
+      Array.prototype.forEach.call(host.querySelectorAll('[data-preset]'), function (btn) {
+        btn.addEventListener('click', function () { preset(btn.getAttribute('data-preset')); });
+      });
+      $('tb-run').addEventListener('click', run);
+      preset('a');
+    }());
+
+    /* ---------- Self-check ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+  {
+    "q": "Test C ends with R2 = EE. What failed?",
+    "opts": [
+      "The carry-in path",
+      "<code>JC</code>: it fell through instead of jumping",
+      "<code>JZ</code>: it jumped",
+      "The loader"
+    ],
+    "correct": 1,
+    "why": "<code>DATA R2, 0xEE</code> sits right after <code>JC 0x0A</code>. It only runs if the jump was not taken, and C was 1."
+  },
+  {
+    "q": "You translate <code>addi $t0, $t0, -1</code>. Which course instructions do it (R3 holds 0xFF)?",
+    "opts": [
+      "<code>DATA R0, 0xFF</code>",
+      "<code>CLF</code> then <code>ADD R3, R0</code>",
+      "<code>SHR R0, R0</code>",
+      "<code>ADD R0, R3</code> then <code>CLF</code>"
+    ],
+    "correct": 1,
+    "why": "ADD RA, RB writes RB, so <code>ADD R3, R0</code> gives R0 = R0 + 0xFF = R0 &minus; 1. The CLF first stops a stale carry being added."
+  },
+  {
+    "q": "In <code>MYSIM.txt</code>, how does the program know it has done all eight bits?",
+    "opts": [
+      "R0 becomes 0",
+      "R3&rsquo;s starting 1 shifts out into C, and <code>JC 0x16</code> reaches END",
+      "R2 reaches 25",
+      "The PC reaches 0x16 by counting"
+    ],
+    "correct": 1,
+    "why": "R3 starts at 1 and is shifted left once per bit. On the eighth shift the 1 leaves, C = 1, and the jump goes to END."
+  }
+];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p><div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi], okAns = (oi === item.correct), fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) { el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false'); });
+      }
+      host.addEventListener('click', function (e) { var t = e.target.closest('.quiz-option'); if (t) { answer(+t.dataset.q, +t.dataset.o); } });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+
+  })();
+  </script>
+
+  <script>
+  (function () {
+    'use strict';
+    var VIDEOS = [
+      { key: 'run2', id: 'QEZxFppWsaw', vtt: `WEBVTT
+
+00:00.000 --> 00:03.840
+and we keep doing that all the way down
+
+00:03.840 --> 00:08.460
+right and then we add all these numbers together to get our result
+
+00:08.460 --> 00:09.900
+noting that
+
+00:09.900 --> 00:13.540
+this blank space is really
+
+00:13.540 --> 00:16.960
+a zero
+
+00:16.960 --> 00:22.040
+right
+
+00:22.040 --> 00:29.040
+right all these blank spaces are really zeros
+
+00:38.200 --> 00:41.400
+okay and we would just walk through and if we had more ones and zeros we just
+
+00:41.400 --> 00:45.680
+keep going right
+
+00:45.680 --> 00:48.680
+all the rest are zero so we actually literally just go
+
+00:52.040 --> 00:58.160
+right until we finished all the multiplications
+
+00:58.160 --> 01:01.720
+okay and then you add them all up
+
+01:01.720 --> 01:07.000
+so what you should notice
+
+01:07.000 --> 01:09.940
+on all of these is that
+
+01:09.940 --> 01:12.740
+the
+
+01:12.740 --> 01:18.540
+whenever it's we're doing one times
+
+01:18.540 --> 01:22.020
+we always get whatever is in the top and if it's
+
+01:22.040 --> 01:26.260
+zero times it's always zero
+
+01:26.260 --> 01:29.940
+okay so how we do this
+
+01:29.940 --> 01:36.780
+and our cpu which doesn't have multiplication only as addition
+
+01:36.780 --> 01:38.640
+so what we do is
+
+01:38.640 --> 01:45.640
+we start with this
+
+01:47.020 --> 01:48.440
+okay
+
+01:48.440 --> 01:51.700
+and so these are our r zero and r one
+
+01:52.040 --> 01:59.500
+okay I'm not sure which one is which but it doesn't matter ones are 0 ones are 1
+
+01:59.500 --> 02:07.000
+okay so what we're going to do is we're going to put the result in r2 and then
+
+02:07.000 --> 02:19.540
+we're going to keep adding so and then we're going to use r3 as our counter to
+
+02:19.540 --> 02:23.300
+know if we've done all the multiplication we need to do if we did
+
+02:23.300 --> 02:31.520
+all eight bits times all eight bits okay so we start here it's one times the
+
+02:31.520 --> 02:42.880
+numerator right or one times the multiple on the top so we get zero zero
+
+02:42.880 --> 02:48.240
+zero zero zero one zero one okay
+
+02:49.540 --> 03:00.540
+and that's what we put in r2 gets that's our current result okay and then what we
+
+03:00.540 --> 03:03.980
+do is
+
+03:06.460 --> 03:17.600
+that's in r2 and then r3 is our counter
+
+03:18.360 --> 03:19.460
+this is the counter
+
+03:19.540 --> 03:38.000
+r3 let's just say this is r0 r1 okay so then what we do is we want to do the
+
+03:38.000 --> 03:46.020
+second multiplication which is the zero so what we do the first thing we do is
+
+03:46.020 --> 03:50.260
+before we can do the second multiplication
+
+03:55.240 --> 04:01.820
+what we want to do for our zero is we want to shift left okay so our zero now
+
+04:01.820 --> 04:13.780
+becomes shift left which means we move it left one so our zero now becomes zero
+
+04:13.780 --> 04:16.000
+zero zero four zeros one zero
+
+04:16.000 --> 04:29.920
+0 1 0 and our one becomes we shift right for our one so our one becomes okay so
+
+04:29.920 --> 04:41.200
+we shift left for our zero shift right okay now we do the multiplication and it
+
+04:41.200 --> 04:48.580
+doesn't go into our two right the multiplication is it's all zeros right
+
+04:48.580 --> 05:01.660
+and we add that to our to whatever the result is and our three becomes we shift
+
+05:01.660 --> 05:04.480
+left for our three
+
+05:07.580 --> 05:11.000
+and then for our three we
+
+05:11.200 --> 05:32.500
+so our three becomes 1 0 meaning we just did the second bit okay and then we
+
+05:32.500 --> 05:36.240
+repeat that process shift left shift right
+
+05:41.200 --> 05:50.440
+shift left oops I don't want this
+
+06:09.200 --> 06:11.180
+I want to keep that same process so R is
+
+06:11.180 --> 06:16.360
+0 we shift left one so our zero becomes
+
+06:18.340 --> 06:26.300
+one zero zero zero one zero one zero zero our one we shift right so our one
+
+06:26.300 --> 06:35.900
+becomes seven zeros with the one okay we do that multiplication and we get zero
+
+06:35.900 --> 06:38.300
+zero
+
+06:39.060 --> 06:41.060
+we add that to our two
+
+06:41.180 --> 06:49.660
+whatever is already in our two and our three is shift left so becomes 1 0 0
+
+06:49.660 --> 06:58.980
+ok so the value in our to now is this first number we put in here zero zero
+
+06:58.980 --> 07:06.480
+zero zero zero one zero one which is this number here right plus 0 what are
+
+07:06.480 --> 07:11.000
+we doing plus 0 0 0 1 0 1 0 1 0 1
+
+07:11.180 --> 07:18.820
+zero which is this number here right
+
+07:21.560 --> 07:26.300
+okay and you just repeat that process shift left shift right if it's a one
+
+07:26.300 --> 07:32.180
+take that number that's on the top add it to what's in our to shift left our
+
+07:32.180 --> 07:38.740
+three one and your and you just keep shifting left on our three and tell you
+
+07:38.740 --> 07:48.160
+know until our three becomes so the last one the eighth one is one zero zero
+
+07:48.160 --> 07:57.120
+zero zero zero zero zero yeah okay that's the eighth one so that's our
+
+07:57.120 --> 08:07.620
+eighth bit and so when it becomes when that one shifts out we know we're done
+
+08:07.620 --> 08:08.720
+because we've done all
+
+08:08.720 --> 08:16.160
+eight bits right this is on our three when our three shifts out then we know
+
+08:16.160 --> 08:22.320
+we're done we already did eight bits okay so every time we just take if this
+
+08:22.320 --> 08:28.580
+rightmost bit in the bottom is a one we just take the value of our zero and add
+
+08:28.580 --> 08:36.560
+it to our two okay and then what we do is we shift our zero left one we shift
+
+08:36.560 --> 08:38.700
+our zero right one look at that left one and then we shift our zero right one
+
+08:38.720 --> 08:44.600
+rightmost bit to zero we just skip everything and go repeat that shift
+
+08:44.600 --> 08:50.000
+shift left shift right process so one we take whatever is in the top and add it
+
+08:50.000 --> 09:00.840
+into our two okay and since you don't know what's all in these bits you always
+
+09:00.840 --> 09:05.580
+process all eight bits okay even though we have a bunch of zeros in the front we
+
+09:05.580 --> 09:08.580
+still process all eight bits
+
+09:08.720 --> 09:13.440
+that's what we're using in this case we're using our three to do that by
+
+09:13.440 --> 09:17.240
+shifting it left and keeping track of it
+
+09:21.140 --> 09:25.740
+okay so that's how we do multiplication
+
+09:26.860 --> 09:34.160
+in binary as repeated addition but in between we do these shifts you know
+
+09:34.160 --> 09:38.720
+multiply the top by two divide the bottom by two so that we can grab that
+
+09:38.720 --> 09:41.480
+next bit
+
+09:44.100 --> 09:50.140
+okay and these these shifts left are basically padding these red zeros in to
+
+09:50.140 --> 09:57.340
+our numbers okay and the shift right is just to get what's the current number
+
+09:57.340 --> 10:03.740
+we're using as our multiplier in this rightmost column
+` }
+    ];
+
+    function timeToSeconds(t) {
+      if (!t) return 0;
+      var p = t.trim().split(':');
+      if (p.length === 2) return (parseInt(p[0]) || 0) * 60 + (parseFloat(p[1]) || 0);
+      if (p.length === 3) return (parseInt(p[0]) || 0) * 3600 + (parseInt(p[1]) || 0) * 60 + (parseFloat(p[2]) || 0);
+      return 0;
+    }
+
+    function parseVtt(text) {
+      var out = [];
+      text.trim().split(/\n\n+/).forEach(function (block) {
+        if (block.indexOf('WEBVTT') === 0 || block.trim() === '') return;
+        var lines = block.trim().split('\n');
+        var tl = lines.filter(function (l) { return l.indexOf('-->') !== -1; })[0];
+        if (!tl) return;
+        var parts = tl.split(' --> ');
+        out.push({ start: timeToSeconds(parts[0]), end: timeToSeconds(parts[1]),
+                   text: lines.slice(lines.indexOf(tl) + 1).join(' ').trim() });
+      });
+      return out;
+    }
+
+    function TranscriptManager(v) {
+      this.v = v;
+      this.player = null;
+      this.timer = null;
+      this.frame = document.getElementById('video-container-' + v.key);
+      this.panel = document.getElementById('transcript-container-' + v.key);
+      this.cues = parseVtt(v.vtt);
+    }
+    TranscriptManager.prototype.populate = function () {
+      var self = this;
+      if (!this.panel) return;
+      this.panel.innerHTML = '';
+      this.cues.forEach(function (cue) {
+        var el = document.createElement('div');
+        el.className = 'transcript-line';
+        el.dataset.start = cue.start;
+        el.dataset.end = cue.end;
+        el.textContent = cue.text;
+        el.setAttribute('role', 'button');
+        el.setAttribute('tabindex', '0');
+        var seek = function () {
+          if (self.player && self.player.seekTo) { self.player.seekTo(cue.start, true); self.player.playVideo(); }
+        };
+        el.addEventListener('click', seek);
+        el.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); seek(); }
+        });
+        self.panel.appendChild(el);
+      });
+    };
+    TranscriptManager.prototype.highlight = function () {
+      if (!this.player || !this.player.getCurrentTime || !this.panel) return;
+      var t = this.player.getCurrentTime(), panel = this.panel;
+      panel.querySelectorAll('.transcript-line').forEach(function (line) {
+        var a = parseFloat(line.dataset.start), b = parseFloat(line.dataset.end);
+        if (t >= a && t < b) {
+          if (!line.classList.contains('active-transcript-line')) {
+            var prev = panel.querySelector('.active-transcript-line');
+            if (prev) prev.classList.remove('active-transcript-line');
+            line.classList.add('active-transcript-line');
+            // Scroll the panel only, never the page
+            panel.scrollTop = line.offsetTop - panel.offsetTop - panel.clientHeight / 2 + line.clientHeight / 2;
+          }
+        } else {
+          line.classList.remove('active-transcript-line');
+        }
+      });
+    };
+    TranscriptManager.prototype.syncHeight = function () {
+      if (!this.frame || !this.panel) return;
+      var vc = this.frame.closest('.video-col'), tc = this.panel.closest('.transcript-col');
+      var side = !!(vc && tc) && Math.abs(tc.getBoundingClientRect().top - vc.getBoundingClientRect().top) < 2;
+      var h = side ? this.frame.offsetHeight + 'px' : '24rem';
+      this.panel.style.height = h;
+      this.panel.style.maxHeight = h;
+    };
+
+    var managers = VIDEOS.map(function (v) { return new TranscriptManager(v); });
+
+    window.onYouTubeIframeAPIReady = function () {
+      managers.forEach(function (m) {
+        if (!document.getElementById('youtube-player-' + m.v.key)) return;
+        m.player = new YT.Player('youtube-player-' + m.v.key, {
+          videoId: m.v.id,
+          events: {
+            onStateChange: function (e) {
+              clearInterval(m.timer);
+              if (e.data === YT.PlayerState.PLAYING) {
+                managers.forEach(function (o) {
+                  if (o !== m && o.player && o.player.pauseVideo) { o.player.pauseVideo(); }
+                });
+                m.timer = setInterval(function () { m.highlight(); }, 300);
+              }
+            }
+          }
+        });
+      });
+    };
+
+    function start() {
+      managers.forEach(function (m) { m.populate(); });
+      setTimeout(function () { managers.forEach(function (m) { m.syncHeight(); }); }, 100);
+      if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+        var tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      } else {
+        window.onYouTubeIframeAPIReady();
+      }
+    }
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', start); } else { start(); }
+
+    var rt;
+    window.addEventListener('resize', function () {
+      clearTimeout(rt);
+      rt = setTimeout(function () { managers.forEach(function (m) { m.syncHeight(); }); }, 250);
+    });
+  })();
+  </script>
+</body>
+</html>

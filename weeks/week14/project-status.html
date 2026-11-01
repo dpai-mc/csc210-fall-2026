@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w14-status">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Project Status</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .q-block { border-left: 3px solid var(--color-border); padding-left: var(--space-md); margin: var(--space-lg) 0; }
+    .q-num { font-weight: 700; color: var(--color-primary); }
+    .q-pts { font-size: var(--fs-sm); color: var(--color-text-muted); }
+    .ans { margin-top: var(--space-sm); }
+    .ans__input { display: block; width: 100%; box-sizing: border-box; min-height: 4.6em; resize: vertical; font-family: var(--font-sans); font-size: var(--fs-sm); line-height: 1.55; color: var(--color-text); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm); }
+    .ans__input:focus { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+    .ans--mono .ans__input { font-family: var(--font-mono); }
+    .ans__print { display: none; }
+    .cover-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-md); margin: var(--space-md) 0; }
+    .cover-grid > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
+    .cover-grid label { display: block; font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); margin-bottom: var(--space-xs); }
+    .cover-grid input { width: 100%; box-sizing: border-box; font-size: var(--fs-base); padding: var(--space-xs) var(--space-sm); border: 1px solid var(--color-border); border-radius: 4px; }
+    .choice { display: flex; flex-wrap: wrap; gap: var(--space-md); margin: var(--space-sm) 0; }
+    .choice label { display: flex; gap: 6px; align-items: center; font-weight: 600; font-size: var(--fs-sm); }
+    .cls-table td:first-child { font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .cls-table td:nth-child(2) { text-align: center; font-weight: 700; }
+    .submit-row { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: var(--space-lg) 0; }
+    @media print {
+      .sp-header, .sp-footer, .no-print { display: none !important; }
+      .q-block, .cls-table tr { break-inside: avoid; }
+      body { background: #fff; }
+      .ans__input { display: none; }
+      .ans__print { display: block; white-space: pre-wrap; word-break: break-word; border: 1px solid #999; border-radius: 3px; padding: 6px 8px; min-height: 3em; font-size: 10.5pt; line-height: 1.5; }
+      .ans--mono .ans__print { font-family: var(--font-mono); }
+    }
+
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 14 &rsaquo; <span>Project Status</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Project Status</h1>
+    <p><span class="points-badge">10 points &middot; complete/incomplete</span> &nbsp;|&nbsp; Week 14, Part C &nbsp;|&nbsp; <strong>Due Sunday 11/22, 11:59 pm</strong> &nbsp;|&nbsp; Print to PDF and upload to Canvas</p>
+
+    <section id="intro">
+      <p>Your final project is due <strong>12/11</strong>. In Week 10 you planned it; this page is where you say where it actually stands, so that the feedback you get is about your circuit. It is <strong>complete</strong>, and earns all 10 points, when every section is answered. Nothing here is graded on whether your CPU works &mdash; only on whether you have told your instructor how it is doing.</p>
+      <div class="callout callout--warn">
+        <div class="callout__title">Nothing you type on this page is saved anywhere</div>
+        <p>There is no storage behind these boxes. Close the tab or reload and <strong>your typing is gone.</strong> Print to PDF before you leave.</p>
+      </div>
+    </section>
+
+    <section id="st-cover">
+      <h2>You</h2>
+      <div class="cover-grid">
+        <div><label for="cv-name">Name</label><input type="text" id="cv-name" autocomplete="name"></div>
+        <div><label for="cv-date">Date</label><input type="text" id="cv-date" autocomplete="off"></div>
+      </div>
+    </section>
+
+    <section id="st-1">
+      <h2>1. Your target now</h2>
+      <div class="q-block">
+        <p><span class="q-num">1a.</span> Which tier are you aiming for now? <span class="q-pts">C: fetch and the ALU &middot; B: + LD, ST, DATA &middot; A: + every jump, CLF, and <code>MYSIM.txt</code></span></p>
+        <div class="choice" role="radiogroup" aria-label="Target tier">
+          <label><input type="radio" name="tier" value="C"> C</label>
+          <label><input type="radio" name="tier" value="B"> B</label>
+          <label><input type="radio" name="tier" value="A"> A</label>
+        </div>
+        <p><span class="q-num">1b.</span> Is that the tier you chose in your Week 10 plan? If not, why the change?</p>
+        <div class="ans"><label class="sr-only" for="s1b">Tier change</label><textarea class="ans__input" id="s1b" rows="2"></textarea><div class="ans__print" aria-hidden="true"></div></div>
+      </div>
+    </section>
+
+    <section id="st-2">
+      <h2>2. Which classes work</h2>
+      <p>One answer per row. &ldquo;Works&rdquo; means you have seen it give the right result from RAM, not that it is wired.</p>
+      <div class="table-scroll">
+        <table class="pin-table cls-table">
+          <thead><tr><th>Class</th><th>Tier</th><th>Status</th></tr></thead>
+          <tbody>
+<tr><td>ADD SHR SHL NOT AND OR XOR CMP</td><td>C</td><td><div class="choice" role="radiogroup" aria-label="ALU"><label><input type="radio" name="cls-ALU" value="works"> works</label><label><input type="radio" name="cls-ALU" value="wired"> wired, not working</label><label><input type="radio" name="cls-ALU" value="not"> not wired</label></div></td></tr>
+<tr><td>CLF</td><td>A</td><td><div class="choice" role="radiogroup" aria-label="CLF"><label><input type="radio" name="cls-CLF" value="works"> works</label><label><input type="radio" name="cls-CLF" value="wired"> wired, not working</label><label><input type="radio" name="cls-CLF" value="not"> not wired</label></div></td></tr>
+<tr><td>LD</td><td>B</td><td><div class="choice" role="radiogroup" aria-label="LD"><label><input type="radio" name="cls-LD" value="works"> works</label><label><input type="radio" name="cls-LD" value="wired"> wired, not working</label><label><input type="radio" name="cls-LD" value="not"> not wired</label></div></td></tr>
+<tr><td>ST</td><td>B</td><td><div class="choice" role="radiogroup" aria-label="ST"><label><input type="radio" name="cls-ST" value="works"> works</label><label><input type="radio" name="cls-ST" value="wired"> wired, not working</label><label><input type="radio" name="cls-ST" value="not"> not wired</label></div></td></tr>
+<tr><td>DATA</td><td>B</td><td><div class="choice" role="radiogroup" aria-label="DATA"><label><input type="radio" name="cls-DATA" value="works"> works</label><label><input type="radio" name="cls-DATA" value="wired"> wired, not working</label><label><input type="radio" name="cls-DATA" value="not"> not wired</label></div></td></tr>
+<tr><td>JMPR</td><td>A</td><td><div class="choice" role="radiogroup" aria-label="JMPR"><label><input type="radio" name="cls-JMPR" value="works"> works</label><label><input type="radio" name="cls-JMPR" value="wired"> wired, not working</label><label><input type="radio" name="cls-JMPR" value="not"> not wired</label></div></td></tr>
+<tr><td>JMP</td><td>A</td><td><div class="choice" role="radiogroup" aria-label="JMP"><label><input type="radio" name="cls-JMP" value="works"> works</label><label><input type="radio" name="cls-JMP" value="wired"> wired, not working</label><label><input type="radio" name="cls-JMP" value="not"> not wired</label></div></td></tr>
+<tr><td>J<em>caez</em></td><td>A</td><td><div class="choice" role="radiogroup" aria-label="Jcaez"><label><input type="radio" name="cls-Jcaez" value="works"> works</label><label><input type="radio" name="cls-Jcaez" value="wired"> wired, not working</label><label><input type="radio" name="cls-Jcaez" value="not"> not wired</label></div></td></tr>
+<tr><td>END stops the clock</td><td>A</td><td><div class="choice" role="radiogroup" aria-label="END"><label><input type="radio" name="cls-END" value="works"> works</label><label><input type="radio" name="cls-END" value="wired"> wired, not working</label><label><input type="radio" name="cls-END" value="not"> not wired</label></div></td></tr>
+<tr><td>the loader (LOAD, MARS, external RAM)</td><td>A</td><td><div class="choice" role="radiogroup" aria-label="LOADER"><label><input type="radio" name="cls-LOADER" value="works"> works</label><label><input type="radio" name="cls-LOADER" value="wired"> wired, not working</label><label><input type="radio" name="cls-LOADER" value="not"> not wired</label></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="st-3">
+      <h2>3. Tests you ran</h2>
+      <p>Checkpoint 7&rsquo;s three tests and <code>MYSIM.txt</code>. For each, what happened &mdash; including where it stopped if it never reached END.</p>
+      <div class="q-block">
+        <p><strong>Test A &mdash; memory.</strong> <span class="q-pts">Expected at END: R0 1E &middot; R1 5A &middot; R2 5A &middot; RAM[1E] 5A &middot; PC 06</span></p>
+        <div class="choice" role="radiogroup" aria-label="ta result">
+          <label><input type="radio" name="ta" value="pass"> matches</label>
+          <label><input type="radio" name="ta" value="fail"> does not match</label>
+          <label><input type="radio" name="ta" value="notrun"> not run</label>
+        </div>
+        <div class="ans ans--mono"><label class="sr-only" for="ta-saw">ta: what you saw</label><textarea class="ans__input" id="ta-saw" rows="2" placeholder="What your registers showed at END, or where it stopped."></textarea><div class="ans__print" aria-hidden="true"></div></div>
+      </div>
+      <div class="q-block">
+        <p><strong>Test B &mdash; jumps.</strong> <span class="q-pts">Expected at END: R0 00 &middot; R1 01 &middot; R3 07 &middot; PC 0D</span></p>
+        <div class="choice" role="radiogroup" aria-label="tb result">
+          <label><input type="radio" name="tb" value="pass"> matches</label>
+          <label><input type="radio" name="tb" value="fail"> does not match</label>
+          <label><input type="radio" name="tb" value="notrun"> not run</label>
+        </div>
+        <div class="ans ans--mono"><label class="sr-only" for="tb-saw">tb: what you saw</label><textarea class="ans__input" id="tb-saw" rows="2" placeholder="What your registers showed at END, or where it stopped."></textarea><div class="ans__print" aria-hidden="true"></div></div>
+      </div>
+      <div class="q-block">
+        <p><strong>Test C &mdash; flags and carry.</strong> <span class="q-pts">Expected at END: R0 FF &middot; R1 00 &middot; R2 22 &middot; R3 01 &middot; C A E Z = 0 0 1 0 &middot; PC 0F</span></p>
+        <div class="choice" role="radiogroup" aria-label="tc result">
+          <label><input type="radio" name="tc" value="pass"> matches</label>
+          <label><input type="radio" name="tc" value="fail"> does not match</label>
+          <label><input type="radio" name="tc" value="notrun"> not run</label>
+        </div>
+        <div class="ans ans--mono"><label class="sr-only" for="tc-saw">tc: what you saw</label><textarea class="ans__input" id="tc-saw" rows="2" placeholder="What your registers showed at END, or where it stopped."></textarea><div class="ans__print" aria-hidden="true"></div></div>
+      </div>
+      <div class="q-block">
+        <p><strong><code>MYSIM.txt</code> (optional).</strong> <span class="q-pts">Expected at END: R2 = 00011001 (25), R3 = 00000101, END lit</span></p>
+        <div class="choice" role="radiogroup" aria-label="tm result">
+          <label><input type="radio" name="tm" value="pass"> matches</label>
+          <label><input type="radio" name="tm" value="fail"> does not match</label>
+          <label><input type="radio" name="tm" value="notrun"> not run</label>
+        </div>
+        <div class="ans ans--mono"><label class="sr-only" for="tm-saw">tm: what you saw</label><textarea class="ans__input" id="tm-saw" rows="2" placeholder="What your registers showed at END, or where it stopped."></textarea><div class="ans__print" aria-hidden="true"></div></div>
+      </div>
+    </section>
+
+    <section id="st-4">
+      <h2>4. What is in the way</h2>
+      <div class="q-block">
+        <p><span class="q-num">4a.</span> What is blocking you, or most likely to? Be specific: &ldquo;JZ never jumps in Test C&rdquo;, not &ldquo;jumps are hard&rdquo;. If nothing is, say what you will do next.</p>
+        <div class="ans"><label class="sr-only" for="s4a">Blocking</label><textarea class="ans__input" id="s4a" rows="3"></textarea><div class="ans__print" aria-hidden="true"></div></div>
+        <p><span class="q-num">4b.</span> What have you already tried?</p>
+        <div class="ans"><label class="sr-only" for="s4b">Tried</label><textarea class="ans__input" id="s4b" rows="2"></textarea><div class="ans__print" aria-hidden="true"></div></div>
+      </div>
+    </section>
+
+    <section id="st-5">
+      <h2>5. One question</h2>
+      <div class="q-block">
+        <p><span class="q-num">5.</span> One question for your instructor about your CPU or the final project.</p>
+        <div class="ans"><label class="sr-only" for="s5">Question</label><textarea class="ans__input" id="s5" rows="2"></textarea><div class="ans__print" aria-hidden="true"></div></div>
+      </div>
+    </section>
+
+    <div class="submit-row no-print">
+      <button class="widget-btn widget-btn--primary" type="button" id="print-status">Print my status to PDF</button>
+    </div>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 14, Project Status
+  </footer>
+  <script>
+  /* The status form. No kernel, no storage of any kind: printing must
+     never depend on shared/logic.js. */
+  (function () {
+    'use strict';
+    var textareas = document.querySelectorAll('.ans__input');
+    function mirror() {
+      Array.prototype.forEach.call(textareas, function (t) {
+        var out = t.parentNode.querySelector('.ans__print');
+        if (out) { out.textContent = t.value; }
+      });
+    }
+    Array.prototype.forEach.call(textareas, function (t) {
+      t.addEventListener('input', function () { t.style.height = 'auto'; t.style.height = (t.scrollHeight + 2) + 'px'; });
+    });
+    document.getElementById('print-status').addEventListener('click', function () { mirror(); window.print(); });
+    if (window.matchMedia) {
+      var mq = window.matchMedia('print');
+      var onChange = function (e) { if (e.matches) { mirror(); } };
+      if (mq.addEventListener) { mq.addEventListener('change', onChange); } else if (mq.addListener) { mq.addListener(onChange); }
+    }
+  })();
+  </script>
+</body>
+</html>

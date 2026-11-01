@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w14-00">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 14 Orientation: The Finished Machine</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .split-bar { display: flex; height: 2.2rem; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--color-border); margin: var(--space-sm) 0; }
+    .split-bar > div { display: flex; align-items: center; justify-content: center; font-size: var(--fs-xs); font-weight: 700; color: #fff; text-align: center; padding: 0 2px; overflow: hidden; }
+    .split-bar .sb-pg { background: var(--color-primary); }
+    .split-bar .sb-cp { background: var(--color-accent-hov); }
+    .split-bar .sb-qz { background: var(--color-success); }
+    .split-legend { display: flex; justify-content: space-between; font-size: var(--fs-xs); color: var(--color-text-muted); gap: var(--space-sm); }
+    .due { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-md); margin: var(--space-md) 0; }
+    .due > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
+    .due h3 { margin-top: 0; font-size: var(--fs-base); }
+    @media (max-width: 860px) { .due { grid-template-columns: 1fr; } }
+
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 14 &rsaquo; <span>Orientation</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Week 14 — The Finished Machine</h1>
+    <p><strong>Load, store and immediates; jumps; carry-in; END; loading and running a program</strong> &nbsp;|&nbsp; <strong>11/16 – 11/22</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~9 hours</p>
+
+    <section id="sec-gap">
+      <div class="callout callout--hook">
+        <div class="callout__title">Your CPU can&rsquo;t make a decision yet.</div>
+        <p>Last week your CPU fetched and ran a program on its own. But it ran straight through, byte 0 to the end, every time. It could not read a value from memory or write one back, could not load a constant, and could not choose between two paths. It also could not stop: after the last instruction it fetched zeros forever.</p>
+        <p>This week you wire the rest of the instruction set &mdash; <code>LD</code>, <code>ST</code>, <code>DATA</code>, the three kinds of jump, carry-in and <code>END</code> &mdash; and the harness your instructor&rsquo;s CPU used to load a program from a file and run it at full speed. At the end of it your CPU can run <code>MYSIM.txt</code>, the 5 &times; 5 program you decoded in Week 10, and stop with 25 in R2.</p>
+      </div>
+    </section>
+
+    <section id="sec-shape">
+      <h2>The shape of the week</h2>
+      <div class="split-bar" role="img" aria-label="Of about nine hours this week: about three and a half hours on the orientation and four pages, about five hours on Checkpoint 7, and about three quarters of an hour on the quiz and the project status.">
+        <div class="sb-pg" style="flex:3.5">Week 14 pages</div>
+        <div class="sb-cp" style="flex:5">Checkpoint 7</div>
+        <div class="sb-qz" style="flex:0.75">Quiz + status</div>
+      </div>
+      <div class="split-legend"><span>~3.5 hrs</span><span>~5 hrs</span><span>~0.75</span></div>
+
+      <div class="due">
+        <div>
+          <h3>Part A &mdash; Checkpoint 7</h3>
+          <p>Every class of instruction wired, the carry-in path, END, and the loader; three test programs run to END, with screenshots. 60 points, graded by your instructor.</p>
+        </div>
+        <div>
+          <h3>Part B &mdash; Canvas quiz</h3>
+          <p>Ten questions on the four pages, 30 points, auto-graded. No time limit, two attempts, higher score kept.</p>
+        </div>
+        <div>
+          <h3>Part C &mdash; Project status</h3>
+          <p>A one-page form on where your final project stands. 10 points, complete/incomplete, and your instructor writes back.</p>
+        </div>
+      </div>
+      <p><strong>All three are due Sunday 11/22, 11:59 pm.</strong> Next week is Thanksgiving week: light, with no Logisim work, so this is the last checkpoint before the final project.</p>
+    </section>
+
+    <section id="sec-path">
+      <h2>This week&rsquo;s learning path</h2>
+      <div class="spa-card-grid">
+        <div class="spa-card">
+          <div class="spa-card__number">Page 1</div>
+          <div class="spa-card__title">Memory and Immediates</div>
+          <div class="spa-card__time">~45 min &nbsp;|&nbsp; Sections 14.1–14.4</div>
+          <div class="spa-card__desc"><code>LD</code> and <code>ST</code>, two transfers each; <code>DATA</code>, an instruction that carries its own value in the next byte.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+        <div class="spa-card">
+          <div class="spa-card__number">Page 2</div>
+          <div class="spa-card__title">Jumps</div>
+          <div class="spa-card__time">~45 min &nbsp;|&nbsp; Sections 14.5–14.8</div>
+          <div class="spa-card__desc">A jump is a write to the program counter: from a register, from the next byte, or only if a flag says so.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+        <div class="spa-card">
+          <div class="spa-card__number">Page 3</div>
+          <div class="spa-card__title">Carry, END and the Loader</div>
+          <div class="spa-card__time">~1 hr &nbsp;|&nbsp; Sections 14.9–14.12</div>
+          <div class="spa-card__desc">The carry that comes back, the instruction that stops the clock, and how a file gets into your RAM &mdash; with your instructor&rsquo;s video of the whole procedure.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+        <div class="spa-card">
+          <div class="spa-card__number">Page 4</div>
+          <div class="spa-card__title">Testing a CPU</div>
+          <div class="spa-card__time">~45 min &nbsp;|&nbsp; Sections 14.13–14.16</div>
+          <div class="spa-card__desc">A test program for every class, a MIPS loop on your machine, and how <code>MYSIM.txt</code> multiplies without a multiplier.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-tools">
+      <h2>Tools and reading</h2>
+      <ul>
+        <li><strong>Logisim 2.7.1</strong> &mdash; needed for Checkpoint 7. This week you use three Logisim built-ins for the first time, as a named exception: a Counter, a RAM and a Multiplexor, for loading programs only. Page 3 explains where each is allowed and why.</li>
+        <li><strong><code>MYSIM.txt</code></strong> &mdash; in this week&rsquo;s Canvas module. Running it is optional this week and required for the A tier of the final project.</li>
+        <li><strong>MARS</strong> &mdash; not needed this week.</li>
+        <li><strong>Saylor CS301</strong> &mdash; log in at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 5: Designing a Processor</strong> for loads, stores and branches on MIPS.</li>
+      </ul>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 14, Orientation
+  </footer>
+</body>
+</html>

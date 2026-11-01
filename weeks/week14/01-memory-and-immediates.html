@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w14-01">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 14: Memory and Immediates</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .w-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-md); }
+    @media (max-width: 760px) { .w-grid { grid-template-columns: 1fr; } }
+    .w-panel { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-surface); min-width: 0; margin-top: var(--space-sm); }
+    .w-panel h3 { margin: 0 0 var(--space-xs); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .btn-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .steps { display: flex; flex-wrap: wrap; gap: 4px; }
+    .stp { min-width: 2.2rem; text-align: center; border: 2px solid var(--color-border); border-radius: 999px; padding: 1px 6px; font-weight: 700; font-size: var(--fs-sm); }
+    .stp--on { background: var(--color-accent); border-color: var(--color-accent-hov); color: #fff; }
+    .lines { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 4px; }
+    .ln { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .ln small { display: block; font-family: var(--font-sans); font-size: 11px; color: var(--color-text-muted); }
+    .ln--1 { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .ln--1 small { color: #dfe8f3; }
+    .ln--new { border-left: 4px solid var(--color-accent); }
+    .vals { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 4px; }
+    .val { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); background: var(--color-surface); overflow-wrap: anywhere; }
+    .val b { font-family: var(--font-sans); color: var(--color-primary); }
+    .val small { display: block; font-family: var(--font-sans); font-size: 11px; color: var(--color-text-muted); }
+    .val--wrote { border-color: var(--color-success); background: #f0faf4; }
+    .busline { font-family: var(--font-mono); border: 2px solid var(--color-primary); border-radius: var(--radius); padding: var(--space-xs) var(--space-sm); margin: var(--space-xs) 0; background: var(--color-code-bg); overflow-wrap: anywhere; }
+    .busline--float { border-style: dashed; border-color: var(--color-border); }
+    .busline--bad { border-color: var(--color-danger); background: #fdf0ef; }
+    .w-status { font-size: var(--fs-sm); min-height: 1.5em; margin: var(--space-xs) 0; }
+    .mono { font-family: var(--font-mono); }
+    .row-now { background: #fff7e0; }
+    .gen-table td:first-child { font-family: var(--font-mono); font-weight: 700; white-space: nowrap; }
+    .tag-new { display: inline-block; font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 999px; background: var(--color-accent); color: #fff; margin-left: 4px; font-family: var(--font-sans); }
+
+    .cs-sel { font-family: var(--font-mono); font-size: var(--fs-sm); padding: 2px 6px; border: 1px solid var(--color-border); border-radius: 4px; max-width: 100%; }
+    .dp td { font-family: var(--font-mono); font-size: var(--fs-sm); }
+
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 14 &rsaquo; <span>Page 1 — Memory and Immediates</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Memory and Immediates</h1>
+    <p><strong>Sections 14.1 – 14.4</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~45 minutes</p>
+
+    <section id="sec-14-1">
+      <h2>14.1 &nbsp; What a C-tier CPU cannot do</h2>
+      <p><strong>What you have.</strong> A CPU that fetches every instruction from RAM and executes the ALU class and CLF. In the tiers of your final project, that is tier C.</p>
+      <p><strong>What you can&rsquo;t do.</strong> Get a number into a register except by hand. Read a variable from memory or write one back. Choose between two paths, or repeat anything. Every program you can run is a straight line, and every value in it was typed in through the test port.</p>
+      <p><strong>What you can do by the end of the week.</strong> Run any program in the course instruction set, loaded from a file, at full speed, until it stops itself. This page adds the three instructions of tier B: <code>LD</code>, <code>ST</code> and <code>DATA</code>. None of them needs a new part on your bus. They are new rows in the control table.</p>
+    </section>
+
+    <section id="sec-14-2">
+      <h2>14.2 &nbsp; LD and ST: two transfers each</h2>
+      <p>Week 12 showed you these two on paper; now you wire them. <code>LD RA, RB</code> means RB &larr; RAM[RA]: the address is in a register, and the value goes into another. <code>ST RA, RB</code> means RAM[RA] &larr; RB. Both take two transfers after fetch, and step 6 does nothing:</p>
+      <h3><code>LD R1, R2</code> &mdash; byte <code>00000110</code></h3>
+      <div class="table-scroll"><table class="pin-table dp"><thead><tr><th>Step</th><th>Drives the bus</th><th>Captures</th><th>Note</th></tr></thead><tbody id="dp-ld"></tbody></table></div>
+      <h3><code>ST R1, R2</code> &mdash; byte <code>00010110</code></h3>
+      <div class="table-scroll"><table class="pin-table dp"><thead><tr><th>Step</th><th>Drives the bus</th><th>Captures</th><th>Note</th></tr></thead><tbody id="dp-st"></tbody></table></div>
+      <p>Two things are worth noticing. The MAR is set from a <em>register</em> at step 4, not from the PC &mdash; the MAR does not care where an address comes from. And <code>ST</code> needs a line the control unit has never had: <code>ram_s</code>, the RAM&rsquo;s set, which until now only your hand-loading pin <code>data_ram</code> could raise. The RAM&rsquo;s input is the bus, so whatever RB puts on it is written.</p>
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/control-unit-load-store.jpg"
+             alt="A Logisim control unit for load and store. The stepper runs across the top. A 3-to-8 decoder on instruction bits, each output ANDed with the inverted bit 7, sits in the middle. Two AND gates on step 4 feed an OR into REGA_E and MAR_S; on step 5, one AND feeds RAM_E and REGB_S for load, and another feeds REGB_E and RAM_S for store. Enables are gated with clke on the left and sets with clks on the right, as in earlier control units.">
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s load-and-store control unit: step 4 is shared (RA &rarr; MAR); step 5 splits on bit 4 of the instruction. Fall 2025 numbered instruction bits from the left; your bits are b7&hellip;b0.</figcaption>
+      </figure>
+    </section>
+
+    <section id="sec-14-3">
+      <h2>14.3 &nbsp; DATA: an instruction that carries its value</h2>
+      <p><code>DATA RB, n</code> puts a constant into a register. The constant cannot fit in the instruction byte &mdash; that byte is already <code>0010 00bb</code> &mdash; so it lives in the <strong>next byte</strong> of RAM. <code>DATA R2, 0x2A</code> is two bytes, <code>22 2A</code>. The trick is getting the second byte without fetching it as an instruction, and you already own it. After fetch, the PC points at the data byte, so steps 4 to 6 repeat fetch&rsquo;s own pattern:</p>
+      <h3><code>DATA R2, n</code> &mdash; bytes <code>00100010</code>, n</h3>
+      <div class="table-scroll"><table class="pin-table dp"><thead><tr><th>Step</th><th>Drives the bus</th><th>Captures</th><th>Note</th></tr></thead><tbody id="dp-data"></tbody></table></div>
+      <p>Step 4 is fetch&rsquo;s step 1 again: the PC (now pointing at <em>n</em>) goes to the MAR while the ALU makes PC + 1 for ACC. Step 5 puts <em>n</em> into R2. Step 6 is fetch&rsquo;s step 3: ACC goes back to the PC, which now points <strong>past</strong> the data byte, at the next instruction. The data byte is never fetched as an instruction because the PC jumps over it.</p>
+      <figure class="circuit-canvas">
+        <img class="circuit-canvas__img zoomable" src="images/control-unit-data-diagram.jpg"
+             alt="A Logisim control unit for the data instruction. The stepper runs across the top; step 1 and a step 4 term feed an OR into BUS 1. Step 4 ANDed with the data class line raises PC_E, MAR_S and ACC_S; step 5 raises RAM_E and REGB_S; step 6 raises ACC_E and PC_S. Enables on the left are gated with clke, sets on the right with clks.">
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s DATA control unit: the step-4 AND reaches <code>BUS 1</code> through the same OR as fetch&rsquo;s step 1.</figcaption>
+      </figure>
+    </section>
+
+    <!-- ========== Widget 1 ========== -->
+    <section id="sec-stepper">
+      <div class="widget-card" id="w-class">
+        <div class="widget-card__title">Class Stepper</div>
+        <div class="widget-card__subtitle">Pick an instruction. See all six steps as transfers, and the control lines each step raises in its set quarter.</div>
+        <div class="btn-row">
+          <label for="cs-pick" style="font-size:var(--fs-sm);font-weight:700">Instruction</label>
+          <select id="cs-pick" class="cs-sel">
+            <option value="6">LD R1, R2</option>
+            <option value="22">ST R1, R2</option>
+            <option value="34">DATA R2, n</option>
+            <option value="15">LD R3, R3</option>
+            <option value="16">ST R0, R0</option>
+            <option value="134">ADD R1, R2 (for comparison)</option>
+          </select>
+        </div>
+        <div class="w-panel">
+          <h3>Six steps</h3>
+          <div class="table-scroll"><table class="pin-table dp"><thead><tr><th>Step</th><th>Drives</th><th>Captures</th><th>Lines high in the set quarter</th></tr></thead><tbody id="cs-body"></tbody></table></div>
+          <p class="w-status" id="cs-status" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-14-4">
+      <h2>14.4 &nbsp; The control table grows</h2>
+      <p>Here is your whole control table at the end of this week, with the terms this week adds marked. The jump terms belong to page 2 and <code>c</code> to page 3, but they are listed here so you can build the control unit from one table.</p>
+      <div class="table-scroll">
+        <table class="pin-table gen-table">
+          <thead><tr><th>Line</th><th>Gated with</th><th>Week 13 terms</th><th>Added this week</th></tr></thead>
+          <tbody id="ctl-body"><tr><td colspan="4"><em>Loading the table&hellip;</em></td></tr></tbody>
+        </table>
+      </div>
+      <p>Each new class is one output of the <code>DECODER_3TO8</code> you placed in Week 11 &mdash; ANDed with NOT b7, exactly as CLF was. You built all eight class ANDs then and wired one; this week you wire five more. Every new term is still a (step AND class) AND, ORed into a line that already exists, except two new lines: <code>ram_s</code> and <code>c</code>.</p>
+
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Three questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+      <p>For loads and stores on MIPS in a second voice, log into your Saylor CS301 account at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 5: Designing a Processor</strong>. MIPS adds an offset to the address register; your CPU uses the register as the address itself.</p>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>You can say what each step of <code>LD</code>, <code>ST</code> and <code>DATA</code> does, and why DATA&rsquo;s step 6 skips a byte. Next page: instructions that write the PC on purpose.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 14, Page 1
+  </footer>
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['fin', 'core'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.fin) { return; }
+    var F = L.fin, C = L.core;
+
+    function b8(v) { return v === null || v === undefined ? 'EEEEEEEE' : ('0000000' + (v >>> 0).toString(2)).slice(-8); }
+    function h2(v) { return v === null || v === undefined ? 'EE' : ('0' + v.toString(16).toUpperCase()).slice(-2); }
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+    function note(r, ir) {
+      var n = r.step <= 3 ? 'fetch' : '';
+      if (r.bus1) { n += (n ? '; ' : '') + 'bus1: ACC captures PC + 1'; }
+      if (r.c) { n += (n ? '; ' : '') + 'c: carry-in enabled'; }
+      if (r.step === 5 && ir >= 0x80) { n += (n ? '; ' : '') + 'opcode ' + C.ALU_MNEMONICS[r.opcode]; }
+      if (r.idle) { n = 'nothing'; }
+      return n;
+    }
+    function fill(id, ir) {
+      var tb = document.getElementById(id); if (!tb) { return; }
+      tb.innerHTML = F.datapath(ir, {}).map(function (r) {
+        return '<tr><td>' + r.step + '</td><td>' + (r.drivers.join(', ') || '\u2014') + '</td><td>' + (r.captures.join(', ') || '\u2014') + '</td><td>' + note(r, ir) + '</td></tr>';
+      }).join('');
+    }
+    fill('dp-ld', 0x06); fill('dp-st', 0x16); fill('dp-data', 0x22);
+    (function () {
+      var tb = document.getElementById('ctl-body'); if (!tb) { return; }
+      function tw(t) { return '<code>step' + t.step + '</code>' + (t.when === 'every instruction' ? '' : ' AND ' + t.when); }
+      tb.innerHTML = F.TABLE.map(function (r) {
+        var added = (F.ADDED[r.line] || []).map(function (t) { return { step: t[0], when: t[1] }; });
+        var old = r.isNew ? [] : r.terms.slice(0, r.terms.length - added.length);
+        var add = r.isNew ? r.terms : added;
+        return '<tr><td>' + r.line + (r.isNew ? '<span class="tag-new">new</span>' : '') + '</td><td>' + (r.gate ? '<code>' + r.gate + '</code>' : 'not clock-gated') + '</td><td>' +
+          (old.map(tw).join(' OR ') || '\u2014') + '</td><td>' + (add.map(tw).join(' OR ') || '\u2014') + '</td></tr>';
+      }).join('');
+    }());
+
+    /* ---------- Widget 1 — Class Stepper ---------- */
+    (function () {
+      var sel = document.getElementById('cs-pick'); if (!sel) { return; }
+      function paint() {
+        var ir = +sel.value, d = C.decodeByte(ir, 0x2A);
+        document.getElementById('cs-body').innerHTML = F.datapath(ir, {}).map(function (r) {
+          var raw = F.raised(ir, r.step, {}), hi = F.LINES.filter(function (n) { return raw[n]; });
+          return '<tr><td>' + r.step + '</td><td>' + (r.drivers.join(', ') || '\u2014') + '</td><td>' + (r.captures.join(', ') || '\u2014') + '</td><td>' + (hi.join(', ') || 'none') + '</td></tr>';
+        }).join('');
+        document.getElementById('cs-status').textContent = b8(ir) + ' is ' + (ir === 0x22 ? 'DATA R2, followed by its data byte' : d.text) + '. ' +
+          (ir === 0x22 ? 'Two bytes: the PC ends two past the instruction.' : (ir < 0x80 ? 'Step 6 is idle for this class.' : 'The ALU class uses all three execute steps.'));
+      }
+      sel.addEventListener('change', paint);
+      paint();
+    }());
+
+    /* ---------- Self-check ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+  {
+    "q": "At step 4 of <code>LD R3, R0</code>, which register drives the bus?",
+    "opts": [
+      "R0",
+      "R3",
+      "The PC",
+      "The RAM"
+    ],
+    "correct": 1,
+    "why": "LD RA, RB reads RAM[RA]. RA is R3, so step 4 puts R3 on the bus and the MAR captures it; step 5 puts the RAM byte into R0."
+  },
+  {
+    "q": "<code>DATA R1, 0x40</code> is at addresses 0x06 and 0x07. When it finishes, what does the PC hold?",
+    "opts": [
+      "0x07",
+      "0x08",
+      "0x40",
+      "0x06"
+    ],
+    "correct": 1,
+    "why": "Fetch leaves the PC at 0x07 (the data byte). Step 4 makes 0x08 in ACC, and step 6 puts it in the PC: the data byte is skipped."
+  },
+  {
+    "q": "Which line does <code>ST</code> need that no earlier instruction raised?",
+    "opts": [
+      "<code>mar_s</code>",
+      "<code>ram_e</code>",
+      "<code>ram_s</code>",
+      "<code>regb_s</code>"
+    ],
+    "correct": 2,
+    "why": "ST writes the RAM, so it needs the RAM&rsquo;s set line. Fetch and LD only read the RAM (<code>ram_e</code>)."
+  }
+];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p><div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi], okAns = (oi === item.correct), fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) { el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false'); });
+      }
+      host.addEventListener('click', function (e) { var t = e.target.closest('.quiz-option'); if (t) { answer(+t.dataset.q, +t.dataset.o); } });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+
+  })();
+  </script>
+</body>
+</html>
