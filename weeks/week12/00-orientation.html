@@ -16,6 +16,7 @@
     .due > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
     .due h3 { margin-top: 0; font-size: var(--fs-base); }
     @media (max-width: 760px) { .due { grid-template-columns: 1fr; } }
+    .video-ts { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--color-text-muted); white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -100,6 +101,35 @@
       </div>
     </section>
 
+    <section id="sec-video">
+      <h2>Week 12 overview video</h2>
+      <p>About 11 minutes. Your instructor walks through the week page by page: the two quizzes <span class="video-ts">(from 00:34)</span>, the memory bus <span class="video-ts">(03:40)</span>, memory timing and synchronous against asynchronous buses <span class="video-ts">(05:52)</span>, the memory data register <span class="video-ts">(07:22)</span>, memory-mapped input and output <span class="video-ts">(07:34)</span> and port-mapped I/O <span class="video-ts">(08:42)</span>, and syscalls and interrupts <span class="video-ts">(09:07)</span>. The big picture of Phase 3 follows at 10:10 and the two quizzes again at 10:31. Click any line of the transcript to jump there.</p>
+
+      <div class="video-breakout">
+        <div class="video-transcript-row">
+          <div class="video-col">
+            <div class="video-frame" id="video-container">
+              <iframe id="youtube-player"
+                      src="https://www.youtube.com/embed/mJ8CJfaQbKM?enablejsapi=1&amp;cc_load_policy=1&amp;iv_load_policy=3&amp;modestbranding=1&amp;rel=0"
+                      title="CSC210 Week 12 Orientation: Talking to Memory and the World"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allowfullscreen loading="lazy"></iframe>
+            </div>
+            <div class="video-caption">Closed captions available. Use the transcript panel to jump to any point in the video.</div>
+          </div>
+          <div class="transcript-col">
+            <h2 class="sr-only">Video transcript</h2>
+            <div class="transcript-panel" id="transcript-container" role="region"
+                 aria-live="polite"
+                 aria-label="Video transcript. Select a line to jump to that point in the video. The line currently being spoken is announced as the video plays.">
+              <p class="transcript-loading">Loading transcript&hellip;</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section id="sec-tools">
       <h2>Tools and reading</h2>
       <ul>
@@ -115,6 +145,460 @@
   <footer class="sp-footer">
     CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 12, Orientation
   </footer>
+
+  <script>
+  (function () {
+    'use strict';
+
+    /* ------------------------------------------------------------
+       Week 12 overview video. Procedure A -- one video on this page, so
+       no TranscriptManager. VIDEO_ID is the YouTube id; vttContent holds
+       the WEBVTT captions inline so the panel needs no second request
+       and works from the Canvas iframe without a CORS fetch. The script
+       below the VTT is Week 11's, unchanged.
+
+       The source VTT (csc210-wk12.vtt, Whisper) arrived with CRLF line
+       endings and 103 cues; the original is kept unchanged at
+       docs/video-raw/csc210-wk12.whisper.vtt. Deleted: two Whisper
+       repeats (07:49, 09:52) and an "Oh" over silence (08:18); an 80 ms
+       "okay" at 09:22 folded into the cue after it. Mis-heard terms
+       repaired: bus, one clock, sit and wait, you know, this talks about,
+       syscalls (x3), memory-mapped I/O, port-mapped I/O, Logisim, break;
+       names capitalised (CPU, MARS, RAM, Logisim, Saylor, Canvas, I).
+       02:28 replaced with Dave's wording ("so in a real CPU we have").
+       99 cues out. The repaired file is csc210-wk12.vtt in this folder.
+       ------------------------------------------------------------ */
+
+    var VIDEO_ID = 'mJ8CJfaQbKM';
+    var vttContent = `WEBVTT
+
+00:00.240 --> 00:05.680
+aloha and welcome to week 12 memory and talking to the world
+
+00:07.440 --> 00:12.800
+and so you can see this week what we have I'll just do a quick overview before I look into it
+
+00:12.800 --> 00:20.160
+is we have after this orientation the memory bus memory timing input and output and syscalls and
+
+00:20.160 --> 00:27.680
+interrupts not all of these things are in our CPU so this week we really it's more of a hey this is
+
+00:27.680 --> 00:34.560
+uh how the CPU really works and then for your assignment you actually have two online quizzes
+
+00:34.560 --> 00:42.480
+to do the first one is on chapter 12 or assignment 12 week 12 so assignment 12. week 12 only
+
+00:43.600 --> 00:51.040
+and then the second quiz is on weeks 9 through 12 which takes care of this section of the course
+
+00:52.240 --> 00:55.520
+all right so um just know you have those two quizzes to do
+
+00:56.480 --> 00:57.520
+and they both you have
+
+00:57.680 --> 01:00.960
+multiple tries they both have full every you know um
+
+01:03.280 --> 01:07.840
+best score out of those I think it's two tries each best score out of the two is your score
+
+01:08.880 --> 01:15.440
+all right and no time limit so you can take as long as you want to work on them all right and
+
+01:15.440 --> 01:25.920
+so um so this week is really um how do we get our CPU to start actually doing stuff okay
+
+01:28.160 --> 01:29.760
+in MARS we use syscalls
+
+01:31.920 --> 01:39.600
+to do input and output primarily so that's what we want to do here a little bit
+
+01:42.000 --> 01:46.480
+okay so the two quizzes Canvas assignment 12 and quiz two
+
+01:52.240 --> 01:57.440
+okay so the first part will be the memory bus talking about how that works you definitely need to
+
+01:58.160 --> 02:00.960
+understand that because our CPU does have a memory bus that we use
+
+02:01.840 --> 02:08.080
+and how we use RAM and how we use our registers and everything else
+
+02:09.440 --> 02:17.040
+part two really talks more about access time and handshakes and why memory is slow um okay
+
+02:18.400 --> 02:25.200
+so your memory the reason we use data registers and memory registers is to speed up memory RAM is
+
+02:25.200 --> 02:27.440
+very slow okay
+
+02:28.240 --> 02:33.520
+so in a real CPU we have
+
+02:34.240 --> 02:40.720
+um different caches where each cache is a little bit faster and we stage stuff that we need
+
+02:40.720 --> 02:47.120
+in the different caches okay and then registers are on the CPU itself so they're the fastest and
+
+02:47.120 --> 02:55.200
+they're right there then input and output you know in MARS we use memory mapped input and output um
+
+02:55.200 --> 02:57.140
+in our CPU we really only have
+
+02:57.140 --> 03:05.060
+input output instructions so so hopefully you'll be able to see the parallels but our CPU is much
+
+03:05.060 --> 03:12.580
+simpler and then syscall is really asking the system and it really interrupts what you're doing
+
+03:12.580 --> 03:20.500
+to do something else all right so um Logisim we're not doing anything with Logisim this week
+
+03:20.500 --> 03:26.500
+MARS is really optional but it's really read if you want read unit 5 designing a processor in
+
+03:26.500 --> 03:35.780
+Saylor that it covers a lot of the same materials okay so the memory bus
+
+03:40.740 --> 03:42.900
+okay so what we have is um
+
+03:45.300 --> 03:54.740
+we have an we'll have an 8-bit bus that we use in our sim right to pass stuff around our CPU
+
+03:55.860 --> 03:56.180
+in
+
+03:57.380 --> 03:59.940
+um a true
+
+04:03.540 --> 04:06.980
+system we have 64-bit everything is 64-bit so
+
+04:09.300 --> 04:17.700
+um so we have 64-bit bus just passing data this is our data lines okay we also typically
+
+04:17.700 --> 04:26.100
+will have a control line okay and address line so we have three lines we're using one to do everything
+
+04:27.060 --> 04:29.860
+in a real CPU you have three separate lines
+
+04:30.500 --> 04:37.140
+on our bus to pass you know data in parallel rather than we have to pass it sequentially
+
+04:37.140 --> 04:45.780
+because we only have one all right so this just talks about that until you go through this
+
+04:46.340 --> 04:52.340
+and the RAM bus the load and store are two transfers how does load and store actually work
+
+04:53.780 --> 04:55.860
+okay how do you get through load in store
+
+04:56.500 --> 05:02.140
+and then a little simulation here that you can walk through that walks you
+
+05:02.140 --> 05:10.700
+through that process okay and then our RAM is designed for 256 bytes but we're
+
+05:10.700 --> 05:16.040
+only using 32 of them and a lot of the reason we're doing that is just because
+
+05:16.040 --> 05:22.940
+this Logisim program really slows down if you try to load all 256 bytes in
+
+05:22.940 --> 05:29.060
+there it just makes it unusable as a program so we're not doing that we're
+
+05:29.060 --> 05:33.500
+only doing 32 and so we're gonna keep our test program small so that it fits
+
+05:33.500 --> 05:50.700
+within that 32 bytes okay so it's pretty much the RAM part with a memory bus part
+
+05:52.940 --> 06:08.600
+okay memory is slow okay and so synchronous and asynchronous buses if
+
+06:08.600 --> 06:15.320
+you think about it synchronous buses run everything off of one clock okay so if
+
+06:15.320 --> 06:18.800
+you have something that happens fast it has to sit and wait until the bus till
+
+06:18.800 --> 06:22.400
+that clock cycles asynchronous has no shared clock
+
+06:22.940 --> 06:27.440
+but it uses a handshake to control what we're doing because you still have to
+
+06:27.440 --> 06:34.100
+keep everything in sync so that the memory that the data shows up when it
+
+06:34.100 --> 06:39.180
+needs to show up the process happens on that data when it needs to happen okay
+
+06:39.180 --> 06:47.060
+and everything stays synchronized but if we can do more than one thing we can
+
+06:47.060 --> 06:52.260
+kind of be doing things in parallel and so an asynchronous bus is more flexible
+
+06:52.260 --> 06:52.880
+in terms of
+
+06:52.940 --> 07:01.760
+setting up to run the next command if you will the next process faster you
+
+07:01.760 --> 07:09.660
+know and we use our CPU more efficiently all right and so this talks about
+
+07:09.660 --> 07:16.160
+synchronous our CPU synchronous for our simulation so it's going to be slow
+
+07:16.160 --> 07:19.600
+because we have to go through everything
+
+07:22.940 --> 07:29.080
+okay this talks about the memory data register why we don't have one but what
+
+07:29.080 --> 07:34.620
+it is what it does and how we're simulating that in our small CPU
+
+07:34.620 --> 07:44.780
+simulation and then the last part is input and output I think it's input output
+
+07:44.780 --> 07:49.640
+or the last major part we have interrupts to do syscalls and interrupts after this
+
+07:52.940 --> 08:01.340
+so if you have any input and output your register devices need registers as
+
+08:01.340 --> 08:07.180
+well so they know what is mapped to the keyboard what is the display what's it
+
+08:07.180 --> 08:18.320
+this what's the network card okay so it's called memory-mapped I/O
+
+08:22.940 --> 08:27.500
+just walks through that and it talks how you get it
+
+08:27.500 --> 08:30.940
+and this is a MARS program that talks also about
+
+08:30.940 --> 08:35.180
+hey here's how you do these things okay
+
+08:42.220 --> 08:46.540
+and then another option is the port-mapped I/O
+
+08:47.260 --> 08:52.940
+so this is where they're isolated and x86 uses
+
+08:52.940 --> 08:56.780
+both kinds
+
+09:03.580 --> 09:07.340
+and this just talks a little bit about what polling costs so
+
+09:07.340 --> 09:12.140
+um then the last section is syscalls and interrupts
+
+09:12.140 --> 09:18.380
+which we do not have in our 8-bit CPU but we do in and we do use syscalls
+
+09:18.380 --> 09:22.860
+especially in our MARS programming okay
+
+09:22.860 --> 09:26.460
+okay so it's a software interrupt but basically it says stop doing anything
+
+09:26.460 --> 09:30.220
+else and do this kind of a thing
+
+09:37.980 --> 09:42.700
+okay so this just talks about what that is what a software interrupt is
+
+09:42.700 --> 09:48.700
+so it's an exception but how does it handle it and how does it deal with it
+
+09:58.060 --> 10:02.540
+okay the hardware interrupts come from devices since we have no devices
+
+10:02.540 --> 10:06.460
+we're really not dealing with those
+
+10:10.300 --> 10:14.220
+and then this will just goes a little bit more in detail about our CPU and
+
+10:14.220 --> 10:20.380
+what we're going to be doing so week 9 week 10 what we did week 11
+
+10:20.380 --> 10:21.820
+and this is week 12.
+
+10:22.940 --> 10:30.460
+just so you have a big picture of where we're at with our CPU
+
+10:31.020 --> 10:36.060
+all right and then like I said the two assignments are to work through the
+
+10:36.060 --> 10:39.500
+quizzes one on chapter 12 do that one first and
+
+10:39.500 --> 10:43.500
+then do the 9 through 12 one second
+
+10:43.500 --> 10:51.580
+okay and then next week we'll be back in doing some Logisim stuff
+
+10:51.580 --> 10:52.780
+all right
+
+10:52.780 --> 10:54.080
+All right, hope you have a good break
+
+10:54.080 --> 10:55.920
+and we'll talk to you later.
+`;
+
+    var player, timeUpdater, parsedTranscript = [];
+
+    function timeToSeconds(timeStr) {
+      if (!timeStr) return 0;
+      var parts = timeStr.trim().split(':');
+      if (parts.length === 2) {
+        return (parseInt(parts[0]) || 0) * 60 + (parseFloat(parts[1]) || 0);
+      } else if (parts.length === 3) {
+        return (parseInt(parts[0]) || 0) * 3600 + (parseInt(parts[1]) || 0) * 60 + (parseFloat(parts[2]) || 0);
+      }
+      return 0;
+    }
+
+    function parseVtt(vttText) {
+      var cues = vttText.trim().split(/\n\n+/);
+      var parsedCues = [];
+      cues.forEach(function (cueBlock) {
+        if (cueBlock.indexOf('WEBVTT') === 0 || cueBlock.trim() === '') return;
+        var lines = cueBlock.trim().split('\n');
+        var timeLine = lines.filter(function (l) { return l.indexOf('-->') !== -1; })[0];
+        if (!timeLine) return;
+        var parts = timeLine.split(' --> ');
+        var textLines = lines.slice(lines.indexOf(timeLine) + 1);
+        parsedCues.push({
+          start: timeToSeconds(parts[0]),
+          end: timeToSeconds(parts[1]),
+          text: textLines.join(' ').trim()
+        });
+      });
+      return parsedCues;
+    }
+
+    function populateTranscript() {
+      var container = document.getElementById('transcript-container');
+      if (!container) return;
+      container.innerHTML = '';
+      parsedTranscript.forEach(function (cue) {
+        var lineEl = document.createElement('div');
+        lineEl.className = 'transcript-line';
+        lineEl.dataset.start = cue.start;
+        lineEl.dataset.end = cue.end;
+        lineEl.textContent = cue.text;
+        lineEl.setAttribute('role', 'button');
+        lineEl.setAttribute('tabindex', '0');
+        var seekTo = function () {
+          if (player && player.seekTo) { player.seekTo(cue.start, true); player.playVideo(); }
+        };
+        lineEl.addEventListener('click', seekTo);
+        lineEl.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); seekTo(); }
+        });
+        container.appendChild(lineEl);
+      });
+    }
+
+    function highlightCurrentLine() {
+      if (!player || !player.getCurrentTime) return;
+      var currentTime = player.getCurrentTime();
+      var lines = document.querySelectorAll('#transcript-container .transcript-line');
+      lines.forEach(function (line) {
+        var start = parseFloat(line.dataset.start);
+        var end = parseFloat(line.dataset.end);
+        if (currentTime >= start && currentTime < end) {
+          if (!line.classList.contains('active-transcript-line')) {
+            var prev = document.querySelector('#transcript-container .active-transcript-line');
+            if (prev) prev.classList.remove('active-transcript-line');
+            line.classList.add('active-transcript-line');
+            line.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else {
+          line.classList.remove('active-transcript-line');
+        }
+      });
+    }
+
+    function syncTranscriptHeight() {
+      var videoContainer = document.getElementById('video-container');
+      var transcriptContainer = document.getElementById('transcript-container');
+      if (!videoContainer || !transcriptContainer) return;
+      var videoCol = videoContainer.closest('.video-col');
+      var transcriptCol = transcriptContainer.closest('.transcript-col');
+      var sideBySide = !!(videoCol && transcriptCol) && Math.abs(
+        transcriptCol.getBoundingClientRect().top - videoCol.getBoundingClientRect().top) < 2;
+      if (sideBySide) {
+        transcriptContainer.style.height = videoContainer.offsetHeight + 'px';
+        transcriptContainer.style.maxHeight = videoContainer.offsetHeight + 'px';
+      } else {
+        transcriptContainer.style.height = '24rem';
+        transcriptContainer.style.maxHeight = '24rem';
+      }
+    }
+
+    window.onYouTubeIframeAPIReady = function () {
+      if (!VIDEO_ID || !document.getElementById('youtube-player')) return;
+      player = new YT.Player('youtube-player', {
+        videoId: VIDEO_ID,
+        events: {
+          onStateChange: function (event) {
+            clearInterval(timeUpdater);
+            if (event.data === YT.PlayerState.PLAYING) {
+              timeUpdater = setInterval(highlightCurrentLine, 300);
+            }
+          }
+        }
+      });
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      if (!VIDEO_ID || !vttContent.trim()) { syncTranscriptHeight(); return; }
+
+      parsedTranscript = parseVtt(vttContent);
+      populateTranscript();
+      setTimeout(syncTranscriptHeight, 100);
+      if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+        var tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      } else {
+        window.onYouTubeIframeAPIReady();
+      }
+    });
+
+    var resizeTimeout;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(syncTranscriptHeight, 250);
+    });
+  })();
+  </script>
 
 </body>
 </html>
