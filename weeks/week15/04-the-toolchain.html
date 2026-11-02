@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w15-04">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 15: Macros, Assemblers, Linkers, Loaders and Debuggers</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .w-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-md); }
+    @media (max-width: 760px) { .w-grid { grid-template-columns: 1fr; } }
+    .w-panel { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-surface); min-width: 0; margin-top: var(--space-sm); }
+    .w-panel h3 { margin: 0 0 var(--space-xs); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .btn-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: var(--space-xs) 0; }
+    .vals { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 4px; }
+    .val { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); background: var(--color-surface); overflow-wrap: anywhere; }
+    .val b { font-family: var(--font-sans); color: var(--color-primary); display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+    .val--big { font-size: var(--fs-base); font-weight: 700; border-color: var(--color-primary); }
+    .w-status { font-size: var(--fs-sm); min-height: 1.5em; margin: var(--space-xs) 0; }
+    .mono { font-family: var(--font-mono); }
+    .eqn { font-family: var(--font-mono); background: var(--color-code-bg); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); overflow-x: auto; white-space: pre; font-size: var(--fs-sm); }
+    .alg { font-family: var(--font-mono); background: var(--color-code-bg); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); overflow-x: auto; white-space: pre; font-size: var(--fs-sm); }
+    .gen-table td, .gen-table th { font-size: var(--fs-sm); }
+    .gen-table td.num, .gen-table th.num { text-align: right; font-family: var(--font-mono); }
+    .gen-table td.mono { white-space: nowrap; }
+    .field { display: inline-flex; flex-direction: column; gap: 2px; font-size: var(--fs-sm); margin: 2px 8px 2px 0; }
+    .field input, .field select { font-family: var(--font-mono); font-size: var(--fs-sm); padding: 3px 6px; border: 1px solid var(--color-border); border-radius: 4px; min-width: 0; }
+    .tgl[aria-pressed="true"] { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .src-edit { width: 100%; box-sizing: border-box; font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.5; min-height: 13em; padding: var(--space-sm); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-code-bg); resize: vertical; }
+    .src-edit:focus { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+    .w-err { color: var(--color-danger); font-weight: 700; }
+    .fwd { font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 999px; background: var(--color-accent); color: #fff; font-family: var(--font-sans); }
+    .mac { font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 999px; background: var(--color-primary); color: #fff; font-family: var(--font-sans); }
+    .chain-flow { display: flex; flex-wrap: wrap; gap: 6px; align-items: stretch; margin: var(--space-md) 0; }
+    .chain-flow > div { flex: 1 1 150px; border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm); background: var(--color-surface); font-size: var(--fs-sm); }
+    .chain-flow > div b { display: block; color: var(--color-primary); }
+    .chain-flow pre { margin: 4px 0 0; font-size: 12px; white-space: pre-wrap; }
+    .chain-flow .arr { flex: 0 0 auto; border: 0; background: none; display: flex; align-items: center; font-size: 1.4rem; color: var(--color-text-muted); padding: 0; }
+    @media (max-width: 700px) { .chain-flow .arr { transform: rotate(90deg); width: 100%; justify-content: center; } }
+
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 15 &rsaquo; <span>Page 4 — The Toolchain</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Macros, Assemblers, Linkers, Loaders and Debuggers</h1>
+    <p><strong>Sections 15.13 – 15.16</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~45 minutes</p>
+    <p>Since Week 5 you have typed assembly into MARS and pressed Assemble, and since Week 14 you have put bytes into your own CPU&rsquo;s RAM. A whole set of tools sits between the text you write and the bytes a processor runs. This page names them, using things you have already done.</p>
+
+    <section id="sec-15-13">
+      <h2>15.13 &nbsp; Macros</h2>
+      <p>A <strong>macro</strong> is a named piece of assembly text. Wherever you write its name, the assembler pastes in the text, with any arguments substituted, before it assembles anything. The processor never sees the macro, only what it expanded to. You have met two kinds already:</p>
+      <ul>
+        <li><strong>Pseudo-instructions</strong> (Week 7): <code>blt $t0, $t1, L</code> is not a MIPS instruction; MARS expands it to <code>slt</code> + <code>bne</code>. These are macros built into the assembler.</li>
+        <li><strong>MOV and SUB</strong> on your CPU (Week 13): not instructions either, but sequences of NOT and ADD that you wrote out by hand. An assembler that expanded them for you would be treating them as macros (the assembler in 15.14 does).</li>
+      </ul>
+      <p>MARS lets you write your own. Two that every MIPS programmer ends up wanting, push and pop, using only the stack instructions from Week 7:</p>
+      <div class="alg">.macro push (%r)
+        addi $sp, $sp, -4
+        sw   %r, 0($sp)
+.end_macro
+
+.macro pop (%r)
+        lw   %r, 0($sp)
+        addi $sp, $sp, 4
+.end_macro
+
+        .data
+        .text
+        addi $t0, $zero, 7
+        addi $t1, $zero, 9
+        push ($t0)
+        push ($t1)
+        pop  ($t0)          # $t0 = 9
+        pop  ($t1)          # $t1 = 7: swapped
+        addi $v0, $zero, 10
+        syscall</div>
+      <p><code>%r</code> is the macro&rsquo;s parameter; <code>push ($t0)</code> becomes the two lines with <code>$t0</code> in place of <code>%r</code>. A macro has to be defined before it is used, so the definitions come first. After assembling, MARS&rsquo;s Text Segment shows the expanded instructions, eight of them before the exit, with no trace of the names <code>push</code> and <code>pop</code>.</p>
+      <h3>Macro or subroutine?</h3>
+      <p>Week 7&rsquo;s procedures also give a name to a piece of code. The difference is when the copying happens:</p>
+      <div class="table-scroll"><table class="gen-table"><thead><tr><th></th><th>Macro</th><th>Subroutine (<code>jal</code> / <code>jr</code>)</th></tr></thead><tbody>
+        <tr><td>Copies in memory</td><td>one at every place it is used</td><td>one</td></tr>
+        <tr><td>Cost each time it runs</td><td>just its own instructions</td><td>its instructions + the call and the return</td></tr>
+        <tr><td>Can call itself (recursion)</td><td>no: it would expand forever</td><td>yes (Week 7)</td></tr>
+        <tr><td>Decided by</td><td>the assembler, before the program runs</td><td>the CPU, while it runs</td></tr>
+      </tbody></table></div>
+      <p>A macro saves the call and return and spends memory doing it, which is the right trade for something two or three instructions long. It also <em>hides the instruction count</em> from page 1: one line of source, several instructions executed. <code>SUB R1, R2</code> looks like one instruction and costs three.</p>
+    </section>
+
+    <section id="sec-15-14">
+      <h2>15.14 &nbsp; The assembler&rsquo;s two passes</h2>
+      <p>An assembler turns each line of source into bytes. That is easy until a line refers to a <strong>label</strong> that has not appeared yet. In Week 14&rsquo;s sum loop, <code>JZ</code> jumps forward to the END. To encode it, the assembler needs END&rsquo;s address, and when it reaches the <code>JZ</code> it has not seen the END yet. You solved this by hand in Week 14 by counting bytes first. An assembler does exactly that, in two passes:</p>
+      <ol>
+        <li><strong>Pass 1</strong> walks the source counting bytes, without encoding anything. Every time it meets a label it writes the label and the current address into the <strong>symbol table</strong>.</li>
+        <li><strong>Pass 2</strong> walks it again and encodes every line. Any label it meets is now in the table, whether it was defined above or below.</li>
+      </ol>
+      <p>MARS does the same for MIPS. Its <em>Labels</em> window (Settings &rarr; Show Labels Window) is its symbol table, and Week 7&rsquo;s branch offsets are what pass 2 works out from it.</p>
+    </section>
+
+    <!-- ========== Widget 4 ========== -->
+    <section id="sec-asm">
+      <div class="widget-card" id="w-asm">
+        <div class="widget-card__title">Two-Pass Assembler</div>
+        <div class="widget-card__subtitle">An assembler for your CPU, with labels and MOV / SUB as macros. Edit the source; both passes rerun as you type.</div>
+        <div class="btn-row">
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small" data-src="loop">Sum loop with labels</button>
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small" data-src="macro">MOV and SUB as macros</button>
+        </div>
+        <label class="sr-only" for="asm-src">Source for your CPU</label>
+        <textarea class="src-edit" id="asm-src" spellcheck="false"></textarea>
+        <p class="w-status" id="asm-status" aria-live="polite"></p>
+        <div class="w-grid">
+          <div class="w-panel">
+            <h3>Pass 1 &mdash; symbol table</h3>
+            <div class="table-scroll"><table class="gen-table"><thead><tr><th>Label</th><th class="num">Address</th></tr></thead><tbody id="asm-sym"></tbody></table></div>
+          </div>
+          <div class="w-panel">
+            <h3>Pass 2 &mdash; bytes</h3>
+            <div class="table-scroll"><table class="gen-table"><thead><tr><th class="num">Addr</th><th>Bytes</th><th>Source</th></tr></thead><tbody id="asm-out"></tbody></table></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-15-15">
+      <h2>15.15 &nbsp; The linker and the loader</h2>
+      <p>Real programs are not one file. Each source file is assembled on its own into an <strong>object file</strong>: machine code, plus a list of the labels it defines and the labels it uses but does not define. Two more tools finish the job:</p>
+      <ul>
+        <li>The <strong>linker</strong> joins the object files into one program. It decides where in memory each file&rsquo;s code and data go (moving them from where the assembler assumed, called <strong>relocation</strong>), and fills in every address that crossed from one file to another. In MIPS, <code>.globl total</code> marks <code>total</code> as a label other files may use; without it the label is private to its file.</li>
+        <li>The <strong>loader</strong> puts the linked program into memory, sets up the stack pointer and the PC, and starts it. <strong>You built one.</strong> In Week 14, RESET put the PC at 0, and LOAD walked COUNTER_256 through the external RAM, copying the program into your CPU&rsquo;s RAM.</li>
+      </ul>
+      <p>That is why course programs never need <code>.globl main</code>: each one is a single file, nothing needs to be linked to it, and MARS starts at the first instruction in <code>.text</code>. MARS can assemble several files together (Settings &rarr; <em>Assemble all files in directory</em>); this course never asks you to.</p>
+      <p>Here is the whole chain for one line of C, using Week 8&rsquo;s array idea:</p>
+      <div class="chain-flow" role="group" aria-label="From C to a running program">
+        <div><b>You write C</b><pre>sum = sum + a[i];</pre></div>
+        <div class="arr" aria-hidden="true">&rarr;</div>
+        <div><b>Compiler &rarr; assembly</b><pre>sll  $t1, $s1, 2
+add  $t1, $s0, $t1
+lw   $t2, 0($t1)
+add  $s2, $s2, $t2</pre></div>
+        <div class="arr" aria-hidden="true">&rarr;</div>
+        <div><b>Assembler &rarr; object file</b><pre>machine words, plus
+"a is defined
+ elsewhere"</pre></div>
+        <div class="arr" aria-hidden="true">&rarr;</div>
+        <div><b>Linker &rarr; executable</b><pre>files joined,
+a's address
+filled in</pre></div>
+        <div class="arr" aria-hidden="true">&rarr;</div>
+        <div><b>Loader &rarr; memory</b><pre>copied in, PC set,
+running</pre></div>
+      </div>
+      <p>(<code>$s0</code> holds the address of <code>a</code>, <code>$s1</code> holds <code>i</code>, <code>$s2</code> holds <code>sum</code>; <code>sll</code> by 2 multiplies <code>i</code> by 4, the size of a word, as in Week 8.)</p>
+    </section>
+
+    <section id="sec-15-16">
+      <h2>15.16 &nbsp; Debugging tools</h2>
+      <p>A <strong>debugger</strong> lets you run a program a piece at a time and look inside the machine while it runs. You have been using them since Week 5 without the name.</p>
+      <ul>
+        <li><strong>MARS</strong>, on the Execute tab:
+          <ul>
+            <li><strong>Step</strong> (F7) runs one instruction; <strong>Backstep</strong> (F8) undoes one.</li>
+            <li><strong>Breakpoints</strong>: tick the <em>Bkpt</em> box beside an instruction in the Text Segment, then <strong>Run</strong> (F5). MARS runs at full speed and stops <em>before</em> that instruction, every time it reaches it.</li>
+            <li>The <strong>Registers</strong> pane highlights the register that just changed, and the <strong>Data Segment</strong> shows memory. These are your watches.</li>
+            <li>The <strong>run speed</strong> slider slows execution down so you can watch it. <em>Tools &rarr; Instruction Counter</em> counts the instructions a run executes: page 1&rsquo;s IC, measured.</li>
+          </ul></li>
+        <li><strong>Logisim</strong> is a debugger for hardware: Tick Once runs one quarter, the poke tool sets a pin, a probe shows any wire&rsquo;s value, and Week 13&rsquo;s test port let you drive the bus by hand.</li>
+      </ul>
+      <p>Tools are half of it. The other half is Week 13&rsquo;s method: <strong>say what should happen before you step</strong>, then step and compare. A debugger only shows you what <em>did</em> happen; you have to supply what <em>should</em> have.</p>
+      <h3>Try it: a breakpoint in a loop</h3>
+      <div class="alg">        .data
+        .text
+        addi $t0, $zero, 5      # n
+        add  $t1, $zero, $zero  # sum
+loop:   add  $t1, $t1, $t0
+        addi $t0, $t0, -1
+        bne  $t0, $zero, loop
+        addi $v0, $zero, 10
+        syscall</div>
+      <p>Assemble it, tick <em>Bkpt</em> beside the <code>bne</code>, and press Run. Before you do, write down what <code>$t0</code> and <code>$t1</code> will hold at each stop. MARS stops before each <code>bne</code>: <code>$t0</code> = 4, 3, 2, 1, 0 and <code>$t1</code> = 5, 9, 12, 14, 15. Press Run again at each stop; after the fifth, the loop falls through and the program exits. This is optional and not graded.</p>
+
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Four questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+
+      <p>For this in a second voice, log into your Saylor CS301 account at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 2: Instructions &mdash; Hardware Language</strong>. Its section on translating and starting a program covers the assembler, linker and loader for MIPS.</p>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>You can say what each tool between your source and the running program does, and you have built one of them. That is Week 15&rsquo;s content: the quiz and the research topic are on the next page, and the final project page follows.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 15, Page 4
+  </footer>
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ["perf"];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.perf) { return; }
+    var P = L.perf;
+
+    function h2(v) { return v === null || v === undefined ? 'EE' : ('0' + (v & 255).toString(16).toUpperCase()).slice(-2); }
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+    function fmt(x, d) { return Number(x).toFixed(d === undefined ? 2 : d); }
+    function sec(t) {
+      if (!isFinite(t)) { return '\u221e'; }
+      if (t >= 1) { return fmt(t, t >= 100 ? 0 : 3) + ' s'; }
+      if (t >= 1e-3) { return fmt(t * 1e3, 3) + ' ms'; }
+      if (t >= 1e-6) { return fmt(t * 1e6, 3) + ' \u00b5s'; }
+      return fmt(t * 1e9, 3) + ' ns';
+    }
+
+    var SRC = { loop: "        DATA R0, 5      ; n\n        DATA R1, 0      ; sum\n        DATA R3, 0xFF   ; -1\nloop:   CLF\n        ADD R0, R1      ; sum = sum + n\n        CLF\n        ADD R3, R0      ; n = n - 1\n        JZ done         ; a forward reference\n        JMP loop\ndone:   END", macro: "        DATA R0, 7\n        DATA R1, 3\n        DATA R2, 0\n        MOV R0, R2      ; a macro: 2 instructions\n        SUB R1, R2      ; a macro: 3 instructions\n        END" };
+    /* ---------- Widget 4 -- Two-Pass Assembler ---------- */
+    (function () {
+      var host = document.getElementById('w-asm'); if (!host) { return; }
+      function $(id) { return document.getElementById(id); }
+      var ta = $('asm-src');
+      ta.value = SRC.loop;
+      function paint() {
+        var r = P.assemble(ta.value);
+        if (!r.ok) {
+          $('asm-status').innerHTML = '<span class="w-err">' + esc(r.error) + '</span>';
+          $('asm-sym').innerHTML = ''; $('asm-out').innerHTML = '';
+          return;
+        }
+        $('asm-sym').innerHTML = r.symbols.length ? r.symbols.map(function (s) { return '<tr><td class="mono">' + esc(s.label) + '</td><td class="num">0x' + h2(s.addr) + '</td></tr>'; }).join('') :
+          '<tr><td colspan="2">No labels.</td></tr>';
+        $('asm-out').innerHTML = r.rows.map(function (row) {
+          var refs = row.labelRefs.map(function (x) { return ' <span class="mono">(' + esc(x.label) + ' = 0x' + h2(x.addr) + ')</span>' + (x.forward ? ' <span class="fwd">forward</span>' : ''); }).join('');
+          var src = esc(row.text) + refs + (row.macro ? ' <span class="mac">macro</span><br><small class="mono">' + row.expandsTo.map(esc).join(' &middot; ') + '</small>' : '');
+          return '<tr><td class="num">' + h2(row.addr) + '</td><td class="mono">' + row.bytes.map(h2).join(' ') + '</td><td>' + src + '</td></tr>';
+        }).join('');
+        $('asm-status').textContent = r.lines + ' lines written \u2192 ' + r.instructions + ' instructions, ' + r.bytes.length + ' bytes in memory (of 32).';
+      }
+      ta.addEventListener('input', paint);
+      host.addEventListener('click', function (e) { var b = e.target.closest('button'); if (b && b.dataset.src) { ta.value = SRC[b.dataset.src]; paint(); } });
+      paint();
+    }());
+
+    /* ---------- Self-check ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+  {
+    "q": "A program uses the <code>push</code> macro from 15.13 ten times. How many instructions does <code>push</code> put into the assembled program?",
+    "opts": [
+      "20: two instructions at each of the ten places it is used",
+      "2: one copy, called ten times",
+      "10",
+      "None: macros run in the assembler, not the CPU"
+    ],
+    "correct": 0,
+    "why": "A macro is pasted in wherever it is used: ten copies of <code>addi</code> + <code>sw</code>. A subroutine would be one copy plus ten calls and ten returns."
+  },
+  {
+    "q": "What does the assembler&rsquo;s first pass produce?",
+    "opts": [
+      "The symbol table: the address of every label",
+      "The machine code",
+      "The linked program",
+      "A list of the program&rsquo;s bugs"
+    ],
+    "correct": 0,
+    "why": "Pass 1 counts bytes and records where each label lands. Pass 2 can then encode a jump to a label that appears later in the file."
+  },
+  {
+    "q": "Your program calls a procedure whose label is defined in a different source file. Which tool fills in its address?",
+    "opts": [
+      "The linker",
+      "The assembler",
+      "The loader",
+      "The debugger"
+    ],
+    "correct": 0,
+    "why": "The assembler only sees one file, so it leaves the address unresolved. The linker joins the files, decides where each one goes, and fills in the addresses."
+  },
+  {
+    "q": "In Week 14, RESET, LOAD and COUNTER_256 copied a program from the external RAM into your CPU&rsquo;s RAM and left the PC at 0. Which tool were you building?",
+    "opts": [
+      "A loader",
+      "A linker",
+      "An assembler",
+      "A compiler"
+    ],
+    "correct": 0,
+    "why": "A loader puts an executable program into memory and sets the processor up to start it. Yours did both, in hardware."
+  }
+];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p><div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi], okAns = (oi === item.correct), fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) { el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false'); });
+      }
+      host.addEventListener('click', function (e) { var t = e.target.closest('.quiz-option'); if (t) { answer(+t.dataset.q, +t.dataset.o); } });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+
+  })();
+  </script>
+</body>
+</html>

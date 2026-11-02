@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w15-final">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Final Project: Your CPU</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .tier-table td:first-child { font-weight: 700; font-size: var(--fs-lg, 1.2rem); text-align: center; }
+    .doc-list > li { margin-bottom: var(--space-sm); }
+    .checklist { list-style: none; padding-left: 0; }
+    .checklist li { margin: 6px 0; }
+    .checklist label { display: flex; gap: 10px; align-items: flex-start; }
+    .checklist input { margin-top: 4px; width: 1.1rem; height: 1.1rem; flex: 0 0 auto; }
+    .timeline { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-md); margin: var(--space-md) 0; }
+    .timeline > div { border: 1px solid var(--color-border); border-top: 4px solid var(--color-primary); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); font-size: var(--fs-sm); }
+    .timeline h3 { margin-top: 0; font-size: var(--fs-base); }
+    @media (max-width: 760px) { .timeline { grid-template-columns: 1fr; } }
+    @media print { .sp-header, .sp-footer { display: none !important; } .checklist li, tr { break-inside: avoid; } }
+
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 15 &rsaquo; <span>Final Project</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Final Project — Your CPU</h1>
+    <p><span class="points-badge">100 points</span> &nbsp;|&nbsp; Published in Week 15 &nbsp;|&nbsp; <strong>Due Friday 12/11, 11:59 pm</strong> &nbsp;|&nbsp; One <code>.circ</code> file + one documentation PDF</p>
+
+    <section id="fp-what">
+      <h2>What you build</h2>
+      <p>Since Week 2 you have built, in one Logisim file, every circuit a CPU needs: gates, adders and decoders, latches and registers, the ALU, the RAM, the bus, the control unit, fetch, and in Week 14 every class of instruction, END and the loader. The final project is that CPU, <strong>executing programs from its own RAM, correctly</strong>, with tests that show it and documentation that explains it.</p>
+      <ul>
+        <li><strong>Logisim 2.7.1</strong>, and <strong>one <code>.circ</code> file</strong> containing every circuit. A file that links to another file is graded as incomplete, because it cannot open on its own on your instructor&rsquo;s machine.</li>
+        <li><strong>Built from gates</strong>, as every checkpoint has been. The only Logisim built-ins allowed are the ones Week 14 named: the <strong>Counter</strong> inside <code>COUNTER_256</code>, the <strong>RAM</strong> on <code>CPU_TEST</code> as the external RAM, the <strong>Multiplexor</strong> at your <code>RAM_16X16</code>&rsquo;s input, and the <strong>Clock</strong>; plus pins, probes and splitters.</li>
+        <li><strong>The course instruction set</strong> (Week 10). You implement a subset of it, by tier; you do not invent new instructions.</li>
+      </ul>
+    </section>
+
+    <section id="fp-tiers">
+      <h2>The three tiers</h2>
+      <p>Graded by what your finished CPU <strong>executes, from RAM, correctly</strong>. These are the tiers from Week 10&rsquo;s project plan, unchanged.</p>
+      <div class="table-scroll"><table class="tier-table"><thead><tr><th>Tier</th><th>Your CPU executes</th><th>Instructions</th><th>How your tests run</th></tr></thead><tbody>
+        <tr><td>C</td><td>fetch, and every ALU instruction</td><td>ADD SHR SHL NOT AND OR XOR CMP &mdash; 8</td><td>Registers may be set through Week 13&rsquo;s test port; the program is in your RAM and the CPU fetches it.</td></tr>
+        <tr><td>B</td><td>everything in C, plus memory and immediate values</td><td>+ LD ST DATA &mdash; 11</td><td>Loaded and run with Week 14&rsquo;s procedure: RESET, LOAD, release, run to END.</td></tr>
+        <tr><td>A</td><td>everything in B, plus every jump and CLF, and runs <code>MYSIM.txt</code> to R2 = 25</td><td>+ JMPR JMP J<em>caez</em> CLF &mdash; 15</td><td>As B, and <code>MYSIM.txt</code> to END with R2 = 00011001.</td></tr>
+      </tbody></table></div>
+      <p>Aim for the tier you expect to reach. You are not bound by the tier in your Week 10 plan or your Week 14 status: you are graded on the tier your submission demonstrates. A CPU that runs part of the instruction set correctly is worth something; one that runs all of it is the goal.</p>
+    </section>
+
+    <section id="fp-submit">
+      <h2>What you submit</h2>
+      <ol class="doc-list">
+        <li><strong><code>yourname.circ</code></strong> &mdash; the one file, saved after your last test.</li>
+        <li><strong>A documentation PDF</strong> with four sections:
+          <ol type="a">
+            <li><strong>Design decisions.</strong> At least three choices you made in building your CPU and why. Choices the course made for you count if you say why they work: the single bus, the six steps, decoders for control, the ninth buffer. So do your own: how you laid out a tab, how you debugged something, what you would do differently.</li>
+            <li><strong>Your instruction set.</strong> A table of every instruction you implemented: mnemonic, its byte (or bytes) in binary, and its class. Week 10&rsquo;s decoder and Week 15&rsquo;s two-pass assembler will check your encodings.</li>
+            <li><strong>Test results.</strong> One test program per class of instruction in your tier: its bytes, the result you expected <em>written before you ran it</em>, and a screenshot of your CPU at END (or at its final state, for tier C). Week 14&rsquo;s Tests A, B and C are a good start, and Week 10&rsquo;s plan had yours. A failed test, honestly reported, is better than a missing one.</li>
+            <li><strong>What does not work.</strong> Anything that fails or that you did not finish, and what you tried. &ldquo;Nothing&rdquo; is a fine answer if it is true.</li>
+          </ol></li>
+      </ol>
+    </section>
+
+    <section id="fp-grading">
+      <h2>How it is graded</h2>
+      <p>The tier you demonstrate sets the range; your tests and documentation place you within it.</p>
+      <div class="table-scroll"><table class="gen-table"><thead><tr><th>Tier demonstrated</th><th>Points</th></tr></thead><tbody>
+        <tr><td>A &mdash; every instruction, and <code>MYSIM.txt</code></td><td>90&ndash;100</td></tr>
+        <tr><td>B &mdash; ALU, memory and immediates</td><td>80&ndash;89</td></tr>
+        <tr><td>C &mdash; fetch and the ALU</td><td>70&ndash;79</td></tr>
+        <tr><td>Some of tier C</td><td>up to 69, by what runs</td></tr>
+      </tbody></table></div>
+      <p>Within the range, up to 10 points come from the documentation and tests: complete sections (a) to (d), a test for each class, expected results written down before the run, and legible screenshots. A <code>.circ</code> file that does not open on its own is graded on its documentation alone.</p>
+    </section>
+
+    <section id="fp-time">
+      <h2>From here to 12/11</h2>
+      <div class="timeline">
+        <div><h3>Week 15 &mdash; now</h3><p>Read this page. Open your file and run Week 14&rsquo;s three tests again, or Checkpoint 6&rsquo;s program if you are at tier C. Write down what works.</p></div>
+        <div><h3>Week 16 &mdash; 11/30 to 12/06</h3><p>Finish the instructions for your tier, write your tests, take your screenshots. Start the documentation while the decisions are fresh.</p></div>
+        <div><h3>Week 17 &mdash; 12/07 to 12/11</h3><p>Check everything against the list below, on a copy of your file opened on its own. Submit by Friday 11:59 pm.</p></div>
+      </div>
+    </section>
+
+    <section id="fp-check">
+      <h2>Submission checklist</h2>
+      <p>Tick these off before you upload. The boxes are for you; nothing is saved or sent.</p>
+      <ul class="checklist">
+        <li><label><input type="checkbox"><span>All circuits are contained within this single <code>.circ</code> file &mdash; no external file links.</span></label></li>
+        <li><label><input type="checkbox"><span>The file opens and works on a machine that has never seen your other files (try it on another computer, or ask someone to).</span></label></li>
+        <li><label><input type="checkbox"><span>Logisim built-ins only where Week 14 allowed them: Counter in <code>COUNTER_256</code>, RAM on <code>CPU_TEST</code>, Multiplexor at the RAM&rsquo;s input, and the Clock.</span></label></li>
+        <li><label><input type="checkbox"><span>Every instruction in your tier passes a test you wrote, with the expected result written down <em>before</em> you ran it.</span></label></li>
+        <li><label><input type="checkbox"><span>Tier A only: <code>MYSIM.txt</code> runs to END with R2 = 00011001.</span></label></li>
+        <li><label><input type="checkbox"><span>Documentation sections (a) to (d) are all there.</span></label></li>
+        <li><label><input type="checkbox"><span>Every screenshot is legible: register values readable without zooming.</span></label></li>
+        <li><label><input type="checkbox"><span>You uploaded two files: the <code>.circ</code> and the documentation PDF.</span></label></li>
+      </ul>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 15, Final Project
+  </footer>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w15-topic">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Research Topic</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .q-block { border-left: 3px solid var(--color-border); padding-left: var(--space-md); margin: var(--space-lg) 0; }
+    .q-num { font-weight: 700; color: var(--color-primary); }
+    .q-pts { font-size: var(--fs-sm); color: var(--color-text-muted); }
+    .ans { margin-top: var(--space-sm); }
+    .ans__input { display: block; width: 100%; box-sizing: border-box; min-height: 4.6em; resize: vertical; font-family: var(--font-sans); font-size: var(--fs-sm); line-height: 1.55; color: var(--color-text); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm); }
+    .ans__input:focus { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+    .ans__print { display: none; }
+    .cover-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-md); margin: var(--space-md) 0; }
+    .cover-grid > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
+    .cover-grid label { display: block; font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); margin-bottom: var(--space-xs); }
+    .cover-grid input { width: 100%; box-sizing: border-box; font-size: var(--fs-base); padding: var(--space-xs) var(--space-sm); border: 1px solid var(--color-border); border-radius: 4px; }
+    .topics { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 6px; margin: var(--space-sm) 0; }
+    .topics label { display: flex; gap: 8px; align-items: flex-start; border: 1px solid var(--color-border); border-radius: var(--radius); padding: 6px 10px; background: var(--color-surface); font-size: var(--fs-sm); }
+    .topics label small { display: block; color: var(--color-text-muted); }
+    .submit-row { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: var(--space-lg) 0; }
+    @media print {
+      .sp-header, .sp-footer, .no-print { display: none !important; }
+      .q-block { break-inside: avoid; }
+      body { background: #fff; }
+      .ans__input { display: none; }
+      .ans__print { display: block; white-space: pre-wrap; word-break: break-word; border: 1px solid #999; border-radius: 3px; padding: 6px 8px; min-height: 3em; font-size: 10.5pt; line-height: 1.5; }
+      .topics label { break-inside: avoid; }
+    }
+
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 15 &rsaquo; <span>Research Topic</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Research Topic</h1>
+    <p><span class="points-badge">5 points &middot; complete/incomplete</span> &nbsp;|&nbsp; Week 15, Part B &nbsp;|&nbsp; <strong>Due Sunday 11/29, 11:59 pm</strong> &nbsp;|&nbsp; Print to PDF and upload to Canvas</p>
+
+    <section id="intro">
+      <p>In Week 16 you write a short paper on <strong>one feature of modern processors</strong>, connecting it to what you have learned in this course. Week 16 gives the full requirements. This page is where you choose the feature and say what you want to find out, so that the feedback you get back can steer you before you start writing.</p>
+      <p>It is <strong>complete</strong>, and earns all 5 points, when every section is answered. Nothing here is graded on which topic you choose.</p>
+      <div class="callout callout--warn">
+        <div class="callout__title">Nothing you type on this page is saved anywhere</div>
+        <p>There is no storage behind these boxes. Close the tab or reload and <strong>your typing is gone.</strong> Print to PDF before you leave.</p>
+      </div>
+    </section>
+
+    <section id="rt-cover">
+      <h2>You</h2>
+      <div class="cover-grid">
+        <div><label for="cv-name">Name</label><input type="text" id="cv-name" autocomplete="name"></div>
+        <div><label for="cv-date">Date</label><input type="text" id="cv-date" autocomplete="off"></div>
+      </div>
+    </section>
+
+    <section id="rt-1">
+      <h2>1. Your topic</h2>
+      <div class="q-block">
+        <p><span class="q-num">1a.</span> Choose one, or choose &ldquo;my own&rdquo; and name it below. Each says where in this course it connects; you are not limited to those.</p>
+        <div class="topics" role="radiogroup" aria-label="Research topic">
+          <label><input type="radio" name="topic" value="cache"><span>Cache hierarchies<small>connects to Week 8 (RAM), Week 12 (memory is slow)</small></span></label>
+          <label><input type="radio" name="topic" value="bp"><span>Branch prediction<small>connects to Week 7 (branches), Week 14 (J<em>caez</em>), page 3 (control hazards)</small></span></label>
+          <label><input type="radio" name="topic" value="ooo"><span>Out-of-order execution<small>connects to page 3 (data hazards), Week 11 (control)</small></span></label>
+          <label><input type="radio" name="topic" value="ss"><span>Superscalar processors: more than one instruction per cycle<small>connects to page 1 (CPI below 1), page 3</small></span></label>
+          <label><input type="radio" name="topic" value="simd"><span>SIMD and vector instructions<small>connects to Week 6 (8-bit operations side by side), page 1</small></span></label>
+          <label><input type="radio" name="topic" value="smt"><span>Simultaneous multithreading (hyper-threading)<small>connects to page 3, Week 11</small></span></label>
+          <label><input type="radio" name="topic" value="mc"><span>Multicore processors and cache coherence<small>connects to Week 8, page 2 (the power wall)</small></span></label>
+          <label><input type="radio" name="topic" value="gpu"><span>GPUs, and how they differ from CPUs<small>connects to Week 6 (the ALU), page 1</small></span></label>
+          <label><input type="radio" name="topic" value="riscv"><span>RISC-V, an open instruction set<small>connects to Weeks 5&ndash;7 (MIPS), Week 10 (your ISA)</small></span></label>
+          <label><input type="radio" name="topic" value="armx86"><span>ARM and x86: two instruction sets<small>connects to Week 5 (ISA), Week 10</small></span></label>
+          <label><input type="radio" name="topic" value="spectre"><span>Speculative-execution attacks (Spectre, Meltdown)<small>connects to page 3 (prediction), Week 16 (caches)</small></span></label>
+          <label><input type="radio" name="topic" value="power"><span>The power wall: why clock rates stopped climbing<small>connects to page 2, Week 4 (timing)</small></span></label>
+          <label><input type="radio" name="topic" value="vm"><span>Virtual memory and the TLB<small>connects to Week 8 (addresses), Week 12 (the memory bus)</small></span></label>
+          <label><input type="radio" name="topic" value="own"><span>My own topic<small>name it in 1b</small></span></label>
+        </div>
+      </div>
+      <div class="q-block">
+        <p><span class="q-num">1b.</span> Your topic in your own words, in one sentence. (If you chose your own, this is where you name it.)</p>
+        <div class="ans"><label class="sr-only" for="rt1b">Your topic in your own words, in one sentence. (If you chose</label><textarea class="ans__input" id="rt1b" rows="2"></textarea><div class="ans__print" aria-hidden="true"></div></div>
+      </div>
+    </section>
+
+    <section id="rt-2">
+      <h2>2. Your question</h2>
+      <div class="q-block">
+        <p><span class="q-num">2.</span> The one question your paper will answer. A good question has an answer you do not know yet: &ldquo;Why do processors predict branches instead of waiting?&rdquo; works; &ldquo;What is branch prediction?&rdquo; is a definition, not a question.</p>
+        <div class="ans"><label class="sr-only" for="rt2">The one question your paper will answer. A good question has</label><textarea class="ans__input" id="rt2" rows="2"></textarea><div class="ans__print" aria-hidden="true"></div></div>
+      </div>
+    </section>
+
+    <section id="rt-3">
+      <h2>3. The connection to this course</h2>
+      <div class="q-block">
+        <p><span class="q-num">3.</span> Two things from this course your topic connects to, by week, and one sentence on each connection. (For example: &ldquo;Week 15, page 3: a mispredicted branch is the control hazard; the instructions fetched behind it are thrown away.&rdquo;)</p>
+        <div class="ans"><label class="sr-only" for="rt3">Two things from this course your topic connects to, by week,</label><textarea class="ans__input" id="rt3" rows="4"></textarea><div class="ans__print" aria-hidden="true"></div></div>
+      </div>
+    </section>
+
+    <section id="rt-4">
+      <h2>4. Sources</h2>
+      <div class="q-block">
+        <p><span class="q-num">4.</span> Two sources you plan to use, and who published each one (a textbook, a manufacturer, a university, a news site, &hellip;). Saylor CS301 counts as one.</p>
+        <div class="ans"><label class="sr-only" for="rt4">Two sources you plan to use, and who published each one (a t</label><textarea class="ans__input" id="rt4" rows="3"></textarea><div class="ans__print" aria-hidden="true"></div></div>
+      </div>
+    </section>
+
+    <section id="rt-5">
+      <h2>5. What you do not understand yet</h2>
+      <div class="q-block">
+        <p><span class="q-num">5.</span> One thing about your topic you do not understand yet. This is what the feedback will try to help with.</p>
+        <div class="ans"><label class="sr-only" for="rt5">One thing about your topic you do not understand yet. This i</label><textarea class="ans__input" id="rt5" rows="2"></textarea><div class="ans__print" aria-hidden="true"></div></div>
+      </div>
+    </section>
+
+    <div class="submit-row no-print">
+      <button class="widget-btn widget-btn--primary" type="button" id="print-topic">Print my topic to PDF</button>
+    </div>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 15, Research Topic
+  </footer>
+  <script>
+  /* The topic form. No kernel, no storage of any kind: printing must
+     never depend on shared/logic.js. */
+  (function () {
+    'use strict';
+    var textareas = document.querySelectorAll('.ans__input');
+    function mirror() {
+      Array.prototype.forEach.call(textareas, function (t) {
+        var out = t.parentNode.querySelector('.ans__print');
+        if (out) { out.textContent = t.value; }
+      });
+    }
+    Array.prototype.forEach.call(textareas, function (t) {
+      t.addEventListener('input', function () { t.style.height = 'auto'; t.style.height = (t.scrollHeight + 2) + 'px'; });
+    });
+    document.getElementById('print-topic').addEventListener('click', function () { mirror(); window.print(); });
+    if (window.matchMedia) {
+      var mq = window.matchMedia('print');
+      var onChange = function (e) { if (e.matches) { mirror(); } };
+      if (mq.addEventListener) { mq.addEventListener('change', onChange); } else if (mq.addListener) { mq.addListener(onChange); }
+    }
+  })();
+  </script>
+</body>
+</html>

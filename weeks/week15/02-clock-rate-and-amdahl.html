@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w15-02">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 15: Clock Rate and Amdahl’s Law</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .w-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-md); }
+    @media (max-width: 760px) { .w-grid { grid-template-columns: 1fr; } }
+    .w-panel { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-surface); min-width: 0; margin-top: var(--space-sm); }
+    .w-panel h3 { margin: 0 0 var(--space-xs); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .btn-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: var(--space-xs) 0; }
+    .vals { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 4px; }
+    .val { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); background: var(--color-surface); overflow-wrap: anywhere; }
+    .val b { font-family: var(--font-sans); color: var(--color-primary); display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+    .val--big { font-size: var(--fs-base); font-weight: 700; border-color: var(--color-primary); }
+    .w-status { font-size: var(--fs-sm); min-height: 1.5em; margin: var(--space-xs) 0; }
+    .mono { font-family: var(--font-mono); }
+    .eqn { font-family: var(--font-mono); background: var(--color-code-bg); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); overflow-x: auto; white-space: pre; font-size: var(--fs-sm); }
+    .alg { font-family: var(--font-mono); background: var(--color-code-bg); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); overflow-x: auto; white-space: pre; font-size: var(--fs-sm); }
+    .gen-table td, .gen-table th { font-size: var(--fs-sm); }
+    .gen-table td.num, .gen-table th.num { text-align: right; font-family: var(--font-mono); }
+    .gen-table td.mono { white-space: nowrap; }
+    .field { display: inline-flex; flex-direction: column; gap: 2px; font-size: var(--fs-sm); margin: 2px 8px 2px 0; }
+    .field input, .field select { font-family: var(--font-mono); font-size: var(--fs-sm); padding: 3px 6px; border: 1px solid var(--color-border); border-radius: 4px; min-width: 0; }
+    .tgl[aria-pressed="true"] { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .am-bars { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); gap: 6px 10px; align-items: center; font-size: var(--fs-sm); }
+    .am-bar { display: flex; height: 1.6rem; border-radius: 4px; overflow: hidden; border: 1px solid var(--color-border); background: #fff; }
+    .am-bar > span { display: flex; align-items: center; justify-content: center; height: 100%; color: #fff; font-size: 11px; font-weight: 700; overflow: hidden; white-space: nowrap; }
+    .am-keep { background: var(--color-text-muted); }
+    .am-fast { background: var(--color-success); }
+    .am-slow { background: var(--color-accent); }
+    .slider-row { display: grid; grid-template-columns: 11rem minmax(0, 1fr) 4.5rem; gap: 8px; align-items: center; font-size: var(--fs-sm); margin: 6px 0; }
+    @media (max-width: 560px) { .slider-row { grid-template-columns: 1fr 4.5rem; } .slider-row label { grid-column: 1 / -1; } }
+    .slider-row input[type=range] { width: 100%; }
+    .chain { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-family: var(--font-mono); font-size: var(--fs-sm); margin: var(--space-sm) 0; }
+    .chain span { border: 1px solid var(--color-border); border-radius: 4px; padding: 2px 6px; background: var(--color-surface); }
+    .chain i { color: var(--color-text-muted); font-style: normal; }
+
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 15 &rsaquo; <span>Page 2 — Clock Rate and Amdahl&rsquo;s Law</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Clock Rate and Amdahl&rsquo;s Law</h1>
+    <p><strong>Sections 15.5 – 15.8</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~30 minutes</p>
+
+    <section id="sec-15-5">
+      <h2>15.5 &nbsp; What sets the clock</h2>
+      <p>Page 1&rsquo;s third lever was a shorter clock period. Why not make the period as short as you like? Because every step of your CPU is a transfer that has to <em>settle</em> before it is captured. In step 5 of an ADD, RA drives the bus, the bus drives the ALU, the adder works out the sum, and only then can ACC capture it. Your clock already allows for this: <code>clk_e</code> rises a quarter before <code>clk_s</code>, so every enabled path has a quarter to settle before anything is set (Week 11). Week 12 asked whether a memory could answer within that quarter.</p>
+      <p>On a real chip the same rule sets the clock. Between one register and the next there is combinational logic, and a signal takes time to pass through each gate. The <strong>critical path</strong> is the slowest such path, from a register&rsquo;s output to another register&rsquo;s input. The clock period must be at least the critical path&rsquo;s delay plus the <strong>setup time</strong> of the register that captures the result (Week 4). Make the period any shorter and some register captures a value that has not finished arriving.</p>
+      <div class="callout callout--note">
+        <div class="callout__title">Logisim is different, honestly</div>
+        <p>Logisim does not simulate gate delays as time. It settles each change step by step and then reports the result, so your circuit has no critical path in nanoseconds. How fast it runs depends on how fast your computer can simulate it. Everything on this page is about real hardware, and your CPU&rsquo;s quarters are the place where real hardware would need the time.</p>
+      </div>
+    </section>
+
+    <section id="sec-15-6">
+      <h2>15.6 &nbsp; The ripple carry, again</h2>
+      <p>In Week 6 you met the most important idea in computer performance while building <code>AND_8BIT</code>. Bit 3 of an AND depends only on bit 3 of its inputs, so all eight bits settle at once, one gate delay. Bit 3 of a <em>sum</em> depends on the carry from bit 2, which depends on bit 1, which depends on bit 0:</p>
+      <div class="chain" aria-label="The carry chain: carry out of bit 0 feeds bit 1, which feeds bit 2, and so on up to bit 7.">
+        <span>bit 0</span><i>&rarr; c1 &rarr;</i><span>bit 1</span><i>&rarr; c2 &rarr;</i><span>bit 2</span><i>&rarr; &hellip; &rarr;</i><span>bit 7</span><i>&rarr; C</i>
+      </div>
+      <p>The answer ripples up through eight stages, one after another. Same eight bits, eight times slower, and the cause is not that addition is complicated: it is that each bit <em>depends</em> on the one before. Widen the adder to 16 bits and the chain doubles. On most processors the adder sits on the critical path, so the length of that chain helps set the clock for the whole machine.</p>
+      <p>Week 6 promised that this week you would meet the techniques real processors use to buy that time back, and that every one of them is an attempt to break a dependency. The first is below.</p>
+      <div class="callout callout--note">
+        <div class="callout__title">Going further: carry-lookahead (optional, not assessed)</div>
+        <p>Instead of waiting for the carry, compute it. Each bit position can say, from its own two inputs alone, whether it <strong>generates</strong> a carry (g = a AND b: both 1) or <strong>propagates</strong> one arriving from below (p = a OR b). Then each carry is a formula in the inputs only:</p>
+        <div class="alg">c1 = g0 + p0&middot;c0
+c2 = g1 + p1&middot;g0 + p1&middot;p0&middot;c0
+c3 = g2 + p2&middot;g1 + p2&middot;p1&middot;g0 + p2&middot;p1&middot;p0&middot;c0</div>
+        <p>Every carry is now two levels of gates from the inputs, all computed at the same time: the dependency is broken. The price is gates: each formula is longer than the last, and the AND gates need more and more inputs. Real adders therefore look ahead within blocks of four bits and ripple between the blocks. Your ALU uses the ripple-carry adder you built, and nothing in this course asks you to build this one.</p>
+      </div>
+    </section>
+
+    <section id="sec-15-7">
+      <h2>15.7 &nbsp; Amdahl&rsquo;s Law</h2>
+      <p>Suppose you make one part of a program faster. How much faster is the whole program? If a fraction <em>p</em> of the original time is sped up by a factor <em>s</em>, and the rest is untouched:</p>
+      <div class="eqn">speedup = 1 / ( (1 &minus; p) + p / s )
+
+as s grows without limit:   speedup &rarr; 1 / (1 &minus; p)</div>
+      <p>The untouched part, 1 &minus; <em>p</em>, never shrinks, so it sets a ceiling however good the improvement is. That is <strong>Amdahl&rsquo;s Law</strong>, and your CPU shows it clearly:</p>
+      <ul>
+        <li><strong>Fetch is half of every instruction.</strong> Three of every six steps fetch. Make execution infinitely fast and the program is still at most 1 / (1 &minus; 0.5) = <strong>2&times;</strong> faster.</li>
+        <li><strong>Fetch in one step instead of three</strong> is <em>s</em> = 3 on <em>p</em> = 0.5: 1 / (0.5 + 0.5/3) = <strong>1.5&times;</strong>.</li>
+        <li><strong>MYSIM without its CLFs</strong> (page 1): 18 of 77 instructions removed entirely, so <em>p</em> = 18/77 and <em>s</em> = &infin;: 1 / (1 &minus; 18/77) = 77/59 = <strong>1.30&times;</strong>, the same number page 1 got by counting.</li>
+      </ul>
+      <p>The lesson designers draw from it is <em>make the common case fast</em>: effort spent on something that takes 5% of the time can never buy more than 5%.</p>
+    </section>
+
+    <!-- ========== Widget 2 ========== -->
+    <section id="sec-amdahl">
+      <div class="widget-card" id="w-amdahl">
+        <div class="widget-card__title">Amdahl Explorer</div>
+        <div class="widget-card__subtitle">Choose how much of the time you speed up, and by how much.</div>
+        <div class="slider-row"><label for="am-p">Fraction sped up (p)</label><input type="range" id="am-p" min="0" max="100" step="1" value="50"><span class="mono" id="am-p-v">50%</span></div>
+        <div class="slider-row"><label for="am-s">Speed-up of that part (s)</label><input type="range" id="am-s" min="1" max="100" step="1" value="3"><span class="mono" id="am-s-v">3&times;</span></div>
+        <div class="btn-row">
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small tgl" id="am-inf" aria-pressed="false">s = &infin; (make it instant)</button>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small" data-preset="exec">Execute &rarr; instant</button>
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small" data-preset="fetch">Fetch: 3 steps &rarr; 1</button>
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small" data-preset="clf">MYSIM without CLF</button>
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small" data-preset="small">20% of the time, 10&times; faster</button>
+        </div>
+        <div class="w-panel">
+          <h3>Time, before and after</h3>
+          <div class="am-bars">
+            <span>Before</span><div class="am-bar" id="am-before"></div>
+            <span>After</span><div class="am-bar" id="am-after"></div>
+          </div>
+          <div class="vals" style="margin-top:8px" id="am-out" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-15-8">
+      <h2>15.8 &nbsp; Why not just raise the clock?</h2>
+      <p>For decades, much of the speed-up in computers came from the third lever: each generation of chips had smaller transistors, which switched faster, so the clock went up. That stopped in the mid-2000s, at a few GHz, and has stayed there. Every clock tick switches transistors, and switching uses energy: run the clock faster and the chip uses more power and gets hotter, until it cannot be cooled. This limit is often called the <strong>power wall</strong>.</p>
+      <p>So designers turned to the other two levers: do more useful work in each cycle, and run more than one program at once. Page 3 is the first of those, and the main way a CPI below 1 becomes possible. Week 16 covers what a modern processor does with multiple cores and with memory.</p>
+
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Four questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+
+      <p>For this in a second voice, log into your Saylor CS301 account at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 1: Introduction to Computer Theory</strong>. Amdahl&rsquo;s Law is there too; carry-lookahead is in <strong>Unit 4: Computer Arithmetic</strong>.</p>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>You know what limits the clock, what a dependency costs, and why speeding up one part of a program has a ceiling. Next page: running several instructions at once, and why dependencies make that hard.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 15, Page 2
+  </footer>
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ["perf"];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.perf) { return; }
+    var P = L.perf;
+
+    function h2(v) { return v === null || v === undefined ? 'EE' : ('0' + (v & 255).toString(16).toUpperCase()).slice(-2); }
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+    function fmt(x, d) { return Number(x).toFixed(d === undefined ? 2 : d); }
+    function sec(t) {
+      if (!isFinite(t)) { return '\u221e'; }
+      if (t >= 1) { return fmt(t, t >= 100 ? 0 : 3) + ' s'; }
+      if (t >= 1e-3) { return fmt(t * 1e3, 3) + ' ms'; }
+      if (t >= 1e-6) { return fmt(t * 1e6, 3) + ' \u00b5s'; }
+      return fmt(t * 1e9, 3) + ' ns';
+    }
+
+    /* ---------- Widget 2 -- Amdahl Explorer ---------- */
+    (function () {
+      var host = document.getElementById('w-amdahl'); if (!host) { return; }
+      function $(id) { return document.getElementById(id); }
+      var inf = false;
+      function card(label, v, big) { return '<div class="val' + (big ? ' val--big' : '') + '"><b>' + label + '</b>' + v + '</div>'; }
+      function paint() {
+        var p = +$('am-p').value / 100, s = inf ? Infinity : +$('am-s').value;
+        $('am-p-v').textContent = Math.round(p * 100) + '%';
+        $('am-s-v').textContent = inf ? '\u221e' : s + '\u00d7';
+        $('am-inf').setAttribute('aria-pressed', inf ? 'true' : 'false');
+        $('am-s').disabled = inf;
+        var keep = 1 - p, fast = inf ? 0 : p / s, sp = P.amdahl(p, s), lim = P.amdahl(p, Infinity);
+        $('am-before').innerHTML = (keep > 0 ? '<span class="am-keep" style="flex:' + keep + '">untouched</span>' : '') + (p > 0 ? '<span class="am-slow" style="flex:' + p + '">sped-up part</span>' : '');
+        var after = keep + fast;
+        $('am-after').innerHTML = (keep > 0 ? '<span class="am-keep" style="flex:' + keep + '"></span>' : '') + (fast > 0 ? '<span class="am-fast" style="flex:' + fast + '"></span>' : '') +
+          '<span style="flex:' + Math.max(0, 1 - after) + '"></span>';
+        $('am-before').setAttribute('role', 'img'); $('am-after').setAttribute('role', 'img');
+        $('am-before').setAttribute('aria-label', 'Before: the whole original time.');
+        $('am-after').setAttribute('aria-label', 'After: ' + fmt(after * 100, 1) + ' percent of the original time.');
+        $('am-out').innerHTML = card('New time', fmt(after * 100, 1) + '% of before') + card('Speedup', (isFinite(sp) ? fmt(sp, 2) : '\u221e') + '\u00d7', true) +
+          card('Ceiling, s = \u221e', (isFinite(lim) ? fmt(lim, 2) : '\u221e') + '\u00d7');
+      }
+      host.addEventListener('click', function (e) {
+        var b = e.target.closest('button'); if (!b) { return; }
+        if (b.id === 'am-inf') { inf = !inf; }
+        var pr = { exec: [50, 1, true], fetch: [50, 3, false], clf: [23, 1, true], small: [20, 10, false] }[b.dataset.preset];
+        if (pr) { $('am-p').value = pr[0]; $('am-s').value = pr[1]; inf = pr[2]; }
+        paint();
+      });
+      $('am-p').addEventListener('input', paint); $('am-s').addEventListener('input', paint);
+      paint();
+    }());
+
+    /* ---------- Self-check ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+  {
+    "q": "On a real chip, what sets the shortest clock period that will work?",
+    "opts": [
+      "The slowest path that must settle between one register and the next within a cycle, plus setup time",
+      "The number of instructions in the program",
+      "The number of registers",
+      "The fastest gate on the chip"
+    ],
+    "correct": 0,
+    "why": "Every value captured at the end of a cycle must have settled first. The slowest such path is the critical path, and the period cannot be shorter than it plus the setup time of the register capturing it (Week 4)."
+  },
+  {
+    "q": "Half of a program&rsquo;s time is spent in code that you make 4 times faster. What is the overall speedup?",
+    "opts": [
+      "1.6&times;",
+      "2&times;",
+      "4&times;",
+      "2.5&times;"
+    ],
+    "correct": 0,
+    "why": "1 / ((1 &minus; 0.5) + 0.5 / 4) = 1 / 0.625 = 1.6. The half you did not touch still takes half the original time."
+  },
+  {
+    "q": "90% of a program&rsquo;s time can be made as fast as you like. What is the most the whole program can speed up?",
+    "opts": [
+      "10&times;",
+      "90&times;",
+      "Without limit",
+      "1.9&times;"
+    ],
+    "correct": 0,
+    "why": "The limit is 1 / (1 &minus; p) = 1 / 0.1 = 10. The other 10% of the time is untouched, so the program can never take less than a tenth of what it did."
+  },
+  {
+    "q": "Why is a 16-bit ripple-carry adder slower than an 8-bit one, when an 8-bit AND and a 16-bit AND take the same time?",
+    "opts": [
+      "Each carry depends on the one before, so the carry has to pass through twice as many stages",
+      "16-bit gates are slower than 8-bit gates",
+      "The 16-bit adder needs a faster clock",
+      "It is not: both take one gate delay"
+    ],
+    "correct": 0,
+    "why": "AND has no dependency between bits, so every bit settles at once. Addition has a dependency: bit 15 cannot settle until the carry from bit 14 has, and so on down to bit 0. Week 6 said so; page 3 shows the same dependency between instructions."
+  }
+];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p><div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi], okAns = (oi === item.correct), fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) { el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false'); });
+      }
+      host.addEventListener('click', function (e) { var t = e.target.closest('.quiz-option'); if (t) { answer(+t.dataset.q, +t.dataset.o); } });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+
+  })();
+  </script>
+</body>
+</html>

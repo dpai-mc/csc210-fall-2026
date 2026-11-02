@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w15-00">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 15 Orientation: How Fast, and Who Built It</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .split-bar { display: flex; height: 2.2rem; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--color-border); margin: var(--space-sm) 0; }
+    .split-bar > div { display: flex; align-items: center; justify-content: center; font-size: var(--fs-xs); font-weight: 700; color: #fff; text-align: center; padding: 0 2px; overflow: hidden; }
+    .split-bar .sb-pg { background: var(--color-primary); }
+    .split-bar .sb-qz { background: var(--color-success); }
+    .split-bar .sb-tp { background: var(--color-accent-hov); }
+    .split-bar .sb-fp { background: #6b4c9a; }
+    .split-legend { display: flex; justify-content: space-between; font-size: var(--fs-xs); color: var(--color-text-muted); gap: var(--space-sm); }
+    .due { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-md); margin: var(--space-md) 0; }
+    .due > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
+    .due h3 { margin-top: 0; font-size: var(--fs-base); }
+    @media (max-width: 760px) { .due { grid-template-columns: 1fr; } }
+    .ahead { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-md); margin: var(--space-md) 0; }
+    .ahead > div { border: 1px solid var(--color-border); border-left: 4px solid var(--color-primary); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
+    .ahead h3 { margin-top: 0; font-size: var(--fs-base); }
+    @media (max-width: 760px) { .ahead { grid-template-columns: 1fr; } }
+
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 15 &rsaquo; <span>Orientation</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Week 15 — How Fast, and Who Built It</h1>
+    <p><strong>Performance; pipelining; macros, assemblers, linkers, loaders and debuggers</strong> &nbsp;|&nbsp; <strong>11/23 – 11/29</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~4 hours</p>
+
+    <section id="sec-gap">
+      <div class="callout callout--hook">
+        <div class="callout__title">Your CPU multiplies 5 &times; 5 in 462 steps. Is that fast?</div>
+        <p>Last week your CPU became a finished machine: it loads a program, runs it, and stops. Every week before this one asked how to build something. This week asks two questions about what you built. <strong>How fast is it</strong>, compared with the processor in your laptop, and why? And <strong>who built the program</strong>: what happens between the text you type and the bytes that sit in memory?</p>
+        <p>The first question needs three numbers and one equation, and leads to the idea every modern processor is built around: doing several instructions at once. The second names tools you have used since Week 5 (the assembler and the debugger) and two you have not met by name (the linker, and the loader, which you built in Week 14).</p>
+      </div>
+      <div class="callout callout--note">
+        <div class="callout__title">Thanksgiving week</div>
+        <p>Campus is closed Wednesday 11/25 through Sunday 11/29. This is a light week on purpose: about four hours, <strong>no Logisim work</strong>, and everything can be finished by Tuesday. The deadline is after the break so that you can choose when to do it.</p>
+      </div>
+    </section>
+
+    <section id="sec-shape">
+      <h2>The shape of the week</h2>
+      <div class="split-bar" role="img" aria-label="Of about four hours this week: about three hours on the orientation and four pages, half an hour on the quiz, a quarter of an hour on the research topic, and a quarter of an hour reading the final project page.">
+        <div class="sb-pg" style="flex:3">Week 15 pages</div>
+        <div class="sb-qz" style="flex:0.5">Quiz</div>
+        <div class="sb-tp" style="flex:0.25">Topic</div>
+        <div class="sb-fp" style="flex:0.25">Project</div>
+      </div>
+      <div class="split-legend"><span>~3 hrs</span><span>~0.5</span><span>0.25</span><span>0.25</span></div>
+      <div class="due">
+        <div>
+          <h3>Part A &mdash; Canvas quiz</h3>
+          <p>Ten questions on the four pages, 25 points, auto-graded. No time limit, two attempts, higher score kept.</p>
+        </div>
+        <div>
+          <h3>Part B &mdash; Research topic</h3>
+          <p>A one-page form choosing the modern CPU feature you will write about in Week 16. 5 points, complete/incomplete.</p>
+        </div>
+      </div>
+      <p><strong>Both are due Sunday 11/29, 11:59 pm.</strong></p>
+    </section>
+
+    <section id="sec-ahead">
+      <h2>The last two weeks</h2>
+      <p>This week sets up the two that follow it.</p>
+      <div class="ahead">
+        <div>
+          <h3>Week 16 &mdash; 11/30 to 12/06</h3>
+          <p>Modern architecture: caches and the memory hierarchy, MIPS&rsquo;s five-stage pipeline and how it handles the hazards you meet on page 3, and multicore processors. You write a short research paper on the topic you choose this week.</p>
+        </div>
+        <div>
+          <h3>Week 17 &mdash; 12/07 to 12/11</h3>
+          <p>Synthesis, and the final project: your CPU, its tests and its documentation, <strong>due Friday 12/11, 11:59 pm</strong>.</p>
+        </div>
+      </div>
+      <p>The full final project requirements are on the <strong>Final Project</strong> page in this week&rsquo;s module, published now so that you have them before the break. If you have time this week, read it and run Week 14&rsquo;s three tests on your file again.</p>
+    </section>
+
+    <section id="sec-path">
+      <h2>This week&rsquo;s learning path</h2>
+      <div class="spa-card-grid">
+        <div class="spa-card">
+          <div class="spa-card__number">Page 1</div>
+          <div class="spa-card__title">The Performance Equation</div>
+          <div class="spa-card__time">~45 min &nbsp;|&nbsp; Sections 15.1–15.4</div>
+          <div class="spa-card__desc">Time = instructions &times; CPI &times; clock period, measured on Week 9&rsquo;s MIPS and on your own CPU running <code>MYSIM.txt</code>.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+        <div class="spa-card">
+          <div class="spa-card__number">Page 2</div>
+          <div class="spa-card__title">Clock Rate and Amdahl&rsquo;s Law</div>
+          <div class="spa-card__time">~30 min &nbsp;|&nbsp; Sections 15.5–15.8</div>
+          <div class="spa-card__desc">What limits the clock, the ripple carry again, and why speeding up part of a program has a ceiling.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+        <div class="spa-card">
+          <div class="spa-card__number">Page 3</div>
+          <div class="spa-card__title">Pipelining, and Why It Is Hard</div>
+          <div class="spa-card__time">~45 min &nbsp;|&nbsp; Sections 15.9–15.12</div>
+          <div class="spa-card__desc">Overlapping instructions, why your CPU&rsquo;s single bus cannot, and the two hazards that get in the way.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+        <div class="dep-arrow" aria-hidden="true">&darr;</div>
+        <div class="spa-card">
+          <div class="spa-card__number">Page 4</div>
+          <div class="spa-card__title">The Toolchain</div>
+          <div class="spa-card__time">~45 min &nbsp;|&nbsp; Sections 15.13–15.16</div>
+          <div class="spa-card__desc">Macros, the assembler&rsquo;s two passes, the linker, the loader you built, and debuggers.</div>
+          <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-tools">
+      <h2>Tools and reading</h2>
+      <ul>
+        <li><strong>Logisim 2.7.1</strong> &mdash; not needed this week.</li>
+        <li><strong>MARS</strong> &mdash; optional. Page 4 has a macro example and a breakpoint exercise to try; neither is graded.</li>
+        <li><strong>Saylor CS301</strong> &mdash; log in at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 1: Introduction to Computer Theory</strong> for performance, <strong>Unit 5: Designing a Processor</strong> for pipelining, and <strong>Unit 2: Instructions &mdash; Hardware Language</strong> for assemblers and linkers.</li>
+      </ul>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 15, Orientation
+  </footer>
+</body>
+</html>

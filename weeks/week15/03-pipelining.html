@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w15-03">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 15: Pipelining, and Why It Is Hard</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .w-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-md); }
+    @media (max-width: 760px) { .w-grid { grid-template-columns: 1fr; } }
+    .w-panel { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-surface); min-width: 0; margin-top: var(--space-sm); }
+    .w-panel h3 { margin: 0 0 var(--space-xs); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .btn-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: var(--space-xs) 0; }
+    .vals { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 4px; }
+    .val { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); background: var(--color-surface); overflow-wrap: anywhere; }
+    .val b { font-family: var(--font-sans); color: var(--color-primary); display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+    .val--big { font-size: var(--fs-base); font-weight: 700; border-color: var(--color-primary); }
+    .w-status { font-size: var(--fs-sm); min-height: 1.5em; margin: var(--space-xs) 0; }
+    .mono { font-family: var(--font-mono); }
+    .eqn { font-family: var(--font-mono); background: var(--color-code-bg); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); overflow-x: auto; white-space: pre; font-size: var(--fs-sm); }
+    .alg { font-family: var(--font-mono); background: var(--color-code-bg); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); overflow-x: auto; white-space: pre; font-size: var(--fs-sm); }
+    .gen-table td, .gen-table th { font-size: var(--fs-sm); }
+    .gen-table td.num, .gen-table th.num { text-align: right; font-family: var(--font-mono); }
+    .gen-table td.mono { white-space: nowrap; }
+    .field { display: inline-flex; flex-direction: column; gap: 2px; font-size: var(--fs-sm); margin: 2px 8px 2px 0; }
+    .field input, .field select { font-family: var(--font-mono); font-size: var(--fs-sm); padding: 3px 6px; border: 1px solid var(--color-border); border-radius: 4px; min-width: 0; }
+    .tgl[aria-pressed="true"] { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .pipe { border-collapse: collapse; font-size: var(--fs-sm); }
+    .pipe th, .pipe td { border: 1px solid var(--color-border); padding: 2px 4px; text-align: center; min-width: 1.9rem; }
+    .pipe th { background: var(--color-code-bg); font-weight: 700; }
+    .pipe td.nm { text-align: left; font-family: var(--font-mono); white-space: nowrap; min-width: 12rem; }
+    .pipe td.st { font-weight: 700; color: #fff; }
+    .pipe td.sF { background: #5b7fa6; } .pipe td.sD { background: #3f6a3f; } .pipe td.sX { background: #b45309; } .pipe td.sW { background: #6b4c9a; }
+    .pipe td.stall { background: repeating-linear-gradient(45deg, #fde68a, #fde68a 4px, #fff7d6 4px, #fff7d6 8px); color: #7c2d12; }
+    .pipe tr.squashed td.nm { text-decoration: line-through; color: var(--color-text-muted); }
+    .pipe tr.squashed td.st { background: #c9ced6; color: #555; text-decoration: line-through; }
+    .legend { display: flex; flex-wrap: wrap; gap: var(--space-md); font-size: var(--fs-xs); color: var(--color-text-muted); margin-top: 6px; }
+    .legend i { display: inline-block; width: 12px; height: 12px; vertical-align: -2px; margin-right: 4px; border: 1px solid var(--color-border); }
+
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 15 &rsaquo; <span>Page 3 — Pipelining</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>Pipelining, and Why It Is Hard</h1>
+    <p><strong>Sections 15.9 – 15.12</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~45 minutes</p>
+
+    <section id="sec-15-9">
+      <h2>15.9 &nbsp; Overlap</h2>
+      <p>Your CPU finishes one instruction completely before it starts the next. While it is executing an ADD, the hardware that fetched that ADD is doing nothing, and while it fetches, the ALU is doing nothing. Page 2 ended with the question of how a processor can do more work in each cycle. The main answer is to keep every part busy all the time, on different instructions.</p>
+      <p>Split the work of an instruction into <em>k</em> <strong>stages</strong>, each done by its own hardware, with a register between one stage and the next to hold what it has produced. A generic four-stage design:</p>
+      <div class="table-scroll"><table class="gen-table"><thead><tr><th>Stage</th><th>Does</th></tr></thead><tbody>
+        <tr><td><strong>F</strong> &mdash; Fetch</td><td>reads the instruction at the PC from memory, adds to the PC</td></tr>
+        <tr><td><strong>D</strong> &mdash; Decode</td><td>decodes it and reads its registers</td></tr>
+        <tr><td><strong>X</strong> &mdash; Execute</td><td>the ALU computes the result (or the address, or the branch decision)</td></tr>
+        <tr><td><strong>W</strong> &mdash; Write back</td><td>writes the result to a register</td></tr>
+      </tbody></table></div>
+      <p>Each cycle, every instruction in the pipeline moves on one stage, and a new one enters at F. One instruction still takes four cycles from start to finish: its <strong>latency</strong> is unchanged. But once the pipeline is full, one instruction <em>finishes</em> every cycle: the <strong>throughput</strong> is four times higher. <em>n</em> instructions take</p>
+      <div class="eqn">one at a time:   k &times; n  cycles
+pipelined:       k + n &minus; 1  cycles   (k to fill, then one per cycle)</div>
+      <p>For a long program the CPI gets close to <strong>1</strong>, whatever <em>k</em> is, and each stage does less, so the clock can be faster too. That is how pipelining pulls two levers at once.</p>
+      <details class="aside-optional">
+        <summary>An analogy: the laundry</summary>
+        <p class="aside-optional__skip">This assumes you have done laundry with a separate washer and dryer. Skip it if not: nothing above or below depends on it.</p>
+        <p>Four loads, each needing the washer, then the dryer, then folding. Done one load at a time, the washer sits idle while the first load dries. Start the second load washing the moment the first moves to the dryer, and all three stations work at once: each load takes as long as before, but the last load is folded much sooner.</p>
+        <div class="aside-optional__breaks">
+          <div class="aside-optional__breaks-title">Where the analogy breaks</div>
+          <dl>
+            <dt>Loads do not depend on each other</dt>
+            <dd>Instructions do. If the second instruction needs the first one&rsquo;s result, it cannot start its work on time (15.11). No load of laundry needs another load to be dry first.</dd>
+            <dt>You always know the next load</dt>
+            <dd>A processor does not, after a branch: it has to fetch the next instruction before it knows which one comes next (15.12).</dd>
+            <dt>The stations are equal</dt>
+            <dd>Pipeline stages rarely are, and the clock has to suit the slowest stage.</dd>
+          </dl>
+        </div>
+      </details>
+    </section>
+
+    <section id="sec-15-10">
+      <h2>15.10 &nbsp; Why your CPU cannot do this</h2>
+      <p>Every one of your CPU&rsquo;s six steps is a transfer over the one bus. To fetch the next instruction while executing this one, the PC would have to drive the bus in the same step as a register does: two values on one wire. Week 5 taught what that is. When two instructions need the same piece of hardware at the same time it is a <strong>structural hazard</strong>, and the single bus makes every pair of steps one.</p>
+      <p>Pipelined processors remove it by giving every stage its own hardware: separate paths instead of one bus, a register file that can read two registers and write one in the same cycle, and separate places to fetch instructions and data from. That is a large part of their cost. Your CPU&rsquo;s single bus is the simplification that made it something you could build and debug in a semester (Week 10), and this is what it gives up.</p>
+    </section>
+
+    <section id="sec-15-11">
+      <h2>15.11 &nbsp; Data hazards</h2>
+      <p>Even with all that separate hardware, overlap breaks down when one instruction needs another&rsquo;s result:</p>
+      <div class="alg">add $t0, $t1, $t2      # writes $t0 in W
+sub $t3, $t0, $t4      # reads $t0 in D</div>
+      <p>One at a time this is no problem. In a pipeline, <code>sub</code> reaches D, where it reads its registers, one cycle behind <code>add</code>, before <code>add</code> has reached W. If it read <code>$t0</code> then, it would get the old value. So it has to wait in D until <code>add</code> writes. (This design writes registers early in a cycle and reads them late, so a value written in W can be read in D in that same cycle.) The wasted cycle is a <strong>stall</strong>, also called a bubble, and everything behind <code>sub</code> waits too. This is a <strong>data hazard</strong>.</p>
+      <p>Look at the shape of it: the result of one step is needed by the next, and the next cannot start until it arrives. It is Week 6&rsquo;s ripple carry, one level up, between instructions instead of between bits. Week 16 shows how processors avoid most of these stalls by passing a result straight from the ALU to the next instruction instead of waiting for it to be written.</p>
+    </section>
+
+    <!-- ========== Widget 3 ========== -->
+    <section id="sec-chart">
+      <div class="widget-card" id="w-pipe">
+        <div class="widget-card__title">Pipeline Chart</div>
+        <div class="widget-card__subtitle">Each row is an instruction; each column is a clock cycle. Choose a program, then compare one-at-a-time with pipelined.</div>
+        <div class="btn-row" role="group" aria-label="Program">
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small tgl" data-prog="independent" aria-pressed="true">Six independent instructions</button>
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small tgl" data-prog="data" aria-pressed="false">A data hazard</button>
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small tgl" data-prog="branch" aria-pressed="false">A taken branch</button>
+        </div>
+        <div class="btn-row" role="group" aria-label="Mode">
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small tgl" data-mode="sequential" aria-pressed="false">One at a time</button>
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small tgl" data-mode="pipelined" aria-pressed="true">Pipelined</button>
+        </div>
+        <div class="table-scroll" id="pp-wrap"></div>
+        <div class="legend"><span><i style="background:#5b7fa6"></i>F fetch</span><span><i style="background:#3f6a3f"></i>D decode</span><span><i style="background:#b45309"></i>X execute</span><span><i style="background:#6b4c9a"></i>W write back</span><span><i style="background:#fde68a"></i>stalled</span><span><i style="background:#c9ced6"></i>thrown away</span></div>
+        <div class="vals" style="margin-top:8px" id="pp-out"></div>
+        <p class="w-status" id="pp-status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section id="sec-15-12">
+      <h2>15.12 &nbsp; Control hazards</h2>
+      <p>A branch is the other dependency: which instruction comes next depends on the branch&rsquo;s result. In the four-stage pipeline the branch decides in X, but by then F has already fetched the two instructions after it, assuming the program would carry straight on. If the branch is taken they are the wrong instructions: they are thrown away before they write anything, fetching restarts at the target, and those cycles are lost. This is a <strong>control hazard</strong>, and the third program in the chart shows it.</p>
+      <p>Your CPU has the same question, in its own form: a J<em>caez</em> only knows at step 6 whether it is taken. In <code>MYSIM.txt</code> the JC is taken 3 times out of 16. A pipeline that simply guessed &ldquo;not taken&rdquo; every time would be right 13 times in 16 and pay only for the other three. Guessing well is called <strong>branch prediction</strong>, and it is one of the things Week 16 covers.</p>
+      <div class="callout callout--aha">
+        <div class="callout__title">Week 6&rsquo;s promise, kept</div>
+        <p>Carry-lookahead breaks the dependency between the bits of a sum. Pipelining breaks the dependency of one instruction <em>waiting for the previous one to finish</em>. Stalls, forwarding and branch prediction are how a pipeline copes with the dependencies it cannot break. Every technique on these two pages is an attempt to break a dependency, or to work around one it cannot break.</p>
+      </div>
+
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Four questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+
+      <p>For this in a second voice, log into your Saylor CS301 account at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 5: Designing a Processor</strong>. Its pipelining section uses MIPS&rsquo;s five stages, which Week 16 covers.</p>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>You can draw a pipeline, count its cycles, and name the two hazards that stop it running at one instruction per cycle. Week 16 builds on this with MIPS&rsquo;s own five-stage pipeline and how real processors handle each hazard. Next page: the tools that turn the text you write into the bytes a CPU runs.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 15, Page 3
+  </footer>
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ["perf"];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.perf) { return; }
+    var P = L.perf;
+
+    function h2(v) { return v === null || v === undefined ? 'EE' : ('0' + (v & 255).toString(16).toUpperCase()).slice(-2); }
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+    function fmt(x, d) { return Number(x).toFixed(d === undefined ? 2 : d); }
+    function sec(t) {
+      if (!isFinite(t)) { return '\u221e'; }
+      if (t >= 1) { return fmt(t, t >= 100 ? 0 : 3) + ' s'; }
+      if (t >= 1e-3) { return fmt(t * 1e3, 3) + ' ms'; }
+      if (t >= 1e-6) { return fmt(t * 1e6, 3) + ' \u00b5s'; }
+      return fmt(t * 1e9, 3) + ' ns';
+    }
+
+    /* ---------- Widget 3 -- Pipeline Chart ---------- */
+    (function () {
+      var host = document.getElementById('w-pipe'); if (!host) { return; }
+      function $(id) { return document.getElementById(id); }
+      var prog = 'independent', mode = 'pipelined';
+      function card(label, v, big) { return '<div class="val' + (big ? ' val--big' : '') + '"><b>' + label + '</b>' + v + '</div>'; }
+      function paint() {
+        host.querySelectorAll('[data-prog]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.prog === prog ? 'true' : 'false'); });
+        host.querySelectorAll('[data-mode]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.mode === mode ? 'true' : 'false'); });
+        var list = P.PIPE_PROGRAMS[prog], r = P.pipeline(list, mode), seq = P.pipeline(list, 'sequential'), pip = P.pipeline(list, 'pipelined');
+        var maxC = r.cycles, c, html = '<table class="pipe"><caption class="sr-only">Pipeline chart: instructions by clock cycle</caption><thead><tr><th scope="col">Instruction</th>';
+        for (c = 1; c <= maxC; c++) { html += '<th scope="col">' + c + '</th>'; }
+        html += '</tr></thead><tbody>';
+        r.rows.forEach(function (row) {
+          html += '<tr' + (row.squashed ? ' class="squashed"' : '') + '><td class="nm">' + esc(row.name) + '</td>';
+          for (c = 1; c <= maxC; c++) {
+            var s = row.cells[c];
+            if (!s) { html += '<td></td>'; continue; }
+            var stalled = c > 1 && row.cells[c - 1] === s;
+            html += '<td class="st s' + s + (stalled ? ' stall' : '') + '" title="' + P.STAGE_NAMES[P.STAGES.indexOf(s)] + (stalled ? ', stalled' : '') + '">' + s + '</td>';
+          }
+          html += '</tr>';
+        });
+        html += '</tbody></table>';
+        $('pp-wrap').innerHTML = html;
+        var stalls = 0, squashed = 0;
+        r.rows.forEach(function (row) { stalls += row.stalls; if (row.squashed) { squashed++; } });
+        $('pp-out').innerHTML = card('Instructions completed', r.n) + card('Cycles', r.cycles, true) + card('CPI', fmt(r.cycles / r.n, 2)) +
+          card('One at a time', seq.cycles + ' cycles') + card('Ideal pipelined', (4 + r.n - 1) + ' cycles') + card('Speedup over one at a time', fmt(seq.cycles / pip.cycles, 2) + '\u00d7');
+        var msg = mode === 'sequential' ? 'One at a time: ' + r.n + ' instructions \u00d7 4 stages = ' + r.cycles + ' cycles, CPI 4.' :
+          prog === 'independent' ? 'Pipelined, no hazards: 4 + ' + r.n + ' \u2212 1 = ' + r.cycles + ' cycles.' :
+          prog === 'data' ? 'sub waits ' + stalls + ' cycle in D for add\u2019s write-back; the instructions behind it wait too. ' + r.cycles + ' cycles instead of ' + (4 + r.n - 1) + '.' :
+          'The branch decides in X (cycle ' + r.rows[2].start[2] + '). The ' + squashed + ' instructions fetched behind it are thrown away and fetching restarts at the target: ' + r.cycles + ' cycles instead of ' + (4 + r.n - 1) + '.';
+        $('pp-status').textContent = msg;
+      }
+      host.addEventListener('click', function (e) {
+        var b = e.target.closest('button'); if (!b) { return; }
+        if (b.dataset.prog) { prog = b.dataset.prog; }
+        if (b.dataset.mode) { mode = b.dataset.mode; }
+        paint();
+      });
+      paint();
+    }());
+
+    /* ---------- Self-check ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+  {
+    "q": "A four-stage pipeline runs 10 instructions with no hazards. How many cycles from the first fetch to the last write-back?",
+    "opts": [
+      "13",
+      "40",
+      "10",
+      "14"
+    ],
+    "correct": 0,
+    "why": "k + n &minus; 1 = 4 + 10 &minus; 1 = 13. The first instruction takes 4 cycles; each of the other nine finishes one cycle after the one before. One at a time it would be 40."
+  },
+  {
+    "q": "<code>add $t0, $t1, $t2</code> is followed immediately by <code>or $t3, $t0, $t4</code>. What kind of hazard is this?",
+    "opts": [
+      "A data hazard: <code>or</code> needs <code>$t0</code> before <code>add</code> has written it",
+      "A control hazard",
+      "No hazard: they use different instructions",
+      "A structural hazard"
+    ],
+    "correct": 0,
+    "why": "The second instruction reads a register the first one writes. In a pipeline the second reaches its register read before the first reaches its write-back, so it must wait."
+  },
+  {
+    "q": "Why can your CPU not overlap fetching the next instruction with executing this one?",
+    "opts": [
+      "Both need the single bus in every step, and the bus can carry one value at a time",
+      "The control unit has no step 7",
+      "The RAM has only 32 bytes",
+      "The ALU cannot add and compare at once"
+    ],
+    "correct": 0,
+    "why": "Every one of the six steps is a bus transfer. Overlapping would need two transfers in one step, and one bus cannot carry two values: a structural hazard. A pipelined processor gives each stage its own paths."
+  },
+  {
+    "q": "In a pipeline, a branch is taken. What happens to the instructions fetched after it before the branch was decided?",
+    "opts": [
+      "They are thrown away, and fetching restarts at the branch target",
+      "They finish anyway",
+      "They wait until the branch is decided, then continue",
+      "The branch is undone"
+    ],
+    "correct": 0,
+    "why": "They were fetched on the guess that the program would carry straight on. Once the branch is known to be taken they are the wrong instructions, so they are discarded before they write anything, and those cycles are lost."
+  }
+];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p><div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi], okAns = (oi === item.correct), fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) { el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false'); });
+      }
+      host.addEventListener('click', function (e) { var t = e.target.closest('.quiz-option'); if (t) { answer(+t.dataset.q, +t.dataset.o); } });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+
+  })();
+  </script>
+</body>
+</html>

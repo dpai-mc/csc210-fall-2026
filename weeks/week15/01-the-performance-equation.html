@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w15-01">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 15: The Performance Equation</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .w-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-md); }
+    @media (max-width: 760px) { .w-grid { grid-template-columns: 1fr; } }
+    .w-panel { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-surface); min-width: 0; margin-top: var(--space-sm); }
+    .w-panel h3 { margin: 0 0 var(--space-xs); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .btn-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: var(--space-xs) 0; }
+    .vals { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 4px; }
+    .val { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); background: var(--color-surface); overflow-wrap: anywhere; }
+    .val b { font-family: var(--font-sans); color: var(--color-primary); display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+    .val--big { font-size: var(--fs-base); font-weight: 700; border-color: var(--color-primary); }
+    .w-status { font-size: var(--fs-sm); min-height: 1.5em; margin: var(--space-xs) 0; }
+    .mono { font-family: var(--font-mono); }
+    .eqn { font-family: var(--font-mono); background: var(--color-code-bg); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); overflow-x: auto; white-space: pre; font-size: var(--fs-sm); }
+    .alg { font-family: var(--font-mono); background: var(--color-code-bg); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); overflow-x: auto; white-space: pre; font-size: var(--fs-sm); }
+    .gen-table td, .gen-table th { font-size: var(--fs-sm); }
+    .gen-table td.num, .gen-table th.num { text-align: right; font-family: var(--font-mono); }
+    .gen-table td.mono { white-space: nowrap; }
+    .field { display: inline-flex; flex-direction: column; gap: 2px; font-size: var(--fs-sm); margin: 2px 8px 2px 0; }
+    .field input, .field select { font-family: var(--font-mono); font-size: var(--fs-sm); padding: 3px 6px; border: 1px solid var(--color-border); border-radius: 4px; min-width: 0; }
+    .tgl[aria-pressed="true"] { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .bar { display: flex; height: 1.6rem; border-radius: 4px; overflow: hidden; border: 1px solid var(--color-border); margin: 4px 0; }
+    .bar > span { display: block; height: 100%; }
+    .bar .b-work { background: var(--color-primary); }
+    .bar .b-idle { background: repeating-linear-gradient(45deg, #e8edf3, #e8edf3 4px, #fff 4px, #fff 8px); }
+    .bar .b-fetch { background: var(--color-accent); }
+    .legend { display: flex; flex-wrap: wrap; gap: var(--space-md); font-size: var(--fs-xs); color: var(--color-text-muted); }
+    .legend i { display: inline-block; width: 12px; height: 12px; vertical-align: -2px; margin-right: 4px; border: 1px solid var(--color-border); }
+    .mode-tabs { display: flex; gap: 6px; margin-bottom: var(--space-sm); flex-wrap: wrap; }
+
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 15 &rsaquo; <span>Page 1 — The Performance Equation</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>The Performance Equation</h1>
+    <p><strong>Sections 15.1 – 15.4</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~45 minutes</p>
+
+    <section id="sec-15-1">
+      <h2>15.1 &nbsp; Three numbers</h2>
+      <p>Your CPU runs <code>MYSIM.txt</code> and stops with 25 in R2. A laptop would multiply 5 by 5 so fast that you could not measure it with a stopwatch. To say <em>how much</em> faster, and <em>why</em>, you need a way to turn &ldquo;fast&rdquo; into a number. It takes three:</p>
+      <ul>
+        <li><strong>Instruction count (IC)</strong> &mdash; how many instructions the program executes. Not how many it contains: a loop body that runs eight times counts eight times.</li>
+        <li><strong>Cycles per instruction (CPI)</strong> &mdash; how many clock cycles one instruction takes, on average.</li>
+        <li><strong>Clock period (T)</strong> &mdash; how long one cycle lasts. Its reciprocal is the <strong>clock rate</strong>: a 1 GHz clock has a period of 1 ns.</li>
+      </ul>
+      <div class="eqn">Time = Instruction count &times; CPI &times; Clock period
+
+seconds   = instructions  &times; cycles/instruction &times; seconds/cycle</div>
+      <p>It is a product because instructions run one after another, each one taking CPI cycles, and each cycle taking T seconds. The units cancel to seconds, which is a good check that nothing is missing.</p>
+      <p>Week 9&rsquo;s multi-cycle MIPS ran its trace program in <strong>19 instructions and 76 cycles</strong>. If its clock ran at 1 GHz, the program took 19 &times; 4.0 &times; 1 ns = <strong>76 ns</strong>. The equation does not care what the machine is, only these three numbers.</p>
+    </section>
+
+    <section id="sec-15-2">
+      <h2>15.2 &nbsp; CPI is an average</h2>
+      <p>Week 9&rsquo;s machine does not take the same number of cycles for every instruction: a load uses memory twice and takes five, a branch takes three. So its CPI depends on the <strong>mix</strong> of instructions the program runs. Here is the trace program&rsquo;s mix, counted by running it on the same model Week 9 used:</p>
+      <div class="table-scroll"><table class="gen-table"><thead><tr><th>Class</th><th class="num">Executed</th><th class="num">Cycles each</th><th class="num">Cycles</th></tr></thead><tbody id="mips-mix"></tbody></table></div>
+      <p>76 cycles over 19 instructions is a CPI of exactly <strong>4.0</strong>, the number Week 9&rsquo;s stepper reported. Change the program and the average changes: a loop full of loads has a higher CPI than a loop full of adds on the same machine. And anything that makes one class slower, such as Week 12&rsquo;s wait states on a slow memory, raises the average by however often that class runs.</p>
+    </section>
+
+    <section id="sec-15-3">
+      <h2>15.3 &nbsp; Your CPU</h2>
+      <p>On your CPU, call one <strong>step</strong> one cycle. Every instruction is six steps (three to fetch, three to execute), whatever the instruction does. So your CPU&rsquo;s CPI is <strong>6</strong>, for every program, and the mix does not matter. One step is four ticks of the clock (the four quarters, Week 11), which is where the 24 clicks per instruction came from.</p>
+      <p><code>MYSIM.txt</code> executes <strong>77 instructions</strong> before END (Week 14 counted them the same way). That is 77 &times; 6 = <strong>462 steps</strong>, or 1,848 ticks. Logisim 2.7.1&rsquo;s fastest <em>Tick Frequency</em> setting is 4.1 KHz, which is 4,096 ticks a second, so one step lasts 4 / 4,096 s, about a millisecond:</p>
+      <div class="eqn">Time = 77 &times; 6 &times; (4 / 4096 s) = 0.451 s</div>
+      <p>Your CPU multiplies 5 &times; 5 in under half a second, as long as Logisim can actually simulate your circuit that fast. A large circuit may not keep up with the setting, and how fast it really runs depends on the computer running Logisim. That is a description, not a diagnosis.</p>
+      <h3>Where the steps go</h3>
+      <p>CPI = 6 hides something. Not every instruction <em>needs</em> its six steps; some finish their work early and wait. The table counts, for each kind of instruction <code>MYSIM.txt</code> runs, how many of the six steps do any work (the rest are idle) &mdash; read from your control table, the same one Week 14 wired:</p>
+      <div class="table-scroll"><table class="gen-table"><thead><tr><th>Kind</th><th class="num">Executed</th><th class="num">Steps that work</th><th class="num">Idle steps</th><th class="num">Steps spent</th></tr></thead><tbody id="mysim-classes"></tbody></table></div>
+      <p>CLF does all its work in step 4. JMP is done at step 5. A conditional jump that is not taken is done at step 5 too, because step 6 is the one that would have written the PC. Add up only the steps that work and <code>MYSIM.txt</code> needs <strong>400</strong> steps, not 462: a CPI of about <strong>5.19</strong>, roughly 13% faster.</p>
+      <div class="callout callout--note">
+        <div class="callout__title">You do not build this</div>
+        <p>Getting those 62 steps back needs a stepper that resets early, after each kind of instruction&rsquo;s last working step: more terms on the stepper&rsquo;s reset, decided by the control unit. Week 9&rsquo;s MIPS machine is built that way, which is why its instructions took 3, 4 or 5 cycles. Your CPU always runs all six because a fixed count keeps the stepper simple, and simple is what a CPU you build and debug in a semester needs (Week 11). It is a design choice with a measurable price, and now you have measured it.</p>
+      </div>
+    </section>
+
+    <!-- ========== Widget 1 ========== -->
+    <section id="sec-calc">
+      <div class="widget-card" id="w-perf">
+        <div class="widget-card__title">Performance Calculator</div>
+        <div class="widget-card__subtitle">Time a program on your CPU, or put any machine&rsquo;s three numbers into the equation.</div>
+        <div class="mode-tabs" role="group" aria-label="Calculator mode">
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small tgl" data-mode="cpu" aria-pressed="true">Your CPU</button>
+          <button type="button" class="widget-btn widget-btn--outline widget-btn--small tgl" data-mode="any" aria-pressed="false">Any machine</button>
+        </div>
+        <div id="pc-cpu">
+          <div class="btn-row">
+            <label class="field">Program
+              <select id="pc-prog">
+                <option value="mysim">MYSIM.txt (5 &times; 5)</option>
+                <option value="a">Week 14 Test A (memory)</option>
+                <option value="b">Week 14 Test B (jumps)</option>
+                <option value="c">Week 14 Test C (flags, carry-in)</option>
+                <option value="loop">Week 14 sum loop (5 + 4 + 3 + 2 + 1)</option>
+              </select></label>
+            <label class="field">Tick Frequency
+              <select id="pc-rate"></select></label>
+          </div>
+          <div class="vals" aria-live="polite" id="pc-out"></div>
+          <div class="w-panel">
+            <h3>Every instruction&rsquo;s six steps</h3>
+            <div class="bar" id="pc-bar" role="img" aria-label=""></div>
+            <div class="legend"><span><i style="background:var(--color-accent)"></i>fetch (steps 1&ndash;3)</span><span><i style="background:var(--color-primary)"></i>execute steps that work</span><span><i style="background:repeating-linear-gradient(45deg,#e8edf3,#e8edf3 4px,#fff 4px,#fff 8px)"></i>idle steps</span></div>
+          </div>
+        </div>
+        <div id="pc-any" hidden>
+          <div class="btn-row">
+            <label class="field">Instructions executed <input id="pa-ic" value="19" size="12" inputmode="decimal"></label>
+            <label class="field">CPI <input id="pa-cpi" value="4" size="6" inputmode="decimal"></label>
+            <label class="field">Clock rate <input id="pa-rate" value="1" size="8" inputmode="decimal"></label>
+            <label class="field">unit <select id="pa-unit"><option value="1">Hz</option><option value="1e3">KHz</option><option value="1e6">MHz</option><option value="1e9" selected>GHz</option></select></label>
+          </div>
+          <div class="btn-row">
+            <button type="button" class="widget-btn widget-btn--outline widget-btn--small" data-preset="w9">Week 9 trace</button>
+            <button type="button" class="widget-btn widget-btn--outline widget-btn--small" data-preset="mysim">MYSIM on your CPU</button>
+            <button type="button" class="widget-btn widget-btn--outline widget-btn--small" data-preset="core">A 3 GHz core, CPI 0.5, a billion instructions</button>
+          </div>
+          <div class="vals" aria-live="polite" id="pa-out"></div>
+        </div>
+        <p class="w-status" id="pc-status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section id="sec-15-4">
+      <h2>15.4 &nbsp; Three levers</h2>
+      <p>Each term of the equation is something you can change, and each belongs to a different part of the design:</p>
+      <div class="table-scroll"><table class="gen-table"><thead><tr><th>Lever</th><th>Who pulls it</th><th>On your CPU</th></tr></thead><tbody>
+        <tr><td>Fewer instructions</td><td>The programmer, the compiler, the instruction set</td><td>A better algorithm; an instruction that does more</td></tr>
+        <tr><td>Fewer cycles per instruction</td><td>The control unit</td><td>The early-reset stepper in 15.3</td></tr>
+        <tr><td>A shorter cycle</td><td>The circuit</td><td>Page 2</td></tr>
+      </tbody></table></div>
+      <h3>The instruction set: 18 CLFs</h3>
+      <p>Of <code>MYSIM.txt</code>&rsquo;s 77 instructions, <strong>18 are CLF</strong>. They are there because your ADD and shifts take CTMP&rsquo;s carry in (Week 14), so the program has to clear a stale carry before each one. An instruction set with an ADD that ignored the carry would not need them: <span id="clf-line">59 instructions, 354 steps, 1.30 &times; faster</span>, with no change to the clock or the control unit. That is the trade every instruction-set designer makes: carry-in makes multi-byte arithmetic possible, and it costs every program that does not need it.</p>
+      <h3>The algorithm: two ways to multiply</h3>
+      <p><code>MYSIM.txt</code> multiplies by shift-and-add: eight passes, one per bit of the multiplier, whatever the numbers are. The obvious alternative is repeated addition: add the multiplicand to a total, multiplier times. Both run on your CPU; here is what each costs, measured by running them:</p>
+      <div class="table-scroll"><table class="gen-table"><thead><tr><th>Multiply</th><th class="num">Shift-and-add</th><th class="num">Repeated addition</th></tr></thead><tbody id="mul-table"></tbody></table></div>
+      <p>For 5 &times; 5, repeated addition wins: 33 instructions against 77. Shift-and-add&rsquo;s cost hardly moves (76 to 79 instructions, depending on how many 1 bits the multiplier has), while repeated addition&rsquo;s grows by six instructions for every 1 added to the multiplier. At 12 &times; 15 they are nearly even, and from 13 on repeated addition loses. Fewer instructions is not a property of an algorithm alone; it depends on the inputs it will see. On a 32-bit machine, where the multiplier can be in the billions, shift-and-add wins by so much that it is what multiplier hardware does.</p>
+      <p>The clock is the third lever, and it is the subject of the next page. How far all three can go: a laptop core today runs at a few GHz, and completes several instructions in a single cycle, a CPI below 1. Page 3 starts to show how a CPI below your CPU&rsquo;s 6, and below 1, is possible at all.</p>
+
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Four questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+
+      <p>For this in a second voice, log into your Saylor CS301 account at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a> and open <strong>Unit 1: Introduction to Computer Theory</strong>. CS301 uses the same equation, from Patterson and Hennessy.</p>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>You can time any program on any machine from three numbers, and say which part of the design each number belongs to. Next page: what sets the clock, and why speeding up one part of a program has a limit.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 15, Page 1
+  </footer>
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ["perf", "fin", "core", "cycle"];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.perf || !L.fin) { return; }
+    var P = L.perf, C = L.core, F = L.fin;
+
+    function h2(v) { return v === null || v === undefined ? 'EE' : ('0' + (v & 255).toString(16).toUpperCase()).slice(-2); }
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+    function fmt(x, d) { return Number(x).toFixed(d === undefined ? 2 : d); }
+    function sec(t) {
+      if (!isFinite(t)) { return '\u221e'; }
+      if (t >= 1) { return fmt(t, t >= 100 ? 0 : 3) + ' s'; }
+      if (t >= 1e-3) { return fmt(t * 1e3, 3) + ' ms'; }
+      if (t >= 1e-6) { return fmt(t * 1e6, 3) + ' \u00b5s'; }
+      return fmt(t * 1e9, 3) + ' ns';
+    }
+
+    var PROGS = {
+      a: ['DATA R0, 0x1E', 'DATA R1, 0x5A', 'ST R0, R1', 'LD R0, R2', 'END'],
+      b: ['DATA R3, 0x07', 'JMPR R3', 'DATA R0, 0xAA', 'END', 'END', 'JMP 0x0B', 'DATA R0, 0xBB', 'DATA R1, 0x01', 'END'],
+      c: ['CLF', 'DATA R0, 0xFF', 'DATA R1, 0x01', 'ADD R0, R1', 'JC 0x0A', 'DATA R2, 0xEE', 'ADD R2, R3', 'JZ 0x0F', 'DATA R2, 0x22', 'END'],
+      loop: ['DATA R0, 0x05', 'DATA R1, 0x00', 'DATA R3, 0xFF', 'CLF', 'ADD R0, R1', 'CLF', 'ADD R3, R0', 'JZ 0x0E', 'JMP 0x06', 'END']
+    };
+    var cache = {};
+    function measure(k) {
+      if (!cache[k]) { cache[k] = P.measure(k === 'mysim' ? C.MYSIM.slice() : F.assemble(PROGS[k]).bytes); }
+      return cache[k];
+    }
+    var KIND = { 'ALU': 'ALU (ADD, SHR, SHL, XOR, &hellip;)', 'CMP': 'CMP', 'CLF': 'CLF', 'DATA': 'DATA', 'LD': 'LD', 'ST': 'ST',
+                 'JMPR': 'JMPR', 'JMP': 'JMP', 'JIF taken': 'J<em>caez</em>, taken', 'JIF not taken': 'J<em>caez</em>, not taken' };
+    function mnem(c) { return Object.keys(c.mnemonics).map(function (m) { return m + ' ' + c.mnemonics[m]; }).join(', '); }
+
+    /* 15.2 -- Week 9's mix, from the cycle machine */
+    (function () {
+      var tb = document.getElementById('mips-mix'); if (!tb) { return; }
+      var m = P.mipsMix(), names = { R: 'R-type (add)', addi: 'addi', lw: 'lw', sw: 'sw', bne: 'bne', beq: 'beq', j: 'j' };
+      tb.innerHTML = m.mix.map(function (r) {
+        return '<tr><td><code>' + names[r.cls] + '</code></td><td class="num">' + r.count + '</td><td class="num">' + r.cycles + '</td><td class="num">' + (r.count * r.cycles) + '</td></tr>';
+      }).join('') + '<tr><td><strong>Total</strong></td><td class="num"><strong>' + m.instructions + '</strong></td><td class="num">CPI ' + fmt(m.cpi, 1) + '</td><td class="num"><strong>' + m.cycles + '</strong></td></tr>';
+    }());
+
+    /* 15.3 -- where MYSIM's steps go */
+    (function () {
+      var tb = document.getElementById('mysim-classes'); if (!tb) { return; }
+      var s = measure('mysim');
+      tb.innerHTML = s.classes.map(function (c) {
+        return '<tr><td>' + KIND[c.cls] + (c.cls === 'ALU' ? '<br><small>' + mnem(c) + '</small>' : '') + '</td><td class="num">' + c.count + '</td><td class="num">' + c.workSteps + ' of 6</td><td class="num">' + c.idle + '</td><td class="num">' + (c.count * 6) + '</td></tr>';
+      }).join('') + '<tr><td><strong>Total</strong></td><td class="num"><strong>' + s.ic + '</strong></td><td class="num">' + s.variableSteps + ' working</td><td class="num">' + (s.fixedSteps - s.variableSteps) + '</td><td class="num"><strong>' + s.fixedSteps + '</strong></td></tr>';
+    }());
+
+    /* 15.4 -- CLF line and the multiplication table, measured */
+    (function () {
+      var s = measure('mysim'), clf = 0;
+      s.classes.forEach(function (c) { if (c.cls === 'CLF') { clf = c.count; } });
+      var ic = s.ic - clf, el = document.getElementById('clf-line');
+      if (el) { el.textContent = ic + ' instructions, ' + (ic * 6) + ' steps, ' + fmt(s.fixedSteps / (ic * 6), 2) + ' \u00d7 faster'; }
+      var tb = document.getElementById('mul-table'); if (!tb) { return; }
+      tb.innerHTML = [[5, 5], [3, 15], [8, 15], [12, 15], [13, 15], [15, 15]].map(function (p) {
+        var sh = P.mulCost(p[0], p[1], 'shift'), ad = P.mulCost(p[0], p[1], 'add');
+        return '<tr><td>' + p[0] + ' &times; ' + p[1] + ' = ' + sh.product + '</td><td class="num">' + sh.ic + ' instructions</td><td class="num">' + ad.ic + ' instructions</td></tr>';
+      }).join('');
+    }());
+
+    /* ---------- Widget 1 -- Performance Calculator ---------- */
+    (function () {
+      var host = document.getElementById('w-perf'); if (!host) { return; }
+      function $(id) { return document.getElementById(id); }
+      var rate = $('pc-rate');
+      rate.innerHTML = P.TICK_RATES.map(function (r) { return '<option value="' + r.hz + '">' + r.label + ' (' + r.hz + ' ticks/s)</option>'; }).join('');
+      function card(label, v, big) { return '<div class="val' + (big ? ' val--big' : '') + '"><b>' + label + '</b>' + v + '</div>'; }
+      function paintCpu() {
+        var s = measure($('pc-prog').value), hz = +rate.value, t = P.TICKS_PER_STEP / hz;
+        $('pc-out').innerHTML = card('Instructions (IC)', s.ic) + card('CPI', '6') + card('Steps', s.fixedSteps) + card('Ticks', s.ticks) +
+          card('One step (T)', sec(t)) + card('Time', sec(P.time(s.ic, 6, t)), true) +
+          card('If idle steps were skipped', s.variableSteps + ' steps, CPI ' + fmt(s.cpiVariable, 2)) + card('&hellip; time', sec(P.time(s.ic, s.cpiVariable, t)));
+        var tot = s.fixedSteps, fetch = s.ic * 3, work = s.variableSteps - fetch, idle = s.fixedSteps - s.variableSteps;
+        var bar = $('pc-bar');
+        bar.innerHTML = '<span class="b-fetch" style="flex:' + fetch + '"></span><span class="b-work" style="flex:' + work + '"></span><span class="b-idle" style="flex:' + idle + '"></span>';
+        bar.setAttribute('aria-label', 'Of ' + tot + ' steps: ' + fetch + ' fetching, ' + work + ' executing, ' + idle + ' idle.');
+        $('pc-status').textContent = 'Of ' + tot + ' steps, ' + fetch + ' fetch (' + Math.round(100 * fetch / tot) + '%), ' + work + ' execute, ' + idle + ' are idle.' + (s.ended ? '' : ' The program did not reach END.');
+      }
+      function num(id) { var v = parseFloat($(id).value); return isNaN(v) ? null : v; }
+      function paintAny() {
+        var ic = num('pa-ic'), cpi = num('pa-cpi'), r = num('pa-rate'), u = +$('pa-unit').value;
+        if (ic === null || cpi === null || r === null || r <= 0 || ic < 0 || cpi <= 0) { $('pa-out').innerHTML = ''; $('pc-status').textContent = 'Enter three positive numbers.'; return; }
+        var hz = r * u, T = 1 / hz;
+        $('pa-out').innerHTML = card('Clock period (T)', sec(T)) + card('Cycles', (ic * cpi).toLocaleString()) + card('Time', sec(P.time(ic, cpi, T)), true);
+        $('pc-status').textContent = ic.toLocaleString() + ' \u00d7 ' + cpi + ' \u00d7 ' + sec(T) + ' = ' + sec(P.time(ic, cpi, T)) + '.';
+      }
+      var mode = 'cpu';
+      function paint() { $('pc-cpu').hidden = mode !== 'cpu'; $('pc-any').hidden = mode !== 'any'; if (mode === 'cpu') { paintCpu(); } else { paintAny(); } }
+      host.addEventListener('click', function (e) {
+        var b = e.target.closest('button'); if (!b) { return; }
+        if (b.dataset.mode) {
+          mode = b.dataset.mode;
+          host.querySelectorAll('[data-mode]').forEach(function (x) { x.setAttribute('aria-pressed', x.dataset.mode === mode ? 'true' : 'false'); });
+        }
+        if (b.dataset.preset) {
+          var p = { w9: [19, 4, 1, '1e9'], mysim: [77, 6, 1024, '1'], core: [1e9, 0.5, 3, '1e9'] }[b.dataset.preset];
+          $('pa-ic').value = p[0]; $('pa-cpi').value = p[1]; $('pa-rate').value = p[2]; $('pa-unit').value = p[3];
+        }
+        paint();
+      });
+      ['pc-prog', 'pc-rate', 'pa-unit'].forEach(function (id) { $(id).addEventListener('change', paint); });
+      ['pa-ic', 'pa-cpi', 'pa-rate'].forEach(function (id) { $(id).addEventListener('input', paint); });
+      paint();
+    }());
+
+    /* ---------- Self-check ---------- */
+    (function () {
+      var host = document.getElementById('sc-body');
+      if (!host) { return; }
+      var Q = [
+  {
+    "q": "A program executes 2,000 instructions with an average CPI of 4 on a 1 GHz clock. How long does it take?",
+    "opts": [
+      "8 &micro;s",
+      "2 &micro;s",
+      "8 ms",
+      "500 ns"
+    ],
+    "correct": 0,
+    "why": "Time = IC &times; CPI &times; T = 2,000 &times; 4 &times; 1 ns = 8,000 ns = 8 &micro;s. At 1 GHz one cycle is 1 ns."
+  },
+  {
+    "q": "Your CPU runs a program of 10 instructions (END not counted). How many steps, and how many ticks of the clock?",
+    "opts": [
+      "60 steps, 240 ticks",
+      "10 steps, 40 ticks",
+      "60 steps, 60 ticks",
+      "30 steps, 120 ticks"
+    ],
+    "correct": 0,
+    "why": "Every instruction is 6 steps, whatever it does, and every step is 4 ticks: 10 &times; 6 = 60 steps, 60 &times; 4 = 240 ticks."
+  },
+  {
+    "q": "Rewriting a multiplication as shift-and-add instead of repeated addition changes which term of the equation?",
+    "opts": [
+      "Instruction count",
+      "CPI",
+      "Clock period",
+      "None: the hardware is the same, so the time is the same"
+    ],
+    "correct": 0,
+    "why": "Same machine, same CPI, same clock: only the number of instructions executed changes. That is the software lever."
+  },
+  {
+    "q": "In Week 9's trace (19 instructions, 76 cycles; three of them <code>lw</code> at 5 cycles), suppose memory became slower and every <code>lw</code> took 6 cycles. What is the new CPI?",
+    "opts": [
+      "79 / 19 &asymp; 4.16",
+      "4.0: CPI does not depend on memory",
+      "6.0",
+      "77 / 19 &asymp; 4.05"
+    ],
+    "correct": 0,
+    "why": "Three loads, one extra cycle each: 76 + 3 = 79 cycles for the same 19 instructions. This is what Week 12's wait states do to CPI."
+  }
+];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p><div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi], okAns = (oi === item.correct), fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) { el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false'); });
+      }
+      host.addEventListener('click', function (e) { var t = e.target.closest('.quiz-option'); if (t) { answer(+t.dataset.q, +t.dataset.o); } });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+
+  })();
+  </script>
+</body>
+</html>
