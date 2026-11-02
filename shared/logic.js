@@ -1631,6 +1631,294 @@
   }
 
   /* ============================================================
+     WEEK 15 -- Performance and the toolchain (CSCLogic.perf)
+     ============================================================
+     Added 2026-11-02.
+
+     WHAT THIS MODELS. Measurement, not hardware. Nothing here is a
+     circuit a student builds:
+
+       * The performance equation, Time = IC x CPI x T, applied to the
+         course CPU and to Week 9's multi-cycle MIPS.
+       * On the course CPU a CYCLE IS ONE STEP (spec decision 5): CPI is
+         6 for every instruction, one step is 4 ticks, 24 ticks per
+         instruction as Weeks 11-14 count them.
+       * trace(bytes) runs a program on Week 14's finished CPU (fin.boot)
+         and records, for each instruction, the last of its six steps
+         that does any work (the last non-idle row of fin.datapath, with
+         the flags as they were). That is what a stepper that reset after
+         each class's last working step would cost -- analysis only, the
+         students do not build it (spec decision 7).
+       * Amdahl's Law.
+       * A generic k-stage in-order pipeline chart (spec decision 8):
+         no forwarding; the register file is written in the first half of
+         W and read in the second half of D, so a consumer's X may start
+         the cycle after its producer's W; a taken branch is resolved at
+         the end of its X, squashing what was fetched behind it.
+       * A two-pass assembler for the course CPU with labels and Week
+         13's MOV/SUB as macros.
+
+     NAMING. Every helper is perf-prefixed (the Week 6 shadowing rule).
+     ============================================================ */
+
+  var PERF_TICKS_PER_STEP = 4;
+  var PERF_TICK_RATES = [
+    { hz: 4096, label: '4.1 KHz' }, { hz: 2048, label: '2.0 KHz' }, { hz: 1024, label: '1.0 KHz' },
+    { hz: 512, label: '512 Hz' }, { hz: 256, label: '256 Hz' }, { hz: 128, label: '128 Hz' },
+    { hz: 64, label: '64 Hz' }, { hz: 32, label: '32 Hz' }, { hz: 16, label: '16 Hz' },
+    { hz: 8, label: '8 Hz' }, { hz: 4, label: '4 Hz' }, { hz: 2, label: '2 Hz' }, { hz: 1, label: '1 Hz' }
+  ];
+  var PERF_STAGES = ['F', 'D', 'X', 'W'];
+  var PERF_STAGE_NAMES = ['Fetch', 'Decode', 'Execute', 'Write back'];
+
+  function perfTime(ic, cpi, period) { return ic * cpi * period; }
+
+  function perfAmdahl(p, s) {
+    if (p < 0 || p > 1) { throw new Error('perf.amdahl: p must be 0..1'); }
+    if (s === Infinity) { return p === 1 ? Infinity : 1 / (1 - p); }
+    if (!(s > 0)) { throw new Error('perf.amdahl: s must be > 0'); }
+    return 1 / ((1 - p) + p / s);
+  }
+
+  /* The last step (4-6) of an instruction that does any work, given the
+     flags it executes with. Fetch (1-3) always works. */
+  function perfWorkSteps(ir, flags) {
+    var last = 0;
+    finDatapath(ir, flags || {}).forEach(function (r) { if (!r.idle) { last = r.step; } });
+    return last;
+  }
+
+  /* Runs a program on the finished CPU and records every instruction it
+     executes (END excluded, as Week 14 counts). */
+  function perfTrace(bytes, max) {
+    var b = finBoot(bytes), c = b.cpu, out = [], n = 0;
+    max = max || 2000;
+    while (n < max) {
+      var before = c.state(), flags = { C: before.flags.C, A: before.flags.A, E: before.flags.E, Z: before.flags.Z };
+      var r = c.runInstruction();
+      if (r.ended) { break; }
+      var ir = r.ir, d = coreDecodeByte(ir, 0), t = d.cls === 'JIF' ? finTaken(ir, flags).taken : null;
+      out.push({ addr: r.pcBefore, ir: ir, text: coreDecodeByte(ir, null).text, cls: d.cls === 'ALU' && d.mnemonic === 'CMP' ? 'CMP' : d.cls,
+                 mnemonic: d.mnemonic, flags: flags, workSteps: perfWorkSteps(ir, flags), taken: t, errors: r.errors });
+      n++;
+    }
+    return { instructions: out, ended: c.state().end === 1, state: c.state(), loadTicks: b.loadTicks };
+  }
+  /* coreDecodeByte(ir, null) would print the operand as "0xEE"-ish
+     garbage for two-byte instructions; recover it from the trace's RAM. */
+  function perfTraceText(trace, ram) {
+    trace.instructions.forEach(function (x) {
+      var d = coreDecodeByte(x.ir, ram[(x.addr + 1) & 255]);
+      x.text = d.text;
+    });
+    return trace;
+  }
+
+  function perfSummary(trace) {
+    var list = trace.instructions || trace, by = {}, order = [], fixed = 0, vari = 0;
+    list.forEach(function (x) {
+      var k = x.cls === 'JIF' ? (x.taken ? 'JIF taken' : 'JIF not taken') : x.cls;
+      if (!by[k]) { by[k] = { cls: k, count: 0, workSteps: x.workSteps, idle: 6 - x.workSteps, mnemonics: {} }; order.push(k); }
+      by[k].count++;
+      by[k].mnemonics[x.mnemonic] = (by[k].mnemonics[x.mnemonic] || 0) + 1;
+      fixed += 6; vari += x.workSteps;
+    });
+    var ic = list.length;
+    return { ic: ic, fixedSteps: fixed, variableSteps: vari, ticks: fixed * PERF_TICKS_PER_STEP,
+             cpiFixed: ic ? fixed / ic : 0, cpiVariable: ic ? vari / ic : 0,
+             classes: order.map(function (k) { return by[k]; }) };
+  }
+
+  /* Run a program and summarise it. bytes: an array (e.g. core.MYSIM). */
+  function perfMeasure(bytes) {
+    var t = perfTrace(bytes);
+    var ram = []; for (var i = 0; i < 256; i++) { ram.push(bytes[i] === undefined ? 0 : bytes[i] & 255); }
+    perfTraceText(t, ram);
+    var s = perfSummary(t);
+    s.trace = t.instructions; s.ended = t.ended; s.state = t.state;
+    return s;
+  }
+
+  /* Week 9's per-class cycles and its trace program (19 instructions, 76
+     cycles), from the cycle machine itself. */
+  var PERF_W9_PROGRAM = [
+    '        .data', 'vals:   .word 6, 11, 8', 'sum:    .word 0', '        .text',
+    '        addi $t0, $zero, 3', '        add  $t1, $zero, $zero',
+    'loop:   lw   $t2, 0($s0)', '        add  $t1, $t1, $t2', '        addi $s0, $s0, 4',
+    '        addi $t0, $t0, -1', '        bne  $t0, $zero, loop', '        sw   $t1, 0($s0)',
+    '        addi $v0, $zero, 10', '        syscall'
+  ].join('\n');
+  function perfMipsMix() {
+    var mm = cycMachine(PERF_W9_PROGRAM, { textBase: 0x00400008, regs: { '$s0': 0x10010000 } });
+    var cycles = 0, instr = 0, guard = 0, rec, by = {}, order = [], cls;
+    while (guard++ < 1000) {
+      rec = mm.stepInstruction();
+      if (!rec.length || rec[rec.length - 1].cls === 'syscall') { break; }
+      cls = rec[rec.length - 1].cls;
+      if (!by[cls]) { by[cls] = { cls: cls, count: 0, cycles: rec.length }; order.push(cls); }
+      by[cls].count++;
+      cycles += rec.length; instr++;
+    }
+    return { counts: CYC_COUNTS, cycles: cycles, instructions: instr, cpi: instr ? cycles / instr : 0,
+             mix: order.map(function (k) { return by[k]; }) };
+  }
+
+  /* Multiplication on the course CPU, two algorithms, for page 1's lever
+     (b). a = multiplier, b = multiplicand; product must fit in a byte. */
+  function perfMulProgram(a, b, alg) {
+    if (alg === 'shift') {
+      var m = CORE_MYSIM.slice(); m[1] = a & 255; m[3] = b & 255; return m;
+    }
+    return finAssemble(['DATA R0, ' + (a & 255), 'DATA R1, ' + (b & 255), 'DATA R2, 0', 'DATA R3, 0xFF',
+                        'CLF', 'ADD R1, R2', 'CLF', 'ADD R3, R0', 'JZ 0x10', 'JMP 0x08', 'END']).bytes;
+  }
+  function perfMulCost(a, b, alg) {
+    if (a < 1 || a * b > 255) { throw new Error('perf.mulCost: need a >= 1 and a*b <= 255'); }
+    var t = perfTrace(perfMulProgram(a, b, alg));
+    return { ic: t.instructions.length, steps: t.instructions.length * 6, product: t.state.R2, ended: t.ended };
+  }
+
+  /* pipeline(prog, mode, k)
+       prog: [{ name, dst, src: [], branchTaken }]
+       mode: 'pipelined' | 'sequential'
+     Returns { rows: [{ name, cells: {cycle: stage}, start: [], squashed, stalls }], cycles, k, n }.
+     n counts instructions that complete (squashed ones excluded). */
+  function perfPipeline(prog, mode, k) {
+    k = k || 4;
+    var rows = [], cyc = 0, i, s;
+    if (mode === 'sequential') {
+      prog.forEach(function (p) {
+        var cells = {}, start = [];
+        for (s = 0; s < k; s++) { cyc++; cells[cyc] = PERF_STAGES[s]; start.push(cyc); }
+        rows.push({ name: p.name, cells: cells, start: start, squashed: false, stalls: 0 });
+      });
+      return { rows: rows, cycles: cyc, k: k, n: prog.length, mode: mode };
+    }
+    var written = {}, prev = null, last = null, pendingTarget = null;
+    var list = [];
+    prog.forEach(function (p) {
+      list.push(p);
+      if (p.branchTaken) { list.push({ name: '(next after branch)', wrong: true }); list.push({ name: '(next after that)', wrong: true }); }
+    });
+    for (i = 0; i < list.length; i++) {
+      var p = list[i], st = [], stalls = 0;
+      var base = p.wrong ? last : prev;
+      st[0] = base ? base.start[1] : 1;
+      if (pendingTarget !== null && !p.wrong) { st[0] = Math.max(st[0], pendingTarget); pendingTarget = null; }
+      for (s = 1; s < k; s++) {
+        var need = st[s - 1] + 1;
+        if (base) { need = Math.max(need, s + 1 < k ? base.start[s + 1] : base.start[k - 1] + 1); }
+        if (s === 2 && !p.wrong) {
+          (p.src || []).forEach(function (r) { if (written[r] !== undefined) { need = Math.max(need, written[r] + 1); } });
+        }
+        st[s] = need;
+      }
+      var row = { name: p.name, start: st, cells: {}, squashed: !!p.wrong, stalls: 0 };
+      if (p.wrong) {
+        /* fetched and decoded, then thrown away at the end of the branch's X */
+        var br = rows.filter(function (r) { return r.branch; }).slice(-1)[0];
+        var kill = br.start[2];
+        for (s = 0; s < k; s++) { var a0 = st[s], a1 = s + 1 < k ? st[s + 1] - 1 : st[s]; for (var c = a0; c <= a1 && c <= kill; c++) { row.cells[c] = PERF_STAGES[s]; } }
+        row.start = st.map(function (x) { return x <= kill ? x : null; });
+        row.fullStart = st;
+        rows.push(row);
+        last = { start: st };
+        continue;
+      }
+      for (s = 0; s < k; s++) {
+        var b0 = st[s], b1 = s + 1 < k ? st[s + 1] - 1 : st[s];
+        for (var cc = b0; cc <= b1; cc++) { row.cells[cc] = PERF_STAGES[s]; }
+        if (s === 1) { row.stalls = b1 - b0; }
+      }
+      if (p.dst) { written[p.dst] = st[k - 1]; }
+      if (p.branchTaken) { row.branch = true; pendingTarget = st[2] + 1; }
+      rows.push(row);
+      prev = row; last = row;
+      cyc = Math.max(cyc, st[k - 1]);
+    }
+    return { rows: rows, cycles: cyc, k: k, n: rows.filter(function (r) { return !r.squashed; }).length, mode: mode };
+  }
+
+  /* The three programs Widget 3 offers, in MIPS taught instructions. */
+  var PERF_PIPE_PROGRAMS = {
+    independent: [
+      { name: 'add $t0, $s0, $s1', dst: 't0', src: ['s0', 's1'] },
+      { name: 'add $t1, $s2, $s3', dst: 't1', src: ['s2', 's3'] },
+      { name: 'and $t2, $s4, $s5', dst: 't2', src: ['s4', 's5'] },
+      { name: 'or  $t3, $s6, $s7', dst: 't3', src: ['s6', 's7'] },
+      { name: 'addi $t4, $a0, 1', dst: 't4', src: ['a0'] },
+      { name: 'sub $t5, $a1, $a2', dst: 't5', src: ['a1', 'a2'] }
+    ],
+    data: [
+      { name: 'add $t0, $t1, $t2', dst: 't0', src: ['t1', 't2'] },
+      { name: 'sub $t3, $t0, $t4', dst: 't3', src: ['t0', 't4'] },
+      { name: 'and $t5, $s0, $s1', dst: 't5', src: ['s0', 's1'] },
+      { name: 'or  $t6, $s2, $s3', dst: 't6', src: ['s2', 's3'] },
+      { name: 'addi $t7, $s4, 4', dst: 't7', src: ['s4'] }
+    ],
+    branch: [
+      { name: 'addi $t0, $t0, -1', dst: 't0', src: ['t0'] },
+      { name: 'add $t1, $t1, $t2', dst: 't1', src: ['t1', 't2'] },
+      { name: 'bne $t3, $zero, skip', src: ['t3'], branchTaken: true },
+      { name: 'skip: add $t4, $s0, $s1', dst: 't4', src: ['s0', 's1'] },
+      { name: 'or  $t5, $s2, $s3', dst: 't5', src: ['s2', 's3'] }
+    ]
+  };
+
+  /* Two-pass assembler for the course CPU. Labels ("loop:"), course
+     mnemonics, MOV/SUB as macros, numbers in hex (0x..) or decimal.
+     A label may be used as the operand of JMP, J*caez* or DATA. */
+  function perfAssemble(src) {
+    var lines = Array.isArray(src) ? src : String(src).split('\n');
+    var items = [], symbols = {}, order = [], addr = 0, i, t, m, e;
+    /* pass 1 */
+    for (i = 0; i < lines.length; i++) {
+      t = String(lines[i]).replace(/;.*$/, '').trim();
+      if (!t) { continue; }
+      while ((m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*)$/.exec(t))) {
+        var name = m[1].toLowerCase();
+        if (/^r[0-3]$/.test(name)) { return { ok: false, line: i + 1, error: 'line ' + (i + 1) + ': ' + m[1] + ' is a register name, not a label' }; }
+        if (symbols[name] !== undefined) { return { ok: false, line: i + 1, error: 'line ' + (i + 1) + ': label ' + m[1] + ' is defined twice' }; }
+        symbols[name] = addr; order.push(name);
+        t = m[2].trim();
+      }
+      if (!t) { continue; }
+      var refs = [], probe = t.replace(/,\s*([A-Za-z_][A-Za-z0-9_]*)\s*$|^(\S+)\s+([A-Za-z_][A-Za-z0-9_]*)\s*$/, function (all, a, mn, b) {
+        var lab = a || b;
+        if (/^R[0-3]$/i.test(lab) || /^0x/i.test(lab)) { return all; }
+        refs.push(lab.toLowerCase());
+        return a ? ', 0' : mn + ' 0';
+      });
+      if (/^(MOV|SUB)\b/i.test(probe)) { e = dpExpand(probe); }
+      else { e = coreEncode(probe); }
+      if (!e.ok) { return { ok: false, line: i + 1, error: 'line ' + (i + 1) + ': ' + e.error }; }
+      items.push({ line: i + 1, text: t, addr: addr, size: e.bytes.length, refs: refs, macro: /^(MOV|SUB)\b/i.test(probe) ? e.lines : null });
+      addr += e.bytes.length;
+    }
+    if (addr > 32) { return { ok: false, error: addr + ' bytes: the RAM has 32 populated bytes.' }; }
+    /* pass 2 */
+    var rows = [], bytes = [], instructions = 0;
+    for (i = 0; i < items.length; i++) {
+      var it = items[i], resolved = it.text, refInfo = [];
+      for (var r = 0; r < it.refs.length; r++) {
+        var lab = it.refs[r];
+        if (symbols[lab] === undefined) { return { ok: false, line: it.line, error: 'line ' + it.line + ': label ' + lab + ' is never defined' }; }
+        var hx = coreHex2(symbols[lab]);
+        resolved = resolved.replace(new RegExp('\\b' + lab + '\\s*$', 'i'), hx);
+        refInfo.push({ label: lab, addr: symbols[lab], forward: symbols[lab] > it.addr });
+      }
+      e = it.macro ? dpExpand(resolved) : coreEncode(resolved);
+      if (!e.ok) { return { ok: false, line: it.line, error: 'line ' + it.line + ': ' + e.error }; }
+      var exp = it.macro ? it.macro.slice() : [resolved.toUpperCase().replace(/\s+/g, ' ').replace(/\s*,\s*/g, ', ').replace(/0X/g, '0x')];
+      instructions += exp.length;
+      rows.push({ line: it.line, text: it.text, addr: it.addr, bytes: e.bytes.slice(), expandsTo: exp, labelRefs: refInfo, macro: !!it.macro });
+      e.bytes.forEach(function (x) { bytes.push(x); });
+    }
+    return { ok: true, symbols: order.map(function (n) { return { label: n, addr: symbols[n] }; }), rows: rows, bytes: bytes,
+             lines: items.length, instructions: instructions };
+  }
+
+  /* ============================================================
      WEEK 14 -- The finished CPU (CSCLogic.fin)
      ============================================================
      Added 2026-11-01.
@@ -4299,6 +4587,28 @@
       aluSteps: coreAluSteps,
       machine: coreMachine,
       runAlu: coreRunAlu
+    },
+
+    /* Week 15 additions -- performance and the toolchain. Every helper
+       is perf-prefixed; see the block comment. */
+    perf: {
+      TICKS_PER_STEP: PERF_TICKS_PER_STEP,
+      TICK_RATES: PERF_TICK_RATES,
+      STAGES: PERF_STAGES,
+      STAGE_NAMES: PERF_STAGE_NAMES,
+      PIPE_PROGRAMS: PERF_PIPE_PROGRAMS,
+      W9_PROGRAM: PERF_W9_PROGRAM,
+      time: perfTime,
+      amdahl: perfAmdahl,
+      workSteps: perfWorkSteps,
+      trace: perfTrace,
+      summary: perfSummary,
+      measure: perfMeasure,
+      mipsMix: perfMipsMix,
+      mulProgram: perfMulProgram,
+      mulCost: perfMulCost,
+      pipeline: perfPipeline,
+      assemble: perfAssemble
     },
 
     /* Week 14 additions -- the finished CPU: every class, carry-in,
