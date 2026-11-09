@@ -39,7 +39,7 @@
           <thead><tr><th>Part</th><th>What it is</th><th>How</th><th>Points</th></tr></thead>
           <tbody>
             <tr><td><strong>A</strong></td><td>Logisim Checkpoint 7 &mdash; every class of instruction wired, the carry-in, END, the clock and the loader, and three test programs run</td><td><code>.circ</code> file + 6 screenshots</td><td>60</td></tr>
-            <tr><td><strong>B</strong></td><td>Canvas quiz on the four Week 14 pages</td><td>in Canvas: 10 questions, auto-graded</td><td>30</td></tr>
+            <tr><td><strong>B</strong></td><td>Canvas quiz on the Week 14 pages</td><td>in Canvas: 10 questions, auto-graded</td><td>30</td></tr>
             <tr><td><strong>C</strong></td><td>Project status &mdash; where your CPU stands, three weeks before the final project is due</td><td>the <em>Project Status</em> page, printed to PDF and uploaded</td><td>10, complete/incomplete</td></tr>
           </tbody>
         </table>
@@ -56,7 +56,7 @@
     <section id="part-a">
       <h2>Part A &mdash; Logisim Checkpoint 7 <span class="q-pts">(60 points)</span></h2>
 
-      <p>Checkpoint 7 is graded on <strong>every class of instruction wired</strong>. Running <code>MYSIM.txt</code> is optional this week (and required for the A tier of the final project). Pages 1&ndash;3 explain every wire; read them first.</p>
+      <p>Checkpoint 7 is graded on <strong>every class of instruction wired</strong>. Running <code>MYSIM.txt</code> is optional this week (and required for the A tier of the final project). Pages 1&ndash;3 explain every wire, and page 5, <em>The Complete CPU</em>, defines the finished control unit and CPU tab in one place; read them first.</p>
 
       <div class="callout callout--warn">
         <div class="callout__title">The exception, exactly</div>
@@ -70,6 +70,7 @@
       </div>
 
       <h3>Tab <code>CONTROL_UNIT</code> &mdash; what changes</h3>
+      <p>Two kinds of change: the new instruction classes (this table), and the final control section that takes over LOAD, MARS and RESET (the list after it; page 5, &sect;14.17 draws the whole unit).</p>
       <p>Add four inputs, <code>fc</code>, <code>fa</code>, <code>fe</code> and <code>fz</code> (the flags, 1 bit each), and three outputs, <code>ram_s</code>, <code>c</code> and <code>end</code>. Wire five more outputs of the class decoder you placed in Week 11 (each ANDed with NOT b7, as CLF is): LD, ST, DATA, JMPR, JMP and J<em>caez</em>. The whole table, with this week&rsquo;s additions in bold:</p>
       <div class="table-scroll">
         <table class="pin-table ctl-mini">
@@ -96,6 +97,15 @@
         </table>
       </div>
       <p class="inside"><strong>match</strong> = (<code>fc</code> AND b3) OR (<code>fa</code> AND b2) OR (<code>fe</code> AND b1) OR (<code>fz</code> AND b0): four ANDs into one 4-input OR, used only at step 6 (page 2, &sect;14.6). Every other new term is a (step AND class) AND, ORed into a line that already exists.</p>
+      <p><strong>The final control section</strong> (your instructor&rsquo;s design, page 5):</p>
+      <ul>
+        <li>New inputs <code>load</code>, <code>mars</code> and <code>reset</code>.</li>
+        <li>The stepper&rsquo;s <code>clk</code> = <code>clk</code> AND NOT <code>load</code>; its step 1 output is used as <code>step1</code> AND NOT <code>load</code>.</li>
+        <li><code>mar_s</code> = (the table&rsquo;s terms) OR <code>mars</code>. &nbsp;<code>ram_s</code> = (the table&rsquo;s term) OR (<code>load</code> AND <code>clk_s</code>).</li>
+        <li><strong>REG_SELECT moves inside the control unit</strong>: place your Week 10 <code>REG_SELECT</code> here, fed by <code>rega_e</code>, <code>regb_e</code>, <code>regb_s</code> and the IR&rsquo;s register fields, and make its eight lines outputs: <code>r0_e</code>&ndash;<code>r3_e</code>, <code>r0_s</code>&ndash;<code>r3_s</code>.</li>
+        <li><code>reset</code> ORed into <code>ir_s</code>, <code>pc_s</code>, <code>acc_s</code>, <code>tmp_s</code>, <code>flags_s</code> and <code>r0_s</code>&ndash;<code>r3_s</code>.</li>
+        <li>Optional, not graded: outputs <code>io</code>, <code>da</code>, <code>io_clk_e</code>, <code>io_clk_s</code> (page 5).</li>
+      </ul>
 
       <h3>Tab <code>CTMP</code> (new) &mdash; these pin names are exact</h3>
       <div class="table-scroll">
@@ -125,20 +135,21 @@
       <h3>Tab <code>CPU</code> &mdash; what changes</h3>
       <ul>
         <li><strong>Delete</strong> the <code>clk_in</code> and <code>ci</code> input pins.</li>
-        <li><strong>The clock:</strong> new input <code>clock</code>; <code>CLOCK</code>&rsquo;s <code>clk_in</code> = <code>clock</code> AND NOT <code>end</code>. <code>run</code> now passes <code>clk</code> to the control unit through an AND too, as well as <code>clk_e</code> and <code>clk_s</code>.</li>
+        <li><strong>Delete</strong> Week 13&rsquo;s <code>run</code> pin and its three ANDs, the test port (<code>data</code>, <code>data_e</code>, <code>data_s</code>, <code>data_pc</code>, <code>data_ir</code>, <code>data_mar</code>, <code>data_ram</code>, <code>ram_reset</code>) and the <code>REG_SELECT</code> instance (it is inside the control unit now: wire its <code>r0_e</code>&ndash;<code>r3_s</code> outputs to the four registers).</li>
+        <li><strong>The clock:</strong> new input <code>clock</code>; <code>CLOCK</code>&rsquo;s <code>clk_in</code> = <code>clock</code> AND NOT <code>end</code>. <code>clk</code>, <code>clk_e</code> and <code>clk_s</code> go straight to the control unit.</li>
         <li><strong>The carry-in:</strong> place a <code>CTMP</code>; its <code>c</code> from FLAGS C, its <code>s</code> from <code>tmp_s</code>. ALU <code>ci</code> = CTMP <code>o</code> AND the control unit&rsquo;s <code>c</code>.</li>
         <li><strong>Flags to the control unit:</strong> FLAGS C, A, E, Z to <code>fc</code>, <code>fa</code>, <code>fe</code>, <code>fz</code>.</li>
-        <li><strong>The RAM:</strong> its <code>s</code> = <code>ram_s</code> OR <code>data_ram</code> OR (<code>load</code> AND <code>clk_s</code>). Its <code>i</code> comes from a Multiplexor: select = <code>load</code>, input 0 = the bus, input 1 = new 8-bit input <code>ram_input</code>.</li>
-        <li><strong>The loader:</strong> new input <code>load</code>; a <code>COUNTER_256</code> whose <code>clk</code> = <code>clk</code> AND <code>load</code> (the clock&rsquo;s <code>clk</code>, before the <code>run</code> AND), its <code>count</code> onto the bus through a controlled buffer enabled by <code>load</code>.</li>
-        <li><strong>RESET:</strong> new input <code>reset</code>; a constant <code>00000000</code> onto the bus through a controlled buffer enabled by <code>reset</code>, and <code>reset</code> ORed into the sets of the PC, IR, MAR (the RAM&rsquo;s <code>sa</code>), TMP and R0&ndash;R3.</li>
+        <li><strong>The RAM:</strong> its <code>s</code> = the control unit&rsquo;s <code>ram_s</code>, its <code>sa</code> = <code>mar_s</code>. Its <code>i</code> comes from a Multiplexor: select = <code>load</code>, input 0 = the bus, input 1 = new 8-bit input <code>ram_input</code>.</li>
+        <li><strong>The loader:</strong> new inputs <code>load</code> and <code>mars</code>, both to the control unit; a <code>COUNTER_256</code> whose <code>clk</code> = <code>clk</code> AND <code>load</code>, its <code>count</code> onto the bus through a controlled buffer enabled by <code>load</code>.</li>
+        <li><strong>RESET:</strong> new input <code>reset</code>, to the control unit and to your RAM&rsquo;s <code>reset</code>.</li>
+        <li><strong>Pull-downs:</strong> every pin that faces the bus is set to <em>Pull Behavior: Pull Down</em> &mdash; the bus-side pins of R0&ndash;R3, TMP, ACC, BUS1, the PC, the IR, the ALU (<code>a</code>, <code>b</code>, <code>ci</code>, <code>opcode</code>, flags) and the RAM (address, <code>i</code>, <code>o</code>, <code>reset</code>), and the <code>bus</code> output. A bus nothing drives then reads <code>00000000</code>, which is how RESET writes 0 (page 5, item 2).</li>
         <li><strong>New outputs:</strong> <code>end</code>, <code>clkl</code> (the clock&rsquo;s <code>clk</code>), <code>clk_e</code>, <code>clk_s</code>. Recommended, for hex displays on <code>CPU_TEST</code>: <code>bus</code>, <code>pc</code>, <code>ir</code>, <code>acc</code>, <code>r0</code>&ndash;<code>r3</code> (8 bits each).</li>
-        <li><strong>Keep</strong> Week 13&rsquo;s test port (<code>data</code>, <code>data_e</code>, <code>data_s</code>, <code>data_pc</code>, <code>data_ir</code>, <code>data_mar</code>, <code>data_ram</code>, <code>ram_reset</code>, all pull-down). Only <code>data_mar</code> is used from <code>CPU_TEST</code>.</li>
       </ul>
 
       <h3>Tab <code>CPU_TEST</code> (new)</h3>
       <ul>
         <li>One <code>CPU</code> instance. Edit the <code>CPU</code> tab&rsquo;s appearance so its pins are easy to wire, as your instructor&rsquo;s is on page 3.</li>
-        <li>A <strong>Clock</strong> to <code>clock</code>. Inputs <code>run</code>, <code>LOAD</code> (to <code>load</code>), <code>RESET</code> (a button, to <code>reset</code>) and <code>MARS</code> (to <code>data_mar</code>). An LED or output <code>END</code>; outputs showing <code>clkl</code>, <code>clk_e</code> and <code>clk_s</code>.</li>
+        <li>A <strong>Clock</strong> to <code>clock</code>. Inputs <code>LOAD</code> (to <code>load</code>), <code>RESET</code> (a button, to <code>reset</code>) and <code>MARS</code> (to <code>mars</code>). An LED or output <code>END</code>; outputs showing <code>clkl</code>, <code>clk_e</code> and <code>clk_s</code>.</li>
         <li><strong>The external RAM:</strong> a second <code>COUNTER_256</code>, its <code>clk</code> = <code>clkl</code>, its <code>count</code> to a built-in RAM&rsquo;s <code>A</code> (Address Bit Width 8, Data Bit Width 8). RAM <code>sel</code> = <code>LOAD</code>, clock = <code>clkl</code>, <code>ld</code> = constant 1, <code>clr</code> = constant 0, <code>D</code> to the CPU&rsquo;s <code>ram_input</code>.</li>
         <li>Recommended: hex digit displays for the bus, PC, IR, ACC and R0&ndash;R3.</li>
       </ul>
@@ -164,12 +175,13 @@
       <h3>Load and run, every time</h3>
       <ol class="load-list">
         <li>Simulate &rarr; Reset.</li>
-        <li><code>run</code> = 0. Press <code>RESET</code>.</li>
-        <li><code>LOAD</code> = 1 and <code>MARS</code> = 1, before any tick.</li>
+        <li><code>LOAD</code> = 1, before any tick.</li>
+        <li>Press <code>RESET</code>; the hex displays all read <code>00</code>.</li>
         <li>External RAM &rarr; Edit Contents: type the bytes (or Open a file).</li>
+        <li><code>MARS</code> = 1.</li>
         <li>Ticks Enabled until the bus reads <code>FF</code>; ticks off.</li>
         <li>Tick Once until <code>clkl</code> = 0, <code>clk_e</code> = 1, <code>clk_s</code> = 0.</li>
-        <li><code>LOAD</code> = 0, <code>MARS</code> = 0, then <code>run</code> = 1.</li>
+        <li><code>MARS</code> = 0, then <code>LOAD</code> = 0.</li>
         <li>Ticks Enabled until <code>END</code> lights; ticks off.</li>
       </ol>
 
@@ -178,9 +190,9 @@
         <table class="pin-table" id="verify-table">
           <thead><tr><th>#</th><th>When</th><th>Expect</th></tr></thead>
           <tbody>
-            <tr><td>1</td><td>Test A: after step 2 (RESET)</td><td>PC, IR and R0&ndash;R3 all <code>00</code>; <code>END</code> off</td></tr>
-            <tr><td>2</td><td>Test A: after step 5, right-click <code>RAM_16X16</code> &rarr; View (then Simulate &rarr; Go Out To State to return)</td><td>bytes 00&ndash;06 = <code>20 1E 21 5A 11 02 CF</code>; the rest <code>00</code></td></tr>
-            <tr><td>3</td><td>Test A: after step 7</td><td><code>clkl</code>, <code>clk_e</code>, <code>clk_s</code> = 0, 1, 0; <code>LOAD</code> 0; <code>run</code> 1; bus = <code>00</code></td></tr>
+            <tr><td>1</td><td>Test A: after step 3 (RESET)</td><td>PC, IR, ACC and R0&ndash;R3 all <code>00</code>; <code>END</code> off</td></tr>
+            <tr><td>2</td><td>Test A: after step 6, right-click <code>RAM_16X16</code> &rarr; View (then Simulate &rarr; Go Out To State to return)</td><td>bytes 00&ndash;06 = <code>20 1E 21 5A 11 02 CF</code>; the rest <code>00</code></td></tr>
+            <tr><td>3</td><td>Test A: after step 8</td><td><code>clkl</code>, <code>clk_e</code>, <code>clk_s</code> = 0, 1, 0; <code>LOAD</code> 0; <code>MARS</code> 0; bus = <code>00</code></td></tr>
             <tr><td>4</td><td>Test A at END</td><td>as in the table above</td></tr>
             <tr><td>5</td><td>Test B at END</td><td>as in the table above</td></tr>
             <tr><td>6</td><td>Test C at END, with FLAGS visible (a probe, or the <code>CPU</code> tab)</td><td>as in the table above</td></tr>
@@ -195,11 +207,12 @@
         <table class="pin-table">
           <thead><tr><th>Criterion</th><th>Points</th></tr></thead>
           <tbody>
-            <tr><td><code>CONTROL_UNIT</code>: <code>fc fa fe fz</code> in; <code>ram_s</code>, <code>c</code>, <code>end</code> out; every class term as in the table; the match gated into step 6 only; <code>end</code> decoded</td><td>20</td></tr>
+            <tr><td><code>CONTROL_UNIT</code> classes: <code>fc fa fe fz</code> in; <code>ram_s</code>, <code>c</code>, <code>end</code> out; every class term as in the table; the match gated into step 6 only; <code>end</code> decoded</td><td>16</td></tr>
+            <tr><td><code>CONTROL_UNIT</code> final section: <code>load</code>, <code>mars</code>, <code>reset</code> in; stepper clock and step 1 gated by NOT <code>load</code>; <code>mar_s</code> OR <code>mars</code>; <code>ram_s</code> OR (<code>load</code> AND <code>clk_s</code>); <code>REG_SELECT</code> inside, <code>r0_e</code>&ndash;<code>r3_s</code> out; <code>reset</code> into the nine sets</td><td>8</td></tr>
             <tr><td><code>CTMP</code> (three pins, one <code>MEM_1BIT</code>) and the carry path: <code>ci</code> = CTMP AND <code>c</code></td><td>6</td></tr>
-            <tr><td>The loader on the <code>CPU</code> tab: <code>COUNTER_256</code> and its buffer, the RAM input Multiplexor, the RAM <code>s</code> OR</td><td>8</td></tr>
-            <tr><td><code>CPU</code> tab: clock AND NOT end; <code>run</code> on all three clock lines; RESET buffer and ORs; the new outputs</td><td>6</td></tr>
-            <tr><td><code>CPU_TEST</code>: Clock, the four inputs, <code>END</code>, the external RAM and its counter</td><td>6</td></tr>
+            <tr><td>The loader on the <code>CPU</code> tab: <code>COUNTER_256</code> and its buffer, the RAM input Multiplexor</td><td>6</td></tr>
+            <tr><td><code>CPU</code> tab: clock AND NOT end; pull-downs; RESET to the control unit and the RAM; <code>run</code>, the test port and <code>REG_SELECT</code> gone; the new outputs</td><td>4</td></tr>
+            <tr><td><code>CPU_TEST</code>: Clock, the three inputs, <code>END</code>, the external RAM and its counter</td><td>6</td></tr>
             <tr><td>Six screenshots, matching the table (2 each)</td><td>12</td></tr>
             <tr><td>Single file; built-ins only where the exception names them</td><td>2</td></tr>
           </tbody>
@@ -221,7 +234,7 @@
          ============================================================ -->
     <section id="part-b">
       <h2>Part B &mdash; Canvas quiz <span class="q-pts">(30 points)</span></h2>
-      <p>Ten questions on the four Week 14 pages, 3 points each, auto-graded. No time limit. <strong>Two attempts; your higher score counts.</strong> Each question is drawn from two parallel versions, so a second attempt will usually look different. Opens Monday 11/16; closes Sunday 11/22, 11:59 pm.</p>
+      <p>Ten questions on the Week 14 pages, 3 points each, auto-graded. No time limit. <strong>Two attempts; your higher score counts.</strong> Each question is drawn from two parallel versions, so a second attempt will usually look different. Opens Monday 11/16; closes Sunday 11/22, 11:59 pm.</p>
       <p>The questions follow the pages in order: what LD and ST put on the bus; how DATA steps over its byte; which lines are high at a step; whether a conditional jump is taken; what JMPR and JMP do to the PC; the carry-in; END and the clock; the load-and-run procedure; encoding a jump; and the result of a short program. The widgets on each page are the best practice.</p>
     </section>
 

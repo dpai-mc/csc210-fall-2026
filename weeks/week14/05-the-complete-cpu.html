@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en" data-spa-id="w14-05">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSC210 — Week 14: The Complete CPU</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <style>
+    .w-panel { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-sm) var(--space-md); background: var(--color-surface); min-width: 0; margin-top: var(--space-sm); }
+    .w-panel h3 { margin: 0 0 var(--space-xs); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 6px; }
+    .btn-row label { font-size: var(--fs-sm); }
+    .ce-sel, .ce-hex { font-size: var(--fs-sm); padding: 2px 6px; border: 1px solid var(--color-border); border-radius: 4px; font-family: var(--font-mono); }
+    .ce-hex { width: 5.5em; }
+    fieldset.ce-fs { border: 1px solid var(--color-border); border-radius: 4px; padding: 2px 8px 4px; margin: 0; }
+    fieldset.ce-fs legend { font-size: 12px; font-weight: 700; color: var(--color-text-muted); padding: 0 4px; }
+    .pins { display: grid; grid-template-columns: repeat(auto-fit, minmax(116px, 1fr)); gap: 4px; }
+    .pin { border: 1px solid var(--color-border); border-radius: 4px; padding: 3px 8px; font-family: var(--font-mono); font-size: var(--fs-sm); }
+    .pin small { display: block; font-family: var(--font-sans); font-size: 11px; color: var(--color-text-muted); }
+    .pin--1 { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .pin--1 small { color: #dfe8f3; }
+    .pin--opt { border-style: dashed; }
+    .w-status { font-size: var(--fs-sm); min-height: 1.5em; margin: var(--space-xs) 0; }
+    .gen-table td:first-child { font-family: var(--font-mono); font-weight: 700; white-space: nowrap; }
+    .gen-table td { vertical-align: top; }
+    .gen-table td small { color: var(--color-text-muted); }
+    .gen-table .num { font-weight: 700; text-align: center; }
+    .opt-row td { color: var(--color-text-muted); }
+    .tag-new, .tag-opt { display: inline-block; font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 999px; margin-left: 4px; font-family: var(--font-sans); }
+    .tag-new { background: var(--color-accent); color: #fff; }
+    .tag-opt { border: 1px dashed var(--color-border); color: var(--color-text-muted); }
+    .fig-label { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; margin-bottom: 4px; font-family: var(--font-sans); }
+    .fig-label--gen { background: var(--color-primary); color: #fff; }
+    .fig-label--f25 { background: #5b4a2e; color: #fff; }
+    .gen-svg { width: 100%; max-width: 860px; height: auto; display: block; margin: 0 auto; font-family: var(--font-sans); }
+    .gen-svg .svg-frame { fill: none; stroke: var(--color-primary); stroke-width: 2.5; }
+    .gen-svg .svg-blk { fill: var(--color-surface); stroke: var(--color-text-muted); stroke-width: 1.5; }
+    .gen-svg .svg-blk--a { fill: #fff3e0; stroke: var(--color-accent); stroke-width: 2; }
+    .gen-svg .svg-blk--o { fill: var(--color-surface); stroke: var(--color-text-muted); stroke-dasharray: 5 4; }
+    .gen-svg .svg-w { stroke: var(--color-text-muted); stroke-width: 1.6; fill: none; }
+    .gen-svg .svg-wa { stroke: var(--color-accent); }
+    .gen-svg .svg-ink { fill: var(--color-text-muted); }
+    .gen-svg .svg-bus { fill: var(--color-primary); }
+    .gen-svg .svg-onbus { fill: #fff; font-weight: 700; }
+    .gen-svg text { font-size: 13px; fill: var(--color-text); }
+    .gen-svg .svg-h { font-size: 16px; font-weight: 700; fill: var(--color-primary); }
+    .gen-svg .svg-b { font-weight: 700; }
+    .gen-svg .svg-s { font-size: 11.5px; }
+    .gen-svg .svg-accent { fill: #b45309; font-weight: 700; }
+    .gen-svg .svg-in text, .gen-svg .svg-out text { font-family: var(--font-mono); font-size: 12.5px; }
+    .gen-svg .svg-num circle { fill: #2f6b2f; }
+    .gen-svg .svg-num text { fill: #fff; font-weight: 700; font-size: 13px; }
+    .diff li { margin-bottom: 4px; }
+    .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-sm); }
+    .detail-grid figure { margin: 0; }
+    .detail-grid img { width: 100%; height: auto; }
+    .checklist li { margin-bottom: 3px; }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <div class="sp-header__title">CSC210 — Computer Organization &amp; Architecture</div>
+    <nav class="sp-header__breadcrumb" aria-label="Breadcrumb">
+      Week 14 &rsaquo; <span>Page 5 — The Complete CPU</span>
+    </nav>
+  </header>
+
+  <main class="sp-main sp-main--full">
+
+    <h1>The Complete CPU</h1>
+    <p><strong>Sections 14.17 – 14.19</strong> &nbsp;|&nbsp; <strong>Estimated time:</strong> ~40 minutes &nbsp;|&nbsp; <em>Your reference for Weeks 15&ndash;17 and the final project</em></p>
+
+    <section id="sec-intro">
+      <div class="callout callout--note">
+        <div class="callout__title">One page that defines the finished machine</div>
+        <p>Pages 1&ndash;3 added the last pieces one at a time. This page puts them together: <strong>every pin and every equation of the final control unit</strong>, and <strong>every addition to the <code>CPU</code> tab, numbered, with where it goes</strong>. When the final project says your CPU simulation is <em>complete</em>, it means what this page describes. The design is your instructor&rsquo;s Fall 2025 CPU; each section shows his figure next to a diagram drawn for this course, and marks where they differ.</p>
+      </div>
+    </section>
+
+    <section id="sec-14-17">
+      <h2>14.17 &nbsp; The final control unit</h2>
+      <p>Since Week 11 your control unit has turned the IR and the stepper into enable and set lines. Three things change in its final form, all from your instructor&rsquo;s design:</p>
+      <ul>
+        <li><strong>LOAD, MARS and RESET come in.</strong> They are control inputs, so they belong where every other control decision is made. LOAD stops the stepper (its clock is <code>clk</code> AND NOT <code>load</code>) and silences step 1 (<code>step1</code> AND NOT <code>load</code>); MARS is ORed into <code>mar_s</code>; LOAD AND <code>clk_s</code> is ORed into <code>ram_s</code>; RESET is ORed into nine set lines.</li>
+        <li><strong>REG_SELECT moves inside.</strong> RESET must set all four registers, but <code>regb_s</code> reaches only the one RB names. So the unit decodes the register fields itself and its outputs become <code>r0_e</code>&ndash;<code>r3_e</code> and <code>r0_s</code>&ndash;<code>r3_s</code>, with RESET ORed into the four sets.</li>
+        <li><strong>The bus is pulled down.</strong> RESET drives nothing. Every pin that faces the bus is set to <em>Pull Behavior: Pull Down</em>, so while RESET holds the sets high, an undriven bus reads <code>00000000</code> and every register captures 0. ACC and FLAGS capture the ALU&rsquo;s 0 ADD 0, so after RESET the flags read C A E Z = 0 0 1 1. RESET also reaches your RAM&rsquo;s <code>reset</code>, which clears its bytes.</li>
+      </ul>
+
+      <figure class="circuit-canvas">
+        <span class="fig-label fig-label--gen">Drawn for this course</span>
+        <svg class="gen-svg" viewBox="0 0 950 520" role="img" aria-labelledby="cu-svg-t cu-svg-d">
+  <title id="cu-svg-t">The final CONTROL_UNIT, block by block</title>
+  <desc id="cu-svg-d">Inputs on the left: clk, clk_e, clk_s, load, mars, reset, ir and the four flags. Inside: the stepper, whose clock is clk AND NOT load and whose step 1 is ANDed with NOT load; the class decoder; the match and END decoders; the line gates that make the fifteen internal lines; REG_SELECT; and the final section, which ORs mars into mar_s, load AND clk_s into ram_s, and reset into the nine set lines. Outputs on the right.</desc>
+  <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="svg-ink"/></marker></defs>
+  <rect x="120" y="20" width="630" height="480" rx="10" class="svg-frame"/>
+  <text x="435" y="44" class="svg-h" text-anchor="middle">CONTROL_UNIT</text>
+  <g class="svg-in">
+    <text x="10" y="92">clk</text><text x="10" y="114">clk_e, clk_s</text>
+    <text x="10" y="176">ir (8)</text><text x="10" y="246">fc fa fe fz</text>
+    <text x="10" y="396" class="svg-accent">load</text><text x="10" y="430" class="svg-accent">mars</text><text x="10" y="464" class="svg-accent">reset</text>
+  </g>
+  <line x1="62" y1="88" x2="150" y2="88" class="svg-w" marker-end="url(#ah)"/>
+  <line x1="112" y1="110" x2="345" y2="110" class="svg-w"/><line x1="345" y1="110" x2="345" y2="300" class="svg-w" marker-end="url(#ah)"/>
+  <line x1="62" y1="172" x2="150" y2="172" class="svg-w" marker-end="url(#ah)"/>
+  <line x1="88" y1="242" x2="150" y2="242" class="svg-w" marker-end="url(#ah)"/>
+  <line x1="50" y1="392" x2="130" y2="392" class="svg-w svg-wa"/><line x1="130" y1="392" x2="130" y2="100" class="svg-w svg-wa"/><line x1="130" y1="100" x2="150" y2="100" class="svg-w svg-wa" marker-end="url(#ah)"/>
+  <line x1="130" y1="392" x2="540" y2="392" class="svg-w svg-wa" marker-end="url(#ah)"/>
+  <line x1="50" y1="426" x2="540" y2="426" class="svg-w svg-wa" marker-end="url(#ah)"/>
+  <line x1="55" y1="460" x2="540" y2="460" class="svg-w svg-wa" marker-end="url(#ah)"/>
+  <rect x="150" y="66" width="170" height="58" rx="6" class="svg-blk svg-blk--a"/>
+  <text x="235" y="88" text-anchor="middle" class="svg-b">STEPPER</text>
+  <text x="235" y="106" text-anchor="middle" class="svg-s">clk AND NOT load;</text><text x="235" y="119" text-anchor="middle" class="svg-s">step1 AND NOT load</text>
+  <rect x="150" y="146" width="170" height="52" rx="6" class="svg-blk"/>
+  <text x="235" y="168" text-anchor="middle" class="svg-b">CLASS DECODER</text><text x="235" y="186" text-anchor="middle" class="svg-s">3&#215;8 AND NOT b7; ALU, CMP</text>
+  <rect x="150" y="216" width="170" height="52" rx="6" class="svg-blk"/>
+  <text x="235" y="238" text-anchor="middle" class="svg-b">MATCH &amp; END</text><text x="235" y="256" text-anchor="middle" class="svg-s">4 ANDs + OR; IR = 11001111</text>
+  <line x1="320" y1="95" x2="360" y2="95" class="svg-w"/><line x1="360" y1="95" x2="360" y2="300" class="svg-w" marker-end="url(#ah)"/>
+  <line x1="320" y1="172" x2="375" y2="172" class="svg-w"/><line x1="375" y1="172" x2="375" y2="300" class="svg-w" marker-end="url(#ah)"/>
+  <line x1="320" y1="242" x2="390" y2="242" class="svg-w"/><line x1="390" y1="242" x2="390" y2="300" class="svg-w" marker-end="url(#ah)"/>
+  <rect x="330" y="300" width="180" height="62" rx="6" class="svg-blk"/>
+  <text x="420" y="324" text-anchor="middle" class="svg-b">LINE GATES</text><text x="420" y="342" text-anchor="middle" class="svg-s">(step AND class) ORs,</text><text x="420" y="355" text-anchor="middle" class="svg-s">AND clk_e or clk_s</text>
+  <rect x="540" y="66" width="160" height="70" rx="6" class="svg-blk"/>
+  <text x="620" y="92" text-anchor="middle" class="svg-b">REG_SELECT</text><text x="620" y="110" text-anchor="middle" class="svg-s">your Week 10 tab;</text><text x="620" y="124" text-anchor="middle" class="svg-s">RA, RB from ir</text>
+  <line x1="510" y1="320" x2="525" y2="320" class="svg-w"/><line x1="525" y1="320" x2="525" y2="100" class="svg-w"/><line x1="525" y1="100" x2="540" y2="100" class="svg-w" marker-end="url(#ah)"/>
+  <text x="516" y="230" class="svg-s" text-anchor="middle" transform="rotate(-90 516 230)">rega_e regb_e regb_s</text>
+  <rect x="540" y="370" width="190" height="110" rx="6" class="svg-blk svg-blk--a"/>
+  <text x="635" y="392" text-anchor="middle" class="svg-b">FINAL SECTION</text>
+  <text x="635" y="412" text-anchor="middle" class="svg-s">mar_s OR mars</text><text x="635" y="428" text-anchor="middle" class="svg-s">ram_s OR (load AND clk_s)</text>
+  <text x="635" y="444" text-anchor="middle" class="svg-s">nine sets OR reset</text><text x="635" y="460" text-anchor="middle" class="svg-s">(r0_s&#8211;r3_s after REG_SELECT)</text>
+  <line x1="510" y1="345" x2="560" y2="345" class="svg-w"/><line x1="560" y1="345" x2="560" y2="370" class="svg-w" marker-end="url(#ah)"/>
+  <line x1="620" y1="136" x2="620" y2="370" class="svg-w" marker-end="url(#ah)"/>
+  <line x1="700" y1="100" x2="770" y2="100" class="svg-w" marker-end="url(#ah)"/>
+  <line x1="730" y1="420" x2="770" y2="420" class="svg-w" marker-end="url(#ah)"/>
+  <line x1="510" y1="305" x2="530" y2="305" class="svg-w"/><line x1="530" y1="305" x2="530" y2="250" class="svg-w"/><line x1="530" y1="250" x2="770" y2="250" class="svg-w" marker-end="url(#ah)"/>
+  <g class="svg-out">
+    <text x="776" y="92">r0_e &#8211; r3_e</text>
+    <text x="776" y="236">pc_e ram_e acc_e</text><text x="776" y="252">bus1 opcode c</text><text x="776" y="268">end (io da io_clk)</text>
+    <text x="776" y="402">mar_s ram_s</text><text x="776" y="418">ir_s pc_s acc_s</text><text x="776" y="434">tmp_s flags_s</text><text x="776" y="450">r0_s &#8211; r3_s</text>
+  </g>
+  <text x="140" y="494" class="svg-s svg-accent">Shaded blocks: the final control section, new this week.</text>
+</svg>
+        <figcaption class="circuit-canvas__caption">The final <code>CONTROL_UNIT</code>. The shaded blocks are the final control section; everything else you built in Weeks 11&ndash;14.</figcaption>
+      </figure>
+
+      <h3>Its pins</h3>
+      <p>Course names are lowercase; the second column is the label on your instructor&rsquo;s figure, so you can match the two.</p>
+      <div class="table-scroll">
+        <table class="gen-table">
+          <thead><tr><th>Input</th><th>His label</th><th>Width</th><th>What it does</th></tr></thead>
+          <tbody>
+<tr><td><code>clk</code></td><td>clk</td><td>1</td><td>the clock&rsquo;s clk (the stepper&rsquo;s clock, through AND NOT load)</td></tr>
+<tr><td><code>clk_e</code></td><td>clke</td><td>1</td><td>enable quarter</td></tr>
+<tr><td><code>clk_s</code></td><td>clks</td><td>1</td><td>set quarter</td></tr>
+<tr><td><code>ir</code></td><td>IR_IN</td><td>8</td><td>the IR&rsquo;s output</td></tr>
+<tr><td><code>fc</code> <code>fa</code> <code>fe</code> <code>fz</code></td><td>C A E Z</td><td>1 each</td><td>the FLAGS outputs</td></tr>
+<tr><td><code>load</code></td><td>LOAD</td><td>1</td><td>loading: freezes the stepper, silences step 1, writes RAM in the set quarter</td></tr>
+<tr><td><code>mars</code></td><td>MARS</td><td>1</td><td>the MAR follows the bus</td></tr>
+<tr><td><code>reset</code></td><td>RESET</td><td>1</td><td>writes 0 into every register (the bus is pulled down)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Every output, with its whole equation. <span class="tag-new">final</span> marks the lines the final section changes; the bold part is what it adds. RA and RB are the IR&rsquo;s bits 3&ndash;2 and 1&ndash;0; <strong>match</strong> is page 2&rsquo;s (<code>fc</code> AND b3) OR (<code>fa</code> AND b2) OR (<code>fe</code> AND b1) OR (<code>fz</code> AND b0).</p>
+      <div class="table-scroll">
+        <table class="gen-table" id="eq-table">
+          <thead><tr><th>Output</th><th>His label</th><th>=</th></tr></thead>
+          <tbody>
+<tr><td>pc_e</td><td>PC_E</td><td>( (<code>step1</code> AND NOT <code>load</code>) OR (<code>step4</code> AND DATA) OR (<code>step4</code> AND JMP) OR (<code>step4</code> AND J<em>caez</em>) ) AND <code>clk_e</code></td></tr>
+<tr><td>ram_e</td><td>RAM_E</td><td>( <code>step2</code> OR (<code>step5</code> AND LD) OR (<code>step5</code> AND DATA) OR (<code>step5</code> AND JMP) OR (<code>step6</code> AND J<em>caez</em> AND match) ) AND <code>clk_e</code></td></tr>
+<tr><td>acc_e</td><td>ACC_E</td><td>( <code>step3</code> OR (<code>step6</code> AND ALU AND NOT CMP) OR (<code>step6</code> AND DATA) OR (<code>step5</code> AND J<em>caez</em>) ) AND <code>clk_e</code></td></tr>
+<tr><td>r0_e &ndash; r3_e <span class="tag-new">final</span></td><td>R0_E &ndash; R3_E</td><td>(<code>rega_e</code> AND RA = <em>k</em>) OR (<code>regb_e</code> AND RB = <em>k</em>), from REG_SELECT, where <code>rega_e</code> = ( (<code>step5</code> AND ALU) OR (<code>step4</code> AND LD) OR (<code>step4</code> AND ST) ) AND <code>clk_e</code> and <code>regb_e</code> = ( (<code>step4</code> AND ALU) OR (<code>step5</code> AND ST) OR (<code>step4</code> AND JMPR) ) AND <code>clk_e</code></td></tr>
+<tr><td>mar_s <span class="tag-new">final</span></td><td>MAR_S</td><td>[ ( (<code>step1</code> AND NOT <code>load</code>) OR (<code>step4</code> AND LD) OR (<code>step4</code> AND ST) OR (<code>step4</code> AND DATA) OR (<code>step4</code> AND JMP) OR (<code>step4</code> AND J<em>caez</em>) ) AND <code>clk_s</code> ] <strong>OR <code>mars</code></strong></td></tr>
+<tr><td>ram_s <span class="tag-new">final</span></td><td>RAM_S</td><td>[ (<code>step5</code> AND ST) AND <code>clk_s</code> ] <strong>OR (<code>load</code> AND <code>clk_s</code>)</strong></td></tr>
+<tr><td>ir_s <span class="tag-new">final</span></td><td>IR_S</td><td>[ <code>step2</code> AND <code>clk_s</code> ] <strong>OR <code>reset</code></strong></td></tr>
+<tr><td>pc_s <span class="tag-new">final</span></td><td>PC_S</td><td>[ ( <code>step3</code> OR (<code>step6</code> AND DATA) OR (<code>step4</code> AND JMPR) OR (<code>step5</code> AND JMP) OR (<code>step5</code> AND J<em>caez</em>) OR (<code>step6</code> AND J<em>caez</em> AND match) ) AND <code>clk_s</code> ] <strong>OR <code>reset</code></strong></td></tr>
+<tr><td>acc_s <span class="tag-new">final</span></td><td>ACC_S</td><td>[ ( (<code>step1</code> AND NOT <code>load</code>) OR (<code>step5</code> AND ALU) OR (<code>step4</code> AND DATA) OR (<code>step4</code> AND J<em>caez</em>) ) AND <code>clk_s</code> ] <strong>OR <code>reset</code></strong></td></tr>
+<tr><td>tmp_s <span class="tag-new">final</span></td><td>TMP_S</td><td>[ (<code>step4</code> AND ALU) AND <code>clk_s</code> ] <strong>OR <code>reset</code></strong></td></tr>
+<tr><td>flags_s <span class="tag-new">final</span></td><td>FLAGS_S</td><td>[ ( (<code>step5</code> AND ALU) OR (<code>step4</code> AND CLF) ) AND <code>clk_s</code> ] <strong>OR <code>reset</code></strong></td></tr>
+<tr><td>r0_s &ndash; r3_s <span class="tag-new">final</span></td><td>R0_S &ndash; R3_S</td><td>(<code>regb_s</code> AND RB = <em>k</em>), from REG_SELECT, <strong>OR <code>reset</code></strong>, where <code>regb_s</code> = ( (<code>step6</code> AND ALU AND NOT CMP) OR (<code>step5</code> AND LD) OR (<code>step5</code> AND DATA) ) AND <code>clk_s</code></td></tr>
+<tr><td>bus1</td><td>BUS1</td><td>( (<code>step1</code> AND NOT <code>load</code>) OR (<code>step4</code> AND CLF) OR (<code>step4</code> AND DATA) OR (<code>step4</code> AND J<em>caez</em>) )</td></tr>
+<tr><td>opcode</td><td>ALU_0, ALU_1, ALU_2</td><td>IR bits 4, 5, 6, each AND (<code>step5</code> AND ALU)</td></tr>
+<tr><td>c</td><td>C</td><td>(<code>step5</code> AND ALU)</td></tr>
+<tr><td>end</td><td>END</td><td>the IR byte = <code>11001111</code>: one AND of the eight bits, b5 and b4 through NOTs</td></tr>
+<tr class="opt-row"><td>io <span class="tag-opt">optional</span></td><td>IO</td><td>IR bit 3</td></tr>
+<tr class="opt-row"><td>da <span class="tag-opt">optional</span></td><td>DA</td><td>IR bit 2</td></tr>
+<tr class="opt-row"><td>io_clk_s <span class="tag-opt">optional</span></td><td>IO CLKS_S</td><td><code>step4</code> AND I/O AND <code>io</code> AND <code>clk_s</code></td></tr>
+<tr class="opt-row"><td>io_clk_e <span class="tag-opt">optional</span></td><td>IO CLK_E</td><td><code>step5</code> AND I/O AND NOT <code>io</code> AND <code>clk_e</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>The four <span class="tag-opt">optional</span> outputs are in your instructor&rsquo;s unit for I/O devices this course never builds. The course gives no I/O encoding (Week 12), so they are decoded the way his figure suggests and left unconnected: add them if you like; they are not graded.</p>
+
+      <figure class="circuit-canvas">
+        <span class="fig-label fig-label--f25">Your instructor&rsquo;s Fall 2025 figure</span>
+        <img class="circuit-canvas__img zoomable" src="images/control-unit-full.png"
+             alt="Your instructor's complete control section in Logisim. Inputs clks, clk, clke and LOAD at the top left feed the stepper through an AND with NOT LOAD. Below, a large field of AND and OR gates produces BUS 1, PC_E, RAM_E, ACC_E, C, IO CLK_E, REG B_E, REG A and the ALU lines on the left edge and IR_S, MAR_S, PC_S, ACC_S, RAM_S, TMP_S, FLAGS_S on the right. Two 2 by 4 decoders at the bottom right produce R0_E to R3_E and R0_S to R3_S, each set line ORed with RESET. END, IO and DA outputs sit at the bottom right; inputs C, A, E, Z and the 8-bit IR_IN at the bottom left.">
+        <figcaption class="circuit-canvas__caption">His final control section, whole. Select it to enlarge; the three crops below are easier to read.</figcaption>
+      </figure>
+      <div class="detail-grid">
+        <figure class="circuit-canvas">
+          <img class="circuit-canvas__img zoomable" src="images/control-unit-top.png"
+               alt="The top third of the control section: the clock inputs, LOAD through a NOT gate into the stepper's clock AND and into an AND with step 1, and the first OR gates for BUS 1 and PC_E.">
+          <figcaption class="circuit-canvas__caption">Top: the stepper and LOAD.</figcaption>
+        </figure>
+        <figure class="circuit-canvas">
+          <img class="circuit-canvas__img zoomable" src="images/control-unit-middle.png"
+               alt="The middle third of the control section: rows of step-and-class AND gates feeding the OR gates for RAM_E, ACC_E, REG B_E, IR_S, MAR_S with MARS, and PC_S.">
+          <figcaption class="circuit-canvas__caption">Middle: the line gates; MARS joins <code>MAR_S</code>.</figcaption>
+        </figure>
+        <figure class="circuit-canvas">
+          <img class="circuit-canvas__img zoomable" src="images/control-unit-bottom.png"
+               alt="The bottom third of the control section: the flag-match AND gates with C, A, E, Z, the ALU operation outputs, the two 2 by 4 register decoders with RESET ORed into R0_S to R3_S, and the END, IO and DA outputs.">
+          <figcaption class="circuit-canvas__caption">Bottom: match, the register decoders with RESET, END.</figcaption>
+        </figure>
+      </div>
+      <div class="detail-grid">
+        <figure class="circuit-canvas">
+          <img class="circuit-canvas__img zoomable" src="images/lme-load-control.jpg"
+               alt="Close-up: inputs clks, clk and clke, and an input LOAD with a LOAD tunnel. LOAD goes through a NOT gate into an AND with clk, whose output clocks the stepper, and through a second NOT into an AND with the stepper's step 1 output.">
+          <figcaption class="circuit-canvas__caption">LOAD: <code>clk</code> AND NOT <code>load</code> clocks the stepper; <code>step1</code> AND NOT <code>load</code>.</figcaption>
+        </figure>
+        <figure class="circuit-canvas">
+          <img class="circuit-canvas__img zoomable" src="images/lme-mars-control.jpg"
+               alt="Close-up: an input MARS runs down to an OR gate beside the AND gate that makes MAR_S from its step terms and clks; the OR's output is the MAR_S output pin. An input RESET runs down past it into the OR gate of IR_S.">
+          <figcaption class="circuit-canvas__caption">MARS ORed into <code>MAR_S</code>; RESET into <code>IR_S</code>.</figcaption>
+        </figure>
+        <figure class="circuit-canvas">
+          <img class="circuit-canvas__img zoomable" src="images/reset-bit-in-control-section.jpg"
+               alt="Close-up: an input RESET, marked with a red arrow, joins an OR gate after the AND gate of clks and the step-2 line; the OR's output is IR_S.">
+          <figcaption class="circuit-canvas__caption">RESET is a control-unit input.</figcaption>
+        </figure>
+      </div>
+      <div class="callout callout--note">
+        <div class="callout__title">Where your control unit differs from his figure</div>
+        <ul class="diff">
+          <li><strong>Names.</strong> Lowercase course names; the table above gives his label for each.</li>
+          <li><strong>The register decoders.</strong> He drew two 2&times;4 decoders (REG A, REG B) and their gates directly. You place your Week 10 <code>REG_SELECT</code> tab inside the unit: the same gates, already tested.</li>
+          <li><strong><code>c</code>.</strong> His figure does not show C&rsquo;s inputs legibly. The course reading is <code>step5</code> AND ALU, which is what page 3 and <code>MYSIM.txt</code> need.</li>
+          <li><strong>RESET does not reach <code>mar_s</code> or <code>ram_s</code>.</strong> RESET clears the RAM through its own <code>reset</code>; MARS sets the MAR next.</li>
+          <li><strong>I/O.</strong> His four I/O outputs are optional in yours.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ========== Widget 1 ========== -->
+    <section id="sec-ce">
+      <p>Try it before you wire it. Pick an instruction, a step and a quarter, then set LOAD, MARS and RESET the way the procedure does: LOAD alone at step 1 silences everything; LOAD with MARS in the set quarter is exactly one byte of the load; RESET raises the nine sets in any step.</p>
+      <div class="widget-card" id="w-ce">
+        <div class="widget-card__title">Control Unit Explorer</div>
+        <div class="widget-card__subtitle">The final <code>CONTROL_UNIT</code>&rsquo;s outputs for the inputs you set. Highlighted pins are 1.</div>
+        <div class="btn-row">
+          <label for="ce-prog">Instruction</label>
+          <select id="ce-prog" class="ce-sel">
+            <option value="0x00">0x00 &mdash; any byte, at fetch (steps 1&ndash;3)</option>
+            <option value="0x86">0x86 &mdash; ADD R1, R2</option>
+            <option value="0xF6">0xF6 &mdash; CMP R1, R2</option>
+            <option value="0x60">0x60 &mdash; CLF</option>
+            <option value="0x02">0x02 &mdash; LD R0, R2</option>
+            <option value="0x11">0x11 &mdash; ST R0, R1</option>
+            <option value="0x21">0x21 &mdash; DATA R1, n</option>
+            <option value="0x33">0x33 &mdash; JMPR R3</option>
+            <option value="0x40">0x40 &mdash; JMP a</option>
+            <option value="0x58">0x58 &mdash; JC a</option>
+            <option value="0xCF">0xCF &mdash; END</option>
+            <option value="0x78">0x78 &mdash; I/O, IO = 1 (optional pins)</option>
+            <option value="0x70">0x70 &mdash; I/O, IO = 0 (optional pins)</option>
+          </select>
+          <label for="ce-hex">or IR byte</label>
+          <input id="ce-hex" class="ce-hex" type="text" value="0x86" maxlength="4" aria-describedby="ce-status">
+        </div>
+        <div class="btn-row">
+          <fieldset class="ce-fs"><legend>Step</legend>
+            <label><input type="radio" name="ce-step" value="1"> 1</label>
+            <label><input type="radio" name="ce-step" value="2"> 2</label>
+            <label><input type="radio" name="ce-step" value="3"> 3</label>
+            <label><input type="radio" name="ce-step" value="4"> 4</label>
+            <label><input type="radio" name="ce-step" value="5" checked> 5</label>
+            <label><input type="radio" name="ce-step" value="6"> 6</label>
+          </fieldset>
+          <fieldset class="ce-fs"><legend>Quarter</legend>
+            <label><input type="radio" name="ce-q" value="e" checked> clk_e = 1</label>
+            <label><input type="radio" name="ce-q" value="s"> clk_s = 1</label>
+            <label><input type="radio" name="ce-q" value="0"> both 0</label>
+          </fieldset>
+        </div>
+        <div class="btn-row">
+          <fieldset class="ce-fs"><legend>Control inputs</legend>
+            <label><input type="checkbox" id="ce-load"> load</label>
+            <label><input type="checkbox" id="ce-mars"> mars</label>
+            <label><input type="checkbox" id="ce-reset"> reset</label>
+          </fieldset>
+          <fieldset class="ce-fs"><legend>Flags</legend>
+            <label><input type="checkbox" id="ce-fc" checked> fc</label>
+            <label><input type="checkbox" id="ce-fa"> fa</label>
+            <label><input type="checkbox" id="ce-fe"> fe</label>
+            <label><input type="checkbox" id="ce-fz"> fz</label>
+          </fieldset>
+        </div>
+        <p class="w-status" id="ce-status" aria-live="polite"></p>
+        <div class="w-panel">
+          <h3>Outputs</h3>
+          <div class="pins" id="ce-pins"></div>
+        </div>
+        <div class="w-panel">
+          <h3>Optional outputs</h3>
+          <div class="pins" id="ce-opt"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-14-18">
+      <h2>14.18 &nbsp; The <code>CPU</code> tab, item by item</h2>
+      <p>Your instructor numbered the nine additions that turn the Week 13 CPU tab into the finished one. The numbers below are his; the diagram is the same layout, simplified, with each addition in the place it goes. Everything not numbered &mdash; the registers, TMP, BUS1, the ALU, ACC, the PC, the IR, the RAM &mdash; is already on your tab. Also <strong>delete</strong> three things your instructor&rsquo;s CPU never had: Week 13&rsquo;s <code>run</code> pin and its three ANDs, the test port, and the <code>REG_SELECT</code> instance (now inside the control unit).</p>
+      <figure class="circuit-canvas">
+        <span class="fig-label fig-label--gen">Drawn for this course</span>
+        <svg class="gen-svg" viewBox="0 0 860 430" role="img" aria-labelledby="cpu-svg-t cpu-svg-d">
+  <title id="cpu-svg-t">The finished CPU tab, with the nine additions numbered</title>
+  <desc id="cpu-svg-d">The bus runs across the middle. Above it: TMP and BUS1 feeding the ALU, R0 to R3, and the RAM with its MAR. The control unit sits in the centre. Numbered additions: 1 the clock with clock AND NOT end, at the top left; 2 the pull-downs and the bus output pin, at the bottom; 3 CTMP between FLAGS and the ALU's carry-in; 4 FLAGS wired into the control unit; 5 RESET into the control unit and the RAM; 6 the multiplexor at the RAM's input; 7 LOAD, MARS and END beside the control unit; 8 the optional I/O pins; 9 the loader counter driving the bus through a buffer.</desc>
+  <rect x="20" y="200" width="820" height="16" rx="3" class="svg-bus"/><text x="430" y="212" text-anchor="middle" class="svg-s svg-onbus">BUS (8)</text>
+  <rect x="40" y="40" width="70" height="34" rx="4" class="svg-blk"/><text x="75" y="62" text-anchor="middle" class="svg-b">TMP</text>
+  <rect x="40" y="90" width="70" height="30" rx="4" class="svg-blk"/><text x="75" y="110" text-anchor="middle" class="svg-b">BUS1</text>
+  <rect x="40" y="236" width="90" height="90" rx="4" class="svg-blk"/><text x="85" y="285" text-anchor="middle" class="svg-b">ALU</text>
+  <rect x="40" y="346" width="90" height="34" rx="4" class="svg-blk"/><text x="85" y="368" text-anchor="middle" class="svg-b">ACC</text>
+  <rect x="150" y="300" width="70" height="34" rx="4" class="svg-blk svg-blk--a"/><text x="185" y="322" text-anchor="middle" class="svg-b">CTMP</text>
+  <rect x="150" y="244" width="70" height="40" rx="4" class="svg-blk"/><text x="185" y="268" text-anchor="middle" class="svg-b">FLAGS</text>
+  <rect x="128" y="30" width="136" height="56" rx="4" class="svg-blk svg-blk--a"/><text x="196" y="52" text-anchor="middle" class="svg-b">CLOCK</text><text x="196" y="70" text-anchor="middle" class="svg-s">clock AND NOT end</text>
+  <rect x="280" y="40" width="80" height="40" rx="4" class="svg-blk"/><text x="320" y="65" text-anchor="middle" class="svg-b">R0</text>
+  <rect x="380" y="40" width="80" height="40" rx="4" class="svg-blk"/><text x="420" y="65" text-anchor="middle" class="svg-b">R1</text>
+  <rect x="480" y="40" width="80" height="40" rx="4" class="svg-blk"/><text x="520" y="65" text-anchor="middle" class="svg-b">R2</text>
+  <rect x="580" y="40" width="80" height="40" rx="4" class="svg-blk"/><text x="620" y="65" text-anchor="middle" class="svg-b">R3</text>
+  <rect x="270" y="100" width="420" height="84" rx="6" class="svg-frame"/><text x="480" y="132" text-anchor="middle" class="svg-b">CONTROL_UNIT</text><text x="480" y="150" text-anchor="middle" class="svg-s">(&#167;14.17)</text>
+  <rect x="700" y="30" width="130" height="150" rx="4" class="svg-blk"/><text x="765" y="56" text-anchor="middle" class="svg-b">RAM_16X16</text><text x="765" y="74" text-anchor="middle" class="svg-s">MAR, 32 bytes</text>
+  <rect x="720" y="120" width="70" height="40" rx="4" class="svg-blk svg-blk--a"/><text x="755" y="144" text-anchor="middle" class="svg-s">MUX (load)</text>
+  <rect x="280" y="236" width="90" height="40" rx="4" class="svg-blk"/><text x="325" y="261" text-anchor="middle" class="svg-b">PC</text>
+  <rect x="400" y="236" width="90" height="40" rx="4" class="svg-blk"/><text x="445" y="261" text-anchor="middle" class="svg-b">IR</text>
+  <rect x="160" y="356" width="150" height="40" rx="4" class="svg-blk svg-blk--a"/><text x="235" y="374" text-anchor="middle" class="svg-s">COUNTER_256 + buffer</text><text x="235" y="389" text-anchor="middle" class="svg-s">clkl AND load</text>
+  <rect x="380" y="380" width="110" height="30" rx="4" class="svg-blk svg-blk--a"/><text x="435" y="400" text-anchor="middle" class="svg-s">bus output</text>
+  <rect x="520" y="236" width="80" height="40" rx="4" class="svg-blk svg-blk--a"/><text x="560" y="261" text-anchor="middle" class="svg-s">RESET</text>
+  <rect x="620" y="236" width="80" height="40" rx="4" class="svg-blk svg-blk--o"/><text x="660" y="255" text-anchor="middle" class="svg-s">io da</text><text x="660" y="268" text-anchor="middle" class="svg-s">io_clk</text>
+  <rect x="720" y="236" width="110" height="64" rx="4" class="svg-blk svg-blk--a"/><text x="775" y="258" text-anchor="middle" class="svg-s">LOAD  MARS</text><text x="775" y="276" text-anchor="middle" class="svg-s">END</text>
+  <g class="svg-num">
+    <circle cx="128" cy="26" r="12"/><text x="128" y="31" text-anchor="middle">1</text>
+    <circle cx="372" cy="376" r="12"/><text x="372" y="381" text-anchor="middle">2</text>
+    <circle cx="232" cy="312" r="12"/><text x="232" y="317" text-anchor="middle">3</text>
+    <circle cx="232" cy="252" r="12"/><text x="232" y="257" text-anchor="middle">4</text>
+    <circle cx="560" cy="290" r="12"/><text x="560" y="295" text-anchor="middle">5</text>
+    <circle cx="800" cy="140" r="12"/><text x="800" y="145" text-anchor="middle">6</text>
+    <circle cx="775" cy="312" r="12"/><text x="775" y="317" text-anchor="middle">7</text>
+    <circle cx="660" cy="290" r="12"/><text x="660" y="295" text-anchor="middle">8</text>
+    <circle cx="150" cy="376" r="12"/><text x="150" y="381" text-anchor="middle">9</text>
+  </g>
+</svg>
+        <figcaption class="circuit-canvas__caption">Where the nine additions go. Shaded: new this week; dashed: optional.</figcaption>
+      </figure>
+      <div class="table-scroll">
+        <table class="gen-table" id="items-table">
+          <thead><tr><th>#</th><th>Addition</th><th>What to wire</th><th>Explained on</th></tr></thead>
+          <tbody>
+<tr><td class="num">1</td><td><strong>The clock</strong></td><td>A Logisim <strong>Clock</strong> feeds input <code>clock</code>; <code>CLOCK</code>&rsquo;s <code>clk_in</code> = <code>clock</code> AND NOT <code>end</code>. <code>clk</code> goes out as <code>clkl</code> (and to the loader); <code>clk</code>, <code>clk_e</code>, <code>clk_s</code> go to the control unit.</td><td>page 3, &sect;14.10</td></tr>
+<tr><td class="num">2</td><td><strong>Pull-downs and the bus output</strong></td><td>Every pin that faces the bus has <em>Pull Behavior: Pull Down</em>: R0&ndash;R3, TMP, ACC, BUS1, the PC, the IR, the ALU (<code>a</code>, <code>b</code>, <code>ci</code>, <code>opcode</code>, flags) and the RAM (address, <code>i</code>, <code>o</code>, <code>reset</code>). An 8-bit output <code>bus</code> shows the bus. A bus nothing drives reads <code>00000000</code>.</td><td>&sect;14.17 here</td></tr>
+<tr><td class="num">3</td><td><strong>The carry-in</strong></td><td><code>CTMP</code>: one <code>MEM_1BIT</code>, <code>c</code> = FLAGS C, <code>s</code> = <code>tmp_s</code>. ALU <code>ci</code> = CTMP AND the control unit&rsquo;s <code>c</code>.</td><td>page 3, &sect;14.9</td></tr>
+<tr><td class="num">4</td><td><strong>FLAGS to the control unit</strong></td><td>FLAGS C, A, E, Z to <code>fc</code>, <code>fa</code>, <code>fe</code>, <code>fz</code>; FLAGS <code>s</code> = the control unit&rsquo;s <code>flags_s</code>.</td><td>page 2, &sect;14.6</td></tr>
+<tr><td class="num">5</td><td><strong>RESET</strong></td><td>Input <code>reset</code> (a button on <code>CPU_TEST</code>) to the control unit&rsquo;s <code>reset</code> <em>and</em> to your RAM&rsquo;s <code>reset</code>.</td><td>&sect;14.17 here</td></tr>
+<tr><td class="num">6</td><td><strong>The RAM input Multiplexor</strong></td><td>At your RAM&rsquo;s <code>i</code>: select = <code>load</code>, input 0 = the bus, input 1 = input <code>ram_input</code>.</td><td>page 3, &sect;14.11</td></tr>
+<tr><td class="num">7</td><td><strong>LOAD, MARS and END</strong></td><td>Inputs <code>load</code> and <code>mars</code> to the control unit; its <code>end</code> out to an output pin and back to the clock (item 1).</td><td>page 3, &sect;14.11</td></tr>
+<tr><td class="num">8</td><td><strong>I/O pins (optional)</strong></td><td>Outputs <code>io</code>, <code>da</code>, <code>io_clk_e</code>, <code>io_clk_s</code> straight from the control unit. Nothing uses them; not graded.</td><td>&sect;14.17 here</td></tr>
+<tr><td class="num">9</td><td><strong>The loader counter</strong></td><td>A <code>COUNTER_256</code>, its <code>clk</code> = <code>clkl</code> AND <code>load</code>, its <code>count</code> onto the bus through a controlled buffer enabled by <code>load</code>.</td><td>page 3, &sect;14.11</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <figure class="circuit-canvas">
+        <span class="fig-label fig-label--f25">Your instructor&rsquo;s Fall 2025 figure</span>
+        <img class="circuit-canvas__img zoomable" src="images/final-cpu-highlighted.png"
+             alt="Your instructor's finished CPU tab with nine shaded, numbered areas: 1 the clock input with clock AND NOT END at the upper left; 2 the BUS OUTPUT pin at the bottom; 3 the Ctmp latch, its S and C tunnels and the AND into the ALU's ci; 4 FLAGS wired into the control section; 5 RESET into the control section; 6 the multiplexor with RAM INPUT and LOAD at the RAM's input, and RESET to the RAM; 7 LOAD, MARS and END beside the control section; 8 the IO CLK S and E and IO, DA pins; 9 the clk 256 counter clocked by clkl AND LOAD, driving the bus through a buffer.">
+        <figcaption class="circuit-canvas__caption">His finished CPU tab with the nine additions numbered. Select it to enlarge.</figcaption>
+      </figure>
+      <figure class="circuit-canvas">
+        <span class="fig-label fig-label--f25">Your instructor&rsquo;s Fall 2025 figure</span>
+        <img class="circuit-canvas__img zoomable" src="images/final-cpu-diagram.png"
+             alt="The same finished CPU tab without highlighting: TMP and bus 1 above the ALU on the left, ACC below it, R0 to R3 across the top, the RAM with its MAR on the right, the large CONTROL SECTION block in the middle, the PC and IR below it, the clk 256 counter at the lower left, and the BUS OUTPUT pin at the bottom.">
+        <figcaption class="circuit-canvas__caption">The same tab, unmarked: what yours should look like.</figcaption>
+      </figure>
+      <div class="detail-grid">
+        <figure class="circuit-canvas">
+          <img class="circuit-canvas__img zoomable" src="images/registers-pd.png"
+               alt="A register with an 8-bit input pin and an 8-bit output pin, both marked with red arrows, and the attribute table of the selected pin showing Pull Behavior set to Pull Down.">
+          <figcaption class="circuit-canvas__caption">Item 2: a pin set to <em>Pull Behavior: Pull Down</em>.</figcaption>
+        </figure>
+        <figure class="circuit-canvas">
+          <img class="circuit-canvas__img" src="images/bus-output-pd.png"
+               alt="An 8-bit output pin labelled BUS OUTPUT showing 00000000, fed from the bus.">
+          <figcaption class="circuit-canvas__caption">Item 2: the bus output reads 0 when nothing drives.</figcaption>
+        </figure>
+        <figure class="circuit-canvas">
+          <img class="circuit-canvas__img zoomable" src="images/flags-caez-control.jpg"
+               alt="The FLAGS block's c, a, e, z outputs wired to the control section's C, A, E and Z inputs, and FLAGS s from FLAG_S.">
+          <figcaption class="circuit-canvas__caption">Item 4: FLAGS into the control unit.</figcaption>
+        </figure>
+        <figure class="circuit-canvas">
+          <img class="circuit-canvas__img zoomable" src="images/reset-input-to-ram.jpg"
+               alt="A RESET tunnel wired to the r input of the RAM block, beside the RAM INPUT multiplexor.">
+          <figcaption class="circuit-canvas__caption">Item 5: RESET to the RAM&rsquo;s reset.</figcaption>
+        </figure>
+        <figure class="circuit-canvas">
+          <img class="circuit-canvas__img zoomable" src="images/ioclk-io-da.jpg"
+               alt="The bottom of the control section: output pins END, IO and DA, IO marked with a red arrow.">
+          <figcaption class="circuit-canvas__caption">Item 8 (optional): IO and DA.</figcaption>
+        </figure>
+      </div>
+      <p>Items 1, 3, 6 and 9 are drawn larger on page 3. <code>CPU_TEST</code>, the tab you run, holds one <code>CPU</code>, a Clock to <code>clock</code>, inputs LOAD, RESET (a button) and MARS, an END LED, <code>clkl</code>/<code>clk_e</code>/<code>clk_s</code> readouts, hex displays, and the external RAM with its own <code>COUNTER_256</code> on <code>clkl</code> (RAM <code>sel</code> = LOAD, clock = <code>clkl</code>, <code>ld</code> = 1, <code>clr</code> = 0, <code>D</code> to <code>ram_input</code>), as page 3 shows.</p>
+    </section>
+
+    <section id="sec-14-19">
+      <h2>14.19 &nbsp; What &ldquo;complete&rdquo; means</h2>
+      <p>The final project grades your CPU by tier &mdash; which instructions pass their tests. Underneath every tier is the same finished machine. Your CPU simulation is complete when:</p>
+      <ol class="checklist">
+        <li><code>CONTROL_UNIT</code> has every input and output in &sect;14.17, with the equations in the table (the optional four aside).</li>
+        <li>The <code>CPU</code> tab has the nine additions of &sect;14.18, and no <code>run</code> pin, test port or separate <code>REG_SELECT</code>.</li>
+        <li><code>CPU_TEST</code> holds the CPU, the Clock, LOAD, RESET, MARS, END and the external RAM.</li>
+        <li>The page 3 procedure works from Simulate &rarr; Reset: LOAD, RESET (all <code>00</code>), file, MARS, ticks to <code>FF</code>, 0&nbsp;1&nbsp;0, MARS and LOAD off, run to END.</li>
+        <li>Built-ins appear only where page 3&rsquo;s exception allows them.</li>
+      </ol>
+      <p>Tier C is the one exception: a CPU that stops at Checkpoint 6 has no loader, so it keeps Week 13&rsquo;s <code>run</code> pin and test port and is run by hand, as the final project page says.</p>
+      <p>For how a real control unit is organized at full size &mdash; hard-wired, as yours is, or microprogrammed &mdash; log into your Saylor CS301 account at <a href="https://learn.saylor.org/mod/page/view.php?id=20643" target="_blank" rel="noopener">the CS301 course page</a>; its unit on the processor covers both.</p>
+    </section>
+
+    <section id="sec-check">
+      <div class="widget-card" id="selfcheck">
+        <div class="widget-card__title">Self-check</div>
+        <div class="widget-card__subtitle">Four questions, not graded.</div>
+        <div id="sc-body"></div>
+      </div>
+    </section>
+
+    <section id="sec-wrap">
+      <h2>Where you are</h2>
+      <p>That is the whole machine. Build it into Checkpoint 7, and keep this page open while you finish the final project: it is in each of the last three weeks&rsquo; modules for that reason.</p>
+      <div class="spa-card__btn" aria-hidden="true">Continue to the next item in this module</div>
+    </section>
+
+  </main>
+
+  <footer class="sp-footer">
+    CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 14, Page 5
+  </footer>
+  <script src="../../shared/logic.js"></script>
+  <script>
+  (function () {
+    var NEED = ['fin', 'core'];
+    var L = window.CSCLogic || {};
+    var missing = [];
+    for (var i = 0; i < NEED.length; i++) { if (!L[NEED[i]]) { missing.push(NEED[i]); } }
+    if (L.fin && !L.fin.outputs) { missing.push('fin.outputs'); }
+    if (!missing.length) { return; }
+    var b = document.createElement('div');
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'margin:16px auto;max-width:900px;padding:14px 18px;border:2px solid #b45309;' +
+      'border-radius:6px;background:#fff7ed;color:#7c2d12;font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif';
+    b.innerHTML = '<strong>The interactive part of this page is not running.</strong> ' +
+      'The shared script <code>shared/logic.js</code> on the server is older than this page needs (it is missing ' +
+      '<code>CSCLogic.' + missing.join('</code> and <code>CSCLogic.') + '</code>). The written content is unaffected and still correct. ' +
+      '<em>Please tell your instructor you saw this.</em>';
+    var m = document.querySelector('main');
+    if (m) { m.insertBefore(b, m.firstChild); } else { document.body.insertBefore(b, document.body.firstChild); }
+  })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.CSCLogic;
+    if (!L || !L.fin || !L.fin.outputs) { return; }
+    var F = L.fin, C = L.core;
+    function $(id) { return document.getElementById(id); }
+    var DESC = {
+      pc_e: 'PC drives', ram_e: 'RAM drives', acc_e: 'ACC drives', r0_e: 'R0 drives', r1_e: 'R1 drives', r2_e: 'R2 drives', r3_e: 'R3 drives',
+      mar_s: 'MAR captures', ram_s: 'RAM captures', ir_s: 'IR captures', pc_s: 'PC captures', acc_s: 'ACC captures', tmp_s: 'TMP captures',
+      flags_s: 'FLAGS capture', r0_s: 'R0 captures', r1_s: 'R1 captures', r2_s: 'R2 captures', r3_s: 'R3 captures', bus1: 'B = 1',
+      c: 'carry-in on', end: 'IR = END', io: 'IR bit 3', da: 'IR bit 2', io_clk_e: 'device drives', io_clk_s: 'device captures'
+    };
+    /* ---------- Widget 1 — Control Unit Explorer ---------- */
+    (function () {
+      var host = $('w-ce'); if (!host) { return; }
+      function radio(n) { var r = host.querySelector('input[name="' + n + '"]:checked'); return r ? r.value : null; }
+      function irByte() {
+        var t = $('ce-hex').value.trim().replace(/^0x/i, '');
+        if (!/^[0-9a-f]{1,2}$/i.test(t)) { return null; }
+        return parseInt(t, 16);
+      }
+      function paint() {
+        var ir = irByte();
+        if (ir === null) { $('ce-status').textContent = 'Type the IR byte as two hex digits, for example 0x86.'; $('ce-pins').innerHTML = ''; $('ce-opt').innerHTML = ''; return; }
+        var step = +radio('ce-step'), q = radio('ce-q');
+        var o = { ir: ir, step: step, clkE: q === 'e' ? 1 : 0, clkS: q === 's' ? 1 : 0,
+                  load: $('ce-load').checked, mars: $('ce-mars').checked, reset: $('ce-reset').checked,
+                  flags: { C: +$('ce-fc').checked, A: +$('ce-fa').checked, E: +$('ce-fe').checked, Z: +$('ce-fz').checked } };
+        var out = F.outputs(o);
+        function cell(k, opt) {
+          return '<div class="pin' + (out[k] ? ' pin--1' : '') + (opt ? ' pin--opt' : '') + '">' + k + ' = ' + out[k] + '<small>' + DESC[k] + '</small></div>';
+        }
+        $('ce-pins').innerHTML = F.OUT_PINS.map(function (k) { return cell(k, false); }).join('') +
+          '<div class="pin">opcode = ' + ('00' + out.opcode.toString(2)).slice(-3) + '<small>ALU_2 ALU_1 ALU_0</small></div>';
+        $('ce-opt').innerHTML = F.OPT_PINS.map(function (k) { return cell(k, true); }).join('');
+        var high = F.OUT_PINS.filter(function (k) { return out[k]; });
+        var txt = C.decodeByte(ir).text + ', step ' + step + ': ';
+        if (o.load && step === 1 && !o.reset && !o.mars) { txt += 'step 1 is silenced by LOAD (step1 AND NOT load), so nothing is raised.'; }
+        else { txt += high.length ? high.join(', ') + ' high.' : 'no output is high.'; }
+        if (o.load && step !== 1) { txt += ' (LOAD freezes the stepper wherever it is; the procedure turns LOAD on at step 1.)'; }
+        if (o.reset) { txt += ' RESET raises the nine sets; the pulled-down bus writes 0.'; }
+        $('ce-status').textContent = txt;
+      }
+      $('ce-prog').addEventListener('change', function () { $('ce-hex').value = $('ce-prog').value; paint(); });
+      host.addEventListener('change', function (e) { if (e.target.id !== 'ce-prog') { paint(); } });
+      $('ce-hex').addEventListener('input', paint);
+      $('ce-prog').value = '0x86';
+      paint();
+    }());
+    /* ---------- Self-check ---------- */
+    (function () {
+      var host = $('sc-body');
+      if (!host) { return; }
+      var Q = [
+  {
+    "q": "RESET is ORed into the set lines, but nothing drives a value onto the bus while it is held. Why do the registers capture 0 and not E?",
+    "opts": [
+      "Every bus-facing pin is pulled down, so a bus nothing drives reads 00000000",
+      "RESET drives 00000000 onto the bus through a buffer",
+      "The registers clear themselves when their set line rises",
+      "The RAM puts 00 on the bus during RESET"
+    ],
+    "correct": 0,
+    "why": "There is no RESET buffer in the final design. The pull-downs make an undriven bus read 0, so every register RESET sets captures 0 &mdash; and ACC and FLAGS capture the ALU&rsquo;s 0 ADD 0."
+  },
+  {
+    "q": "LOAD is 1 and the Clock is ticking. What is the stepper doing?",
+    "opts": [
+      "Holding still: its clock is clk AND NOT load, and step 1 is ANDed with NOT load, so no line is raised",
+      "Counting steps 1 to 6 as usual, while the loader writes RAM",
+      "Resetting to step 1 on every tick",
+      "Running only steps 1 to 3, the fetch"
+    ],
+    "correct": 0,
+    "why": "Both gates are inside the control unit. That is why the procedure turns LOAD on before RESET and before any tick: step 1&rsquo;s PC_E would otherwise put the never-written PC on the bus."
+  },
+  {
+    "q": "Why does RESET go into r0_s, r1_s, r2_s and r3_s, rather than into regb_s?",
+    "opts": [
+      "regb_s reaches only the register named by RB; all four must clear, so the OR goes after REG_SELECT",
+      "regb_s is gated by clk_s, and RESET must not be",
+      "regb_s does not exist in the final control unit",
+      "So that RESET can clear the registers one at a time"
+    ],
+    "correct": 0,
+    "why": "This is why REG_SELECT moves inside the control unit this week, as in your instructor&rsquo;s design: the OR with reset belongs on its four set outputs."
+  },
+  {
+    "q": "During the load, MAR_S = &hellip; OR mars is high in every quarter, not just the set quarter. Why is that safe?",
+    "opts": [
+      "The MAR simply follows the counter on the bus; the RAM writes only in the set quarter, through load AND clk_s",
+      "It is not safe: the MAR must be ANDed with clk_s",
+      "The counter only changes while MARS is 0",
+      "The RAM ignores its address while load is 1"
+    ],
+    "correct": 0,
+    "why": "The address settles in the MAR first; RAM_S = &hellip; OR (load AND clk_s) writes byte <em>k</em> in the set quarter; the counter moves on when clk falls, when nothing is being written."
+  }
+];
+      Q.forEach(function (item, qi) {
+        var wrap = document.createElement('div');
+        wrap.className = 'quiz-question';
+        var opts = item.opts.map(function (o, oi) {
+          return '<div class="quiz-option" role="button" tabindex="0" data-q="' + qi + '" data-o="' + oi + '">' + o + '</div>';
+        }).join('');
+        wrap.innerHTML = '<p><strong>' + (qi + 1) + '.</strong> ' + item.q + '</p><div class="quiz-options">' + opts + '</div>' +
+          '<div class="quiz-feedback" id="sc-fb-' + qi + '" aria-live="polite" hidden></div>';
+        host.appendChild(wrap);
+      });
+      function answer(qi, oi) {
+        var item = Q[qi], okAns = (oi === item.correct), fb = document.getElementById('sc-fb-' + qi);
+        fb.hidden = false;
+        fb.className = 'quiz-feedback ' + (okAns ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect');
+        fb.innerHTML = (okAns ? '<strong>Correct.</strong> ' : '<strong>Not this one.</strong> ') + item.why;
+        host.querySelectorAll('[data-q="' + qi + '"]').forEach(function (el) { el.setAttribute('aria-pressed', el.dataset.o === String(oi) ? 'true' : 'false'); });
+      }
+      host.addEventListener('click', function (e) { var t = e.target.closest('.quiz-option'); if (t) { answer(+t.dataset.q, +t.dataset.o); } });
+      host.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') { return; }
+        var t = e.target.closest('.quiz-option');
+        if (t) { e.preventDefault(); answer(+t.dataset.q, +t.dataset.o); }
+      });
+    }());
+  })();
+  </script>
+</body>
+</html>

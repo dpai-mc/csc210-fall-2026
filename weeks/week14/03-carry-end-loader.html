@@ -84,7 +84,7 @@
         <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s final clock input: the moment the IR holds END, the AND stops the clock.</figcaption>
       </figure>
       <p><strong>Simulate &rarr; Tick Once</strong> (Ctrl-T) is now one click. <strong>Simulate &rarr; Ticks Enabled</strong> (Ctrl-K) runs at the speed set under <strong>Tick Frequency</strong>, until END stops it. The CPU stops in the middle of fetching END, with END in the IR and the PC still holding END&rsquo;s address.</p>
-      <p><code>run</code> changes once more: it now gates <code>clk</code> into the control unit as well as <code>clk_e</code> and <code>clk_s</code>. With <code>run</code> = 0 the stepper holds step 1 however long the clock runs &mdash; which the loader needs.</p>
+      <p>Your Week 13 <code>run</code> pin retires here. The loader needs the stepper to hold still however long the clock runs, and in the finished CPU that is <code>LOAD</code>&rsquo;s job, inside the control unit: the stepper&rsquo;s clock becomes <code>clk</code> AND NOT <code>LOAD</code>, and step 1 becomes <code>step1</code> AND NOT <code>LOAD</code>, so while LOAD is on the stepper is frozen and step 1 raises nothing. Delete <code>run</code> and its three AND gates on the CPU tab; page 5 shows the whole control unit.</p>
     </section>
 
     <section id="sec-14-11">
@@ -116,11 +116,11 @@
              alt="A Logisim fragment at the RAM's input: a two-input multiplexor whose input 0 comes from the bus and whose input 1 comes from an 8-bit input pin labelled RAM INPUT; a LOAD tunnel drives its select line, and its output goes to the RAM's input.">
         <figcaption class="circuit-canvas__caption">At your RAM&rsquo;s <code>i</code>: a Multiplexor, select = <code>load</code>. Input 0 is the bus; input 1 is <code>ram_input</code>, from the external RAM.</figcaption>
       </figure>
-      <p>While <code>load</code> is 1, each turn of the clock does one byte: the counter puts address <em>k</em> on the bus, the MAR follows it (you hold <code>data_mar</code> at 1 &mdash; your instructor&rsquo;s <strong>MARS</strong> pin), and in the set quarter <code>load</code> AND <code>clk_s</code> raises your RAM&rsquo;s <code>s</code>, writing byte <em>k</em> of the file. The counter moves on when <code>clk</code> falls, in a quarter when nothing is being written. On <code>CPU_TEST</code> a second <code>COUNTER_256</code>, clocked by <code>clkl</code>, gives the external RAM the same address.</p>
+      <p>While <code>load</code> is 1, each turn of the clock does one byte: the counter puts address <em>k</em> on the bus, the MAR follows it (the control unit&rsquo;s <code>MAR_S</code> is ORed with a new input, <strong>MARS</strong>, which you hold at 1), and in the set quarter the control unit&rsquo;s <code>RAM_S</code> = &hellip; OR (<code>LOAD</code> AND <code>clk_s</code>) raises your RAM&rsquo;s <code>s</code>, writing byte <em>k</em> of the file. The counter moves on when <code>clk</code> falls, in a quarter when nothing is being written. On <code>CPU_TEST</code> a second <code>COUNTER_256</code>, clocked by <code>clkl</code>, gives the external RAM the same address.</p>
       <figure class="circuit-canvas">
         <img class="circuit-canvas__img zoomable" src="images/CPU_TopSim.jpg"
              alt="Your instructor's top-level CPU_TEST circuit. Along the top, eight pairs of hex digit displays labelled BUS, ACC, PC, IR, R0, R1, R2 and R3. In the middle, a large block labelled CPU with pins around it: PC, END, BUS OUTPUT, CLK, CLKL and RAM INPUT on the left; LOAD, RESET, R0 to R3, IR and ACC on the right; MARS, IO pins, CLKE and CLKS along the bottom. To the right, inputs LOAD, a RESET button and MARS, an END LED, and CLKL, CLKE, CLKS readouts showing 0, 1, 0 above a clock component. Below, the external RAM with its clk 256 counter.">
-        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s <code>CPU_TEST</code>: hex displays across the top, the CPU in the middle, LOAD, RESET and MARS beside it, the clock, and the external RAM below. Your CPU has a <code>run</code> input too, and no I/O pins.</figcaption>
+        <figcaption class="circuit-canvas__caption">Your instructor&rsquo;s <code>CPU_TEST</code>: hex displays across the top, the CPU in the middle, LOAD, RESET and MARS beside it, the clock, and the external RAM below. His I/O pins are optional in yours (page 5).</figcaption>
       </figure>
     </section>
 
@@ -128,13 +128,14 @@
       <h2>14.12 &nbsp; Load and run</h2>
       <p>The procedure, in your instructor&rsquo;s order. Every step matters; the ones people skip are marked.</p>
       <ol class="proc" id="proc">
-        <li><strong>Simulate &rarr; Reset.</strong> Both counters are now 0.</li>
-        <li><code>run</code> = 0. Pulse <strong>RESET</strong>: PC, R0&ndash;R3, TMP, IR and the MAR become 0. <em>MYSIM needs this: its <code>XOR R2, R2</code> clears R2 only if R2 already holds a value.</em></li>
-        <li><strong>LOAD = 1 and MARS = 1, before any tick.</strong> <em>A tick with LOAD off moves the external RAM&rsquo;s counter and not the CPU&rsquo;s, and every byte lands one address late.</em></li>
+        <li><strong>Simulate &rarr; Reset.</strong> Both counters are now 0, and the stepper is on step 1.</li>
+        <li><strong>LOAD = 1, before any tick.</strong> <em>The stepper freezes and step 1 goes quiet. A tick with LOAD off moves the stepper and the external RAM&rsquo;s counter but not the CPU&rsquo;s, and every byte lands one address late.</em></li>
+        <li><strong>Press RESET</strong>, and check the hex displays all read <code>00</code>: R0&ndash;R3, TMP, ACC, FLAGS, the PC and the IR are 0, and your RAM is cleared. <em>MYSIM needs this: its <code>XOR R2, R2</code> clears R2 only if R2 already holds a value.</em></li>
         <li>Right-click the external RAM &rarr; <strong>Edit Contents</strong> &rarr; <strong>Open</strong> your program (or type its bytes), and close the editor.</li>
+        <li><strong>MARS = 1.</strong></li>
         <li><strong>Ticks Enabled</strong> until the bus reads <code>FF</code>; then turn ticks off. Check your RAM&rsquo;s bytes (right-click &rarr; View).</li>
         <li><strong>Tick Once until <code>clkl</code> = 0, <code>clk_e</code> = 1, <code>clk_s</code> = 0</strong> (<code>clkl</code> is the clock&rsquo;s <code>clk</code>). <em>Start in any other quarter and step 1&rsquo;s set quarter can be skipped, so the first fetch reads the wrong byte.</em></li>
-        <li>LOAD = 0, MARS = 0, then <code>run</code> = 1.</li>
+        <li>MARS = 0, then LOAD = 0.</li>
         <li><strong>Ticks Enabled.</strong> The program runs until END lights; then turn ticks off and read the registers.</li>
       </ol>
 
@@ -165,10 +166,9 @@
       <div class="callout callout--note">
         <div class="callout__title">Where the video differs from your Checkpoint 7</div>
         <ul>
-          <li><strong>RESET.</strong> His CPU pulls every bus pin down, so RESET writes 0 everywhere, the RAM included &mdash; hence &ldquo;check the hex outputs are all zeros&rdquo; and replacing a RAM byte that shows an X (01:35). Your RESET clears the PC, R0&ndash;R3, TMP, IR and the MAR, and the loader writes every RAM byte.</li>
-          <li><strong>You have a <code>run</code> pin.</strong> His LOAD froze the stepper; your <code>run</code> = 0 does that, so set it before RESET and raise it only after LOAD is off.</li>
-          <li><strong>&ldquo;Set our MARS&rdquo;</strong> (03:24) is the MARS pin &mdash; memory address register set &mdash; not the MIPS simulator. Yours is <code>data_mar</code>, labelled MARS on <code>CPU_TEST</code>.</li>
-          <li>The 0, 1, 0 check of step 6 above is not shown; his top-level page asks for it.</li>
+          <li><strong>Nothing in the circuit.</strong> Your finished CPU is his design: LOAD, MARS and RESET go into the control unit, every bus-facing pin is pulled down, and RESET writes 0 everywhere &mdash; hence &ldquo;check the hex outputs are all zeros&rdquo; and replacing a RAM byte that shows an X (01:35).</li>
+          <li><strong>&ldquo;Set our MARS&rdquo;</strong> (03:24) is the MARS pin &mdash; memory address register set &mdash; not the MIPS simulator.</li>
+          <li>The 0, 1, 0 check of step 7 above is not shown; his top-level page asks for it.</li>
         </ul>
       </div>
     </section>
@@ -188,10 +188,10 @@
           </select>
         </div>
         <div class="btn-row" style="margin-top:6px">
-          <button type="button" class="widget-btn widget-btn--outline" id="lr-1">1&ndash;4: reset, RESET, LOAD + MARS, open file</button>
-          <button type="button" class="widget-btn widget-btn--outline" id="lr-2">5: ticks until FF</button>
-          <button type="button" class="widget-btn widget-btn--outline" id="lr-3">6&ndash;7: to 0, 1, 0; LOAD off; run on</button>
-          <button type="button" class="widget-btn widget-btn--primary" id="lr-4">8: ticks until END</button>
+          <button type="button" class="widget-btn widget-btn--outline" id="lr-1">1&ndash;5: reset, LOAD, RESET, open file, MARS</button>
+          <button type="button" class="widget-btn widget-btn--outline" id="lr-2">6: ticks until FF</button>
+          <button type="button" class="widget-btn widget-btn--outline" id="lr-3">7&ndash;8: to 0, 1, 0; MARS off; LOAD off</button>
+          <button type="button" class="widget-btn widget-btn--primary" id="lr-4">9: ticks until END</button>
         </div>
         <p class="w-status" id="lr-status" aria-live="polite"></p>
         <div class="w-panel">
@@ -274,8 +274,8 @@
         if (!cpu) { $('lr-vals').innerHTML = ''; $('lr-loader').innerHTML = ''; $('lr-bar').style.width = '0'; $('lr-end').className = 'lr-end'; return; }
         var s = cpu.snapshot(), st = s.state;
         $('lr-bar').style.width = (st.counter / 255 * 100) + '%';
-        $('lr-loader').innerHTML = '<div class="val"><b>counter</b> ' + h2(st.counter) + '</div><div class="val"><b>LOAD</b> ' + st.load + '</div><div class="val"><b>MARS</b> ' + st.mars + '</div><div class="val"><b>run</b> ' + st.run + '</div>' +
-          '<div class="val"><b>bus</b> ' + (s.bus.state === 'driven' ? h2(s.bus.value) : s.bus.state) + '</div><div class="val"><b>clk clk_e clk_s</b> ' + s.clk.clk + ' ' + s.clk.clkE + ' ' + s.clk.clkS + '</div>';
+        $('lr-loader').innerHTML = '<div class="val"><b>counter</b> ' + h2(st.counter) + '</div><div class="val"><b>LOAD</b> ' + st.load + '</div><div class="val"><b>MARS</b> ' + st.mars + '</div><div class="val"><b>step</b> ' + (s.step || '1 (silenced)') + '</div>' +
+          '<div class="val"><b>bus</b> ' + (s.bus.state === 'driven' ? h2(s.bus.value) : s.bus.state === 'float' ? '00 <small>pulled down</small>' : s.bus.state) + '</div><div class="val"><b>clk clk_e clk_s</b> ' + s.clk.clk + ' ' + s.clk.clkE + ' ' + s.clk.clkS + '</div>';
         var f = st.flags;
         $('lr-vals').innerHTML = [['PC', st.PC], ['IR', st.IR], ['R0', st.R0], ['R1', st.R1], ['R2', st.R2], ['R3', st.R3]].map(function (c) {
           return '<div class="val"><b>' + c[0] + '</b> ' + b8(c[1]) + '<small>' + h2(c[1]) + '</small></div>';
@@ -285,9 +285,9 @@
       }
       function step1() {
         var bytes = PROGS[$('lr-prog').value];
-        cpu = F.cpu({ ext: bytes }); cpu.setPins({ run: 0 }); cpu.pressReset(); cpu.setPins({ load: 1, mars: 1 });
+        cpu = F.cpu({ ext: bytes }); cpu.setPins({ load: 1 }); cpu.pressReset(); cpu.setPins({ mars: 1 });
         stage = 1; loadTicks = 0;
-        say('Simulate \u2192 Reset; run = 0; RESET pulsed; LOAD = 1 and MARS = 1; the external RAM holds ' + bytes.length + ' bytes: ' + bytes.map(h2).join(' ') + '.');
+        say('Simulate \u2192 Reset; LOAD = 1; RESET pressed: every register and your RAM read 00; MARS = 1; the external RAM holds ' + bytes.length + ' bytes: ' + bytes.map(h2).join(' ') + '.');
         paint();
       }
       function step2() {
@@ -301,8 +301,8 @@
       function step3() {
         if (stage < 2) { step2(); }
         var n = cpu.tickToQuarter(0);
-        cpu.setPins({ load: 0, mars: 0 }); cpu.setPins({ run: 1 }); stage = 3;
-        say('Tick Once ' + n + ' time' + (n === 1 ? '' : 's') + ' to clk 0, clk_e 1, clk_s 0. LOAD = 0, MARS = 0, run = 1: step 1, and the PC drives 00 onto the bus.');
+        cpu.setPins({ mars: 0 }); cpu.setPins({ load: 0 }); stage = 3;
+        say('Tick Once ' + n + ' time' + (n === 1 ? '' : 's') + ' to clk 0, clk_e 1, clk_s 0. MARS = 0, LOAD = 0: step 1 wakes, and the PC drives 00 onto the bus.');
         paint();
       }
       function step4() {
