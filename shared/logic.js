@@ -1631,6 +1631,244 @@
   }
 
   /* ============================================================
+     WEEK 16 -- Modern architecture (CSCLogic.mod)
+     ============================================================
+     Added 2026-11-02.
+
+     WHAT THIS MODELS. Machines the students do not build, at the level
+     the Week 16 pages teach them:
+
+       * A cache: L lines of B bytes, direct-mapped (ways = 1) or set-
+         associative with LRU. Addresses split tag | index | offset.
+         Data values are not modelled -- only which blocks are present.
+       * The textbook MIPS five-stage pipeline IF ID EX MEM WB (spec
+         decisions 5, 6): in-order; ALU results forward from EX/MEM and
+         MEM/WB into EX; a load's value can be forwarded only after MEM
+         (one stall on load-use); without forwarding a consumer's EX waits
+         until the cycle after its producer's WB (register file written in
+         the first half of a cycle, read in the second -- Week 15's rule).
+         Branches are decided at the end of EX; a taken branch squashes
+         the two instructions fetched behind it.
+       * Branch predictors keyed by branch address: always not-taken,
+         always taken, 1-bit, 2-bit saturating (starts weakly not-taken).
+       * MSI coherence for one address shared by two cores, write-back.
+
+     NAMING. Every helper is mod-prefixed (the Week 6 shadowing rule).
+     ============================================================ */
+
+  var MOD_DATA = 0x10010000;
+  var MOD_STAGES = ['IF', 'ID', 'EX', 'MEM', 'WB'];
+
+  function modLog2(n) { var k = 0; while ((1 << k) < n) { k++; } if ((1 << k) !== n) { throw new Error('mod: ' + n + ' is not a power of two'); } return k; }
+  function modHex(v, w) { var s = (v >>> 0).toString(16).toUpperCase(); while (s.length < (w || 8)) { s = '0' + s; } return '0x' + s; }
+
+  function modSplit(addr, cfg) {
+    var ways = cfg.ways || 1, sets = cfg.lines / ways, ob = modLog2(cfg.block), ib = modLog2(sets);
+    return { addr: addr >>> 0, offset: addr & (cfg.block - 1), index: (addr >>> ob) & (sets - 1),
+             tag: Math.floor((addr >>> 0) / Math.pow(2, ob + ib)), offsetBits: ob, indexBits: ib, tagBits: 32 - ob - ib };
+  }
+
+  function modCache(cfg) {
+    var ways = cfg.ways || 1, sets = cfg.lines / ways, set = [], i, hits = 0, misses = 0, t = 0;
+    if (!(sets >= 1) || Math.floor(sets) !== sets) { throw new Error('mod.cache: lines must be a multiple of ways'); }
+    for (i = 0; i < sets; i++) { set.push([]); }
+    function access(addr) {
+      var s = modSplit(addr, cfg), lines = set[s.index], k, hit = null, evicted = null;
+      t++;
+      for (k = 0; k < lines.length; k++) { if (lines[k].tag === s.tag) { hit = k; break; } }
+      if (hit !== null) { lines[hit].used = t; hits++; return { addr: s.addr, tag: s.tag, index: s.index, offset: s.offset, hit: true, way: hit, evicted: null }; }
+      misses++;
+      var way;
+      if (lines.length < ways) { lines.push({ tag: s.tag, used: t }); way = lines.length - 1; }
+      else {
+        way = 0;
+        for (k = 1; k < lines.length; k++) { if (lines[k].used < lines[way].used) { way = k; } }
+        evicted = lines[way].tag;
+        lines[way] = { tag: s.tag, used: t };
+      }
+      return { addr: s.addr, tag: s.tag, index: s.index, offset: s.offset, hit: false, way: way, evicted: evicted };
+    }
+    function contents() { return set.map(function (l) { return l.map(function (x) { return x.tag; }); }); }
+    function stats() { return { hits: hits, misses: misses, accesses: hits + misses, rate: hits + misses ? hits / (hits + misses) : 0 }; }
+    return { access: access, contents: contents, stats: stats, cfg: { lines: cfg.lines, block: cfg.block, ways: ways, sets: sets } };
+  }
+
+  function modArrayTrace(n, m, order, base) {
+    var out = [], i, j;
+    base = base === undefined ? MOD_DATA : base;
+    if (order === 'col') { for (j = 0; j < m; j++) { for (i = 0; i < n; i++) { out.push(base + 4 * (i * m + j)); } } }
+    else { for (i = 0; i < n; i++) { for (j = 0; j < m; j++) { out.push(base + 4 * (i * m + j)); } } }
+    return out;
+  }
+  /* Week 9's array-sum program: three lw of vals, then sw to sum. */
+  function modW9Trace() { return [MOD_DATA, MOD_DATA + 4, MOD_DATA + 8, MOD_DATA + 12]; }
+
+  /* The Week 9 program's whole memory stream: every instruction fetch (I)
+     and every data access (D), in order, from the cycle machine itself. */
+  function modW9Stream() {
+    var mm = cycMachine(PERF_W9_PROGRAM, { textBase: 0x00400008, regs: { '$s0': 0x10010000 } }), out = [], g = 0, rec, k;
+    while (g++ < 1000) {
+      rec = mm.stepInstruction();
+      if (!rec.length) { break; }
+      out.push({ kind: 'I', addr: rec[0].instruction.addr, text: rec[0].instruction.src.trim() });
+      for (k = 1; k < rec.length; k++) { if (rec[k].addr !== undefined && rec[k].addr !== null) { out.push({ kind: 'D', addr: rec[k].addr, text: (rec[k].cls === 'sw' ? 'store ' : 'load ') }); } }
+      if (rec[rec.length - 1].cls === 'syscall') { break; }
+    }
+    return out;
+  }
+
+  function modRunCache(cfg, addrs) {
+    var c = modCache(cfg), rows = addrs.map(function (a) { return c.access(a); });
+    var s = c.stats();
+    return { rows: rows, hits: s.hits, misses: s.misses, rate: s.rate, contents: c.contents() };
+  }
+
+  function modAmat(hit, missRate, penalty) { return hit + missRate * penalty; }
+
+  /* pipe5(prog, opts) -- prog: [{ name, kind: 'alu'|'lw'|'sw'|'branch', dst, src: [], taken }] */
+  function modPipe5(prog, opts) {
+    var fwd = !(opts && opts.forwarding === false), k = 5;
+    var list = [], rows = [], prev = null, last = null, pendingTarget = null, producers = {}, cyc = 0, i, s;
+    prog.forEach(function (p) {
+      list.push(p);
+      if (p.kind === 'branch' && p.taken) { list.push({ name: '(next after branch)', wrong: true }); list.push({ name: '(next after that)', wrong: true }); }
+    });
+    for (i = 0; i < list.length; i++) {
+      var p = list[i], st = [], base = p.wrong ? last : prev, notes = [];
+      st[0] = base ? base.start[1] : 1;
+      if (pendingTarget !== null && !p.wrong) { st[0] = Math.max(st[0], pendingTarget); pendingTarget = null; }
+      for (s = 1; s < k; s++) {
+        var need = st[s - 1] + 1;
+        if (base) { need = Math.max(need, s + 1 < k ? base.start[s + 1] : base.start[k - 1] + 1); }
+        if (s === 2 && !p.wrong) {
+          (p.src || []).forEach(function (r) {
+            var q = producers[r]; if (!q) { return; }
+            var ready;
+            if (fwd) { ready = q.kind === 'lw' ? q.start[3] + 1 : q.start[2] + 1; }
+            else { ready = q.start[4] + 1; }
+            if (ready > need) { need = ready; }
+            notes.push({ reg: r, q: q });
+          });
+        }
+        st[s] = need;
+      }
+      var row = { name: p.name, kind: p.kind || null, start: st, cells: {}, squashed: !!p.wrong, stalls: 0, forwards: [] };
+      if (p.wrong) {
+        var br = rows.filter(function (r) { return r.branch; }).slice(-1)[0], kill = br.start[2];
+        for (s = 0; s < k; s++) { var a0 = st[s], a1 = s + 1 < k ? st[s + 1] - 1 : st[s]; for (var c = a0; c <= a1 && c <= kill; c++) { row.cells[c] = MOD_STAGES[s]; } }
+        rows.push(row); last = { start: st };
+        continue;
+      }
+      for (s = 0; s < k; s++) {
+        var b0 = st[s], b1 = s + 1 < k ? st[s + 1] - 1 : st[s];
+        for (var cc = b0; cc <= b1; cc++) { row.cells[cc] = MOD_STAGES[s]; }
+        if (s === 1) { row.stalls = b1 - b0; }
+      }
+      if (fwd) {
+        row.forwards = notes.filter(function (n) { return n.q.start[4] >= st[2]; })
+          .map(function (n) { return { reg: n.reg, from: n.q.name, via: n.q.kind === 'lw' ? 'MEM/WB' : (st[2] === n.q.start[2] + 1 ? 'EX/MEM' : 'MEM/WB') }; });
+      }
+      if (p.dst) { producers[p.dst] = { kind: p.kind, start: st, name: p.name }; }
+      if (p.kind === 'branch' && p.taken) { row.branch = true; pendingTarget = st[2] + 1; }
+      rows.push(row); prev = row; last = row;
+      cyc = Math.max(cyc, st[k - 1]);
+    }
+    var n = rows.filter(function (r) { return !r.squashed; }).length, stalls = 0;
+    rows.forEach(function (r) { stalls += r.stalls; });
+    return { rows: rows, cycles: cyc, n: n, stalls: stalls, squashed: rows.filter(function (r) { return r.squashed; }).length, forwarding: fwd };
+  }
+
+  var MOD_PIPE_PROGRAMS = {
+    independent: [
+      { name: 'add $t0, $s0, $s1', kind: 'alu', dst: 't0', src: ['s0', 's1'] },
+      { name: 'sub $t1, $s2, $s3', kind: 'alu', dst: 't1', src: ['s2', 's3'] },
+      { name: 'and $t2, $s4, $s5', kind: 'alu', dst: 't2', src: ['s4', 's5'] },
+      { name: 'or  $t3, $s6, $s7', kind: 'alu', dst: 't3', src: ['s6', 's7'] },
+      { name: 'addi $t4, $a0, 1', kind: 'alu', dst: 't4', src: ['a0'] }
+    ],
+    aluuse: [
+      { name: 'add $t0, $t1, $t2', kind: 'alu', dst: 't0', src: ['t1', 't2'] },
+      { name: 'sub $t3, $t0, $t4', kind: 'alu', dst: 't3', src: ['t0', 't4'] },
+      { name: 'and $t5, $t0, $t3', kind: 'alu', dst: 't5', src: ['t0', 't3'] },
+      { name: 'or  $t6, $s0, $s1', kind: 'alu', dst: 't6', src: ['s0', 's1'] }
+    ],
+    loaduse: [
+      { name: 'lw  $t2, 0($s0)', kind: 'lw', dst: 't2', src: ['s0'] },
+      { name: 'add $t1, $t1, $t2', kind: 'alu', dst: 't1', src: ['t1', 't2'] },
+      { name: 'addi $s0, $s0, 4', kind: 'alu', dst: 's0', src: ['s0'] },
+      { name: 'addi $t0, $t0, -1', kind: 'alu', dst: 't0', src: ['t0'] }
+    ],
+    reordered: [
+      { name: 'lw  $t2, 0($s0)', kind: 'lw', dst: 't2', src: ['s0'] },
+      { name: 'addi $s0, $s0, 4', kind: 'alu', dst: 's0', src: ['s0'] },
+      { name: 'add $t1, $t1, $t2', kind: 'alu', dst: 't1', src: ['t1', 't2'] },
+      { name: 'addi $t0, $t0, -1', kind: 'alu', dst: 't0', src: ['t0'] }
+    ],
+    branch: [
+      { name: 'addi $t0, $t0, -1', kind: 'alu', dst: 't0', src: ['t0'] },
+      { name: 'bne $t0, $zero, loop', kind: 'branch', src: ['t0'], taken: true },
+      { name: 'loop: lw $t2, 0($s0)', kind: 'lw', dst: 't2', src: ['s0'] },
+      { name: 'add $t1, $t1, $t2', kind: 'alu', dst: 't1', src: ['t1', 't2'] }
+    ]
+  };
+
+  /* predict(stream, scheme) -- stream: [{ addr, taken }] */
+  function modPredict(stream, scheme) {
+    var table = {}, out = [], right = 0;
+    stream.forEach(function (b) {
+      var st = table[b.addr], pred;
+      if (scheme === 'never') { pred = false; }
+      else if (scheme === 'always') { pred = true; }
+      else if (scheme === 'one') { if (st === undefined) { st = 0; } pred = st === 1; table[b.addr] = b.taken ? 1 : 0; }
+      else if (scheme === 'two') { if (st === undefined) { st = 1; } pred = st >= 2; table[b.addr] = b.taken ? Math.min(3, st + 1) : Math.max(0, st - 1); }
+      else { throw new Error('mod.predict: no scheme ' + scheme); }
+      var ok = pred === !!b.taken; if (ok) { right++; }
+      out.push({ addr: b.addr, pred: pred, actual: !!b.taken, correct: ok });
+    });
+    return { rows: out, correct: right, total: stream.length, accuracy: stream.length ? right / stream.length : 0, mispredicts: stream.length - right };
+  }
+
+  function modStreams() {
+    var t = perfTrace(CORE_MYSIM), mysim = [];
+    t.instructions.forEach(function (x) { if (x.cls === 'JIF') { mysim.push({ addr: x.addr, taken: !!x.taken }); } });
+    var nested = [], i, j;
+    for (i = 0; i < 4; i++) {
+      for (j = 0; j < 3; j++) { nested.push({ addr: 0x14, taken: j < 2 }); }
+      nested.push({ addr: 0x1C, taken: i < 3 });
+    }
+    var alt = []; for (i = 0; i < 8; i++) { alt.push({ addr: 0x08, taken: i % 2 === 0 }); }
+    var loop = []; for (i = 0; i < 3; i++) { for (j = 0; j < 10; j++) { loop.push({ addr: 0x10, taken: j < 9 }); } }
+    return { loop: loop, nested: nested, mysim: mysim, alternating: alt };
+  }
+
+  /* coherence(script, on) -- script: [{ core, op: 'r'|'w', v }]; one address x = 0 in memory. */
+  var MOD_COH_SCRIPT = [
+    { core: 0, op: 'r' }, { core: 1, op: 'r' }, { core: 0, op: 'w', v: 5 },
+    { core: 1, op: 'r' }, { core: 1, op: 'w', v: 7 }, { core: 0, op: 'r' }
+  ];
+  function modCoherence(script, on) {
+    var mem = 0, latest = 0, c = [{ st: 'I', v: null }, { st: 'I', v: null }], rows = [];
+    script.forEach(function (s) {
+      var me = c[s.core], other = c[1 - s.core], read = null, note;
+      if (s.op === 'r') {
+        if (me.st === 'I') {
+          if (on && other.st === 'M') { mem = other.v; other.st = 'S'; note = 'miss: the other core writes its copy back, and both now share it'; }
+          else { note = 'miss: copied from memory'; }
+          me.st = 'S'; me.v = mem;
+        } else { note = 'hit: read from its own cache'; }
+        read = me.v;
+      } else {
+        if (on) { note = other.st !== 'I' ? 'write: the other core\u2019s copy is invalidated' : 'write: no other copy to invalidate'; other.st = 'I'; other.v = null; }
+        else { note = 'write: the other core is not told'; }
+        me.st = 'M'; me.v = s.v; latest = s.v;
+      }
+      rows.push({ step: s, read: read, latest: latest, stale: s.op === 'r' && read !== latest, mem: mem, note: note,
+                  caches: [{ st: c[0].st, v: c[0].v }, { st: c[1].st, v: c[1].v }] });
+    });
+    return { rows: rows, stale: rows.filter(function (r) { return r.stale; }).length };
+  }
+
+  /* ============================================================
      WEEK 15 -- Performance and the toolchain (CSCLogic.perf)
      ============================================================
      Added 2026-11-02.
@@ -1955,21 +2193,31 @@
        2025's MARS) so the MAR follows the counter. On CPU_TEST a second
        instance, clocked by clkl, addresses the external built-in RAM.
 
-     ARCHITECT'S DECISIONS (flagged in the spec):
-       1. run (Week 13) now gates clk as well as clk_e and clk_s into the
-          control unit. With run = 0 the stepper holds step 1 and no line
-          is high, which is what Fall 2025's LOAD-gated stepper clock and
-          NOT-LOAD step-1 mask achieved.
-       2. RESET without pull-downs. Fall 2025 pulls every bus-facing pin
-          down and ORs RESET into every set line, so a floating bus writes
-          0 everywhere. Here reset drives 00000000 onto the bus through a
-          buffer and is ORed into the sets of everything that captures
-          from the bus: R0-R3, TMP, IR, the MAR and the PC. It is pressed
-          before loading, as in Fall 2025's video. MYSIM.txt needs it:
-          its XOR R2, R2 clears R2 only if R2 already holds a value.
-       3. c = step5 AND ALU. Fall 2025's final control-unit figure does
-          not show which terms feed C legibly; this is the reading
-          consistent with its carry-in page and with MYSIM.txt.
+     THE FINAL CONTROL UNIT (Dave, 2026-11-02: "Switch to the Fall 2025
+     design"; circuits-final-control-unit-circuit.html, control-unit-
+     full.png, final-cpu-highlighted.png). LOAD, MARS and RESET are
+     CONTROL_UNIT inputs, and every bus-facing pin has a pull-down, so a
+     bus nothing drives reads 00000000:
+       stepper clk = clk AND NOT LOAD     (LOAD freezes the stepper)
+       step 1      = step1 AND NOT LOAD   (and silences its lines)
+       MAR_S       = (terms AND clk_s) OR MARS
+       RAM_S       = (ST step 5 AND clk_s) OR (LOAD AND clk_s)
+       IR_S PC_S ACC_S TMP_S FLAGS_S R0_S-R3_S  each OR RESET
+       END         = IR is 11001111;  the CPU tab's clock AND NOT END
+     RESET also reaches the RAM's reset through a tunnel, so the 32
+     populated bytes clear. With the bus pulled down, RESET writes 0
+     into every register it sets; ACC and FLAGS capture the ALU's
+     0 ADD 0, so FLAGS reads C A E Z = 0 0 1 1 and CTMP 0. Week 13's
+     run pin and test port retire: LOAD does run's job.
+
+     Optional, ungraded outputs (Dave, 2026-11-02): IO and DA (IR bits 3
+     and 2), IO_CLK_S = clk_s AND step4 AND I/O class AND IO, IO_CLK_E =
+     clk_e AND step5 AND I/O class AND NOT IO. Nothing on the CPU tab
+     uses them; the course gives no I/O encoding (Week 12 ruling).
+
+     c = step5 AND ALU (Architect, 2026-11-01): the figure does not
+     show C's terms legibly; this is the reading consistent with the
+     carry-in page and with MYSIM.txt.
 
      NAMING. Every helper is fin-prefixed.
      ============================================================ */
@@ -2055,6 +2303,36 @@
     out.opcode = raw ? raw.opcode : 0;
     out.ra = d.ra; out.rb = d.rb; out.step = st;
     out.end = (ir & 255) === 0xCF ? 1 : 0;
+    /* Optional, ungraded (see the header). */
+    var io = (ir >> 3) & 1, isIo = !!d.classLines[7];
+    out.io = io; out.da = (ir >> 2) & 1;
+    out.io_clk_s = (isIo && st === 4 && io && clkS) ? 1 : 0;
+    out.io_clk_e = (isIo && st === 5 && !io && clkE) ? 1 : 0;
+    return out;
+  }
+
+  /* outputs(o) -- every output pin of the final CONTROL_UNIT (page 5).
+       o: { ir, step (1-6), clkE, clkS, flags, load, mars, reset }
+     Internal lines from finLines, then the final control section:
+     step 1 silenced by LOAD; REG_SELECT inside the unit; MAR_S OR MARS;
+     RAM_S OR (LOAD AND clk_s); RESET ORed into the nine sets. */
+  var FIN_OUT_PINS = ['pc_e', 'ram_e', 'acc_e', 'r0_e', 'r1_e', 'r2_e', 'r3_e', 'mar_s', 'ram_s', 'ir_s', 'pc_s', 'acc_s', 'tmp_s', 'flags_s',
+                      'r0_s', 'r1_s', 'r2_s', 'r3_s', 'bus1', 'c', 'end'];
+  var FIN_OPT_PINS = ['io', 'da', 'io_clk_e', 'io_clk_s'];
+  function finOutputs(o) {
+    o = o || {};
+    var steps = [0, 0, 0, 0, 0, 0, 0], k;
+    if (o.step >= 1 && o.step <= 6) { steps[o.step - 1] = 1; }
+    if (o.load) { steps[0] = 0; }
+    var ce = o.clkE ? 1 : 0, cs = o.clkS ? 1 : 0, ld = o.load ? 1 : 0, rst = o.reset ? 1 : 0;
+    var l = finLines(o.ir & 255, steps, ce, cs, o.flags || {});
+    var rs = coreRegSelect({ ra: l.ra, rb: l.rb, regaE: l.rega_e, regbE: l.regb_e, regbS: l.regb_s });
+    var out = { pc_e: l.pc_e, ram_e: l.ram_e, acc_e: l.acc_e,
+      mar_s: (l.mar_s || o.mars) ? 1 : 0, ram_s: (l.ram_s || (ld && cs)) ? 1 : 0,
+      ir_s: l.ir_s | rst, pc_s: l.pc_s | rst, acc_s: l.acc_s | rst, tmp_s: l.tmp_s | rst, flags_s: l.flags_s | rst,
+      bus1: l.bus1, c: l.c, end: l.end, opcode: l.opcode, step: l.step,
+      io: l.io, da: l.da, io_clk_e: l.io_clk_e, io_clk_s: l.io_clk_s };
+    for (k = 0; k < 4; k++) { out['r' + k + '_e'] = rs.e[k] ? 1 : 0; out['r' + k + '_s'] = (rs.s[k] || rst) ? 1 : 0; }
     return out;
   }
 
@@ -2092,7 +2370,7 @@
   /* cpu(init) -- the Week 14 CPU tab and CPU_TEST.
        init: R0-R3, TMP, ACC, flags (default all E), PC, IR, ctmp,
              ram (written directly: a widget shortcut), ext (the external
-             RAM's contents), run, load, mars.
+             RAM's contents), load, mars.
      toggle(): one tick of the Logisim Clock (one toggle of clk_in), unless
        END has stopped the clock. */
   function finCpu(init) {
@@ -2108,13 +2386,15 @@
     for (a = 0; a < 256; a++) { ext.push(0); }
     (init.ext || []).forEach(function (v, i) { ext[i] = v & 255; });
     (init.ram || []).forEach(function (v, i) { if (v !== null && v !== undefined && i < 32) { ram.step({ address: i, sa: 1 }); ram.step({ i: v & 255, s: 1 }); ram.step({}); } });
-    var pins = { run: init.run ? 1 : 0, load: init.load ? 1 : 0, mars: init.mars ? 1 : 0 };
+    var pins = { load: init.load ? 1 : 0, mars: init.mars ? 1 : 0 };
     var clock = ctlClock(), stepper = ctlStepper();
     var clk = clock.reset(), stp = stepper.powerUp(), toggles = 0, instructions = 0, counter = 0, ended = false, lastClkl = 0;
 
     function irByte() { return IR === null ? 0 : IR; }
     function linesNow() {
-      var l = finLines(irByte(), stp.steps, pins.run ? clk.clkE : 0, pins.run ? clk.clkS : 0, F);
+      var steps = stp.steps.slice();
+      if (pins.load) { steps[0] = 0; }            /* step1 AND NOT LOAD */
+      var l = finLines(irByte(), steps, clk.clkE, clk.clkS, F);
       l.irUnknown = IR === null;
       return l;
     }
@@ -2133,26 +2413,30 @@
         else { why = ro.mar === null ? 'RAM is enabled but the MAR was never set' : 'RAM is enabled, but address ' + coreHex2(ro.mar) + ' is in an unpopulated row'; }
       }
       if (pins.load) { drivers.push({ name: 'COUNT', value: counter }); }
-      if (x.reset) { drivers.push({ name: 'RESET', value: 0 }); }
       if (x.dataE) { drivers.push({ name: 'DATA', value: (x.data | 0) & 255 }); }
       var bus;
       if (drivers.length > 1) { bus = { state: 'conflict', value: null, drivers: drivers.map(function (d) { return d.name; }), why: drivers.map(function (d) { return d.name; }).join(' and ') + ' are both driving the bus' }; }
       else if (drivers.length === 1 && drivers[0].value === null) { bus = { state: 'error', value: null, drivers: [drivers[0].name], why: drivers[0].name + ' has never been written, so it drives EEEEEEEE' }; }
       else if (drivers.length === 1) { bus = { state: 'driven', value: drivers[0].value, drivers: [drivers[0].name] }; }
-      else { bus = { state: 'float', value: null, drivers: [], why: why || 'nothing is driving the bus' }; }
+      else { bus = { state: 'float', value: 0, drivers: [], why: (why || 'nothing is driving the bus') + '; the pull-downs read 00000000' }; }
+      var busOk = bus.state === 'driven' || bus.state === 'float';
 
-      var tmpNow = (l.tmp_s && bus.state === 'driven') ? bus.value : TMP;
-      var ctNow = l.tmp_s ? F.C : CT;
+      var tmpSet = l.tmp_s || x.reset;
+      var tmpNow = (tmpSet && busOk) ? bus.value : TMP;
       var b1 = l.bus1 ? 1 : 0;
-      var aIn = bus.state === 'driven' ? bus.value : (bus.state === 'float' ? 0 : null);
+      var aIn = busOk ? bus.value : null;
       var bIn = b1 ? 1 : tmpNow;
       var op = (l.opcode | 0) & 7, usesCi = (op === 0 || op === 1 || op === 2);
-      var ci = l.c ? ctNow : 0, alu = null, ciBad = l.c && ctNow === null && usesCi;
+      var ctIn = l.tmp_s ? F.C : CT;
+      var ci = l.c ? ctIn : 0, alu = null, ciBad = l.c && ctIn === null && usesCi;
       if (aIn !== null && bIn !== null && !ciBad) {
         var ev = aluEvaluate(op, intToWord(aIn, 8), b1 ? coreBus1(intToWord(tmpNow || 0, 8), 1) : intToWord(bIn, 8), ci ? 1 : 0);
         alu = { a: aIn, b: bIn, ci: ci ? 1 : 0, c: ev.out ? wordToInt(ev.out) : null,
                 C: ev.cout ? 1 : 0, A: ev.al ? 1 : 0, E: ev.eq ? 1 : 0, Z: ev.z === null ? null : (ev.z ? 1 : 0), op: CORE_ALU_MNEMONICS[op] };
       }
+      /* CTMP's s is TMP_S (which RESET also raises); its d is FLAGS.C. While
+         RESET is held FLAGS is capturing too, so CTMP settles on the new C. */
+      var ctNow = x.reset ? (alu ? alu.C : null) : ctIn;
       var sets = [];
       for (i = 0; i < 4; i++) { if (rs.s[i]) { sets.push('R' + i); } }
       if (l.tmp_s) { sets.push('TMP'); }
@@ -2160,15 +2444,14 @@
       if (l.flags_s) { sets.push('FLAGS'); }
       if (l.pc_s || x.set === 'pc' || x.reset) { sets.push('PC'); }
       if (l.ir_s || x.set === 'ir') { sets.push('IR'); }
-      if (l.mar_s || pins.mars || x.set === 'mar' || x.reset) { sets.push('MAR'); }
+      if (l.mar_s || pins.mars || x.set === 'mar') { sets.push('MAR'); }
       if (x.reset) {
-        ['R0', 'R1', 'R2', 'R3', 'TMP', 'IR'].forEach(function (n) { if (sets.indexOf(n) < 0) { sets.push(n); } });
+        ['R0', 'R1', 'R2', 'R3', 'TMP', 'ACC', 'FLAGS', 'IR'].forEach(function (n) { if (sets.indexOf(n) < 0) { sets.push(n); } });
       }
       var loadWrite = pins.load && clk.clkS;
       if (l.ram_s || x.set === 'ram' || loadWrite) { sets.push('RAM'); }
       var needBus = sets.filter(function (n) { return n !== 'ACC' && n !== 'FLAGS' && !(n === 'RAM' && pins.load); });
       var needAlu = sets.filter(function (n) { return n === 'ACC' || n === 'FLAGS'; });
-      var busOk = bus.state === 'driven';
       var aluOk = !!alu && bus.state !== 'conflict' && bus.state !== 'error' && !(l.acc_e && l.acc_s);
       var errors = [], bad = {};
       if (l.irUnknown && l.step >= 4 && (sets.length || drivers.length)) { errors.push('The IR has never been written.'); }
@@ -2179,12 +2462,13 @@
         needAlu.forEach(function (n) { bad[n] = 1; });
       }
       if (!l.irUnknown && l.step === 6 && ctlDecode(irByte()).classLines[5] && finTaken(irByte(), F).unknown) { errors.push('The jump tests a flag that was never written.'); }
-      return { ok: errors.length === 0, error: errors.length ? errors.join(' ') : null, bad: bad, bus: bus, alu: alu, sets: sets,
+      return { ok: errors.length === 0, error: errors.length ? errors.join(' ') : null, bad: bad, bus: bus, alu: alu, sets: sets, ramReset: !!x.reset,
                drivers: drivers.map(function (d) { return d.name; }), ctNow: ctNow, ramIn: pins.load ? ext[counter] : (busOk ? bus.value : null) };
     }
 
     function apply(ev) {
       var wrote = [];
+      if (ev.ramReset) { ram.step({ reset: 1, i: 0 }); ram.step({}); wrote.push('RAM reset'); }
       ev.sets.forEach(function (n) {
         var badOne = ev.bad[n], r = /^R([0-3])$/.exec(n), v = ev.bus.value;
         if (r) { R[+r[1]] = badOne ? null : v; }
@@ -2205,7 +2489,7 @@
       for (i = 0; i < 32; i++) { bytes.push(ram.peek(i)); }
       return { R0: R[0], R1: R[1], R2: R[2], R3: R[3], TMP: TMP, ACC: ACC, flags: { C: F.C, A: F.A, E: F.E, Z: F.Z },
                PC: PC, IR: IR, MAR: ram.state.mar, CTMP: CT, ram: bytes, counter: counter, end: ended ? 1 : 0,
-               run: pins.run, load: pins.load, mars: pins.mars };
+               load: pins.load, mars: pins.mars };
     }
     function snapshot(extra) {
       var l = linesNow(), ev = evaluate(l), o = { toggles: toggles, instructions: instructions, clk: clk, quarter: clk.quarter,
@@ -2218,15 +2502,15 @@
     function toggle() {
       if (ended) { return snapshot({ wrote: [], error: null, stopped: true }); }
       clk = clock.toggle();
-      stp = stepper.settle(pins.run ? clk.clk : 0, 0, true);
+      stp = stepper.settle(pins.load ? 0 : clk.clk, 0, true);   /* clk AND NOT LOAD */
       toggles++;
-      if (stp.pulsed7 && pins.run) { instructions++; }
+      if (stp.pulsed7 && !pins.load) { instructions++; }
       var clkl = clk.clk & pins.load;
       if (lastClkl && !clkl && counter < 255) { counter++; }     /* falling edge, stay at 255 */
       lastClkl = clkl;
       var l = linesNow(), ev = evaluate(l), wrote = [];
       if (ev.sets.length) { wrote = apply(ev); }
-      if (IR === 0xCF && pins.run && !ended) {
+      if (IR === 0xCF && !ended) {
         ended = true;
         if (clk.clkIn) { clk = clock.toggle(); }   /* clock AND NOT end: clk_in falls; no J-K edge */
         /* that half-toggle is not a tick; the clock is now stopped */
@@ -2255,7 +2539,7 @@
       },
       hand: hand,
       pressReset: function () { return hand({ reset: true }); },
-      setPins: function (p) { ['run', 'load', 'mars'].forEach(function (k) { if (p[k] !== undefined) { pins[k] = p[k] ? 1 : 0; } }); return snapshot(); },
+      setPins: function (p) { ['load', 'mars'].forEach(function (k) { if (p[k] !== undefined) { pins[k] = p[k] ? 1 : 0; } }); return snapshot(); },
       setExt: function (bytes) { for (var i = 0; i < 256; i++) { ext[i] = (bytes[i] || 0) & 255; } },
       tickToQuarter: function (q) { var n = 0; while (clk.quarter !== q && n < 8) { toggle(); n++; } return n; },
       snapshot: snapshot,
@@ -2264,25 +2548,26 @@
     };
   }
 
-  /* boot(bytes) -- the Week 14 load-and-run procedure, as the student does
-     it on CPU_TEST, ending with run = 1 at step 1, quarter 1:
-       Simulate -> Reset; run = 0; RESET (PC, R0-R3, TMP, IR, MAR = 0);
-       LOAD = 1 and MARS = 1 before any tick; the external RAM holds the
-       program; Ticks Enabled until the bus reads FF and byte 255's write
-       has passed; ticks off; Tick Once to clk 0, clk_e 1, clk_s 0;
-       LOAD = 0, MARS = 0; run = 1. */
+  /* boot(bytes) -- the Week 14 load-and-run procedure, Fall 2025's video
+     order, ending at step 1, quarter 1 with LOAD and MARS off:
+       Simulate -> Reset; LOAD = 1 (the stepper freezes, step 1 is
+       silenced); RESET (R0-R3, TMP, ACC, FLAGS, PC, IR = 0; the RAM
+       clears); the external RAM holds the program; MARS = 1; Ticks
+       Enabled until the bus reads FF and byte 255's write has passed;
+       ticks off; Tick Once to clkl 0, clk_e 1, clk_s 0; MARS = 0,
+       LOAD = 0. */
   function finBoot(bytes) {
     var c = finCpu({ ext: bytes });
     var log = { loadTicks: 0 };
-    c.setPins({ run: 0 });
+    c.setPins({ load: 1 });
     log.reset = c.pressReset();
-    c.setPins({ load: 1, mars: 1 });
+    c.setPins({ mars: 1 });
     var guard = 0;
     while (!(c.state().counter === 255 && c.snapshot().quarter === 3) && guard < 3000) { c.toggle(); guard++; }
     log.loadTicks = guard;
     log.toQ1 = c.tickToQuarter(0);
-    c.setPins({ load: 0, mars: 0 });
-    c.setPins({ run: 1 });
+    c.setPins({ mars: 0 });
+    c.setPins({ load: 0 });
     log.cpu = c;
     return log;
   }
@@ -4589,6 +4874,27 @@
       runAlu: coreRunAlu
     },
 
+    /* Week 16 additions -- modern architecture: caches, the five-stage
+       pipeline, prediction, coherence. Every helper is mod-prefixed. */
+    mod: {
+      DATA: MOD_DATA,
+      STAGES: MOD_STAGES,
+      PIPE_PROGRAMS: MOD_PIPE_PROGRAMS,
+      COH_SCRIPT: MOD_COH_SCRIPT,
+      hex: modHex,
+      split: modSplit,
+      cache: modCache,
+      arrayTrace: modArrayTrace,
+      w9Trace: modW9Trace,
+      w9Stream: modW9Stream,
+      runCache: modRunCache,
+      amat: modAmat,
+      pipe5: modPipe5,
+      predict: modPredict,
+      streams: modStreams,
+      coherence: modCoherence
+    },
+
     /* Week 15 additions -- performance and the toolchain. Every helper
        is perf-prefixed; see the block comment. */
     perf: {
@@ -4626,7 +4932,10 @@
       assemble: finAssemble,
       cpu: finCpu,
       boot: finBoot,
-      runProgram: finRunProgram
+      runProgram: finRunProgram,
+      outputs: finOutputs,
+      OUT_PINS: FIN_OUT_PINS,
+      OPT_PINS: FIN_OPT_PINS
     }),
 
     /* Week 13 additions -- the whole CPU: PC, IR and RAM on the bus,
