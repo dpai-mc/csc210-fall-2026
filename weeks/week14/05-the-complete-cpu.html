@@ -32,6 +32,7 @@
     .fig-label { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; margin-bottom: 4px; font-family: var(--font-sans); }
     .fig-label--gen { background: var(--color-primary); color: #fff; }
     .fig-label--f25 { background: #5b4a2e; color: #fff; }
+    .gen-svg .svg-gate { fill: var(--color-surface); stroke: var(--color-text); stroke-width: 1.6; }
     .gen-svg { width: 100%; max-width: 860px; height: auto; display: block; margin: 0 auto; font-family: var(--font-sans); }
     .gen-svg .svg-frame { fill: none; stroke: var(--color-primary); stroke-width: 2.5; }
     .gen-svg .svg-blk { fill: var(--color-surface); stroke: var(--color-text-muted); stroke-width: 1.5; }
@@ -83,7 +84,7 @@
       <p>Since Week 11 your control unit has turned the IR and the stepper into enable and set lines. Three things change in its final form, all from your instructor&rsquo;s design:</p>
       <ul>
         <li><strong>LOAD, MARS and RESET come in.</strong> They are control inputs, so they belong where every other control decision is made. LOAD stops the stepper (its clock is <code>clk</code> AND NOT <code>load</code>) and silences step 1 (<code>step1</code> AND NOT <code>load</code>); MARS is ORed into <code>mar_s</code>; LOAD AND <code>clk_s</code> is ORed into <code>ram_s</code>; RESET is ORed into nine set lines.</li>
-        <li><strong>REG_SELECT moves inside.</strong> RESET must set all four registers, but <code>regb_s</code> reaches only the one RB names. So the unit decodes the register fields itself and its outputs become <code>r0_e</code>&ndash;<code>r3_e</code> and <code>r0_s</code>&ndash;<code>r3_s</code>, with RESET ORed into the four sets.</li>
+        <li><strong>The register decoders move inside.</strong> RESET must set all four registers, but <code>regb_s</code> reaches only the one RB names. So the unit decodes the register fields itself and its outputs become <code>r0_e</code>&ndash;<code>r3_e</code> and <code>r0_s</code>&ndash;<code>r3_s</code>, with RESET ORed into the four sets. You build this section as your instructor did &mdash; three 2&times;4 decoders and three-input AND gates &mdash; and it replaces the <code>REG_SELECT</code> on your CPU tab. <a href="#sec-14-17-reg">&ldquo;The register decoders, gate by gate&rdquo;</a>, below, draws it.</li>
         <li><strong>The bus is pulled down.</strong> RESET drives nothing. Every pin that faces the bus is set to <em>Pull Behavior: Pull Down</em>, so while RESET holds the sets high, an undriven bus reads <code>00000000</code> and every register captures 0. ACC and FLAGS capture the ALU&rsquo;s 0 ADD 0, so after RESET the flags read C A E Z = 0 0 1 1. RESET also reaches your RAM&rsquo;s <code>reset</code>, which clears its bytes.</li>
       </ul>
 
@@ -91,7 +92,7 @@
         <span class="fig-label fig-label--gen">Drawn for this course</span>
         <svg class="gen-svg" viewBox="0 0 950 520" role="img" aria-labelledby="cu-svg-t cu-svg-d">
   <title id="cu-svg-t">The final CONTROL_UNIT, block by block</title>
-  <desc id="cu-svg-d">Inputs on the left: clk, clk_e, clk_s, load, mars, reset, ir and the four flags. Inside: the stepper, whose clock is clk AND NOT load and whose step 1 is ANDed with NOT load; the class decoder; the match and END decoders; the line gates that make the fifteen internal lines; REG_SELECT; and the final section, which ORs mars into mar_s, load AND clk_s into ram_s, and reset into the nine set lines. Outputs on the right.</desc>
+  <desc id="cu-svg-d">Inputs on the left: clk, clk_e, clk_s, load, mars, reset, ir and the four flags. Inside: the stepper, whose clock is clk AND NOT load and whose step 1 is ANDed with NOT load; the class decoder; the match and END decoders; the line gates that make the fifteen internal lines; the register decoders; and the final section, which ORs mars into mar_s, load AND clk_s into ram_s, and reset into the nine set lines. Outputs on the right.</desc>
   <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="svg-ink"/></marker></defs>
   <rect x="120" y="20" width="630" height="480" rx="10" class="svg-frame"/>
   <text x="435" y="44" class="svg-h" text-anchor="middle">CONTROL_UNIT</text>
@@ -121,13 +122,13 @@
   <rect x="330" y="300" width="180" height="62" rx="6" class="svg-blk"/>
   <text x="420" y="324" text-anchor="middle" class="svg-b">LINE GATES</text><text x="420" y="342" text-anchor="middle" class="svg-s">(step AND class) ORs,</text><text x="420" y="355" text-anchor="middle" class="svg-s">AND clk_e or clk_s</text>
   <rect x="540" y="66" width="160" height="70" rx="6" class="svg-blk"/>
-  <text x="620" y="92" text-anchor="middle" class="svg-b">REG_SELECT</text><text x="620" y="110" text-anchor="middle" class="svg-s">your Week 10 tab;</text><text x="620" y="124" text-anchor="middle" class="svg-s">RA, RB from ir</text>
+  <text x="620" y="92" text-anchor="middle" class="svg-b">REG DECODERS</text><text x="620" y="110" text-anchor="middle" class="svg-s">three 2&#215;4, 3-input ANDs</text><text x="620" y="124" text-anchor="middle" class="svg-s">with clk_e / clk_s</text>
   <line x1="510" y1="320" x2="525" y2="320" class="svg-w"/><line x1="525" y1="320" x2="525" y2="100" class="svg-w"/><line x1="525" y1="100" x2="540" y2="100" class="svg-w" marker-end="url(#ah)"/>
   <text x="516" y="230" class="svg-s" text-anchor="middle" transform="rotate(-90 516 230)">rega_e regb_e regb_s</text>
   <rect x="540" y="370" width="190" height="110" rx="6" class="svg-blk svg-blk--a"/>
   <text x="635" y="392" text-anchor="middle" class="svg-b">FINAL SECTION</text>
   <text x="635" y="412" text-anchor="middle" class="svg-s">mar_s OR mars</text><text x="635" y="428" text-anchor="middle" class="svg-s">ram_s OR (load AND clk_s)</text>
-  <text x="635" y="444" text-anchor="middle" class="svg-s">nine sets OR reset</text><text x="635" y="460" text-anchor="middle" class="svg-s">(r0_s&#8211;r3_s after REG_SELECT)</text>
+  <text x="635" y="444" text-anchor="middle" class="svg-s">nine sets OR reset</text><text x="635" y="460" text-anchor="middle" class="svg-s">(r0_s&#8211;r3_s after the decoders)</text>
   <line x1="510" y1="345" x2="560" y2="345" class="svg-w"/><line x1="560" y1="345" x2="560" y2="370" class="svg-w" marker-end="url(#ah)"/>
   <line x1="620" y1="136" x2="620" y2="370" class="svg-w" marker-end="url(#ah)"/>
   <line x1="700" y1="100" x2="770" y2="100" class="svg-w" marker-end="url(#ah)"/>
@@ -168,7 +169,7 @@
 <tr><td>pc_e</td><td>PC_E</td><td>( (<code>step1</code> AND NOT <code>load</code>) OR (<code>step4</code> AND DATA) OR (<code>step4</code> AND JMP) OR (<code>step4</code> AND J<em>caez</em>) ) AND <code>clk_e</code></td></tr>
 <tr><td>ram_e</td><td>RAM_E</td><td>( <code>step2</code> OR (<code>step5</code> AND LD) OR (<code>step5</code> AND DATA) OR (<code>step5</code> AND JMP) OR (<code>step6</code> AND J<em>caez</em> AND match) ) AND <code>clk_e</code></td></tr>
 <tr><td>acc_e</td><td>ACC_E</td><td>( <code>step3</code> OR (<code>step6</code> AND ALU AND NOT CMP) OR (<code>step6</code> AND DATA) OR (<code>step5</code> AND J<em>caez</em>) ) AND <code>clk_e</code></td></tr>
-<tr><td>r0_e &ndash; r3_e <span class="tag-new">final</span></td><td>R0_E &ndash; R3_E</td><td>(<code>rega_e</code> AND RA = <em>k</em>) OR (<code>regb_e</code> AND RB = <em>k</em>), from REG_SELECT, where <code>rega_e</code> = ( (<code>step5</code> AND ALU) OR (<code>step4</code> AND LD) OR (<code>step4</code> AND ST) ) AND <code>clk_e</code> and <code>regb_e</code> = ( (<code>step4</code> AND ALU) OR (<code>step5</code> AND ST) OR (<code>step4</code> AND JMPR) ) AND <code>clk_e</code></td></tr>
+<tr><td>r0_e &ndash; r3_e <span class="tag-new">final</span></td><td>R0_E &ndash; R3_E</td><td>(<code>rega_e</code> AND RA = <em>k</em> AND <code>clk_e</code>) OR (<code>regb_e</code> AND RB = <em>k</em> AND <code>clk_e</code>), from the register decoders, where <code>rega_e</code> = (<code>step5</code> AND ALU) OR (<code>step4</code> AND LD) OR (<code>step4</code> AND ST) and <code>regb_e</code> = (<code>step4</code> AND ALU) OR (<code>step5</code> AND ST) OR (<code>step4</code> AND JMPR), both now internal and no longer ANDed with <code>clk_e</code> on their own</td></tr>
 <tr><td>mar_s <span class="tag-new">final</span></td><td>MAR_S</td><td>[ ( (<code>step1</code> AND NOT <code>load</code>) OR (<code>step4</code> AND LD) OR (<code>step4</code> AND ST) OR (<code>step4</code> AND DATA) OR (<code>step4</code> AND JMP) OR (<code>step4</code> AND J<em>caez</em>) ) AND <code>clk_s</code> ] <strong>OR <code>mars</code></strong></td></tr>
 <tr><td>ram_s <span class="tag-new">final</span></td><td>RAM_S</td><td>[ (<code>step5</code> AND ST) AND <code>clk_s</code> ] <strong>OR (<code>load</code> AND <code>clk_s</code>)</strong></td></tr>
 <tr><td>ir_s <span class="tag-new">final</span></td><td>IR_S</td><td>[ <code>step2</code> AND <code>clk_s</code> ] <strong>OR <code>reset</code></strong></td></tr>
@@ -176,7 +177,7 @@
 <tr><td>acc_s <span class="tag-new">final</span></td><td>ACC_S</td><td>[ ( (<code>step1</code> AND NOT <code>load</code>) OR (<code>step5</code> AND ALU) OR (<code>step4</code> AND DATA) OR (<code>step4</code> AND J<em>caez</em>) ) AND <code>clk_s</code> ] <strong>OR <code>reset</code></strong></td></tr>
 <tr><td>tmp_s <span class="tag-new">final</span></td><td>TMP_S</td><td>[ (<code>step4</code> AND ALU) AND <code>clk_s</code> ] <strong>OR <code>reset</code></strong></td></tr>
 <tr><td>flags_s <span class="tag-new">final</span></td><td>FLAGS_S</td><td>[ ( (<code>step5</code> AND ALU) OR (<code>step4</code> AND CLF) ) AND <code>clk_s</code> ] <strong>OR <code>reset</code></strong></td></tr>
-<tr><td>r0_s &ndash; r3_s <span class="tag-new">final</span></td><td>R0_S &ndash; R3_S</td><td>(<code>regb_s</code> AND RB = <em>k</em>), from REG_SELECT, <strong>OR <code>reset</code></strong>, where <code>regb_s</code> = ( (<code>step6</code> AND ALU AND NOT CMP) OR (<code>step5</code> AND LD) OR (<code>step5</code> AND DATA) ) AND <code>clk_s</code></td></tr>
+<tr><td>r0_s &ndash; r3_s <span class="tag-new">final</span></td><td>R0_S &ndash; R3_S</td><td>(<code>regb_s</code> AND RB = <em>k</em> AND <code>clk_s</code>), from the register decoders, <strong>OR <code>reset</code></strong>, where <code>regb_s</code> = (<code>step6</code> AND ALU AND NOT CMP) OR (<code>step5</code> AND LD) OR (<code>step5</code> AND DATA), now internal and no longer ANDed with <code>clk_s</code> on its own</td></tr>
 <tr><td>bus1</td><td>BUS1</td><td>( (<code>step1</code> AND NOT <code>load</code>) OR (<code>step4</code> AND CLF) OR (<code>step4</code> AND DATA) OR (<code>step4</code> AND J<em>caez</em>) )</td></tr>
 <tr><td>opcode</td><td>ALU_0, ALU_1, ALU_2</td><td>IR bits 4, 5, 6, each AND (<code>step5</code> AND ALU)</td></tr>
 <tr><td>c</td><td>C</td><td>(<code>step5</code> AND ALU)</td></tr>
@@ -193,7 +194,7 @@
       <figure class="circuit-canvas">
         <span class="fig-label fig-label--f25">Your instructor&rsquo;s Fall 2025 figure</span>
         <img class="circuit-canvas__img zoomable" src="images/control-unit-full.png"
-             alt="Your instructor's complete control section in Logisim. Inputs clks, clk, clke and LOAD at the top left feed the stepper through an AND with NOT LOAD. Below, a large field of AND and OR gates produces BUS 1, PC_E, RAM_E, ACC_E, C, IO CLK_E, REG B_E, REG A and the ALU lines on the left edge and IR_S, MAR_S, PC_S, ACC_S, RAM_S, TMP_S, FLAGS_S on the right. Two 2 by 4 decoders at the bottom right produce R0_E to R3_E and R0_S to R3_S, each set line ORed with RESET. END, IO and DA outputs sit at the bottom right; inputs C, A, E, Z and the 8-bit IR_IN at the bottom left.">
+             alt="Your instructor's complete control section in Logisim. Inputs clks, clk, clke and LOAD at the top left feed the stepper through an AND with NOT LOAD. Below, a large field of AND and OR gates produces BUS 1, PC_E, RAM_E, ACC_E, C, IO CLK_E, REG B_E, REG A and the ALU lines on the left edge and IR_S, MAR_S, PC_S, ACC_S, RAM_S, TMP_S, FLAGS_S on the right. Three 2 by 4 decoders at the bottom produce R0_E to R3_E and R0_S to R3_S, each set line ORed with RESET. END, IO and DA outputs sit at the bottom right; inputs C, A, E, Z and the 8-bit IR_IN at the bottom left.">
         <figcaption class="circuit-canvas__caption">His final control section, whole. Select it to enlarge; the three crops below are easier to read.</figcaption>
       </figure>
       <div class="detail-grid">
@@ -209,7 +210,7 @@
         </figure>
         <figure class="circuit-canvas">
           <img class="circuit-canvas__img zoomable" src="images/control-unit-bottom.png"
-               alt="The bottom third of the control section: the flag-match AND gates with C, A, E, Z, the ALU operation outputs, the two 2 by 4 register decoders with RESET ORed into R0_S to R3_S, and the END, IO and DA outputs.">
+               alt="The bottom third of the control section: the flag-match AND gates with C, A, E, Z, the ALU operation outputs, the three 2 by 4 register decoders with RESET ORed into R0_S to R3_S, and the END, IO and DA outputs.">
           <figcaption class="circuit-canvas__caption">Bottom: match, the register decoders with RESET, END.</figcaption>
         </figure>
       </div>
@@ -230,11 +231,204 @@
           <figcaption class="circuit-canvas__caption">RESET is a control-unit input.</figcaption>
         </figure>
       </div>
+      <h3 id="sec-14-17-reg">The register decoders, gate by gate</h3>
+      <p>This section is new to your control unit, and it replaces the <code>REG_SELECT</code> instance on your CPU tab. Build it from his figure, not by moving <code>REG_SELECT</code> inside. In his design every register gate is a <strong>three-input AND</strong>: the decoder&rsquo;s line, <code>rega_e</code>, <code>regb_e</code> or <code>regb_s</code>, and the clock quarter. Your Week 10 <code>REG_SELECT</code> has two-input ANDs, because since Week 11 your control unit ANDed the quarter into those three lines before they left the unit. A AND B AND C is the same whichever way you group it, but the gates are not the same, and his figure is the one you will check the finished unit against. So build it his way:</p>
+      <ol>
+        <li><strong>Take five outputs off your control unit:</strong> <code>ra</code>, <code>rb</code>, <code>rega_e</code>, <code>regb_e</code> and <code>regb_s</code>. Keep the three control lines inside the unit, but take each one from its OR, <em>before</em> the AND with <code>clk_e</code> or <code>clk_s</code>, and delete those three ANDs. The quarter now enters at each register gate instead.</li>
+        <li><strong>Place three <code>DECODER_2TO4</code>s</strong> (Week 3): REG A on RA (<code>ir</code> bits 3&ndash;2), REG B on RB (<code>ir</code> bits 1&ndash;0), and a third, also on RB, for the sets. A splitter on <code>ir</code> gives you both fields, as it did for <code>ra</code> and <code>rb</code>.</li>
+        <li><strong>The enables: eight three-input ANDs and four ORs.</strong> For each <em>k</em> from 0 to 3, AND REG A&rsquo;s output <em>k</em> with <code>rega_e</code> and <code>clk_e</code>, AND REG B&rsquo;s output <em>k</em> with <code>regb_e</code> and <code>clk_e</code>, and OR the two into <code>r<em>k</em>_e</code>.</li>
+        <li><strong>The sets: four three-input ANDs and four ORs.</strong> For each <em>k</em>, AND the third decoder&rsquo;s output <em>k</em> with <code>regb_s</code> and <code>clk_s</code>, then OR it with <code>reset</code> into <code>r<em>k</em>_s</code>.</li>
+        <li><strong>Add the eight outputs</strong> <code>r0_e</code>&ndash;<code>r3_e</code> and <code>r0_s</code>&ndash;<code>r3_s</code>. On the CPU tab, delete <code>REG_SELECT</code> and wire each output to its register&rsquo;s <code>e</code> or <code>s</code>, where <code>REG_SELECT</code>&rsquo;s outputs went.</li>
+      </ol>
+      <p>In Logisim, select an AND gate and set <em>Number of Inputs</em> to 3 in its attributes before you copy it twelve times.</p>
+
+      <figure class="circuit-canvas">
+        <span class="fig-label fig-label--gen">Drawn for this course</span>
+        <svg class="gen-svg" viewBox="0 0 960 475" role="img" aria-labelledby="rs-svg-t rs-svg-d">
+  <title id="rs-svg-t">The register decoders inside the final control unit</title>
+  <desc id="rs-svg-d">Left, the enables: decoder REG A on RA (IR bits 3 to 2) and decoder REG B on RB (IR bits 1 to 0). Each decoder output k feeds a three-input AND gate whose other two inputs are rega_e (for REG A) or regb_e (for REG B) and clk_e. REG A's AND k and REG B's AND k meet in an OR gate whose output is rk_e, for k = 0 to 3: eight three-input ANDs and four ORs. Right, the sets: a third 2 by 4 decoder on RB. Each output k feeds a three-input AND gate with regb_s and clk_s, and that AND's output is ORed with reset to make rk_s: four three-input ANDs and four ORs.</desc>
+<text x="20" y="16" class="svg-b" text-anchor="start">Enables: every AND also needs clk_e</text>
+<rect x="60" y="70" width="80" height="176" rx="5" class="svg-blk"/>
+<text x="100" y="152.0" class="svg-b" text-anchor="middle">REG A</text>
+<text x="100" y="168.0" class="svg-s" text-anchor="middle">2&#215;4</text>
+<rect x="60" y="265" width="80" height="176" rx="5" class="svg-blk"/>
+<text x="100" y="347.0" class="svg-b" text-anchor="middle">REG B</text>
+<text x="100" y="363.0" class="svg-s" text-anchor="middle">2&#215;4</text>
+<text x="136" y="92" class="svg-s" text-anchor="end">0</text>
+<text x="136" y="287" class="svg-s" text-anchor="end">0</text>
+<text x="136" y="134" class="svg-s" text-anchor="end">1</text>
+<text x="136" y="329" class="svg-s" text-anchor="end">1</text>
+<text x="136" y="176" class="svg-s" text-anchor="end">2</text>
+<text x="136" y="371" class="svg-s" text-anchor="end">2</text>
+<text x="136" y="218" class="svg-s" text-anchor="end">3</text>
+<text x="136" y="413" class="svg-s" text-anchor="end">3</text>
+<polyline points="14,158 60,158" class="svg-w"/>
+<text x="14" y="150" class="svg-b" text-anchor="start">RA</text>
+<text x="14" y="176" class="svg-s" text-anchor="start">ir b3&#8211;b2</text>
+<polyline points="14,353 60,353" class="svg-w"/>
+<text x="14" y="345" class="svg-b" text-anchor="start">RB</text>
+<text x="14" y="371" class="svg-s" text-anchor="start">ir b1&#8211;b0</text>
+<line x1="175" y1="80" x2="175" y2="209" class="svg-w"/>
+<line x1="195" y1="80" x2="195" y2="404" class="svg-w"/>
+<line x1="215" y1="80" x2="215" y2="428" class="svg-w svg-wa"/>
+<text x="173" y="74" class="svg-s" text-anchor="start" transform="rotate(-45 173 74)">rega_e</text>
+<text x="197" y="74" class="svg-s" text-anchor="start" transform="rotate(-45 197 74)">regb_e</text>
+<text x="219" y="74" class="svg-s svg-accent" text-anchor="start" transform="rotate(-45 219 74)">clk_e</text>
+<path d="M250,77 h20 a18,18 0 0 1 0,36 h-20 z" class="svg-gate"/>
+<line x1="140" y1="95" x2="250" y2="95" class="svg-w"/>
+<line x1="175" y1="83" x2="250" y2="83" class="svg-w"/>
+<circle cx="175" cy="83" r="3" class="svg-ink"/>
+<line x1="215" y1="107" x2="250" y2="107" class="svg-w svg-wa"/>
+<circle cx="215" cy="107" r="3" class="svg-ink"/>
+<path d="M250,119 h20 a18,18 0 0 1 0,36 h-20 z" class="svg-gate"/>
+<line x1="140" y1="137" x2="250" y2="137" class="svg-w"/>
+<line x1="175" y1="125" x2="250" y2="125" class="svg-w"/>
+<circle cx="175" cy="125" r="3" class="svg-ink"/>
+<line x1="215" y1="149" x2="250" y2="149" class="svg-w svg-wa"/>
+<circle cx="215" cy="149" r="3" class="svg-ink"/>
+<path d="M250,161 h20 a18,18 0 0 1 0,36 h-20 z" class="svg-gate"/>
+<line x1="140" y1="179" x2="250" y2="179" class="svg-w"/>
+<line x1="175" y1="167" x2="250" y2="167" class="svg-w"/>
+<circle cx="175" cy="167" r="3" class="svg-ink"/>
+<line x1="215" y1="191" x2="250" y2="191" class="svg-w svg-wa"/>
+<circle cx="215" cy="191" r="3" class="svg-ink"/>
+<path d="M250,203 h20 a18,18 0 0 1 0,36 h-20 z" class="svg-gate"/>
+<line x1="140" y1="221" x2="250" y2="221" class="svg-w"/>
+<line x1="175" y1="209" x2="250" y2="209" class="svg-w"/>
+<circle cx="175" cy="209" r="3" class="svg-ink"/>
+<line x1="215" y1="233" x2="250" y2="233" class="svg-w svg-wa"/>
+<circle cx="215" cy="233" r="3" class="svg-ink"/>
+<path d="M250,272 h20 a18,18 0 0 1 0,36 h-20 z" class="svg-gate"/>
+<line x1="140" y1="290" x2="250" y2="290" class="svg-w"/>
+<line x1="195" y1="278" x2="250" y2="278" class="svg-w"/>
+<circle cx="195" cy="278" r="3" class="svg-ink"/>
+<line x1="215" y1="302" x2="250" y2="302" class="svg-w svg-wa"/>
+<circle cx="215" cy="302" r="3" class="svg-ink"/>
+<path d="M250,314 h20 a18,18 0 0 1 0,36 h-20 z" class="svg-gate"/>
+<line x1="140" y1="332" x2="250" y2="332" class="svg-w"/>
+<line x1="195" y1="320" x2="250" y2="320" class="svg-w"/>
+<circle cx="195" cy="320" r="3" class="svg-ink"/>
+<line x1="215" y1="344" x2="250" y2="344" class="svg-w svg-wa"/>
+<circle cx="215" cy="344" r="3" class="svg-ink"/>
+<path d="M250,356 h20 a18,18 0 0 1 0,36 h-20 z" class="svg-gate"/>
+<line x1="140" y1="374" x2="250" y2="374" class="svg-w"/>
+<line x1="195" y1="362" x2="250" y2="362" class="svg-w"/>
+<circle cx="195" cy="362" r="3" class="svg-ink"/>
+<line x1="215" y1="386" x2="250" y2="386" class="svg-w svg-wa"/>
+<circle cx="215" cy="386" r="3" class="svg-ink"/>
+<path d="M250,398 h20 a18,18 0 0 1 0,36 h-20 z" class="svg-gate"/>
+<line x1="140" y1="416" x2="250" y2="416" class="svg-w"/>
+<line x1="195" y1="404" x2="250" y2="404" class="svg-w"/>
+<circle cx="195" cy="404" r="3" class="svg-ink"/>
+<line x1="215" y1="428" x2="250" y2="428" class="svg-w svg-wa"/>
+<circle cx="215" cy="428" r="3" class="svg-ink"/>
+<path d="M430,177 Q440,192 430,207 Q458,207 470,192 Q458,177 430,177 z" class="svg-gate"/>
+<polyline points="288,95 345,95 345,184 436,184" class="svg-w"/>
+<polyline points="288,290 365,290 365,200 436,200" class="svg-w"/>
+<line x1="470" y1="192" x2="492" y2="192" class="svg-w"/>
+<text x="496" y="196" class="svg-b" text-anchor="start">r0_e</text>
+<path d="M430,219 Q440,234 430,249 Q458,249 470,234 Q458,219 430,219 z" class="svg-gate"/>
+<polyline points="288,137 335,137 335,226 436,226" class="svg-w"/>
+<polyline points="288,332 375,332 375,242 436,242" class="svg-w"/>
+<line x1="470" y1="234" x2="492" y2="234" class="svg-w"/>
+<text x="496" y="238" class="svg-b" text-anchor="start">r1_e</text>
+<path d="M430,261 Q440,276 430,291 Q458,291 470,276 Q458,261 430,261 z" class="svg-gate"/>
+<polyline points="288,179 325,179 325,268 436,268" class="svg-w"/>
+<polyline points="288,374 385,374 385,284 436,284" class="svg-w"/>
+<line x1="470" y1="276" x2="492" y2="276" class="svg-w"/>
+<text x="496" y="280" class="svg-b" text-anchor="start">r2_e</text>
+<path d="M430,303 Q440,318 430,333 Q458,333 470,318 Q458,303 430,303 z" class="svg-gate"/>
+<polyline points="288,221 315,221 315,310 436,310" class="svg-w"/>
+<polyline points="288,416 395,416 395,326 436,326" class="svg-w"/>
+<line x1="470" y1="318" x2="492" y2="318" class="svg-w"/>
+<text x="496" y="322" class="svg-b" text-anchor="start">r3_e</text>
+<text x="590" y="16" class="svg-b" text-anchor="start">Sets: every AND also needs clk_s; RESET after</text>
+<rect x="600" y="95" width="80" height="230" rx="5" class="svg-blk"/>
+<text x="640" y="204.0" class="svg-b" text-anchor="middle">2&#215;4</text>
+<text x="640" y="220.0" class="svg-s" text-anchor="middle">on RB</text>
+<text x="676" y="117" class="svg-s" text-anchor="end">0</text>
+<text x="676" y="177" class="svg-s" text-anchor="end">1</text>
+<text x="676" y="237" class="svg-s" text-anchor="end">2</text>
+<text x="676" y="297" class="svg-s" text-anchor="end">3</text>
+<polyline points="580,210 600,210" class="svg-w"/>
+<text x="573" y="200" class="svg-b" text-anchor="start">RB</text>
+<line x1="715" y1="80" x2="715" y2="288" class="svg-w"/>
+<line x1="735" y1="80" x2="735" y2="312" class="svg-w svg-wa"/>
+<line x1="847" y1="80" x2="847" y2="324" class="svg-w svg-wa"/>
+<text x="713" y="74" class="svg-s" text-anchor="start" transform="rotate(-45 713 74)">regb_s</text>
+<text x="739" y="74" class="svg-s svg-accent" text-anchor="start" transform="rotate(-45 739 74)">clk_s</text>
+<text x="851" y="74" class="svg-s svg-accent" text-anchor="start" transform="rotate(-45 851 74)">reset</text>
+<path d="M770,102 h20 a18,18 0 0 1 0,36 h-20 z" class="svg-gate"/>
+<line x1="680" y1="120" x2="770" y2="120" class="svg-w"/>
+<line x1="715" y1="108" x2="770" y2="108" class="svg-w"/>
+<circle cx="715" cy="108" r="3" class="svg-ink"/>
+<line x1="735" y1="132" x2="770" y2="132" class="svg-w svg-wa"/>
+<circle cx="735" cy="132" r="3" class="svg-ink"/>
+<path d="M865,113 Q875,128 865,143 Q893,143 905,128 Q893,113 865,113 z" class="svg-gate"/>
+<polyline points="808,120 871,120" class="svg-w"/>
+<line x1="847" y1="136" x2="871" y2="136" class="svg-w svg-wa"/>
+<circle cx="847" cy="136" r="3" class="svg-ink"/>
+<line x1="905" y1="128" x2="923" y2="128" class="svg-w"/>
+<text x="927" y="132" class="svg-b" text-anchor="start">r0_s</text>
+<path d="M770,162 h20 a18,18 0 0 1 0,36 h-20 z" class="svg-gate"/>
+<line x1="680" y1="180" x2="770" y2="180" class="svg-w"/>
+<line x1="715" y1="168" x2="770" y2="168" class="svg-w"/>
+<circle cx="715" cy="168" r="3" class="svg-ink"/>
+<line x1="735" y1="192" x2="770" y2="192" class="svg-w svg-wa"/>
+<circle cx="735" cy="192" r="3" class="svg-ink"/>
+<path d="M865,173 Q875,188 865,203 Q893,203 905,188 Q893,173 865,173 z" class="svg-gate"/>
+<polyline points="808,180 871,180" class="svg-w"/>
+<line x1="847" y1="196" x2="871" y2="196" class="svg-w svg-wa"/>
+<circle cx="847" cy="196" r="3" class="svg-ink"/>
+<line x1="905" y1="188" x2="923" y2="188" class="svg-w"/>
+<text x="927" y="192" class="svg-b" text-anchor="start">r1_s</text>
+<path d="M770,222 h20 a18,18 0 0 1 0,36 h-20 z" class="svg-gate"/>
+<line x1="680" y1="240" x2="770" y2="240" class="svg-w"/>
+<line x1="715" y1="228" x2="770" y2="228" class="svg-w"/>
+<circle cx="715" cy="228" r="3" class="svg-ink"/>
+<line x1="735" y1="252" x2="770" y2="252" class="svg-w svg-wa"/>
+<circle cx="735" cy="252" r="3" class="svg-ink"/>
+<path d="M865,233 Q875,248 865,263 Q893,263 905,248 Q893,233 865,233 z" class="svg-gate"/>
+<polyline points="808,240 871,240" class="svg-w"/>
+<line x1="847" y1="256" x2="871" y2="256" class="svg-w svg-wa"/>
+<circle cx="847" cy="256" r="3" class="svg-ink"/>
+<line x1="905" y1="248" x2="923" y2="248" class="svg-w"/>
+<text x="927" y="252" class="svg-b" text-anchor="start">r2_s</text>
+<path d="M770,282 h20 a18,18 0 0 1 0,36 h-20 z" class="svg-gate"/>
+<line x1="680" y1="300" x2="770" y2="300" class="svg-w"/>
+<line x1="715" y1="288" x2="770" y2="288" class="svg-w"/>
+<circle cx="715" cy="288" r="3" class="svg-ink"/>
+<line x1="735" y1="312" x2="770" y2="312" class="svg-w svg-wa"/>
+<circle cx="735" cy="312" r="3" class="svg-ink"/>
+<path d="M865,293 Q875,308 865,323 Q893,323 905,308 Q893,293 865,293 z" class="svg-gate"/>
+<polyline points="808,300 871,300" class="svg-w"/>
+<line x1="847" y1="316" x2="871" y2="316" class="svg-w svg-wa"/>
+<circle cx="847" cy="316" r="3" class="svg-ink"/>
+<line x1="905" y1="308" x2="923" y2="308" class="svg-w"/>
+<text x="927" y="312" class="svg-b" text-anchor="start">r3_s</text>
+<text x="20" y="462" class="svg-s" text-anchor="start">RA and RB never need gating: a decoder line does nothing until rega_e, regb_e or regb_s and the right quarter are also high.</text>
+</svg>
+        <figcaption class="circuit-canvas__caption">The register decoders: 3 decoders, 12 three-input ANDs, 8 ORs. Orange wires are the clock quarters and <code>reset</code>; a dot is a connection, and a crossing without one is not.</figcaption>
+      </figure>
+      <div class="detail-grid">
+          <figure class="circuit-canvas">
+            <span class="fig-label fig-label--f25">Your instructor&rsquo;s Fall 2025 figure</span>
+            <img class="circuit-canvas__img zoomable" src="images/control-unit-reg-enables.png"
+                 alt="Close-up of the bottom left of his control section. Two 2 by 4 decoders, REG B above REG A, each take their a and b inputs from IR bits. Each decoder's four outputs feed a column of four three-input AND gates; the other two inputs of every AND come from vertical lines that run up into the control section. Pairs of AND outputs, one from each column, meet in four OR gates driving output pins R0_E, R1_E, R2_E and R3_E.">
+            <figcaption class="circuit-canvas__caption">The enables: REG B and REG A, each AND with three inputs, ORed into <code>R0_E</code>&ndash;<code>R3_E</code>.</figcaption>
+          </figure>
+          <figure class="circuit-canvas">
+            <img class="circuit-canvas__img zoomable" src="images/control-unit-reg-sets.png"
+                 alt="Close-up of the bottom right of his control section. A 2 by 4 decoder on the register B bits feeds four three-input AND gates; the other two inputs of every AND come from two vertical lines. Each AND's output enters an OR gate whose other input is a vertical RESET line, and the ORs drive output pins R0_S, R1_S, R2_S and R3_S.">
+            <figcaption class="circuit-canvas__caption">The sets: one decoder on RB, three-input ANDs, then OR RESET into <code>R0_S</code>&ndash;<code>R3_S</code>.</figcaption>
+          </figure>
+      </div>
+      <p><strong>Check it</strong> with the explorer after this section: ADD R1, R2 (<code>0x86</code>) raises <code>r2_e</code> at step 4 and <code>r1_e</code> at step 5, both only in the enable quarter, and <code>r2_s</code> at step 6, only in the set quarter.</p>
+
       <div class="callout callout--note">
         <div class="callout__title">Where your control unit differs from his figure</div>
         <ul class="diff">
           <li><strong>Names.</strong> Lowercase course names; the table above gives his label for each.</li>
-          <li><strong>The register decoders.</strong> He drew two 2&times;4 decoders (REG A, REG B) and their gates directly. You place your Week 10 <code>REG_SELECT</code> tab inside the unit: the same gates, already tested.</li>
           <li><strong><code>c</code>.</strong> His figure does not show C&rsquo;s inputs legibly. The course reading is <code>step5</code> AND ALU, which is what page 3 and <code>MYSIM.txt</code> need.</li>
           <li><strong>RESET does not reach <code>mar_s</code> or <code>ram_s</code>.</strong> RESET clears the RAM through its own <code>reset</code>; MARS sets the MAR next.</li>
           <li><strong>I/O.</strong> His four I/O outputs are optional in yours.</li>
@@ -310,7 +504,7 @@
 
     <section id="sec-14-18">
       <h2>14.18 &nbsp; The <code>CPU</code> tab, item by item</h2>
-      <p>Your instructor numbered the nine additions that turn the Week 13 CPU tab into the finished one. The numbers below are his; the diagram is the same layout, simplified, with each addition in the place it goes. Everything not numbered &mdash; the registers, TMP, BUS1, the ALU, ACC, the PC, the IR, the RAM &mdash; is already on your tab. Also <strong>delete</strong> three things your instructor&rsquo;s CPU never had: Week 13&rsquo;s <code>run</code> pin and its three ANDs, the test port, and the <code>REG_SELECT</code> instance (now inside the control unit).</p>
+      <p>Your instructor numbered the nine additions that turn the Week 13 CPU tab into the finished one. The numbers below are his; the diagram is the same layout, simplified, with each addition in the place it goes. Everything not numbered &mdash; the registers, TMP, BUS1, the ALU, ACC, the PC, the IR, the RAM &mdash; is already on your tab. Also <strong>delete</strong> three things your instructor&rsquo;s CPU never had: Week 13&rsquo;s <code>run</code> pin and its three ANDs, the test port, and the <code>REG_SELECT</code> instance (the control unit now decodes the registers itself).</p>
       <figure class="circuit-canvas">
         <span class="fig-label fig-label--gen">Drawn for this course</span>
         <svg class="gen-svg" viewBox="0 0 860 430" role="img" aria-labelledby="cpu-svg-t cpu-svg-d">
@@ -544,13 +738,13 @@
   {
     "q": "Why does RESET go into r0_s, r1_s, r2_s and r3_s, rather than into regb_s?",
     "opts": [
-      "regb_s reaches only the register named by RB; all four must clear, so the OR goes after REG_SELECT",
+      "regb_s reaches only the register named by RB; all four must clear, so the OR goes after the register decoders&rsquo; AND gates",
       "regb_s is gated by clk_s, and RESET must not be",
       "regb_s does not exist in the final control unit",
       "So that RESET can clear the registers one at a time"
     ],
     "correct": 0,
-    "why": "This is why REG_SELECT moves inside the control unit this week, as in your instructor&rsquo;s design: the OR with reset belongs on its four set outputs."
+    "why": "This is why the register decoders move inside the control unit this week, as in your instructor&rsquo;s design: the OR with reset belongs on the four set outputs."
   },
   {
     "q": "During the load, MAR_S = &hellip; OR mars is high in every quarter, not just the set quarter. Why is that safe?",
