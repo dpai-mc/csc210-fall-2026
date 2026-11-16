@@ -16,6 +16,7 @@
     .due > div { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-md); background: var(--color-surface); }
     .due h3 { margin-top: 0; font-size: var(--fs-base); }
     @media (max-width: 860px) { .due { grid-template-columns: 1fr; } }
+    .video-ts { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--color-text-muted); white-space: nowrap; }
 
   </style>
 </head>
@@ -112,6 +113,36 @@
       </div>
     </section>
 
+    <section id="sec-video">
+      <h2>Week 14 overview video</h2>
+      <p>About 32 minutes, most of it a build demonstration of the control unit in Logisim. Your instructor starts with the one-class control diagrams on pages 1 and 2 <span class="video-ts">(from 00:32)</span>, then turns to the final control system on page 5 <span class="video-ts">(01:43)</span>: what it does, with enables on the left and sets on the right <span class="video-ts">(02:34)</span>; why staying close to his diagram lets him help diagnose your <code>.circ</code> file <span class="video-ts">(04:24)</span>; and how the figure is split into a top, a middle and a bottom <span class="video-ts">(05:26)</span>. His build order follows <span class="video-ts">(06:54)</span>, then the gate sizes, narrow and medium <span class="video-ts">(07:48)</span>.</p>
+      <p>The Logisim demonstration starts at <span class="video-ts">08:41</span>: renaming an old circuit to keep it <span class="video-ts">(09:07)</span>, giving the stepper room <span class="video-ts">(09:46)</span>, the left-facing 2-to-4 decoder he made so register 0 sits at the top <span class="video-ts">(10:14)</span>, a new control unit circuit <span class="video-ts">(14:01)</span>, placing the AND gates <span class="video-ts">(15:01)</span> with the right number of inputs <span class="video-ts">(16:37)</span>, the output pins <span class="video-ts">(23:47)</span>, the four OR gates <span class="video-ts">(27:03)</span>, and moving parts as a block <span class="video-ts">(28:33)</span>. His summary of the hints is at 31:22. Click any line of the transcript to jump there.</p>
+
+      <div class="video-breakout">
+        <div class="video-transcript-row">
+          <div class="video-col">
+            <div class="video-frame" id="video-container">
+              <iframe id="youtube-player"
+                      src="https://www.youtube.com/embed/LFKZbJpN6hM?enablejsapi=1&amp;cc_load_policy=1&amp;iv_load_policy=3&amp;modestbranding=1&amp;rel=0"
+                      title="CSC210 Week 14 Orientation: The Finished Machine"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allowfullscreen loading="lazy"></iframe>
+            </div>
+            <div class="video-caption">Closed captions available. Use the transcript panel to jump to any point in the video.</div>
+          </div>
+          <div class="transcript-col">
+            <h2 class="sr-only">Video transcript</h2>
+            <div class="transcript-panel" id="transcript-container" role="region"
+                 aria-live="polite"
+                 aria-label="Video transcript. Select a line to jump to that point in the video. The line currently being spoken is announced as the video plays.">
+              <p class="transcript-loading">Loading transcript&hellip;</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section id="sec-tools">
       <h2>Tools and reading</h2>
       <ul>
@@ -128,5 +159,1043 @@
   <footer class="sp-footer">
     CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 14, Orientation
   </footer>
+
+  <script>
+  (function () {
+    'use strict';
+
+    /* ------------------------------------------------------------
+       Week 14 overview video. Procedure A -- one video on this page, so
+       no TranscriptManager. VIDEO_ID is the YouTube id; vttContent holds
+       the WEBVTT captions inline so the panel needs no second request
+       and works from the Canvas iframe without a CORS fetch. The script
+       below the VTT is Week 12's, unchanged.
+
+       The source VTT (csc210-wk14-control-unit.vtt, Whisper) arrived
+       with CRLF line endings and 336 cues; the original is kept
+       unchanged at docs/video-raw/csc210-wk14-control-unit.whisper.vtt.
+       Rolling-window artefact (15:25-15:54, 29:56-30:26) and 19:13
+       "you" x18 removed: 43 cues deleted, 11 stripped of a restated
+       lead-in. Also deleted: sub-second hallucinations at 10:36, 13:02,
+       14:00, 22:10, 25:54; restatements at 15:25, 22:37, 29:56; "um" at
+       01:53. Terms repaired: memory and immediates, MAR, opcode, .circ,
+       ALU, AND / OR gates, four-/six-/two-input, reg zero..three (x10),
+       Control-D, R0/R1/R2, ORs, lining up, becomes a pain; names and the
+       pronoun I capitalised. 293 cues out. The repaired file is
+       csc210-wk14-control-unit.vtt in this folder.
+       ------------------------------------------------------------ */
+
+    var VIDEO_ID = 'LFKZbJpN6hM';
+    var vttContent = `WEBVTT
+
+00:00.000 --> 00:07.360
+aloha and welcome so this is week 14 and so we're getting close to the end and in this week's
+
+00:08.140 --> 00:18.160
+information and learning stuff is all about kind of finishing up the CPU primarily with
+
+00:18.160 --> 00:23.800
+the control system okay so when you look at this week's information
+
+00:23.800 --> 00:32.020
+um we have memory and immediates and I'm not going to walk through everything but when I look
+
+00:32.020 --> 00:39.360
+at this control system diagram all this diagram does this specific diagram only does load and
+
+00:39.360 --> 00:47.260
+store okay that's the only thing it can do that's all that's wired up okay and so there's a bunch
+
+00:47.260 --> 00:53.100
+of these there's load and store there's a data control unit
+
+00:53.800 --> 01:01.840
+okay slightly different layout okay but it only does one thing notice it uses four five and six
+
+01:01.840 --> 01:11.560
+just like the um load and store uses steps four and five on our stepper primarily four five and six
+
+01:11.560 --> 01:21.460
+all right the um jump we look at the next one jumps the control system for jumps
+
+01:23.460 --> 01:23.740
+okay
+
+01:23.800 --> 01:34.440
+uses four five and six again all right add uses one two and three I believe so different
+
+01:35.560 --> 01:43.640
+activities use different steps on our stepper all right so um what I really wanted to talk
+
+01:43.640 --> 01:51.640
+about though was the final control system okay and that's the Complete CPU page
+
+01:53.780 --> 01:57.300
+all right so when you look at the final control system
+
+01:58.820 --> 02:04.740
+um it's kind of let's say it's let's admit it's a mess okay this is the final control system
+
+02:05.540 --> 02:12.340
+I grabbed this picture from the fall of '25. I'm building a new one for this semester
+
+02:12.900 --> 02:17.220
+but I haven't done it yet I've just started it I'm gonna start it right now actually
+
+02:18.180 --> 02:23.620
+but anyway when you look at this so all the steps in the stepper one two three four five six
+
+02:23.620 --> 02:33.380
+seven goes back to reset okay but what the stepper what the control system essentially does
+
+02:34.020 --> 02:40.820
+is we have a bunch of enables on the left and a bunch of sets on the right so these are all
+
+02:40.820 --> 02:45.300
+pretty much all registers whether it's a registers whether it's accumulator
+
+02:45.700 --> 02:53.380
+whether it's the RAM set you know the the MAR um whether it's the RAM for
+
+02:53.380 --> 03:02.720
+for set the value memory address for RAM you know reset all those kind of things those are all on
+
+03:02.720 --> 03:10.240
+here and what the stepper does essentially is it walks through depending upon okay depending upon
+
+03:10.240 --> 03:18.220
+what the opcode is what the instruction register says we're doing and what the registers that are
+
+03:18.220 --> 03:28.300
+in it are it essentially just turns on and off the appropriate registers to enable meaning take
+
+03:28.300 --> 03:36.940
+what's in the register and put it on the bus or set take what's on the bus and put it in the
+
+03:36.940 --> 03:46.420
+register okay so the appropriate register though okay opcode determines what's the ALU is putting
+
+03:46.420 --> 03:47.320
+into the accumulator
+
+03:48.220 --> 03:55.480
+and then when we do accumulator set we take what's on the accumulator and put it on the bus
+
+03:56.920 --> 04:02.980
+okay so that's all that does however when we build this we have to integrate all those different
+
+04:02.980 --> 04:10.840
+steps all those different functions together into this one control system all right and so I know it
+
+04:10.840 --> 04:17.320
+looks very complicated it looks like a pain to follow and it is a bit of a pain to follow but
+
+04:17.320 --> 04:18.160
+if you take your time
+
+04:18.220 --> 04:24.100
+and you're a little meticulous about it you can work your way through it it'll take a little time
+
+04:24.100 --> 04:30.280
+but you can work your way through it and what I'm going to suggest is and every semester somebody
+
+04:30.280 --> 04:38.440
+tries to simplify it using flags moving stuff around if you want to do that that's fine but
+
+04:38.980 --> 04:45.640
+if you run into issues or have problems you know what you should do is send me your control system
+
+04:46.300 --> 04:47.800
+your .circ file
+
+04:48.220 --> 04:54.580
+it has your control unit in it and say hey look this isn't working right can you help diagnose it
+
+04:54.580 --> 05:02.080
+for me and the closer you are to this diagram the easier it is for me to diagnose okay in some cases
+
+05:02.080 --> 05:10.060
+I can't diagnose if you deviate really far away not because it's undiagnosable but because it
+
+05:10.060 --> 05:17.800
+would take a lot of time for me to follow all your logic okay so I'm going to suggest you kind of copy
+
+05:17.800 --> 05:18.160
+what I have
+
+05:18.220 --> 05:25.120
+and I'm going to give you a suggestion on how that I would do it okay or how I'm going to do it
+
+05:26.440 --> 05:32.860
+all right so when you get here what we have down below we have I have three I have it split into
+
+05:32.860 --> 05:40.300
+three parts there's a top a middle and a bottom so the easiest thing to do is if I right click on these
+
+05:41.500 --> 05:47.680
+and open image in a new tab then I have the top okay so this is just the top part
+
+05:48.220 --> 05:56.680
+okay and then there's a middle part that I can open a new tab this is the middle section and
+
+05:56.680 --> 06:03.400
+there's overlap notice the middle goes up through accumulator and RAM set
+
+06:04.540 --> 06:10.480
+and down through all our registers right R3 enable R3 set
+
+06:12.580 --> 06:14.620
+okay the top
+
+06:16.600 --> 06:18.100
+right goes down to
+
+06:18.220 --> 06:25.780
+Reg A you know the top of Reg A you know the middle goes up through accumulator so here's
+
+06:25.780 --> 06:34.360
+this is where it kind of overlaps the middle starts here right the middle starts at accumulator
+
+06:34.360 --> 06:45.580
+and goes down through the registers and then the bottom if we look at the bottom it starts above the
+
+06:45.580 --> 06:46.840
+registers okay
+
+06:48.220 --> 06:54.820
+is this bottom part okay so I'm going to say just a way that I would do this or that I'm going to do
+
+06:54.820 --> 07:05.440
+this okay so when I do this I like to start in the middle so I like to build this little structure
+
+07:05.440 --> 07:12.880
+here with all these AND gates okay and this three by eight decoder I like to build this first
+
+07:14.920 --> 07:17.800
+then make sure I have all my enables and all my
+
+07:18.220 --> 07:29.260
+my sets outputs okay my flag inputs my ALU all right my clock I like to make sure I have all
+
+07:29.260 --> 07:35.560
+those outer stuff in and then I start putting the wires in okay but I work from the middle
+
+07:37.720 --> 07:44.500
+bottom and then top last but you don't have to work that way that's just the way that I work it
+
+07:45.820 --> 07:46.360
+okay
+
+07:48.280 --> 07:50.920
+now there's a couple things when you work this
+
+07:53.200 --> 07:54.580
+the middle part here
+
+07:56.320 --> 08:01.180
+so we're doing these all these these are all AND gates they look like AND gates
+
+08:02.020 --> 08:07.480
+okay these are OR gates and there's a couple with wings on them
+
+08:09.760 --> 08:16.180
+I like this is a one two three six-input OR gate six-input OR gate
+
+08:16.180 --> 08:21.620
+four-input OR gate okay now there's small ones and big ones
+
+08:21.620 --> 08:26.460
+the big ones are the mediums the small ones are narrows and I'll show you what
+
+08:26.460 --> 08:28.460
+those are in a second
+
+08:28.460 --> 08:34.700
+all right and so that's how I build it so
+
+08:34.700 --> 08:38.880
+if I were to build this or when I build this
+
+08:38.880 --> 08:41.880
+let me go open up my
+
+08:41.880 --> 08:47.340
+where's my Logisim
+
+08:47.340 --> 08:51.780
+oops
+
+08:51.780 --> 09:01.780
+here's my Logisim okay so um what I did is like see here's CPU for
+
+09:01.780 --> 09:07.200
+assignment 13 so I built this and I didn't call it cp
+
+09:07.200 --> 09:10.240
+I called it CPU originally and then I renamed it
+
+09:10.240 --> 09:11.860
+and you can rename it live
+
+09:11.880 --> 09:16.620
+it when you click on when you open it right here in the bottom circuit name
+
+09:16.620 --> 09:23.340
+you can edit this name and change it so if you have a CPU in there you want to
+
+09:23.340 --> 09:27.840
+save the old one give it a different name create a new CPU I'm gonna create a
+
+09:27.840 --> 09:37.000
+new CPU for the final one anyway okay here's my control unit for assignment 11
+
+09:37.000 --> 09:46.420
+okay it looks like this right oops that's a little too small but it looks
+
+09:46.420 --> 09:53.900
+like this here's my stepper notice my stepper is really big when you make your
+
+09:53.900 --> 09:58.460
+stepper if you've already built it that's fine but you might want to redo
+
+09:58.460 --> 10:05.340
+the circuit appearance for the stepper if it's not wide enough you want it
+
+10:05.340 --> 10:06.980
+pretty wide so you can give it a little bit of width if you want to give it a
+
+10:06.980 --> 10:14.020
+had all those Gates inside all right now one thing you'll notice that I have
+
+10:14.020 --> 10:23.500
+here in my design here is here's my here's a two by four decoder and then
+
+10:23.500 --> 10:28.640
+there's this two by four decoder was only one input because I gang those as a
+
+10:28.640 --> 10:36.080
+two instead of two separate input I made it a two-bit input okay so I had to
+
+10:36.080 --> 10:36.620
+create a little
+
+10:37.820 --> 10:45.820
+um you know wiring fan to get the two bits in the diagram that's in the
+
+10:47.660 --> 10:52.700
+assignment if you look at these let me look at the bottom because it's easier to look at
+
+10:52.700 --> 10:57.660
+the bottom you can see here I have a two by four with two individual inputs
+
+10:59.100 --> 11:03.740
+okay so I'm building it now with these two getting together and fan to spread them apart
+
+11:03.740 --> 11:10.380
+um but it works the same way now notice I don't know if you can tell this or not but in this
+
+11:10.380 --> 11:18.860
+design this two by four the top one is reg zero you know the second one is goes to reg one reg
+
+11:18.860 --> 11:25.500
+two reg three this one the top one goes to reg zero the second one goes to reg one
+
+11:26.300 --> 11:30.620
+reg two reg three so in order to make that happen
+
+11:33.100 --> 11:33.420
+um
+
+11:33.740 --> 11:43.340
+in here what I had to do because if I grab my d if I grab a decoder a two by four decoder and
+
+11:43.340 --> 11:56.300
+I put it in okay this is reg zero reg one okay if I rotate this because I need these
+
+11:57.580 --> 12:03.580
+over here on the left so if I rotate this so that it's pointing west and
+
+12:03.740 --> 12:10.220
+instead of east oops see this connection you don't want those things to connect right
+
+12:12.380 --> 12:15.020
+so make sure you don't have make sure that doesn't happen
+
+12:15.660 --> 12:22.700
+but now this is reg zero and so it's upside down and there's no way that I've found to fix that
+
+12:23.660 --> 12:27.500
+so what I did was actually created a new decoder
+
+12:29.900 --> 12:33.260
+okay so I created a new decoder and I called it
+
+12:33.740 --> 12:38.060
+it's way down here decoder two to four left
+
+12:39.580 --> 12:47.180
+okay so this is reg zero this is reg one all right so that I can get those lined up properly
+
+12:48.780 --> 12:55.180
+in the same order to make it easier instead of upside down so if I look at this two by four left
+
+12:56.620 --> 13:01.820
+all it is is a two by four where I put the four outputs on it and I put the two-bit input on it
+
+13:03.740 --> 13:12.500
+redrew it edit the circuit appearance I just put the I just move the outputs to
+
+13:12.500 --> 13:23.480
+the left side kind of there it is so let's go right I just put the outputs to
+
+13:23.480 --> 13:27.440
+the left side and input on the right side so that the input could come in
+
+13:27.440 --> 13:31.200
+from the right and the output goes out and I just made sure this first one here
+
+13:31.200 --> 13:39.520
+is the top one or reg zero essentially reg one reg two reg three and this is my
+
+13:39.520 --> 13:47.760
+two-bit input okay so I created a new circuit just so I could do that
+
+13:47.760 --> 13:54.280
+alignment in my control system and make it make it easier to do that alignment
+
+13:54.280 --> 14:00.720
+in my control system all right so or my control unit so let me
+
+14:01.180 --> 14:07.620
+new circuit I'm gonna call it control unit
+
+14:08.040 --> 14:19.820
+and this would be for the final one okay now what I could do I could take this
+
+14:19.820 --> 14:26.540
+control unit and copy it as a starting point it's close it's not exact there's
+
+14:26.540 --> 14:29.760
+other inputs I need
+
+14:29.760 --> 14:35.320
+or I could just start with a blank one okay I'm gonna start with a blank one
+
+14:35.320 --> 14:40.800
+because it's a little bit easier I think so I'm a control unit I'm gonna go in
+
+14:40.800 --> 14:48.000
+here and I always start with the stepper I'll put a stepper in let me shrink it a
+
+14:48.000 --> 14:56.160
+little bit oops not bigger smaller okay so I would start with a stepper and I
+
+14:56.160 --> 15:01.200
+want to move it over down a little bit so I have room to put the wires and it
+
+15:01.200 --> 15:15.000
+might go off okay so then what I want to do next is I want to place these AND
+
+15:15.000 --> 15:25.920
+gates okay so when I look at this okay this set here is just right of
+
+15:26.160 --> 15:32.300
+input four okay and these are the halfway
+
+15:32.320 --> 15:35.980
+between five and six and these are
+
+15:36.000 --> 15:40.880
+right under three just left of three and I
+
+15:40.900 --> 15:42.740
+put my stepper with a little bit of
+
+15:42.760 --> 15:44.480
+room like this just to give me more room
+
+15:44.500 --> 15:50.620
+out here for these wires okay so I would
+
+15:50.640 --> 15:53.840
+try to maybe reconfigure my stepper my
+
+15:53.860 --> 15:58.720
+current stepper I think is bigger than this one so bigger is better it too
+
+15:58.720 --> 16:03.420
+small you know enough room for all the wires and it makes it too hard to build
+
+16:03.420 --> 16:09.360
+okay so make your stepper a pretty good sized so if we look at this first set I
+
+16:09.360 --> 16:16.480
+have one two three four five six seven eight nine AND gates and they're all
+
+16:16.480 --> 16:22.120
+spread out just a little bit the top one spread out a little bit taller okay so
+
+16:22.120 --> 16:26.860
+what I'm gonna do is I'm gonna put in nine AND gates that's the first thing
+
+16:26.860 --> 16:37.360
+I'm gonna do so they go to gates and okay now here's the thing I want to make
+
+16:37.360 --> 16:42.700
+it narrow so I want the smaller one and these are all two inputs now I noticed
+
+16:42.700 --> 16:47.560
+some of you are have not been doing this changing the number inputs but you
+
+16:47.560 --> 16:52.020
+should because it'll help you not get
+
+16:52.100 --> 17:02.200
+things out of alignment okay and not accidentally make a connection when you
+
+17:02.200 --> 17:10.740
+don't want to okay so like all these have two inputs okay so make them two
+
+17:10.740 --> 17:17.460
+except for the last one is a three input right so let's look in the middle so the
+
+17:17.460 --> 17:22.000
+bottom one's a three all the rest are two make them two so you don't accidentally
+
+17:22.000 --> 17:29.500
+get a third input into any of them okay make the last one of three fine all
+
+17:29.500 --> 17:39.680
+right so nine of them I have one oops
+
+17:40.520 --> 17:49.260
+and duplicate it then move the duplicated down to there I have two
+
+17:49.260 --> 17:54.380
+it's like that duplicate it I have four
+
+17:56.540 --> 18:08.200
+shift select these duplicate them I have eight I put a little bit more room in
+
+18:08.200 --> 18:14.000
+them than the other one had let me move this one up a little bit okay and then I
+
+18:14.000 --> 18:23.860
+just need one more the ninth one all right and then let me blow that one up
+
+18:23.860 --> 18:28.940
+so you can see all these are two two two two two two two two two this last one I
+
+18:28.940 --> 18:37.700
+want to change it to a three all right so then let me shrink this down let's
+
+18:37.700 --> 18:42.980
+just write a four I have nine of them all right
+
+18:42.980 --> 18:43.240
+so
+
+18:44.000 --> 18:51.160
+let's go back and look at this let me do the ones on the left there's one two
+
+18:51.160 --> 18:56.640
+three four five six seven there's eight and they're touching where the last one
+
+18:56.640 --> 19:05.440
+ties into the middle of the bottom one all right so I need eight more over here
+
+19:06.700 --> 19:13.600
+so I need them as two-input
+
+19:16.580 --> 19:26.560
+I want this one to be close to three if I make this bigger my three and four
+
+19:26.560 --> 19:32.580
+might be a little close and my stepper but I know that this is gonna tie here
+
+19:32.580 --> 19:43.900
+oops right cuz that's my alignment here all right and then I need seven more
+
+19:43.900 --> 19:53.560
+more of them okay so let me I'm just going to duplicate this one and touch
+
+19:53.560 --> 20:02.900
+that one I have two I'm going to duplicate those two oops
+
+20:05.860 --> 20:11.020
+and move them up to touch then I'll shift select the other two so I have
+
+20:11.020 --> 20:22.000
+four now and I'll duplicate those and move them up like that I'm eight all
+
+20:22.000 --> 20:30.520
+right right so those eight I have these nine and now I need like one two three
+
+20:30.520 --> 20:40.980
+four five six seven the last the bottom one being a three input
+
+20:41.020 --> 20:49.120
+so one two three four five six seven so what I'm gonna do is so this is this one
+
+20:49.120 --> 20:53.500
+is even with the top one this one's pretty much even with the bottom one
+
+20:53.500 --> 21:01.700
+okay then skip one these two skip one these three and then that one right top
+
+21:01.700 --> 21:10.900
+four skip one next to skip one bottom one so I'm gonna go over here oops sorry
+
+21:11.020 --> 21:28.960
+over here I want the top one top two three four skip one one two skip one one
+
+21:28.960 --> 21:36.820
+right duplicate those and I'm gonna move them so that they're in line roughly
+
+21:36.820 --> 21:40.520
+there okay and I have might have to move them
+
+21:40.520 --> 21:40.920
+but
+
+21:41.020 --> 21:54.020
+this gets me in the ballpark okay and then you could do a three a two and a
+
+21:54.020 --> 21:59.020
+three kind of lined up this one three kind of lined up with that one this one
+
+21:59.020 --> 22:10.360
+comes out of the middle and this one pretty much lines up with this one so I
+
+22:10.520 --> 22:21.980
+know this is a three
+
+22:21.980 --> 22:24.520
+now if I go this way there's a nine one so this is a three
+
+22:24.520 --> 22:29.400
+this one there's a five this one now get up there this is a two there's a three
+
+22:29.400 --> 22:37.560
+lining up with this one I think yeah and I need another three that's going to
+
+22:38.460 --> 22:40.380
+whoops
+
+22:40.520 --> 22:49.480
+that make sure you grab the actual object and not a point
+
+22:53.800 --> 22:59.880
+let's see this is the line
+
+22:59.880 --> 23:06.840
+so
+
+23:06.840 --> 23:10.600
+yeah okay so now I built all of these
+
+23:12.600 --> 23:16.040
+and then I can start putting in I can put a three by eight over next to this one
+
+23:17.880 --> 23:23.000
+so I tend to like put in my things and then wire them up later
+
+23:25.080 --> 23:29.240
+um not always not all the way either sometimes I'll get part way done and I'll wanna
+
+23:29.240 --> 23:29.800
+hey I don't need
+
+23:29.880 --> 23:44.820
+good I need to fix this you know here's my 3 by 8 it goes in there okay all
+
+23:44.820 --> 23:47.500
+right so 10 and then I would tend the next thing I would tend to do would be
+
+23:47.500 --> 23:55.380
+to put in all my outputs and my you know on the left side and the right side okay
+
+23:55.380 --> 23:58.980
+and so to do that then I want to go up here I'm gonna go okay I need on the
+
+23:58.980 --> 24:08.520
+left side they made one two three four five six seven eight nine ten I think
+
+24:08.520 --> 24:14.580
+eleven twelve thirteen or this is actually a three output so I might have
+
+24:14.580 --> 24:19.800
+to change this to a three bit output okay so let's not put those in yet let's
+
+24:19.800 --> 24:28.140
+do one two three four five six seven eight nine ten four I think seven eight
+
+24:28.140 --> 24:28.980
+nine ten
+
+24:28.980 --> 24:37.780
+so need ten of these outputs down the left side okay so what I want to do is
+
+24:37.780 --> 24:48.580
+uh make this a little bit the outputs and I don't really need to place them
+
+24:48.580 --> 24:57.900
+perfectly right now output let me blow it up I need the dot on the right side
+
+24:57.900 --> 24:58.740
+not the left side
+
+24:58.980 --> 25:11.400
+so I need change to the east three state no bus one is the first one and put that
+
+25:11.400 --> 25:23.740
+label on the outside right now go Control-D there's a second one Control-D
+
+25:23.740 --> 25:27.740
+now four of them
+
+25:28.980 --> 25:32.380
+but Microsoft
+
+25:32.380 --> 25:37.820
+Control-D have eight of them and I'm not lining them up I haven't renamed them
+
+25:37.820 --> 25:52.160
+yet I need ten here ever I need ten and then I need that's eight need two more
+
+25:52.160 --> 25:54.280
+um
+
+25:54.940 --> 25:56.400
+make ten these last four will be 10 to call this a 10 we want to make 8 I'll
+
+25:56.400 --> 25:58.860
+make 10 that way that is plus two so that's good good good cool
+
+25:58.860 --> 26:03.980
+will be tightly pretty tight
+
+26:03.980 --> 26:29.120
+all right and this will be I know this is R0 underscore enable R1 underscore
+
+26:29.120 --> 26:33.660
+enable so I'm gonna rename them
+
+26:33.980 --> 26:49.600
+R2 you know I just broke my way up just get the names right based on the layout
+
+26:49.600 --> 26:56.100
+okay and then if I have to move them I'll move them okay the other hint the
+
+26:56.100 --> 27:01.880
+temp tip I will give you is that when you're building it like I said if you
+
+27:01.880 --> 27:03.360
+need to move stuff move move it
+
+27:03.360 --> 27:03.860
+okay
+
+27:03.860 --> 27:13.760
+all right so these four ORs you notice I have them tied to an OR so two two two
+
+27:13.760 --> 27:18.920
+and two I believe they're all two-input OR gates but notice the ORs are
+
+27:18.920 --> 27:23.100
+touching so that will give you the spacing on these four if you want to
+
+27:23.100 --> 27:29.140
+match the spacing so then just you know put those in that way all right so we go
+
+27:29.140 --> 27:33.860
+to the bottom put those in this way and I could do that right now if I were
+
+27:33.860 --> 27:39.720
+really wanted to I could go back and I'll let me that's an easy thing to do so
+
+27:39.720 --> 28:01.580
+let me do easy stuff okay OR gate, narrow okay probably facing west make
+
+28:01.580 --> 28:03.700
+them touch
+
+28:03.860 --> 28:07.100
+I need for these right
+
+28:13.460 --> 28:20.800
+or if I drop the same way they touch and then they go straight to this okay so I
+
+28:20.800 --> 28:26.380
+need this one they move let's straight with this one I mean this one to move
+
+28:26.380 --> 28:32.900
+straight with this one this one to move straight with this one
+
+28:33.860 --> 28:38.260
+okay and then if I need to move them I will grab this I will just go like this
+
+28:38.260 --> 28:42.340
+and I'll move them as a block you know if they need to be a little lower a
+
+28:42.340 --> 28:45.060
+little farther right a little farther left that kind of thing
+
+28:45.060 --> 28:48.820
+I'll move them as a block now the other thing that
+
+28:48.820 --> 28:53.780
+might happen is you get to a point where you need to move
+
+28:53.780 --> 28:57.300
+everything because you need more room
+
+28:57.300 --> 29:04.100
+right um edit select all
+
+29:04.100 --> 29:07.380
+I need to move it to the right a little bit more there
+
+29:07.380 --> 29:14.340
+right or if I just need to move all this right I need to move it
+
+29:14.340 --> 29:18.260
+to the right to left up or down highlight it move it
+
+29:18.260 --> 29:22.500
+okay when you get wires in it becomes a pain to move
+
+29:22.500 --> 29:26.420
+because the wires if you don't select them
+
+29:26.420 --> 29:30.580
+and get them all selected then they'll kind of redraw themselves
+
+29:30.580 --> 29:33.540
+and then sometimes they'll cross sometimes they'll make connections that
+
+29:33.540 --> 29:39.300
+you don't want them to make okay so you have to really look at that
+
+29:39.300 --> 29:43.380
+I can tell right now when I look at this
+
+29:44.500 --> 29:49.140
+okay so this is supposed to be here this one's supposed to be between over
+
+29:49.140 --> 29:51.540
+here
+
+29:53.380 --> 29:56.340
+this one's supposed to be say between five and six
+
+29:56.420 --> 30:00.020
+okay so
+
+30:00.020 --> 30:01.940
+all right so I want to make sure they're
+
+30:01.960 --> 30:05.860
+between five and six
+
+30:05.860 --> 30:10.260
+and then the last row
+
+30:10.260 --> 30:13.780
+it's the top I don't see it there's then
+
+30:13.800 --> 30:18.180
+the mid so let's look at this one
+
+30:18.180 --> 30:21.300
+this middle row and the last row it's
+
+30:21.320 --> 30:23.780
+kind of lined up with
+
+30:23.800 --> 30:26.340
+let me just write a seven
+
+30:26.420 --> 30:40.040
+so over here I take all these I want to move them over here like this one easy
+
+30:40.040 --> 30:52.020
+thing I can do is I know that seven goes into reset I'll draw that in and then
+
+30:52.020 --> 30:56.700
+what I like to do with the others I just like to start them just draw a little
+
+30:56.700 --> 31:04.920
+line out of them that way when I blow it up you know when I go to when it comes
+
+31:04.920 --> 31:18.240
+really small there's my clock enter so then when I have to shrink it down I can
+
+31:18.240 --> 31:22.000
+actually tell where they are all right and
+
+31:22.000 --> 31:27.820
+that's kind of the hints I would give you work from the middle put in all your
+
+31:27.820 --> 31:36.340
+features then do the wires towards the end I mean you don't have to put in
+
+31:36.340 --> 31:41.380
+every single gate before you wire it but I like to get like this kind of
+
+31:41.380 --> 31:48.340
+structure in first then I would put the like the two two by fours in kind of
+
+31:48.340 --> 31:51.160
+position them put all the sets in
+
+31:52.000 --> 31:57.820
+position the two by four for the set register sets and do that kind of stuff
+
+31:59.260 --> 32:04.660
+all right that's my hints for you in terms of building your control unit
+
+32:05.860 --> 32:12.220
+and that's what I would focus on the other stuff I wouldn't worry about it this week in terms of
+
+32:12.220 --> 32:19.420
+getting the whole CPU wired up well next week's video I'll talk about more specifics about doing
+
+32:19.420 --> 32:21.820
+that part of it all right
+
+32:22.000 --> 32:25.320
+good luck this week thanks
+`;
+
+    var player, timeUpdater, parsedTranscript = [];
+
+    function timeToSeconds(timeStr) {
+      if (!timeStr) return 0;
+      var parts = timeStr.trim().split(':');
+      if (parts.length === 2) {
+        return (parseInt(parts[0]) || 0) * 60 + (parseFloat(parts[1]) || 0);
+      } else if (parts.length === 3) {
+        return (parseInt(parts[0]) || 0) * 3600 + (parseInt(parts[1]) || 0) * 60 + (parseFloat(parts[2]) || 0);
+      }
+      return 0;
+    }
+
+    function parseVtt(vttText) {
+      var cues = vttText.trim().split(/\n\n+/);
+      var parsedCues = [];
+      cues.forEach(function (cueBlock) {
+        if (cueBlock.indexOf('WEBVTT') === 0 || cueBlock.trim() === '') return;
+        var lines = cueBlock.trim().split('\n');
+        var timeLine = lines.filter(function (l) { return l.indexOf('-->') !== -1; })[0];
+        if (!timeLine) return;
+        var parts = timeLine.split(' --> ');
+        var textLines = lines.slice(lines.indexOf(timeLine) + 1);
+        parsedCues.push({
+          start: timeToSeconds(parts[0]),
+          end: timeToSeconds(parts[1]),
+          text: textLines.join(' ').trim()
+        });
+      });
+      return parsedCues;
+    }
+
+    function populateTranscript() {
+      var container = document.getElementById('transcript-container');
+      if (!container) return;
+      container.innerHTML = '';
+      parsedTranscript.forEach(function (cue) {
+        var lineEl = document.createElement('div');
+        lineEl.className = 'transcript-line';
+        lineEl.dataset.start = cue.start;
+        lineEl.dataset.end = cue.end;
+        lineEl.textContent = cue.text;
+        lineEl.setAttribute('role', 'button');
+        lineEl.setAttribute('tabindex', '0');
+        var seekTo = function () {
+          if (player && player.seekTo) { player.seekTo(cue.start, true); player.playVideo(); }
+        };
+        lineEl.addEventListener('click', seekTo);
+        lineEl.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); seekTo(); }
+        });
+        container.appendChild(lineEl);
+      });
+    }
+
+    function highlightCurrentLine() {
+      if (!player || !player.getCurrentTime) return;
+      var currentTime = player.getCurrentTime();
+      var lines = document.querySelectorAll('#transcript-container .transcript-line');
+      lines.forEach(function (line) {
+        var start = parseFloat(line.dataset.start);
+        var end = parseFloat(line.dataset.end);
+        if (currentTime >= start && currentTime < end) {
+          if (!line.classList.contains('active-transcript-line')) {
+            var prev = document.querySelector('#transcript-container .active-transcript-line');
+            if (prev) prev.classList.remove('active-transcript-line');
+            line.classList.add('active-transcript-line');
+            line.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else {
+          line.classList.remove('active-transcript-line');
+        }
+      });
+    }
+
+    function syncTranscriptHeight() {
+      var videoContainer = document.getElementById('video-container');
+      var transcriptContainer = document.getElementById('transcript-container');
+      if (!videoContainer || !transcriptContainer) return;
+      var videoCol = videoContainer.closest('.video-col');
+      var transcriptCol = transcriptContainer.closest('.transcript-col');
+      var sideBySide = !!(videoCol && transcriptCol) && Math.abs(
+        transcriptCol.getBoundingClientRect().top - videoCol.getBoundingClientRect().top) < 2;
+      if (sideBySide) {
+        transcriptContainer.style.height = videoContainer.offsetHeight + 'px';
+        transcriptContainer.style.maxHeight = videoContainer.offsetHeight + 'px';
+      } else {
+        transcriptContainer.style.height = '24rem';
+        transcriptContainer.style.maxHeight = '24rem';
+      }
+    }
+
+    window.onYouTubeIframeAPIReady = function () {
+      if (!VIDEO_ID || !document.getElementById('youtube-player')) return;
+      player = new YT.Player('youtube-player', {
+        videoId: VIDEO_ID,
+        events: {
+          onStateChange: function (event) {
+            clearInterval(timeUpdater);
+            if (event.data === YT.PlayerState.PLAYING) {
+              timeUpdater = setInterval(highlightCurrentLine, 300);
+            }
+          }
+        }
+      });
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      if (!VIDEO_ID || !vttContent.trim()) { syncTranscriptHeight(); return; }
+
+      parsedTranscript = parseVtt(vttContent);
+      populateTranscript();
+      setTimeout(syncTranscriptHeight, 100);
+      if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+        var tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      } else {
+        window.onYouTubeIframeAPIReady();
+      }
+    });
+
+    var resizeTimeout;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(syncTranscriptHeight, 250);
+    });
+  })();
+  </script>
 </body>
 </html>
