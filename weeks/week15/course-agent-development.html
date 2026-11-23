@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Building an AI Agent: Build → Run → Validate → Repeat</title>
+<style>
+  :root {
+    --bg: #faf8f4; --panel: #ffffff; --ink: #1f2328; --muted: #5b6168; --line: #e3ded4;
+    --build: #2f6fb3; --run: #7a4cc2; --validate: #1f8a5b; --repeat: #c2622d;
+    --build-bg: #e8f0fa; --run-bg: #f1ebfa; --validate-bg: #e6f4ed; --repeat-bg: #fbeee5;
+    --accent: #c2622d; --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181c; --panel: #1f2227; --ink: #e8e6e1; --muted: #a2a7ad; --line: #33373e;
+      --build: #6aa5e6; --run: #b08ef0; --validate: #5cc597; --repeat: #ec9563;
+      --build-bg: #1d2a3a; --run-bg: #2a2238; --validate-bg: #1b3027; --repeat-bg: #3a261b;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 17px/1.6 "Iowan Old Style", Georgia, "Times New Roman", serif; }
+  .sans, h1, h2, h3, nav, button, .tag, .kicker, figcaption, table { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 20px 80px; }
+  header.hero { padding: 24px 0 8px; border-bottom: 1px solid var(--line); margin-bottom: 28px; }
+  .kicker { text-transform: uppercase; letter-spacing: .12em; font-size: 12px; color: var(--accent); font-weight: 700; }
+  h1 { font-size: clamp(28px, 4.5vw, 42px); line-height: 1.15; margin: 8px 0 12px; letter-spacing: -.01em; }
+  h1 .arrow { color: var(--muted); font-weight: 400; }
+  h2 { font-size: 24px; margin: 48px 0 12px; letter-spacing: -.005em; }
+  h3 { font-size: 17px; margin: 0 0 6px; }
+  p.lede { font-size: 19px; color: var(--muted); max-width: 46em; margin: 0 0 12px; }
+  .draft { display: inline-block; font-size: 12px; padding: 2px 8px; border: 1px dashed var(--muted); border-radius: 999px; color: var(--muted); }
+  nav.toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; }
+  nav.toc a { font-size: 14px; color: var(--ink); text-decoration: none; border: 1px solid var(--line); padding: 4px 12px; border-radius: 999px; background: var(--panel); }
+  nav.toc a:hover { border-color: var(--accent); }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; box-shadow: var(--shadow); }
+  .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .role .icon { font-size: 26px; line-height: 1; }
+  .role p { margin: 6px 0 0; font-size: 15.5px; }
+  .role .tag { font-size: 12px; color: var(--muted); }
+
+  /* Loop */
+  .loopwrap { display: grid; grid-template-columns: minmax(280px, 380px) 1fr; gap: 22px; align-items: start; }
+  @media (max-width: 760px) { .loopwrap { grid-template-columns: 1fr; } }
+  svg.loop { width: 100%; height: auto; display: block; }
+  .node { cursor: pointer; }
+  .node circle { stroke-width: 3; transition: r .2s, stroke-width .2s; }
+  .node text { font-family: system-ui, sans-serif; font-weight: 700; font-size: 15px; pointer-events: none; }
+  .node.active circle { stroke-width: 6; }
+  .node:focus { outline: none; }
+  .node:focus-visible circle { stroke-dasharray: 4 3; }
+  .arc { fill: none; stroke: var(--line); stroke-width: 3; }
+  .stagepanel { min-height: 300px; }
+  .stagepanel h3 { font-size: 22px; }
+  .stagepanel .who { font-family: system-ui, sans-serif; font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+  .stagepanel ul { margin: 8px 0; padding-left: 20px; }
+  .stagepanel .ex { border-left: 4px solid var(--accent); padding: 8px 12px; margin-top: 12px; background: var(--bg); border-radius: 0 8px 8px 0; font-size: 15.5px; }
+
+  /* Iteration stepper */
+  .stepper { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .stepper button { border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 7px 14px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+  .stepper button:hover:not(:disabled) { border-color: var(--accent); }
+  .stepper button:disabled { opacity: .4; cursor: default; }
+  .dots { display: flex; gap: 6px; flex-wrap: wrap; }
+  .dots button { width: 34px; height: 34px; padding: 0; border-radius: 50%; font-weight: 700; }
+  .dots button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .iter h3 { font-size: 21px; margin-bottom: 2px; }
+  .iter .date { font-family: system-ui, sans-serif; font-size: 13px; color: var(--muted); }
+  .phases { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 14px; }
+  .phase { border-radius: 10px; padding: 12px 14px; font-size: 15px; }
+  .phase .tag { font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; display: block; margin-bottom: 4px; }
+  .ph-build { background: var(--build-bg); } .ph-build .tag { color: var(--build); }
+  .ph-run { background: var(--run-bg); } .ph-run .tag { color: var(--run); }
+  .ph-validate { background: var(--validate-bg); } .ph-validate .tag { color: var(--validate); }
+  .ph-repeat { background: var(--repeat-bg); } .ph-repeat .tag { color: var(--repeat); }
+  .takeaway { margin-top: 14px; font-style: italic; color: var(--muted); }
+  .turnbadge { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: var(--accent); color: #fff; font-weight: 700; font-size: 12px; }
+
+  /* Featured lesson + mini matrix */
+  .feature { display: grid; grid-template-columns: 1fr minmax(260px, 340px); gap: 22px; align-items: center; border-left: 6px solid var(--accent); margin-bottom: 14px; }
+  @media (max-width: 760px) { .feature { grid-template-columns: 1fr; } }
+  .feature h3 { font-size: 20px; color: var(--accent); }
+  .feature p { margin: 0 0 8px; font-size: 16px; }
+  table.mini { font-size: 13px; border-collapse: separate; border-spacing: 3px; width: 100%; }
+  table.mini th { font-size: 11px; text-transform: none; letter-spacing: 0; color: var(--muted); padding: 2px 4px; border: 0; text-align: center; }
+  table.mini th.row { text-align: left; white-space: nowrap; }
+  table.mini td { border: 0; text-align: center; padding: 6px 0; border-radius: 4px; font-weight: 700; font-family: system-ui, sans-serif; background: var(--bg); color: var(--muted); }
+  table.mini td.l1 { background: var(--build-bg); color: var(--build); }
+  table.mini td.l2 { background: var(--run-bg); color: var(--run); }
+  table.mini td.l3 { background: var(--validate-bg); color: var(--validate); }
+  table.mini tr.gap td.gapcol, table.mini td.gapcol { outline: 2px dashed var(--repeat); outline-offset: -2px; }
+  .mini-cap { font-size: 12.5px; color: var(--muted); font-family: system-ui, sans-serif; margin-top: 6px; }
+
+  /* Lessons */
+  .lesson h3 { color: var(--accent); }
+  .lesson p { margin: 0; font-size: 15.5px; }
+
+  /* Struggles */
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .tablewrap { overflow-x: auto; }
+
+  details { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; background: var(--panel); margin-bottom: 8px; }
+  summary { cursor: pointer; font-family: system-ui, sans-serif; font-weight: 600; }
+  ol.qs li { margin-bottom: 10px; }
+  dl.gloss { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; font-size: 15.5px; }
+  dl.gloss dt { font-family: system-ui, sans-serif; font-weight: 700; }
+  dl.gloss dd { margin: 0; }
+  @media (max-width: 600px) { dl.gloss { grid-template-columns: 1fr; } dl.gloss dd { margin-bottom: 8px; } }
+  footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <div class="kicker">CSC141 AI Literacy · Case study <span class="draft">Draft</span></div>
+    <h1>Building an AI agent from scratch <span class="arrow">—</span><br>Build <span class="arrow">→</span> Run <span class="arrow">→</span> Validate <span class="arrow">→</span> Repeat</h1>
+    <p class="lede">Your instructor built a software agent that reads an entire online course the way a student sees it, then checks it against the college's official course outline. This page is about <em>how</em> it was built. Spoiler: nobody wrote it in one go. It came out of a loop that ran again and again for about a week.</p>
+    <p class="lede sans" style="font-size:15px">Part of a set: Build → Run → Validate → Repeat (this page) · <a href="course-agent-architecture.html">How the course agent works</a> · <a href="course-agent-toolbox.html">The toolbox: libraries and the .venv</a></p>
+    <nav class="toc" aria-label="Sections">
+      <a href="#who">Who did what</a><a href="#loop">The loop</a><a href="#story">The real iterations</a>
+      <a href="#lessons">Lessons</a><a href="#limits">Where it still struggles</a><a href="#discuss">Discuss</a><a href="#gloss">Glossary</a>
+    </nav>
+  </header>
+
+  <section id="what">
+    <h2>What the agent does</h2>
+    <p>Every California community college course has a <strong>Course Outline of Record (COR)</strong>, the official document that lists what the course must teach and the <strong>student learning outcomes (SLOs)</strong> students must show. The agent opens every live page of a course, reads it, and reports:</p>
+    <ul>
+      <li>which COR topics and outcomes each page covers, and how deeply,</li>
+      <li>whether every learning outcome is actually <em>graded</em>, ideally once early and once late in the term,</li>
+      <li>problems it notices on pages (a points table that doesn't add up, a broken link),</li>
+      <li>a draft grading spreadsheet for each assignment, with short answer-key notes.</li>
+    </ul>
+    <p>It was tested on three real courses: CSC141 (this one), CSC210 Computer Architecture, and its lab, CSC210L.</p>
+  </section>
+
+  <section id="who">
+    <h2>Who did what: two AIs and one human</h2>
+    <p>Two different AI systems are involved, and they do different jobs. Mixing them up is one of the most common misunderstandings about "AI agents."</p>
+    <div class="grid3">
+      <div class="card role">
+        <div class="icon" aria-hidden="true">🧑‍🏫</div>
+        <h3>The instructor</h3>
+        <span class="tag">The decision maker and final checker</span>
+        <p>Set the goals and the rules ("the student pages are the truth", "no student work ever goes to an outside AI"), ran the agent on his own PC, and checked its output against the real course pages.</p>
+      </div>
+      <div class="card role">
+        <div class="icon" aria-hidden="true">💬</div>
+        <h3>A frontier AI coding assistant</h3>
+        <span class="tag">Helped build the agent (Claude)</span>
+        <p>Read the course folders (read-only), proposed designs, asked clarifying questions, wrote and tested the Python code, and reviewed run logs and outputs with the instructor.</p>
+      </div>
+      <div class="card role">
+        <div class="icon" aria-hidden="true">🖥️</div>
+        <h3>A local AI model</h3>
+        <span class="tag">Runs inside the agent (Qwen, 27 billion parameters)</span>
+        <p>Runs on two graphics cards in the instructor's own computer, so nothing leaves the building. It does the reading and judgment: "Does this page teach COR topic 4? At what level?"</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="loop">
+    <h2>The loop</h2>
+    <p>Click each stage. Professional software teams, scientists and engineers all use some version of this cycle. With AI systems it matters even more, because the AI's output can <em>look</em> right while being wrong.</p>
+    <div class="loopwrap">
+      <svg class="loop" viewBox="0 0 360 360" role="group" aria-label="Build, Run, Validate, Repeat cycle">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor" style="color:var(--muted)"/>
+          </marker>
+        </defs>
+        <circle cx="180" cy="180" r="118" class="arc"/>
+        <path d="M232 76 A118 118 0 0 1 284 128" class="arc" style="stroke:var(--muted)" marker-end="url(#ah)"/>
+        <path d="M284 232 A118 118 0 0 1 232 284" class="arc" style="stroke:var(--muted)" marker-end="url(#ah)"/>
+        <path d="M128 284 A118 118 0 0 1 76 232" class="arc" style="stroke:var(--muted)" marker-end="url(#ah)"/>
+        <path d="M76 128 A118 118 0 0 1 128 76" class="arc" style="stroke:var(--muted)" marker-end="url(#ah)"/>
+        <text x="180" y="174" text-anchor="middle" class="sans" style="font-size:13px;fill:var(--muted)">about 10 trips</text>
+        <text x="180" y="194" text-anchor="middle" class="sans" style="font-size:13px;fill:var(--muted)">in one week</text>
+        <g class="node" data-stage="build" tabindex="0" role="button" aria-label="Build">
+          <circle cx="180" cy="62" r="46" style="fill:var(--build-bg);stroke:var(--build)"/>
+          <text x="180" y="67" text-anchor="middle" style="fill:var(--build)">Build</text></g>
+        <g class="node" data-stage="run" tabindex="0" role="button" aria-label="Run">
+          <circle cx="298" cy="180" r="46" style="fill:var(--run-bg);stroke:var(--run)"/>
+          <text x="298" y="185" text-anchor="middle" style="fill:var(--run)">Run</text></g>
+        <g class="node" data-stage="validate" tabindex="0" role="button" aria-label="Validate">
+          <circle cx="180" cy="298" r="46" style="fill:var(--validate-bg);stroke:var(--validate)"/>
+          <text x="180" y="303" text-anchor="middle" style="fill:var(--validate)">Validate</text></g>
+        <g class="node" data-stage="repeat" tabindex="0" role="button" aria-label="Repeat">
+          <circle cx="62" cy="180" r="46" style="fill:var(--repeat-bg);stroke:var(--repeat)"/>
+          <text x="62" y="185" text-anchor="middle" style="fill:var(--repeat)">Repeat</text></g>
+      </svg>
+      <div class="card stagepanel" id="stagepanel" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section id="story">
+    <h2>The real iterations</h2>
+    <p>Here is what actually happened, trip by trip around the loop. Notice how often the <strong>Validate</strong> step found something surprising, and how each surprise changed what got built next.</p>
+    <div class="stepper">
+      <button id="prev" aria-label="Previous iteration">← Prev</button>
+      <div class="dots" id="dots" role="tablist" aria-label="Iterations"></div>
+      <button id="next" aria-label="Next iteration">Next →</button>
+    </div>
+    <div class="card iter" id="iter" aria-live="polite"></div>
+  </section>
+
+  <section id="lessons">
+    <h2>Lessons that apply to any AI project</h2>
+    <div class="card feature">
+      <div>
+        <h3>★ The biggest simplification: ask for a grid, not an essay</h3>
+        <p>The biggest improvement didn't come from better code or a bigger model. It came from changing the <em>shape</em> of the output. The first compliance report was well-written prose that took a long time to check. The new one is a matrix: pages down the side, COR items across the top, and a 1, 2, 3 or blank in each cell.</p>
+        <p>That helped both sides. The model answers a small, concrete question about one page ("which topics, at what level?"), which it does far more reliably than judging a whole course. The human can check the result in minutes: a blank column is a gap, and a column that never gets past 1 is only ever introduced.</p>
+      </div>
+      <div>
+        <table class="mini" aria-label="Illustrative coverage matrix">
+          <thead><tr><th class="row"></th><th>Topic A</th><th>Topic B</th><th>Topic C</th><th>Topic D</th></tr></thead>
+          <tbody>
+            <tr><th class="row">Week 1 lesson</th><td class="l1">1</td><td></td><td class="gapcol"></td><td class="l1">1</td></tr>
+            <tr><th class="row">Week 2 lesson</th><td class="l2">2</td><td class="l1">1</td><td class="gapcol"></td><td class="l1">1</td></tr>
+            <tr><th class="row">Assignment 2</th><td class="l2">2</td><td class="l2">2</td><td class="gapcol"></td><td></td></tr>
+            <tr><th class="row">Week 5 lesson</th><td class="l3">3</td><td class="l2">2</td><td class="gapcol"></td><td class="l1">1</td></tr>
+            <tr><th class="row">Assignment 5</th><td class="l3">3</td><td class="l3">3</td><td class="gapcol"></td><td></td></tr>
+          </tbody>
+        </table>
+        <div class="mini-cap">Illustrative example. Topic C is never covered (a gap), and Topic D never gets past 1.</div>
+      </div>
+    </div>
+    <div class="grid3">
+      <div class="card lesson"><h3>1. Look before you build</h3><p>The first plan was wrong. Reading the real course folders before writing code showed that a different design was needed. An hour of looking saved days of rework.</p></div>
+      <div class="card lesson"><h3>2. Ask, don't assume</h3><p>Eleven questions to the instructor settled things no AI could guess, like "is the syllabus or the web page the truth?" Those answers are now rules the agent follows.</p></div>
+      <div class="card lesson"><h3>3. Use plain code where you can</h3><p>Adding up points, finding links and following a weighting formula are jobs for ordinary code, which gets them exactly right every time. The AI handles the parts that need judgment.</p></div>
+      <div class="card lesson"><h3>4. Check against a known answer</h3><p>The instructor had a grading sheet he'd built by hand. When the agent built the same sheet exactly, that was real evidence it worked. "It looks plausible" is not evidence.</p></div>
+      <div class="card lesson"><h3>5. Don't over-fit the instructions</h3><p>It's tempting to add a rule every time the AI makes a mistake. A rule written to fix one page was removed again, because a pile of rules like that makes the agent worse on everything else.</p></div>
+      <div class="card lesson"><h3>6. Know when to stop</h3><p>The compliance report works well. The grading keys for one course still have problems. Pausing to do other productive work is a legitimate exit from the loop, as long as the limits are written down.</p></div>
+    </div>
+  </section>
+
+  <section id="limits">
+    <h2>Where it still struggles</h2>
+    <p>An honest list. Every item was found in the <strong>Validate</strong> step by a human comparing the agent's work with the real course pages.</p>
+    <div class="tablewrap card" style="padding:6px 14px">
+      <table>
+        <thead><tr><th>Problem</th><th>Example</th><th>Why it matters</th></tr></thead>
+        <tbody>
+          <tr><td>Confident technical errors in answer keys</td><td>For a lab circuit, the key used NAND gates where the page's own hints require NOR gates. In another key, one binary result was off by a single bit.</td><td>A wrong key grades students wrong. Every key needs an expert's review before use.</td></tr>
+          <tr><td>"Thinking" that runs too long</td><td>On the hardest assignments, the model spent its whole output budget reasoning and never wrote an answer. One six-hour run ended with the PC locking up.</td><td>Reasoning models can loop. The fix was to log everything, save the cut-off answer, and retry without thinking.</td></tr>
+          <tr><td>False findings</td><td>About 25 "problems" on one course were not real. The agent was reading the raw file rather than the page a student sees after its scripts run.</td><td>Garbage in, garbage out: the input has to match what students really see.</td></tr>
+          <tr><td>Run-to-run variation</td><td>Running the same page twice can produce slightly different observations.</td><td>Treat AI findings as leads to check, not as verdicts.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="discuss">
+    <h2>Discussion questions</h2>
+    <ol class="qs">
+      <li>The agent uses a <em>local</em> model for anything near student data, and allows a frontier (cloud) model only for course content. What risks does that rule protect against? What does it cost?</li>
+      <li>The answer key with the NAND/NOR error <em>looked</em> completely professional. How would you design a check that catches errors like that without an expert re-doing all the work?</li>
+      <li>Lesson 5 says not to add a rule for every mistake. When <em>is</em> it right to add a rule? Where would you draw the line?</li>
+      <li>Which parts of this loop could an AI do by itself? Which parts should always stay with a person? Why?</li>
+      <li>Think of something you've built, written or fixed. Where did your own build → run → validate → repeat loop show up, and where did you skip the "validate" step?</li>
+    </ol>
+  </section>
+
+  <section id="gloss">
+    <h2>Glossary</h2>
+    <dl class="gloss">
+      <dt>Agent</dt><dd>A program that uses an AI model as one part of a larger process: it gathers information, asks the model for judgments, checks the answers, and produces results with little hand-holding.</dd>
+      <dt>Local model</dt><dd>An AI model that runs on your own hardware. Nothing is sent over the internet.</dd>
+      <dt>Frontier model</dt><dd>The most capable models from companies like Anthropic, OpenAI and Google. They run in the provider's cloud.</dd>
+      <dt>Token</dt><dd>A chunk of text, roughly ¾ of a word, that a model reads or writes. Output is limited by a token "budget."</dd>
+      <dt>Thinking mode</dt><dd>A setting where the model writes out hidden reasoning before its answer. Often better results, but slower, and it can run out of budget.</dd>
+      <dt>Deterministic</dt><dd>Gives the same output every time for the same input. Ordinary code is deterministic; AI models usually are not.</dd>
+      <dt>Validation</dt><dd>Checking output against something you trust: the source page, a hand-built example, or an expert.</dd>
+      <dt>COR / SLO</dt><dd>Course Outline of Record / Student Learning Outcome: the official description of a course and the skills students must demonstrate.</dd>
+    </dl>
+  </section>
+
+  <footer>
+    Draft, November 2026 · Prof. Dave Pai, Mendocino College · A case study for CSC141 AI Literacy. Course details simplified for a general audience; no student data appears on this page.
+  </footer>
+</main>
+
+<script>
+const STAGES = {
+  build: {
+    title: "Build", who: "Instructor + AI coding assistant",
+    body: `<p>Decide the next small improvement and write the code for it. Keep each step small enough that, if it breaks, you know what broke.</p>
+      <ul><li>Turn a decision into a rule ("count only <em>graded</em> work as assessment").</li>
+      <li>Write instructions (a "spec") telling the local model what to look for.</li>
+      <li>Add automatic checks that reject a malformed AI answer.</li></ul>`,
+    ex: "Example: after learning that some pages build their tables with JavaScript, a step was added that opens each page in a hidden web browser first, so the agent reads exactly what a student sees."
+  },
+  run: {
+    title: "Run", who: "The agent + the local AI model, on the instructor's PC",
+    body: `<p>Run it on <strong>real</strong> material, not a toy example. Here that meant whole courses: 93 pages for CSC210, 52 pages plus 5 quizzes for CSC141.</p>
+      <ul><li>A single command asks for an output; the agent first does any steps that output depends on.</li>
+      <li>Results are cached, so the next run only redoes pages that changed.</li>
+      <li>Everything goes into a log file you can read afterward.</li></ul>`,
+    ex: "Example: the longest run, drafting answer keys for 14 CSC210 assignments, took almost six hours on two graphics cards."
+  },
+  validate: {
+    title: "Validate", who: "Instructor (the expert), helped by the coding assistant",
+    body: `<p>The most important step, and the one people most often skip. Compare the output with something you trust.</p>
+      <ul><li>Against a known answer: a grading sheet built by hand earlier.</li>
+      <li>Against the source: open the page and check the claim.</li>
+      <li>Count the errors: "about 1 false finding in 20" is a measurement; "seems fine" isn't.</li></ul>`,
+    ex: "Example: the instructor checked a drafted answer key line by line and found that 11001010 AND 00001111 had been given as 00000010. The correct result is 00001010."
+  },
+  repeat: {
+    title: "Repeat (or stop)", who: "Instructor decides",
+    body: `<p>Use what validation found to choose the next build. Fix the cause, not just the symptom, and write down what you learned.</p>
+      <ul><li>Group fixes: one review produced eight fixes, all approved before any code changed.</li>
+      <li>Keep backups of every changed file, and add an automated test so a fixed bug stays fixed (21 tests so far).</li>
+      <li>Decide whether another trip around the loop is worth it.</li></ul>`,
+    ex: "Example: after the six-hour run, the decision was to pause. The compliance report is good enough to use; the CSC210 grading keys go on the 'known limitations' list for later."
+  }
+};
+
+const ITERS = [
+  { t: "Look before building", d: "Day 1",
+    build: "No code yet. The coding assistant read both course folders read-only and compared them with the first design.",
+    run: "Mapped how each course is organized: modules vs. weeks, how quizzes are stored, where student work lives (to keep it out).",
+    validate: "The first design was missing its most useful job. Eleven questions went to the instructor.",
+    repeat: "The instructor's answers became the design rules, such as \"the student pages are the truth\" and \"no student work, ever.\"",
+    take: "The biggest correction came before any code was written." },
+  { t: "Plain code first, no AI", d: "Day 1",
+    build: "Wrote ordinary code to read page lists, point tables, outcome tables and quiz files.",
+    run: "Ran it on all three courses with no AI model involved at all.",
+    validate: "It rebuilt the instructor's hand-made Assignment 5 grading sheet exactly, part by part. It also found a points table whose rows add to 15 while its Total row says 5.",
+    repeat: "With the facts reliable, it was time to add the AI for the parts that need judgment.",
+    take: "A known-good example (the hand-built sheet) turned \"looks right\" into \"is right.\"" },
+  { t: "First run with the local AI", d: "Day 2 · CSC210L lab course",
+    build: "Connected the local model and wrote the page-review instructions.",
+    run: "First end-to-end run. Four bugs appeared, from the AI server rejecting the message order to a Windows text-encoding problem.",
+    validate: "The model's hidden \"thinking\" used up its output budget, so three labs failed. One failed page stopped the whole run. The COR extraction matched the PDF, with about 1 false finding in 20.",
+    repeat: "Turned thinking off for page reviews. Failed pages now get skipped and retried. Answers that break the rules are sent back to the model with the reasons.",
+    take: "The first real run always finds problems a test example never would." },
+  { t: "Does it generalize?", d: "Day 2–3 · CSC141",
+    build: "Changed nothing on purpose.",
+    run: "Ran the agent on a completely different course: 52 pages and 5 quizzes.",
+    validate: "No failures. The instructor spot-checked the compliance report: it looked good.",
+    repeat: "Confidence to add new features.",
+    take: "Testing on a second, different case is how you find out whether you built a tool or a one-off." },
+  { t: "From prose to a matrix", d: "Day 3", turn: true,
+    build: "The first compliance report was prose: a written summary, a list of findings for each page, and comparisons between the pages and the course planning documents.",
+    run: "Ran on two courses. To answer one question, such as \"is COR topic 7 covered, and how deeply?\", the instructor had to search paragraphs spread across dozens of pages.",
+    validate: "Mostly right, but slow to check: confirming one claim meant re-reading the pages behind it. The plan comparisons added noise that had nothing to do with the COR.",
+    repeat: "The instructor redefined the output as a grid. Rows are pages in course order, columns are the COR's topics, objectives and outcomes, and each cell is 1 (introductory), 2 (intermediate), 3 (advanced) or blank. The scope narrowed to the COR alone. The model now answers small questions about one page at a time; code assembles the grid.",
+    take: "Turning point: a blank column is a gap you can see at a glance. Changing the shape of the output made both the AI's job and the human's review simpler." },
+  { t: "New feature: answer keys", d: "Day 4",
+    build: "One model call per assignment drafts short answer-key bullets for the grading sheet. Code enforces the length: at most 5 bullets, 25 words each.",
+    run: "Drafted keys for every CSC141 graded assignment.",
+    validate: "The keys were short enough to read in a spreadsheet cell while grading.",
+    repeat: "Next: tie each assignment's grades to the learning outcomes.",
+    take: "Code sets the limits; the AI fills in the content." },
+  { t: "Outcome assessment: pure math", d: "Day 5",
+    build: "Turned the instructor's scoring rules into code: 75%+ = met, later attempts count more (the last one counts 65%).",
+    run: "Built the outcome sheets inside the grading workbook.",
+    validate: "Checked the formula against hand calculations.",
+    repeat: "No AI was needed here at all. Fixed arithmetic belongs in code.",
+    take: "Not every part of an \"AI agent\" should use AI." },
+  { t: "The hard course", d: "Day 6 · CSC210",
+    build: "Same agent, 93 pages full of interactive widgets and video transcripts.",
+    run: "Compliance report and grading keys for CSC210.",
+    validate: "About 25 false findings: the agent read raw files, not the pages as students see them. Two answer keys had wrong technical details (a NAND/NOR mix-up, one wrong bit).",
+    repeat: "Eight fixes, including opening each page in a hidden browser first. All approved by the instructor before any code changed.",
+    take: "The AI's errors were confident and well formatted. Only an expert caught them." },
+  { t: "The long run", d: "Day 7",
+    build: "Re-ran CSC210 with all eight fixes.",
+    run: "Almost six hours. Six keys hit the token limit and were retried with double the budget. The PC locked up at the end.",
+    validate: "The results were saved before the lockup, but nobody could tell whether the model was looping or just reasoning at length.",
+    repeat: "Added a detailed log, saved every cut-off answer for inspection, and changed the retry to answer without thinking instead of thinking longer. Now 21 automated tests.",
+    take: "When you can't see why something failed, the next build is better visibility." },
+  { t: "Decide to pause", d: "Day 8",
+    build: "No new code.",
+    run: "—",
+    validate: "Compliance works well across all three courses. CSC210 grading keys are still unreliable.",
+    repeat: "Stop here for now. Write down the known limitations and the next steps, and get back to teaching.",
+    take: "Leaving the loop on purpose, with notes, is part of the method." }
+];
+
+const panel = document.getElementById('stagepanel');
+const nodes = [...document.querySelectorAll('.node')];
+function showStage(k) {
+  const s = STAGES[k];
+  nodes.forEach(n => n.classList.toggle('active', n.dataset.stage === k));
+  panel.innerHTML = `<h3 style="color:var(--${k})">${s.title}</h3><div class="who">${s.who}</div>${s.body}<div class="ex">${s.ex}</div>`;
+}
+nodes.forEach(n => {
+  n.addEventListener('click', () => showStage(n.dataset.stage));
+  n.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showStage(n.dataset.stage); } });
+});
+showStage('build');
+
+let cur = 0;
+const dots = document.getElementById('dots');
+ITERS.forEach((_, i) => {
+  const b = document.createElement('button');
+  b.textContent = ITERS[i].turn ? '★' : i + 1; b.setAttribute('role', 'tab'); b.setAttribute('aria-label', 'Iteration ' + (i + 1) + (ITERS[i].turn ? ' (turning point)' : ''));
+  b.addEventListener('click', () => showIter(i));
+  dots.appendChild(b);
+});
+function showIter(i) {
+  cur = i; const it = ITERS[i];
+  [...dots.children].forEach((b, j) => { b.classList.toggle('on', j === i); b.setAttribute('aria-selected', j === i); });
+  document.getElementById('prev').disabled = i === 0;
+  document.getElementById('next').disabled = i === ITERS.length - 1;
+  document.getElementById('iter').innerHTML = `
+    <div class="date">Iteration ${i + 1} of ${ITERS.length} · ${it.d}${it.turn ? ' <span class="turnbadge">★ Turning point</span>' : ''}</div>
+    <h3>${it.t}</h3>
+    <div class="phases">
+      <div class="phase ph-build"><span class="tag">Build</span>${it.build}</div>
+      <div class="phase ph-run"><span class="tag">Run</span>${it.run}</div>
+      <div class="phase ph-validate"><span class="tag">Validate</span>${it.validate}</div>
+      <div class="phase ph-repeat"><span class="tag">Repeat</span>${it.repeat}</div>
+    </div>
+    <p class="takeaway">${it.take}</p>`;
+}
+document.getElementById('prev').onclick = () => cur > 0 && showIter(cur - 1);
+document.getElementById('next').onclick = () => cur < ITERS.length - 1 && showIter(cur + 1);
+showIter(0);
+</script>
+</body>
+</html>

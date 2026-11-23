@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Course Agent's Toolbox: Python Libraries and the .venv</title>
+<style>
+  :root {
+    --bg: #faf8f4; --panel: #ffffff; --ink: #1f2328; --muted: #5b6168; --line: #e0dacf;
+    --ai: #7a4cc2; --ai-bg: #f1ebfa;
+    --in: #2f6fb3; --in-bg: #e8f0fa;
+    --out: #1f8a5b; --out-bg: #e6f4ed;
+    --dev: #b7791f; --dev-bg: #fbf1dd;
+    --ext: #6b7280; --ext-bg: #f1f1ef;
+    --accent: #c2622d; --code-bg: #1e2228; --code-ink: #e6e6e6;
+    --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181c; --panel: #1f2227; --ink: #e8e6e1; --muted: #a2a7ad; --line: #353940;
+      --ai: #b08ef0; --ai-bg: #2a2238; --in: #6aa5e6; --in-bg: #1d2a3a;
+      --out: #5cc597; --out-bg: #1b3027; --dev: #e3b25a; --dev-bg: #3a2f1a;
+      --ext: #a3a9b1; --ext-bg: #262a30; --code-bg: #111317; --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 "Iowan Old Style", Georgia, "Times New Roman", serif; }
+  h1, h2, h3, nav, button, .kicker, .tag, table, .sans, .layer { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  code, pre, .term { font-family: ui-monospace, "Cascadia Code", Consolas, Menlo, monospace; }
+  code { font-size: .88em; background: var(--ext-bg); padding: 1px 5px; border-radius: 4px; }
+  main { max-width: 1040px; margin: 0 auto; padding: 32px 20px 80px; }
+  header.hero { padding: 24px 0 8px; border-bottom: 1px solid var(--line); margin-bottom: 28px; }
+  .kicker { text-transform: uppercase; letter-spacing: .12em; font-size: 12px; color: var(--accent); font-weight: 700; }
+  .draft { display: inline-block; font-size: 12px; padding: 2px 8px; border: 1px dashed var(--muted); border-radius: 999px; color: var(--muted); }
+  h1 { font-size: clamp(28px, 4.5vw, 42px); line-height: 1.15; margin: 8px 0 12px; letter-spacing: -.01em; }
+  h2 { font-size: 24px; margin: 48px 0 12px; }
+  h3 { font-size: 17px; margin: 0 0 6px; }
+  p.lede { font-size: 19px; color: var(--muted); max-width: 48em; margin: 0 0 12px; }
+  a { color: var(--accent); }
+  nav.toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; }
+  nav.toc a { font-size: 14px; color: var(--ink); text-decoration: none; border: 1px solid var(--line); padding: 4px 12px; border-radius: 999px; background: var(--panel); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; box-shadow: var(--shadow); }
+  .note { font-size: 14px; color: var(--muted); font-family: system-ui, sans-serif; }
+
+  /* Stack */
+  .stackwrap { display: grid; grid-template-columns: minmax(300px, 420px) 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 820px) { .stackwrap { grid-template-columns: 1fr; } }
+  .stack { display: flex; flex-direction: column; gap: 6px; }
+  .layer { border: 2px solid var(--c); background: var(--b); border-radius: 10px; padding: 10px 14px; cursor: pointer; text-align: left; color: var(--ink); font-size: 14.5px; }
+  .layer strong { color: var(--c); display: block; font-size: 15px; }
+  .layer span { color: var(--muted); font-size: 13px; }
+  .layer.sel { box-shadow: 0 0 0 3px var(--accent); }
+  .layer .row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .layer .chip { font-size: 12px; border: 1px solid var(--c); border-radius: 999px; padding: 1px 8px; color: var(--c); background: var(--panel); }
+  .downarrow { text-align: center; color: var(--muted); font-size: 13px; line-height: 1; }
+  .stackpanel { position: sticky; top: 16px; min-height: 260px; }
+  .stackpanel p { font-size: 15.5px; }
+
+  /* Library cards */
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .filters button { border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 6px 14px; border-radius: 999px; font-size: 14px; cursor: pointer; }
+  .filters button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .libs { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+  .lib { border-top: 5px solid var(--c); }
+  .lib .tag { font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; color: var(--c); }
+  .lib h3 { font-size: 19px; margin: 4px 0 2px; font-family: ui-monospace, Consolas, Menlo, monospace; }
+  .lib .one { color: var(--muted); font-size: 14.5px; margin: 0 0 10px; font-style: italic; }
+  .lib dl { margin: 0; font-size: 14.5px; }
+  .lib dt { font-family: system-ui, sans-serif; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-top: 8px; }
+  .lib dd { margin: 2px 0 0; }
+  .lib.hide { display: none; }
+
+  pre.code { background: var(--code-bg); color: var(--code-ink); padding: 16px 18px; border-radius: 12px; overflow-x: auto; font-size: 13.5px; line-height: 1.55; margin: 0; }
+  .k { color: #c792ea; } .s { color: #c3e88d; } .c { color: #7f8a99; font-style: italic; } .f { color: #82aaff; } .n { color: #f78c6c; }
+  .codegrid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 860px) { .codegrid { grid-template-columns: 1fr; } }
+  .callouts ol { padding-left: 20px; margin: 0; font-size: 15.5px; }
+  .callouts li { margin-bottom: 10px; }
+
+  /* Terminal walkthrough */
+  .ostabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .ostabs button { border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 6px 14px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+  .ostabs button.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .termgrid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 860px) { .termgrid { grid-template-columns: 1fr; } }
+  .term { background: var(--code-bg); color: var(--code-ink); border-radius: 12px; padding: 14px 16px; font-size: 13.5px; min-height: 300px; white-space: pre-wrap; word-break: break-word; }
+  .term .p { color: #82aaff; } .term .o { color: #9aa3ad; } .term .hl { background: rgba(194,98,45,.35); border-radius: 3px; }
+  .termctl { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-family: system-ui, sans-serif; font-size: 14px; }
+  .termctl button { border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 6px 14px; border-radius: 8px; cursor: pointer; }
+  .termctl button:disabled { opacity: .4; cursor: default; }
+  .explain h3 { font-size: 19px; }
+  .explain p { font-size: 15.5px; margin: 0 0 8px; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .lesson h3 { color: var(--accent); }
+  .lesson p { margin: 0; font-size: 15.5px; }
+  ol.qs li { margin-bottom: 10px; }
+  footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <div class="kicker">CSC141 AI Literacy · Case study <span class="draft">Draft</span></div>
+    <h1>The agent's toolbox: Python libraries and the <code style="font-size:.8em">.venv</code></h1>
+    <p class="lede">Almost nobody builds an AI agent from raw parts. This one is a few thousand lines of Python standing on a handful of well-tested libraries, and each library does one job well. This page shows which library does what, why it was chosen, and how a <strong>virtual environment</strong> keeps them all in one tidy box.</p>
+    <p class="lede sans" style="font-size:15px">Part of a set: <a href="course-agent-development.html">Build → Run → Validate → Repeat</a> · <a href="course-agent-architecture.html">How the course agent works</a> · The toolbox (this page)</p>
+    <nav class="toc" aria-label="Sections">
+      <a href="#stack">The stack</a><a href="#libs">The libraries</a><a href="#pyd">Pydantic AI up close</a>
+      <a href="#venv">The .venv</a><a href="#other">Other tools</a><a href="#lessons">Lessons</a><a href="#discuss">Discuss</a>
+    </nav>
+  </header>
+
+  <section id="stack">
+    <h2 style="margin-top:0">The stack, top to bottom</h2>
+    <p>When the instructor types one command, it passes down through several layers before any AI does any thinking. Click a layer.</p>
+    <div class="stackwrap">
+      <div class="stack" id="stack">
+        <button class="layer" data-l="cmd" style="--c:var(--accent);--b:var(--panel)"><strong>1 · The command</strong><span>course-agent csc210 compliance</span></button>
+        <div class="downarrow">▼</div>
+        <button class="layer" data-l="pkg" style="--c:var(--ink);--b:var(--panel)"><strong>2 · The agent's own code</strong><span>Python package <code>course_agent</code></span></button>
+        <div class="downarrow">▼</div>
+        <button class="layer" data-l="libs" style="--c:var(--in);--b:var(--in-bg)"><strong>3 · Libraries (in the .venv)</strong><span>other people's well-tested code</span>
+          <div class="row"><span class="chip" style="--c:var(--ai)">pydantic-ai</span><span class="chip">playwright</span><span class="chip">pypdf</span><span class="chip">pyyaml</span><span class="chip" style="--c:var(--out)">openpyxl</span><span class="chip" style="--c:var(--dev)">pytest</span></div></button>
+        <div class="downarrow">▼ HTTP request on the same machine</div>
+        <button class="layer" data-l="server" style="--c:var(--ai);--b:var(--ai-bg)"><strong>4 · Model server</strong><span>llama-server, OpenAI-compatible API on port 8083</span></button>
+        <div class="downarrow">▼</div>
+        <button class="layer" data-l="model" style="--c:var(--ai);--b:var(--ai-bg)"><strong>5 · The model</strong><span>Qwen 27B, 8-bit weights file</span></button>
+        <div class="downarrow">▼</div>
+        <button class="layer" data-l="hw" style="--c:var(--ext);--b:var(--ext-bg)"><strong>6 · Hardware</strong><span>two NVIDIA RTX 4090 graphics cards</span></button>
+      </div>
+      <div class="card stackpanel" id="stackpanel" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section id="libs">
+    <h2>The libraries, and why each one is there</h2>
+    <p>Filter by the kind of job. For each library: what it is, where the agent uses it, and why it beat the alternatives.</p>
+    <div class="filters" id="filters">
+      <button class="on" data-f="all">All</button>
+      <button data-f="ai">Talking to the AI</button>
+      <button data-f="in">Reading inputs</button>
+      <button data-f="out">Writing outputs</button>
+      <button data-f="dev">Building &amp; testing</button>
+    </div>
+    <div class="libs" id="libs-grid"></div>
+    <p class="note" style="margin-top:12px">Also used: Python's standard library for files, JSON, XML, paths, hashing (the cache keys) and command-line options. It comes with Python, so it needs no install.</p>
+  </section>
+
+  <section id="pyd">
+    <h2>Pydantic AI up close</h2>
+    <p>Pydantic AI is the library that turns "send text to a chatbot" into "get back a filled-in, checked form." Here is a <strong>simplified</strong> version of how the agent asks for one page review. It is shorter than the real code, but it uses the same ideas.</p>
+    <div class="codegrid">
+<pre class="code" aria-label="Simplified Pydantic AI example"><span class="k">from</span> pydantic <span class="k">import</span> BaseModel, Field
+<span class="k">from</span> pydantic_ai <span class="k">import</span> Agent, ModelRetry
+<span class="k">from</span> pydantic_ai.models.openai <span class="k">import</span> OpenAIChatModel
+<span class="k">from</span> pydantic_ai.providers.openai <span class="k">import</span> OpenAIProvider
+
+<span class="c"># ① The form the model must fill in</span>
+<span class="k">class</span> <span class="f">PageReview</span>(BaseModel):
+    topics: list[str] = Field(description=<span class="s">"COR topic ids taught"</span>)
+    level: int = Field(ge=<span class="n">1</span>, le=<span class="n">3</span>)        <span class="c"># 1, 2 or 3 only</span>
+    cslos_assessed: list[str]
+    observations: list[str] = Field(max_length=<span class="n">8</span>)
+
+<span class="c"># ② Which model: here, the local server</span>
+local = OpenAIChatModel(
+    <span class="s">"qwen3.8-27b-q8-dualgpu"</span>,
+    provider=OpenAIProvider(
+        base_url=<span class="s">"http://127.0.0.1:8083/v1"</span>, api_key=<span class="s">"none"</span>),
+)
+
+<span class="c"># ③ The agent: instructions + form</span>
+agent = Agent(
+    local,
+    output_type=PageReview,
+    instructions=open(<span class="s">"specs/review_page.md"</span>, encoding=<span class="s">"utf-8"</span>).read(),
+)
+
+<span class="c"># ④ A check written in plain code</span>
+@agent.output_validator
+<span class="k">def</span> <span class="f">check</span>(review: PageReview) -> PageReview:
+    <span class="k">if not</span> review.topics:
+        <span class="k">raise</span> ModelRetry(<span class="s">"No COR topic listed. Name at least one topic id."</span>)
+    <span class="k">return</span> review
+
+<span class="c"># ⑤ Run it</span>
+result = agent.run_sync(page_text_and_cor)
+print(result.output.topics, result.output.level)</pre>
+      <div class="card callouts">
+        <ol>
+          <li><strong>The form.</strong> A Pydantic <em>model</em> (a Python class) says exactly which fields the answer must have and what values are allowed. A level of 4 or a missing list is rejected automatically.</li>
+          <li><strong>The model connection.</strong> The local server speaks the same "OpenAI-compatible" language as cloud services, so swapping in a frontier model means changing this one line. Nothing else changes.</li>
+          <li><strong>The agent.</strong> Instructions come from a plain text file (a "spec"), so they can be improved without touching the Python.</li>
+          <li><strong>The check.</strong> <code>ModelRetry</code> sends the answer back to the model <em>with the reason</em>, and the model tries again. This is the "bad answers are sent back" loop from the architecture page.</li>
+          <li><strong>The result</strong> is a real Python object, not a paragraph of text to pick apart. <code>result.output.level</code> is guaranteed to be 1, 2 or 3.</li>
+        </ol>
+        <p class="note" style="margin:10px 0 0">One gotcha from the project: the local model's chat format rejected one way Pydantic AI sends retry messages. The fix was a small custom layer, built with <code>httpx</code>, that rearranges the messages before they reach the server.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="venv">
+    <h2>The .venv: a private toolbox for one project</h2>
+    <p>A <strong>virtual environment</strong> is a folder, here named <code>.venv</code>, that holds its own copy of Python and its own installed libraries. Think of it as a toolbox that belongs to one project. Without it, every project on the computer shares one big drawer, and upgrading a library for one project can quietly break another.</p>
+    <div class="ostabs" role="tablist">
+      <button class="on" data-os="win" role="tab">Windows (PowerShell)</button>
+      <button data-os="mac" role="tab">macOS / Linux</button>
+    </div>
+    <div class="termgrid">
+      <div>
+        <div class="term" id="term" aria-live="polite"></div>
+        <div class="termctl">
+          <button id="tback">← Back</button>
+          <button id="tnext">Run next command →</button>
+          <span id="tcount"></span>
+        </div>
+      </div>
+      <div class="card explain" id="explain" aria-live="polite"></div>
+    </div>
+
+    <h3 style="margin-top:28px">The recipe card: <code>pyproject.toml</code></h3>
+    <p>How does <code>pip install</code> know which libraries to fetch? The project has one settings file that lists them. A simplified version:</p>
+    <div class="codegrid">
+<pre class="code"><span class="c"># pyproject.toml (simplified)</span>
+[project]
+name = <span class="s">"course-agent"</span>
+requires-python = <span class="s">"&gt;=3.10"</span>
+dependencies = [
+  <span class="s">"pydantic-ai-slim[openai,anthropic]"</span>,
+  <span class="s">"openpyxl"</span>,
+  <span class="s">"pyyaml"</span>,
+  <span class="s">"pypdf"</span>,
+  <span class="s">"playwright"</span>,
+]
+
+[project.optional-dependencies]
+dev = [<span class="s">"pytest"</span>]
+
+[project.scripts]
+course-agent = <span class="s">"course_agent.cli:main"</span></pre>
+      <div class="card callouts">
+        <ol>
+          <li><code>dependencies</code>: what every user needs. <code>[openai,anthropic]</code> means "only the connectors for these providers," which is why it's the <em>slim</em> package.</li>
+          <li><code>dev</code>: extras needed only by the developer, here the test tool. That's the <code>[dev]</code> in <code>pip install -e ".[dev]"</code>.</li>
+          <li><code>scripts</code>: creates the <code>course-agent</code> command, so you don't have to type <code>python -m …</code> every time.</li>
+          <li>A file called <code>.gitignore</code> keeps <code>.venv/</code>, secrets (<code>.env</code>) and the output workspace out of version control. The toolbox is rebuilt from this recipe, not copied around.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section id="other">
+    <h2>Other tools that aren't Python libraries</h2>
+    <div class="card" style="padding:6px 14px; overflow-x:auto">
+      <table>
+        <thead><tr><th>Tool</th><th>Job</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td><strong>llama-server</strong> (from llama.cpp)</td><td>Loads the model onto the GPUs and answers requests over HTTP</td><td>Free, fast on consumer GPUs, and speaks the OpenAI-compatible API, so Pydantic AI can talk to it unchanged</td></tr>
+          <tr><td><strong>Qwen 27B</strong>, 8-bit file</td><td>The model itself</td><td>Fits on two 24 GB cards with room for long pages; capable enough for reading and judgment</td></tr>
+          <tr><td><strong>A batch file</strong></td><td>Starts the server with the tested settings</td><td>The settings that work are written down once, not retyped (for example: a long context window, and no repeat penalty, because it damages JSON output)</td></tr>
+          <tr><td><strong>Microsoft Edge</strong></td><td>The hidden browser Playwright drives</td><td>Already installed on Windows, so no extra download</td></tr>
+          <tr><td><strong>Environment variables</strong></td><td>Choose the model and options for a session</td><td><code>COURSE_AGENT_MODEL</code> switches between local and frontier without editing code</td></tr>
+          <tr><td><strong>Excel</strong> and a web browser</td><td>Viewing the outputs</td><td>The instructor already used both; the outputs fit his existing workflow</td></tr>
+          <tr><td><strong>An AI coding assistant</strong></td><td>Writing and testing code with the instructor</td><td>Speeds up building; the instructor approves every change</td></tr>
+          <tr><td><strong>git</strong> (planned)</td><td>Version history</td><td>For now, changed files are backed up into dated folders before each round of fixes. Moving to git is on the to-do list.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="lessons">
+    <h2>Lessons about tools</h2>
+    <div class="grid3">
+      <div class="card lesson"><h3>Use the library, not your own</h3><p>Reading PDFs, driving a browser and writing Excel files are solved problems. Using tested libraries left the effort for the part that's actually new.</p></div>
+      <div class="card lesson"><h3>Standards make AI swappable</h3><p>Because the local server speaks a common API, the same agent runs on a free local model or a paid frontier model. You aren't locked in.</p></div>
+      <div class="card lesson"><h3>Ask for structure, then check it</h3><p>Pydantic turns "please answer in JSON" into a guarantee, and anything that fails the check goes back to the model with the reason.</p></div>
+      <div class="card lesson"><h3>Versions matter</h3><p>The tests ran on one version of Pydantic AI (2.54) and the instructor's machine had another (2.69), and the two report "out of tokens" differently. The code now checks for both. Recording versions saves debugging time.</p></div>
+      <div class="card lesson"><h3>Small defaults bite</h3><p>Windows reads text files as cp1252 unless told otherwise, which garbled every dash and arrow in the course pages. Every file read now says <code>encoding="utf-8"</code>.</p></div>
+      <div class="card lesson"><h3>Isolate the project</h3><p>The .venv means the agent's libraries can't break, or be broken by, anything else on the computer, and the whole setup can be rebuilt from one file.</p></div>
+    </div>
+  </section>
+
+  <section id="discuss">
+    <h2>Discussion questions</h2>
+    <ol class="qs">
+      <li>Pydantic AI forces the model's answer into a fixed form. What do you gain? Could anything useful get lost because it doesn't fit the form?</li>
+      <li>Changing one line switches the agent from a local model to a cloud model. Who should be allowed to change that line, and when?</li>
+      <li>Every library is code written by strangers. How would you decide whether a library is trustworthy enough to handle course or student data?</li>
+      <li>Why might an instructor keep the model's instructions in a text file (a "spec") instead of inside the Python code?</li>
+    </ol>
+  </section>
+
+  <footer>Draft, November 2026 · Prof. Dave Pai, Mendocino College · A case study for CSC141 AI Literacy. The code samples are simplified for teaching; see the project's own <code>pyproject.toml</code> for exact versions.</footer>
+</main>
+
+<script>
+const LAYERS = {
+  cmd: ["The command", "One word picks the course, one word picks the output. The agent works out the rest: if the compliance report needs page reviews that are missing or out of date, it does those first.", "Runs inside the activated .venv. Options such as <code>--thinking on</code> or <code>--force</code> adjust a run."],
+  pkg: ["The agent's own code", "The part written for this project: course profiles, the privacy gate, page readers, the review steps, the cache and the report writers. It's organized into small modules such as <code>cli.py</code>, <code>llm.py</code>, <code>review.py</code> and a <code>reports/</code> folder.", "About 21 automated tests check it. Instructions for the model live in a separate <code>specs/</code> folder as plain text."],
+  libs: ["Libraries", "Code written and tested by other people, installed into the project's .venv. Each one does a single job: talking to models, driving a browser, reading PDFs, reading settings, writing spreadsheets, running tests.", "See the cards below for what each one does and why it was chosen."],
+  server: ["Model server", "A separate program, llama-server, that keeps the model loaded on the graphics cards and answers requests. The agent talks to it over HTTP, the same way it would talk to a cloud AI company, but the address is this computer.", "Started from a batch file with tested settings: a 98,304-token context and one request at a time."],
+  model: ["The model", "A file of about 27 billion numbers (weights), stored at 8-bit precision. This is the 'AI' that reads a page and judges it. It can be swapped for a different model without changing the agent.", "Thinking mode is switched on or off for each request: off for page reviews (fast), on for answer keys (slower, more careful)."],
+  hw: ["Hardware", "Two consumer graphics cards with 24 GB of memory each. The model is split by layers across both, so each card runs about half the time.", "A page review takes about 20 seconds; with thinking on, it can take minutes. A full course runs in hours, which is fine for a job done once a semester."]
+};
+const LIBS = [
+  { n:"pydantic-ai", f:"ai", one:"The agent framework.", what:"Connects Python to AI models and makes them answer in a fixed, checked format, with automatic retries when a check fails.", where:"Every model call: COR extraction, page reviews, answer keys.", why:"The same code works with local and cloud models (OpenAI-compatible, Anthropic and others), and checking answers is built in. The 'slim' package installs only the connectors you ask for." },
+  { n:"pydantic", f:"ai", one:"Data shapes with rules.", what:"Defines a data shape as a Python class, with types and limits, and validates data against it. Installed along with pydantic-ai.", where:"The 'forms' the model fills in: a page review, a COR, an answer key.", why:"A model's answer either fits the shape or gets rejected with a clear reason the model can act on." },
+  { n:"httpx", f:"ai", one:"The HTTP messenger.", what:"Sends web requests. The OpenAI connector uses it underneath to reach the model server.", where:"A small custom layer that merges system messages for the local model, turns thinking on or off per request, and records token counts and timing.", why:"It let the agent fix a compatibility problem without changing Pydantic AI itself." },
+  { n:"playwright", f:"in", one:"A browser robot.", what:"Opens web pages in a real browser with no window, runs their scripts, and hands back the finished page.", where:"Renders each live course page so the agent reads exactly what a student sees, including tables built by JavaScript.", why:"Reading the raw files produced about 25 false findings on one course. Rendering fixed that. Network access is blocked, so only course files load." },
+  { n:"pypdf", f:"in", one:"Reads PDF files.", what:"Extracts the text from PDF documents.", where:"Reads each course's official Course Outline of Record before the model turns it into structured data.", why:"Pure Python with no extra system software. The COR is a text PDF, so nothing heavier was needed." },
+  { n:"pyyaml", f:"in", one:"Reads settings files.", what:"Loads YAML, a settings format meant to be easy for people to read and edit.", where:"The course profiles: one per course, listing folders, exclusions and where the COR and quizzes are.", why:"The instructor can edit a profile in any text editor without touching Python." },
+  { n:"openpyxl", f:"out", one:"Writes Excel files.", what:"Creates and edits .xlsx workbooks: sheets, formulas, formatting, data validation.", where:"The coverage matrix and the grading workbook, with its linked student-name formulas, score limits and outcome-assessment sheets.", why:"The instructor already graded in Excel with mail merge, so the output had to be a real workbook with working formulas, not a CSV." },
+  { n:"pytest", f:"dev", one:"Runs automated tests.", what:"Finds and runs test functions, and reports which pass and which fail.", where:"21 tests, including one that starts a fake model server that always runs out of tokens, to check the retry logic.", why:"Each fixed bug gets a test, so it can't quietly come back. Installed only with the <code>[dev]</code> extra." },
+  { n:"setuptools + pip", f:"dev", one:"Packaging and installing.", what:"pip downloads and installs libraries; setuptools turns the project into an installable package.", where:"<code>pip install -e \".[dev]\"</code> installs the agent and everything it needs into the .venv, and creates the <code>course-agent</code> command.", why:"<code>-e</code> (editable) means code changes take effect immediately, without reinstalling." }
+];
+const COLORS = { ai:["--ai","Talking to the AI"], in:["--in","Reading inputs"], out:["--out","Writing outputs"], dev:["--dev","Building & testing"] };
+
+const sp = document.getElementById('stackpanel');
+const layers = [...document.querySelectorAll('.layer')];
+function showLayer(k) {
+  const [t, a, b] = LAYERS[k];
+  layers.forEach(l => l.classList.toggle('sel', l.dataset.l === k));
+  sp.innerHTML = `<h3 style="font-size:21px">${t}</h3><p>${a}</p><p class="note">${b}</p>`;
+}
+layers.forEach(l => l.addEventListener('click', () => showLayer(l.dataset.l)));
+showLayer('libs');
+
+const grid = document.getElementById('libs-grid');
+grid.innerHTML = LIBS.map(L => `
+  <article class="card lib" data-f="${L.f}" style="--c:var(${COLORS[L.f][0]})">
+    <div class="tag">${COLORS[L.f][1]}</div>
+    <h3>${L.n}</h3><p class="one">${L.one}</p>
+    <dl><dt>What it is</dt><dd>${L.what}</dd><dt>Where the agent uses it</dt><dd>${L.where}</dd><dt>Why this one</dt><dd>${L.why}</dd></dl>
+  </article>`).join('');
+document.querySelectorAll('#filters button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('#filters button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.lib').forEach(c => c.classList.toggle('hide', b.dataset.f !== 'all' && c.dataset.f !== b.dataset.f));
+}));
+
+const STEPS = {
+  win: [
+    { p:"PS C:\\projects\\courses-agent>", c:"python -m venv .venv", o:"", t:"Create the toolbox", e:"Makes a new folder, <code>.venv</code>, holding a private copy of Python. Done once per project." },
+    { p:"PS C:\\projects\\courses-agent>", c:".venv\\Scripts\\activate", o:"", t:"Open the toolbox", e:"Activating points this terminal at the .venv's Python. The prompt now starts with <code>(.venv)</code>, a reminder of which toolbox you're using. Done every session.", act:true },
+    { p:"(.venv) PS C:\\projects\\courses-agent>", c:"pip install -e \".[dev]\"", o:"Installing pydantic-ai-slim, openpyxl, pyyaml, pypdf, playwright, pytest ...\nSuccessfully installed course-agent ...", t:"Fill the toolbox", e:"Reads <code>pyproject.toml</code> and installs every library listed, into the .venv only. <code>-e</code> means editable: code changes work immediately. <code>[dev]</code> adds the test tools. Repeat only when the dependency list changes." },
+    { p:"(.venv) PS C:\\projects\\courses-agent>", c:"pytest -q", o:".....................\n21 passed", t:"Check the install", e:"Runs the automated tests. All green means the code and libraries work together on this machine." },
+    { p:"(.venv) PS C:\\projects\\courses-agent>", c:"$env:COURSE_AGENT_MODEL = \"local:qwen3.8-27b-q8-dualgpu@http://127.0.0.1:8083/v1\"", o:"", t:"Choose the model", e:"An environment variable tells the agent which model to use for this session: here, the local server. Pointing it at a cloud model would change nothing else. (Start the model server first, from its batch file.)" },
+    { p:"(.venv) PS C:\\projects\\courses-agent>", c:"course-agent csc210 compliance", o:"COR up to date (cached)\nReviewing 93 pages: 4 changed, 89 from cache ...\nWrote out/cor_compliance.html, out/cor_coverage.xlsx", t:"Run the agent", e:"The command created by <code>pyproject.toml</code>. It does whatever the report depends on and reuses the cache for anything unchanged. A log of the run goes to the course's <code>logs/</code> folder." },
+    { p:"(.venv) PS C:\\projects\\courses-agent>", c:"deactivate", o:"", t:"Close the toolbox", e:"Returns the terminal to the computer's normal Python. The .venv stays on disk, ready for next time." }
+  ]
+};
+STEPS.mac = STEPS.win.map((s, i) => ({ ...s,
+  p: s.p.replace("PS C:\\projects\\courses-agent>", "~/courses-agent $"),
+  c: i === 0 ? "python3 -m venv .venv" : i === 1 ? "source .venv/bin/activate" : i === 4 ? "export COURSE_AGENT_MODEL=\"local:qwen3.8-27b-q8-dualgpu@http://127.0.0.1:8083/v1\"" : s.c }));
+let os = 'win', ts = 0;
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+function renderTerm() {
+  const steps = STEPS[os];
+  let html = "";
+  for (let i = 0; i <= ts; i++) {
+    const s = steps[i];
+    const cmd = i === ts ? `<span class="hl">${esc(s.c)}</span>` : esc(s.c);
+    html += `<span class="p">${esc(s.p)}</span> ${cmd}\n` + (s.o ? `<span class="o">${esc(s.o)}</span>\n` : "");
+  }
+  if (ts === steps.length - 1) html += `<span class="p">${esc(steps[0].p)}</span> ▌`;
+  document.getElementById('term').innerHTML = html;
+  const s = steps[ts];
+  document.getElementById('explain').innerHTML = `<div class="note">Step ${ts + 1} of ${steps.length}</div><h3>${s.t}</h3><p>${s.e}</p>`;
+  document.getElementById('tcount').textContent = `${ts + 1} / ${steps.length}`;
+  document.getElementById('tback').disabled = ts === 0;
+  document.getElementById('tnext').disabled = ts === steps.length - 1;
+}
+document.getElementById('tnext').onclick = () => { if (ts < STEPS[os].length - 1) { ts++; renderTerm(); } };
+document.getElementById('tback').onclick = () => { if (ts > 0) { ts--; renderTerm(); } };
+document.querySelectorAll('.ostabs button').forEach(b => b.addEventListener('click', () => {
+  os = b.dataset.os; document.querySelectorAll('.ostabs button').forEach(x => x.classList.toggle('on', x === b)); renderTerm();
+}));
+renderTerm();
+</script>
+</body>
+</html>

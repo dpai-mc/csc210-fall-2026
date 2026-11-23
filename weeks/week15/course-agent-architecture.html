@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How the Course Agent Works: Architecture</title>
+<style>
+  :root {
+    --bg: #faf8f4; --panel: #ffffff; --ink: #1f2328; --muted: #5b6168; --line: #d9d3c7;
+    --input: #6b7280; --input-bg: #f1f1ef;
+    --guard: #b7791f; --guard-bg: #fbf1dd;
+    --code: #2f6fb3; --code-bg: #e8f0fa;
+    --ai: #7a4cc2; --ai-bg: #f1ebfa;
+    --out: #1f8a5b; --out-bg: #e6f4ed;
+    --human: #c2622d; --human-bg: #fbeee5;
+    --accent: #c2622d; --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181c; --panel: #1f2227; --ink: #e8e6e1; --muted: #a2a7ad; --line: #3a3e45;
+      --input: #a3a9b1; --input-bg: #262a30;
+      --guard: #e3b25a; --guard-bg: #3a2f1a;
+      --code: #6aa5e6; --code-bg: #1d2a3a;
+      --ai: #b08ef0; --ai-bg: #2a2238;
+      --out: #5cc597; --out-bg: #1b3027;
+      --human: #ec9563; --human-bg: #3a261b;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 17px/1.6 "Iowan Old Style", Georgia, "Times New Roman", serif; }
+  h1, h2, h3, nav, button, .kicker, .legend, .sans, table, svg text { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 32px 20px 80px; }
+  header.hero { padding: 24px 0 8px; border-bottom: 1px solid var(--line); margin-bottom: 28px; }
+  .kicker { text-transform: uppercase; letter-spacing: .12em; font-size: 12px; color: var(--accent); font-weight: 700; }
+  .draft { display: inline-block; font-size: 12px; padding: 2px 8px; border: 1px dashed var(--muted); border-radius: 999px; color: var(--muted); }
+  h1 { font-size: clamp(28px, 4.5vw, 42px); line-height: 1.15; margin: 8px 0 12px; letter-spacing: -.01em; }
+  h2 { font-size: 24px; margin: 48px 0 12px; }
+  h3 { font-size: 17px; margin: 0 0 6px; }
+  p.lede { font-size: 19px; color: var(--muted); max-width: 48em; margin: 0 0 12px; }
+  a { color: var(--accent); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; box-shadow: var(--shadow); }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0 12px; }
+  .toolbar button { border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 7px 14px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+  .toolbar button:hover:not(:disabled) { border-color: var(--accent); }
+  .toolbar button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .toolbar button:disabled { opacity: .4; cursor: default; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+  .legend span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; border: 2px solid var(--c); background: var(--b); }
+
+  .diagram-wrap { display: grid; grid-template-columns: 1fr 320px; gap: 18px; align-items: start; }
+  @media (max-width: 900px) { .diagram-wrap { grid-template-columns: 1fr; } }
+  .svgbox { overflow-x: auto; padding: 10px; }
+  svg.arch { width: 100%; min-width: 680px; height: auto; display: block; }
+  .blk { cursor: pointer; transition: opacity .25s; }
+  .blk rect { stroke-width: 2; rx: 10; transition: stroke-width .15s; }
+  .blk text { font-size: 13px; pointer-events: none; }
+  .blk text.t { font-weight: 700; font-size: 13.5px; }
+  .blk text.s { fill: var(--muted); font-size: 11.5px; }
+  .blk:hover rect, .blk:focus-visible rect { stroke-width: 3.5; }
+  .blk:focus { outline: none; }
+  .blk.sel rect { stroke-width: 4.5; }
+  .dim .blk:not(.lit) { opacity: .22; }
+  .dim .wire:not(.lit) { opacity: .15; }
+  .wire { fill: none; stroke: var(--muted); stroke-width: 1.8; transition: opacity .25s; }
+  .wire.lit { stroke: var(--accent); stroke-width: 3; }
+  .wire.dash { stroke-dasharray: 5 4; }
+  .zone { fill: none; stroke: var(--line); stroke-dasharray: 3 4; }
+  .zonelabel { font-size: 11px; fill: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+  .cat-input rect { fill: var(--input-bg); stroke: var(--input); } .cat-input text.t { fill: var(--ink); }
+  .cat-guard rect { fill: var(--guard-bg); stroke: var(--guard); } .cat-guard text.t { fill: var(--guard); }
+  .cat-code rect { fill: var(--code-bg); stroke: var(--code); } .cat-code text.t { fill: var(--code); }
+  .cat-ai rect { fill: var(--ai-bg); stroke: var(--ai); } .cat-ai text.t { fill: var(--ai); }
+  .cat-out rect { fill: var(--out-bg); stroke: var(--out); } .cat-out text.t { fill: var(--out); }
+  .cat-human rect { fill: var(--human-bg); stroke: var(--human); } .cat-human text.t { fill: var(--human); }
+  .cat-blocked rect { fill: var(--panel); stroke: var(--muted); stroke-dasharray: 4 3; } .cat-blocked text.t { fill: var(--muted); text-decoration: line-through; }
+
+  .detail { position: sticky; top: 16px; min-height: 280px; }
+  .detail .cat { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; font-family: system-ui, sans-serif; }
+  .detail h3 { font-size: 21px; margin: 4px 0 8px; }
+  .detail p { font-size: 15.5px; margin: 0 0 10px; }
+  .detail .tech { font-family: system-ui, sans-serif; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; }
+  .caption { font-family: system-ui, sans-serif; font-size: 15px; background: var(--human-bg); border-left: 4px solid var(--accent); padding: 10px 14px; border-radius: 0 8px 8px 0; margin: 10px 0 0; min-height: 48px; }
+
+  /* AI loop zoom */
+  .zoom { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  svg.loop { width: 100%; height: auto; max-width: 900px; display: block; margin: 0 auto; }
+  svg.loop rect { rx: 10; stroke-width: 2; }
+  svg.loop text { font-size: 13px; }
+  .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+  .ingr h3 { color: var(--accent); }
+  .ingr p { margin: 0; font-size: 15.5px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  ol.qs li { margin-bottom: 10px; }
+  footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <div class="kicker">CSC141 AI Literacy · Case study <span class="draft">Draft</span></div>
+    <h1>How the course agent works</h1>
+    <p class="lede">A block diagram of an AI agent built from scratch to review college courses. Click any block to see what it does, or press <strong>Trace one page</strong> to follow a single assignment page from input to finished report.</p>
+    <p class="lede sans" style="font-size:15px">Part of a set: <a href="course-agent-development.html">Build → Run → Validate → Repeat</a> · How the course agent works (this page) · <a href="course-agent-toolbox.html">The toolbox: libraries and the .venv</a></p>
+  </header>
+
+  <section>
+    <h2 style="margin-top:0">The big picture</h2>
+    <div class="toolbar">
+      <button id="traceBtn">▶ Trace one page</button>
+      <button id="tPrev" disabled>← Step</button>
+      <button id="tNext" disabled>Step →</button>
+      <button id="aiBtn">Highlight: where AI is used</button>
+      <button id="codeBtn">Highlight: plain code</button>
+      <button id="resetBtn">Reset</button>
+    </div>
+    <div class="legend">
+      <span style="--c:var(--input);--b:var(--input-bg)">Input</span>
+      <span style="--c:var(--guard);--b:var(--guard-bg)">Privacy guard</span>
+      <span style="--c:var(--code);--b:var(--code-bg)">Plain code (exact, repeatable)</span>
+      <span style="--c:var(--ai);--b:var(--ai-bg)">AI model (judgment)</span>
+      <span style="--c:var(--out);--b:var(--out-bg)">Output</span>
+      <span style="--c:var(--human);--b:var(--human-bg)">Human</span>
+    </div>
+    <div class="diagram-wrap">
+      <div class="card svgbox">
+        <svg class="arch" id="arch" viewBox="0 0 1000 600" role="group" aria-label="Course agent block diagram">
+          <defs>
+            <marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/>
+            </marker>
+            <marker id="ahl" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/>
+            </marker>
+          </defs>
+
+          <!-- zone labels -->
+          <text x="20" y="22" class="zonelabel">1 · Sources</text>
+          <text x="222" y="22" class="zonelabel">2 · Guard</text>
+          <text x="368" y="22" class="zonelabel">3 · Understand</text>
+          <text x="640" y="22" class="zonelabel">4 · Combine</text>
+          <text x="812" y="22" class="zonelabel">5 · Outputs</text>
+
+          <!-- wires (drawn first) -->
+          <g id="wires">
+            <path class="wire" data-w="profile-guard" d="M180 60 H222" marker-end="url(#ah)"/>
+            <path class="wire" data-w="pages-guard" d="M180 130 H222" marker-end="url(#ah)"/>
+            <path class="wire" data-w="cor-guard" d="M180 200 H222" marker-end="url(#ah)"/>
+            <path class="wire" data-w="qti-guard" d="M180 270 H222" marker-end="url(#ah)"/>
+            <path class="wire" data-w="syl-guard" d="M180 340 H222" marker-end="url(#ah)"/>
+            <path class="wire dash" data-w="student-guard" d="M180 440 H205 V390 H222" marker-end="url(#ah)"/>
+            <path class="wire" data-w="guard-code" d="M332 110 H368" marker-end="url(#ah)"/>
+            <path class="wire" data-w="guard-ai" d="M332 280 H368" marker-end="url(#ah)"/>
+            <path class="wire" data-w="code-ai" d="M480 168 V208" marker-end="url(#ah)"/>
+            <path class="wire" data-w="ai-llm" d="M440 372 V430" marker-end="url(#ah)"/>
+            <path class="wire" data-w="llm-ai" d="M520 430 V372" marker-end="url(#ah)"/>
+            <path class="wire" data-w="code-model" d="M592 110 H640" marker-end="url(#ah)"/>
+            <path class="wire" data-w="ai-model" d="M592 290 H640" marker-end="url(#ah)"/>
+            <path class="wire dash" data-w="ai-cache" d="M368 330 H300 V430" marker-end="url(#ah)"/>
+            <path class="wire" data-w="model-cor" d="M772 72 H812" marker-end="url(#ah)"/>
+            <path class="wire" data-w="model-cov" d="M772 150 H812" marker-end="url(#ah)"/>
+            <path class="wire" data-w="model-grade" d="M772 228 H812" marker-end="url(#ah)"/>
+            <path class="wire" data-w="model-cslo" d="M772 306 H812" marker-end="url(#ah)"/>
+            <path class="wire" data-w="model-hier" d="M772 384 H812" marker-end="url(#ah)"/>
+            <path class="wire" data-w="out-human" d="M900 424 V500" marker-end="url(#ah)"/>
+            <path class="wire dash" data-w="human-profile" d="M812 540 H100 V92" marker-end="url(#ah)"/>
+          </g>
+
+          <!-- 1 Sources -->
+          <g class="blk cat-input" data-id="profile" tabindex="0" role="button"><rect x="20" y="36" width="160" height="50"/><text class="t" x="34" y="57">Course profile</text><text class="s" x="34" y="75">settings file per course</text></g>
+          <g class="blk cat-input" data-id="pages" tabindex="0" role="button"><rect x="20" y="106" width="160" height="50"/><text class="t" x="34" y="127">Live student pages</text><text class="s" x="34" y="145">whatever index.html links</text></g>
+          <g class="blk cat-input" data-id="cor" tabindex="0" role="button"><rect x="20" y="176" width="160" height="50"/><text class="t" x="34" y="197">Course outline (COR)</text><text class="s" x="34" y="215">official PDF</text></g>
+          <g class="blk cat-input" data-id="qti" tabindex="0" role="button"><rect x="20" y="246" width="160" height="50"/><text class="t" x="34" y="267">Canvas quizzes</text><text class="s" x="34" y="285">QTI export files</text></g>
+          <g class="blk cat-input" data-id="syl" tabindex="0" role="button"><rect x="20" y="316" width="160" height="50"/><text class="t" x="34" y="337">Syllabus data</text><text class="s" x="34" y="355">outcomes, schedule</text></g>
+          <g class="blk cat-blocked" data-id="student" tabindex="0" role="button"><rect x="20" y="416" width="160" height="50"/><text class="t" x="34" y="437">Student work</text><text class="s" x="34" y="455">never read</text></g>
+
+          <!-- 2 Guard -->
+          <g class="blk cat-guard" data-id="guard" tabindex="0" role="button"><rect x="222" y="36" width="110" height="368"/>
+            <text class="t" x="236" y="62">Privacy</text><text class="t" x="236" y="80">gate</text>
+            <text class="s" x="236" y="110">excluded</text><text class="s" x="236" y="125">folders</text>
+            <text class="s" x="236" y="150">no student</text><text class="s" x="236" y="165">work</text>
+            <text class="s" x="236" y="190">meeting links</text><text class="s" x="236" y="205">stripped</text>
+            <text class="s" x="236" y="230">read-only</text><text class="s" x="236" y="245">course files</text>
+            <text x="262" y="398" style="font-size:20px">🔒</text></g>
+          <g class="blk cat-code" data-id="cache" tabindex="0" role="button"><rect x="222" y="430" width="140" height="50"/><text class="t" x="236" y="451">Cache</text><text class="s" x="236" y="469">skip what didn't change</text></g>
+
+          <!-- 3 Understand -->
+          <g class="blk cat-code" data-id="code" tabindex="0" role="button"><rect x="368" y="36" width="224" height="132"/>
+            <text class="t" x="382" y="60">Read &amp; measure (code)</text>
+            <text class="s" x="382" y="84">• open each page in a hidden browser</text>
+            <text class="s" x="382" y="102">• list pages by week, find broken links</text>
+            <text class="s" x="382" y="120">• add up points, read rubric tables</text>
+            <text class="s" x="382" y="138">• read quiz files &amp; outcome tags</text>
+            <text class="s" x="382" y="156">• pull video transcripts</text></g>
+          <g class="blk cat-ai" data-id="ai" tabindex="0" role="button"><rect x="368" y="208" width="224" height="164"/>
+            <text class="t" x="382" y="232">Judge (AI reviewer loop)</text>
+            <text class="s" x="382" y="256">• which COR topics does it teach?</text>
+            <text class="s" x="382" y="274">• at what level: 1, 2 or 3?</text>
+            <text class="s" x="382" y="292">• which outcomes does it grade?</text>
+            <text class="s" x="382" y="310">• any problems on the page?</text>
+            <text class="s" x="382" y="328">• draft answer-key bullets</text>
+            <text class="s" x="382" y="356" style="font-style:italic">every answer checked by code</text></g>
+          <g class="blk cat-ai" data-id="llm" tabindex="0" role="button"><rect x="390" y="430" width="180" height="62"/>
+            <text class="t" x="404" y="452">Local LLM server</text>
+            <text class="s" x="404" y="470">Qwen 27B on 2 GPUs</text>
+            <text class="s" x="404" y="485">in the instructor's PC</text></g>
+
+          <!-- 4 Combine -->
+          <g class="blk cat-code" data-id="model" tabindex="0" role="button"><rect x="640" y="36" width="132" height="368"/>
+            <text class="t" x="654" y="62">Course</text><text class="t" x="654" y="80">model</text>
+            <text class="s" x="654" y="110">pages × topics</text>
+            <text class="s" x="654" y="132">items × outcomes</text>
+            <text class="s" x="654" y="154">early / late</text><text class="s" x="654" y="169">assessment</text>
+            <text class="s" x="654" y="194">points &amp; parts</text>
+            <text class="s" x="654" y="216">circuit tree</text><text class="s" x="654" y="231">(CSC210)</text>
+            <text class="s" x="654" y="256">findings list</text></g>
+
+          <!-- 5 Outputs -->
+          <g class="blk cat-out" data-id="o-cor" tabindex="0" role="button"><rect x="812" y="46" width="168" height="52"/><text class="t" x="826" y="68">COR compliance</text><text class="s" x="826" y="86">web report</text></g>
+          <g class="blk cat-out" data-id="o-cov" tabindex="0" role="button"><rect x="812" y="124" width="168" height="52"/><text class="t" x="826" y="146">Coverage matrix</text><text class="s" x="826" y="164">spreadsheet, cells 1/2/3</text></g>
+          <g class="blk cat-out" data-id="o-grade" tabindex="0" role="button"><rect x="812" y="202" width="168" height="52"/><text class="t" x="826" y="224">Grading workbook</text><text class="s" x="826" y="242">sheet per assignment</text></g>
+          <g class="blk cat-out" data-id="o-cslo" tabindex="0" role="button"><rect x="812" y="280" width="168" height="52"/><text class="t" x="826" y="302">Outcome assessment</text><text class="s" x="826" y="320">met / partly / not met</text></g>
+          <g class="blk cat-out" data-id="o-hier" tabindex="0" role="button"><rect x="812" y="358" width="168" height="52"/><text class="t" x="826" y="380">CPU hierarchy</text><text class="s" x="826" y="398">CSC210 only</text></g>
+
+          <!-- Human -->
+          <g class="blk cat-human" data-id="human" tabindex="0" role="button"><rect x="812" y="500" width="168" height="66"/><text class="t" x="826" y="524">Instructor review</text><text class="s" x="826" y="542">checks, edits, decides</text><text class="s" x="826" y="557">what changes next</text></g>
+          <text x="420" y="534" class="zonelabel" style="text-transform:none;letter-spacing:0;font-size:12px">feedback: new rules, settings, instructions</text>
+        </svg>
+      </div>
+      <aside class="card detail" id="detail" aria-live="polite"></aside>
+    </div>
+    <div class="caption" id="caption">Click a block, or press <strong>Trace one page</strong>.</div>
+  </section>
+
+  <section>
+    <h2>Zoom in: the AI reviewer loop</h2>
+    <p>This is the part people usually mean by "the AI." It isn't one question and one answer. Code builds the question, the model answers in a fixed format, and code checks the answer before anything is kept.</p>
+    <div class="card">
+      <svg class="loop" viewBox="0 0 900 250" role="img" aria-label="AI reviewer loop: build prompt, model answers, check answer, keep or send back">
+        <defs><marker id="ah2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker></defs>
+        <g><rect x="10" y="60" width="180" height="100" style="fill:var(--code-bg);stroke:var(--code)"/>
+          <text x="24" y="86" style="font-weight:700;fill:var(--code)">1 · Build the prompt</text>
+          <text x="24" y="108" style="fill:var(--muted);font-size:12px">instructions file</text>
+          <text x="24" y="124" style="fill:var(--muted);font-size:12px">+ page as students see it</text>
+          <text x="24" y="140" style="fill:var(--muted);font-size:12px">+ COR topics &amp; outcomes</text></g>
+        <g><rect x="240" y="60" width="180" height="100" style="fill:var(--ai-bg);stroke:var(--ai)"/>
+          <text x="254" y="86" style="font-weight:700;fill:var(--ai)">2 · Model answers</text>
+          <text x="254" y="108" style="fill:var(--muted);font-size:12px">fills a fixed form:</text>
+          <text x="254" y="124" style="fill:var(--muted);font-size:12px">topics, levels, outcomes,</text>
+          <text x="254" y="140" style="fill:var(--muted);font-size:12px">evidence, observations</text></g>
+        <g><rect x="470" y="60" width="180" height="100" style="fill:var(--code-bg);stroke:var(--code)"/>
+          <text x="484" y="86" style="font-weight:700;fill:var(--code)">3 · Check the answer</text>
+          <text x="484" y="108" style="fill:var(--muted);font-size:12px">placeholder text? no topic?</text>
+          <text x="484" y="124" style="fill:var(--muted);font-size:12px">graded page, no outcome?</text>
+          <text x="484" y="140" style="fill:var(--muted);font-size:12px">too many / duplicate notes?</text></g>
+        <g><rect x="700" y="60" width="190" height="100" style="fill:var(--out-bg);stroke:var(--out)"/>
+          <text x="714" y="86" style="font-weight:700;fill:var(--out)">4 · Keep it</text>
+          <text x="714" y="108" style="fill:var(--muted);font-size:12px">saved to the cache;</text>
+          <text x="714" y="124" style="fill:var(--muted);font-size:12px">reused until the page or</text>
+          <text x="714" y="140" style="fill:var(--muted);font-size:12px">the instructions change</text></g>
+        <path d="M190 110 H236" stroke="var(--muted)" stroke-width="2" fill="none" marker-end="url(#ah2)"/>
+        <path d="M420 110 H466" stroke="var(--muted)" stroke-width="2" fill="none" marker-end="url(#ah2)"/>
+        <path d="M650 110 H696" stroke="var(--muted)" stroke-width="2" fill="none" marker-end="url(#ah2)"/>
+        <text x="663" y="102" style="fill:var(--out);font-size:12px;font-weight:700">pass</text>
+        <path d="M560 160 V210 H330 V164" stroke="var(--human)" stroke-width="2" fill="none" stroke-dasharray="5 4" marker-end="url(#ah2)"/>
+        <text x="350" y="232" style="fill:var(--human);font-size:12px;font-weight:700">fail → sent back with the reasons, model tries again</text>
+        <text x="10" y="36" style="fill:var(--muted);font-size:12px">Out of budget while "thinking"? The answer is saved for inspection and retried without thinking.</text>
+      </svg>
+    </div>
+  </section>
+
+  <section>
+    <h2>What makes this an "agent" and not a chatbot?</h2>
+    <div class="grid3">
+      <div class="card ingr"><h3>A goal</h3><p>"Report how this whole course lines up with its official outline." Not one question but a job with many steps.</p></div>
+      <div class="card ingr"><h3>Tools</h3><p>Code that can open pages in a browser, read PDFs and quiz files, add up points and write spreadsheets. The model doesn't do these itself.</p></div>
+      <div class="card ingr"><h3>A model for judgment</h3><p>The LLM is called hundreds of times, once per page or assignment, only where reading and judgment are needed.</p></div>
+      <div class="card ingr"><h3>Checks and a loop</h3><p>Every answer is checked, bad ones go back for another try, and one failed page doesn't stop the run.</p></div>
+      <div class="card ingr"><h3>Dependencies</h3><p>Ask for the compliance report and the agent works out what it needs first (read the COR, review the pages) and does only the steps whose inputs changed.</p></div>
+      <div class="card ingr"><h3>Guardrails and a human</h3><p>Hard privacy rules in code, and an instructor who reviews every output before it's used.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Code or AI? Who does what</h2>
+    <div class="card" style="padding:6px 14px; overflow-x:auto">
+      <table>
+        <thead><tr><th>Job</th><th>Done by</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Which pages are live, and in what week</td><td>Code</td><td>A fact in index.html. Exact every time.</td></tr>
+          <tr><td>Do the points add up?</td><td>Code</td><td>Arithmetic. An AI can get it wrong, and code can't.</td></tr>
+          <tr><td>Keep student work out</td><td>Code</td><td>A safety rule must never depend on the model "deciding" to follow it.</td></tr>
+          <tr><td>Does this page teach COR topic 4, and how deeply?</td><td>AI</td><td>Needs reading comprehension and judgment; the wording rarely matches the COR exactly.</td></tr>
+          <tr><td>Does this assignment really assess outcome 2?</td><td>AI</td><td>A printed "SLO 2" label is a claim. The model checks what students actually do.</td></tr>
+          <tr><td>Short answer-key notes</td><td>AI, then a human</td><td>Useful drafts, but they can contain confident technical errors.</td></tr>
+          <tr><td>Outcome scores (met / partly met / not met)</td><td>Code</td><td>The instructor's fixed formula: 75%+ = met, later attempts weigh more.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Discussion questions</h2>
+    <ol class="qs">
+      <li>Look at the color legend. Roughly what share of the diagram is AI, and what share is plain code? Did that surprise you?</li>
+      <li>The privacy gate is plain code, not an instruction to the AI ("please ignore student work"). Why is that the safer design?</li>
+      <li>The agent runs on a local model on two graphics cards. What would change if it used a cloud model instead: cost, speed, quality, privacy?</li>
+      <li>The feedback arrow runs from the instructor back to the course profile. What would happen to this system without it?</li>
+    </ol>
+  </section>
+
+  <footer>Draft, November 2026 · Prof. Dave Pai, Mendocino College · A case study for CSC141 AI Literacy. The diagram is simplified; no student data appears on this page.</footer>
+</main>
+
+<script>
+const CAT = { input: ["Input","--input"], guard: ["Privacy guard","--guard"], code: ["Plain code","--code"], ai: ["AI model","--ai"], out: ["Output","--out"], human: ["Human","--human"], blocked: ["Excluded","--muted"] };
+const INFO = {
+  profile: ["input","Course profile","One small settings file per course: where its pages are, which folders to skip, where its COR and quizzes live, and how its modules or weeks are numbered.","Format: YAML. Three profiles: CSC141, CSC210, CSC210L. Courses differ too much for one set of defaults."],
+  pages: ["input","Live student pages","The course's web pages. Only pages linked from the course home page (index.html) count as live, so old copies and drafts are ignored automatically.","CSC210: 93 live pages. CSC141: 52 pages plus portfolio and tool guides."],
+  cor: ["input","Course Outline of Record","The college's official PDF listing the course's learning outcomes, objectives and topics. The AI reads it once and turns it into structured data.","Re-extracted only when the PDF or the extraction instructions change."],
+  qti: ["input","Canvas quizzes","Quiz exports from Canvas. They count as assessment of outcomes, but they're graded automatically, so they get no grading sheet.","QTI XML: question text, points, and outcome tags from the question banks."],
+  syl: ["input","Syllabus data","The data file each syllabus is generated from: outcomes, weekly schedule, points.","Meeting links and passcodes in this file are removed before anything reaches a model."],
+  student: ["blocked","Student work","Submissions, grades and graded sheets. The agent is built so it can't read these folders at all, not even with the local model.","Excluded by folder patterns such as *-sub/ and grade-sheets/."],
+  guard: ["guard","Privacy gate","Plain code that enforces the hard rules before anything else happens: skip excluded folders, never read student work, strip meeting links, and treat course folders as read-only.","Before any call to a cloud model, code checks that the content comes from an allowed course folder."],
+  cache: ["code","Cache","Saves every AI answer, keyed by the exact page text and instructions. A re-run only redoes pages that changed, which turns hours into minutes.","Also caches rendered pages and answer keys. Failed items aren't cached, so they retry next time."],
+  code: ["code","Read & measure","Everything that can be done exactly is done by ordinary code. It first opens each page in a hidden web browser so it sees what a student sees, including tables built by JavaScript.","Playwright for rendering, HTML parsing for points and rubric tables, transcripts pulled from the pages."],
+  ai: ["ai","AI reviewer loop","The judgment step. For each page, code builds a prompt (instructions + page + COR) and the model fills in a fixed form: topics, depth, outcomes, problems. Code checks the form and sends bad answers back.","Built with the pydantic-ai library, which validates the model's answers against a schema. Scroll down for the zoomed-in view."],
+  llm: ["ai","Local LLM server","The AI model itself, running on the instructor's own PC across two graphics cards. No course or student data leaves the machine. The agent can also use a cloud ('frontier') model, but only for course content.","Qwen 27B (8-bit), served by llama-server. Roughly 20 s per page review without 'thinking'; minutes with it."],
+  model: ["code","Course model","Code combines the facts and the AI's judgments into one picture of the course: which pages cover which topics, which items assess which outcomes, and when.","Rule: only graded items count as 'assessed'. Evidence on lesson pages counts as 'taught'."],
+  "o-cor": ["out","COR compliance report","A readable web report: is every outcome, objective and topic covered and assessed, and what problems were found on pages?","HTML. Each finding is a lead for the instructor to check."],
+  "o-cov": ["out","Coverage matrix","A spreadsheet with pages as rows and COR items as columns. Each cell is 1 (introduced), 2 (developed), 3 (advanced) or blank.","A matching sheet shows assignments × outcomes."],
+  "o-grade": ["out","Grading workbook","One workbook per course, one sheet per assignment, in the layout the instructor already used. Row 3 holds draft answer-key notes.","Names typed once on the first sheet flow to every other sheet by formula. No roster is read."],
+  "o-cslo": ["out","Outcome assessment","Turns grades into outcome results (met, partly met, not met) per student, with later assessments weighted more.","Pure formula in the spreadsheet. Runs only after grading, on the instructor's PC."],
+  "o-hier": ["out","CPU hierarchy","For CSC210 only: a drill-down tree of the 8-bit CPU students build, from the whole CPU to single gates, linked to the week and page for each part.","Built from circuit names on the pages (e.g. FULL_ADDER inside ADDER_8BIT)."],
+  human: ["human","Instructor review","The expert checks the outputs against the real pages, corrects mistakes, and decides what to change next: a setting, a rule, or the instructions to the model.","This is the 'Validate' step from the companion page. It found the NAND/NOR answer-key error."]
+};
+const AI_IDS = ["ai","llm"];
+const CODE_IDS = ["guard","cache","code","model"];
+const TRACE = [
+  { ids:["pages"], w:[], t:"Start: a CSC210 assignment page is linked from the course home page, so it counts as live." },
+  { ids:["pages","profile","guard"], w:["pages-guard","profile-guard"], t:"The privacy gate checks the course profile. The page is in an allowed folder and isn't student work, so it passes." },
+  { ids:["guard","code"], w:["guard-code"], t:"Code opens the page in a hidden browser, as a student would, then reads its parts table and adds up the points: A 14 + 14 + 18 + 4, and so on." },
+  { ids:["code","ai","cor"], w:["code-ai","guard-ai","cor-guard"], t:"Code builds a prompt: the review instructions, the page text, and the COR's topics and outcomes." },
+  { ids:["ai","llm"], w:["ai-llm","llm-ai"], t:"The local model fills in the form: topics taught (with level 1–3), outcomes assessed, any problems seen on the page." },
+  { ids:["ai","cache"], w:["ai-cache"], t:"Code checks the answer. If it passes, it's saved in the cache; if not, it goes back to the model with the reasons." },
+  { ids:["code","ai","model"], w:["code-model","ai-model"], t:"Facts and judgments are combined with every other page into the course model." },
+  { ids:["model","o-cor","o-cov","o-grade","o-cslo"], w:["model-cor","model-cov","model-grade","model-cslo"], t:"The page now appears in the compliance report, a row in the coverage matrix, and its own sheet in the grading workbook." },
+  { ids:["o-grade","human"], w:["out-human"], t:"The instructor reviews the drafted key and checks it against the page. Mistakes found here drive the next round of changes." },
+  { ids:["human","profile"], w:["human-profile"], t:"Feedback: a new rule, setting or instruction. The next run uses the cache, so only the affected pages are redone." }
+];
+
+const svg = document.getElementById('arch');
+const blks = [...svg.querySelectorAll('.blk')];
+const wires = [...svg.querySelectorAll('.wire')];
+const detail = document.getElementById('detail');
+const caption = document.getElementById('caption');
+let step = -1;
+
+function showInfo(id) {
+  const [cat, title, body, tech] = INFO[id];
+  const [cname, cvar] = CAT[cat];
+  blks.forEach(b => b.classList.toggle('sel', b.dataset.id === id));
+  detail.innerHTML = `<div class="cat" style="color:var(${cvar})">${cname}</div><h3>${title}</h3><p>${body}</p><div class="tech">${tech}</div>`;
+}
+function light(ids, ws) {
+  svg.classList.add('dim');
+  blks.forEach(b => b.classList.toggle('lit', ids.includes(b.dataset.id)));
+  wires.forEach(w => {
+    const on = ws.includes(w.dataset.w);
+    w.classList.toggle('lit', on);
+    w.setAttribute('marker-end', on ? 'url(#ahl)' : 'url(#ah)');
+  });
+}
+function clearLight() {
+  svg.classList.remove('dim');
+  blks.forEach(b => b.classList.remove('lit', 'sel'));
+  wires.forEach(w => { w.classList.remove('lit'); w.setAttribute('marker-end', 'url(#ah)'); });
+  document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('on'));
+}
+function goStep(i) {
+  step = i; const s = TRACE[i];
+  light(s.ids, s.w);
+  showInfo(s.ids[s.ids.length - 1]);
+  caption.innerHTML = `<strong>Step ${i + 1} of ${TRACE.length}.</strong> ${s.t}`;
+  document.getElementById('tPrev').disabled = i === 0;
+  document.getElementById('tNext').disabled = i === TRACE.length - 1;
+}
+blks.forEach(b => {
+  const act = () => { showInfo(b.dataset.id); if (step < 0) caption.innerHTML = `Selected: <strong>${INFO[b.dataset.id][1]}</strong>. Press <strong>Trace one page</strong> to follow the whole path.`; };
+  b.addEventListener('click', act);
+  b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); } });
+});
+document.getElementById('traceBtn').onclick = () => { clearLight(); document.getElementById('traceBtn').classList.add('on'); goStep(0); };
+document.getElementById('tNext').onclick = () => step >= 0 && step < TRACE.length - 1 && goStep(step + 1);
+document.getElementById('tPrev').onclick = () => step > 0 && goStep(step - 1);
+function highlightSet(ids, btn, text) {
+  clearLight(); step = -1;
+  document.getElementById('tPrev').disabled = document.getElementById('tNext').disabled = true;
+  btn.classList.add('on'); light(ids, []); caption.innerHTML = text;
+}
+document.getElementById('aiBtn').onclick = e => highlightSet(AI_IDS, e.currentTarget, "<strong>Where AI is used:</strong> just two blocks, the reviewer loop and the model server behind it. Everything else is ordinary code.");
+document.getElementById('codeBtn').onclick = e => highlightSet(CODE_IDS, e.currentTarget, "<strong>Plain code:</strong> the privacy gate, reading and measuring, the cache, and combining results. These need to be exact and repeatable.");
+document.getElementById('resetBtn').onclick = () => {
+  clearLight(); step = -1;
+  document.getElementById('tPrev').disabled = document.getElementById('tNext').disabled = true;
+  caption.innerHTML = "Click a block, or press <strong>Trace one page</strong>.";
+  showInfo('ai');
+};
+showInfo('ai');
+</script>
+</body>
+</html>
