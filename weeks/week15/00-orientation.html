@@ -22,6 +22,8 @@
     .ahead h3 { margin-top: 0; font-size: var(--fs-base); }
     @media (max-width: 760px) { .ahead { grid-template-columns: 1fr; } }
 
+    .video-ts { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--color-text-muted); white-space: nowrap; }
+
   </style>
 </head>
 <body>
@@ -125,6 +127,38 @@
       </div>
     </section>
 
+    <section id="sec-video">
+      <h2>Week 15 class video: completing the CPU layout</h2>
+      <p>About 29 minutes. This video is for the <strong>final project</strong>, not for this week&rsquo;s four pages or the quiz: your instructor finishes the CPU layout begun in Week 14 and explains the special circuits around it in more detail than the written pages do. Nothing in Logisim is due this week, so watch it when you sit down to work on your CPU.</p>
+      <p>He opens with his finished CPU and control unit <span class="video-ts">(01:47)</span>, why he keeps the wires spaced so they can be counted <span class="video-ts">(02:12)</span>, and the control outputs down each side <span class="video-ts">(03:37)</span>, including the difference between <code>MAR_S</code> and the <code>MARS</code> input pin <span class="video-ts">(04:12)</span>, the <code>END</code> output <span class="video-ts">(04:49)</span>, and the IO lines the course does not use <span class="video-ts">(05:41)</span>.</p>
+      <p>Then the special circuits. <strong>Loading:</strong> the multiplexer, one of Week 14&rsquo;s three built-in exceptions <span class="video-ts">(06:39)</span>, set to 8 data bits <span class="video-ts">(07:37)</span> and switching between the counter and RAM input <span class="video-ts">(08:17)</span>; the 256 counter, fed by load AND clock L <span class="video-ts">(10:04)</span>, its subcircuit <span class="video-ts">(10:30)</span>, the counter settings <span class="video-ts">(11:03)</span>, its carry output <span class="video-ts">(11:38)</span>, and the controlled buffer made left-handed <span class="video-ts">(13:16)</span>. <strong>Carry-in:</strong> the one-bit <code>Ctmp</code> memory <span class="video-ts">(15:01)</span>, the wire in the old diagram that goes nowhere <span class="video-ts">(15:53)</span>, and why shifts need a carry-in <span class="video-ts">(17:39)</span>. <strong>The clock:</strong> the clock E, S and L outputs <span class="video-ts">(19:25)</span>, and gating the clock with <code>END</code> so a fast simulation stops when the program does <span class="video-ts">(19:44)</span>.</p>
+      <p>He finishes with the two circuits you have to build and the tunnels <span class="video-ts">(21:05)</span>, reset clearing RAM as well <span class="video-ts">(21:35)</span>, <code>MARS</code> and load set by hand <span class="video-ts">(22:13)</span>, reversed decoder bits as the most common wiring mistake <span class="video-ts">(23:16)</span>, a preview of next week&rsquo;s external RAM <span class="video-ts">(23:52)</span>, and how to clear an all-red CPU by toggling reset in simulation mode <span class="video-ts">(25:29)</span>, which works because reset is ORed into every set line <span class="video-ts">(28:04)</span>. Click any line of the transcript to jump there.</p>
+
+      <div class="video-breakout">
+        <div class="video-transcript-row">
+          <div class="video-col">
+            <div class="video-frame" id="video-container">
+              <iframe id="youtube-player"
+                      src="https://www.youtube.com/embed/yOXd6hBdvKE?enablejsapi=1&amp;cc_load_policy=1&amp;iv_load_policy=3&amp;modestbranding=1&amp;rel=0"
+                      title="CSC210 Week 15: Completing the CPU Layout"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allowfullscreen loading="lazy"></iframe>
+            </div>
+            <div class="video-caption">Closed captions available. Use the transcript panel to jump to any point in the video.</div>
+          </div>
+          <div class="transcript-col">
+            <h2 class="sr-only">Video transcript</h2>
+            <div class="transcript-panel" id="transcript-container" role="region"
+                 aria-live="polite"
+                 aria-label="Video transcript. Select a line to jump to that point in the video. The line currently being spoken is announced as the video plays.">
+              <p class="transcript-loading">Loading transcript&hellip;</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section id="sec-tools">
       <h2>Tools and reading</h2>
       <ul>
@@ -140,5 +174,1080 @@
   <footer class="sp-footer">
     CSC 210 — Computer Organization &amp; Architecture &nbsp;|&nbsp; Mendocino College &nbsp;|&nbsp; Week 15, Orientation
   </footer>
+  <script>
+  (function () {
+    'use strict';
+
+    /* ------------------------------------------------------------
+       Week 15 class video (completing the CPU layout). Procedure A --
+       one video on this page, so no TranscriptManager. VIDEO_ID is the
+       YouTube id; vttContent holds the WEBVTT captions inline so the
+       panel needs no second request and works from the Canvas iframe
+       without a CORS fetch. The script below the VTT is Week 14's,
+       unchanged.
+
+       The source VTT (csc210-wk15.vtt, Whisper) arrived with CRLF line
+       endings and 316 cues; the original is kept unchanged at
+       docs/video-raw/csc210-wk15.whisper.vtt. Deleted (10): restated
+       "R0 enable" 03:55; zero-length "Okay" x5 at 09:19; "you" 10:46;
+       looped restatement 20:35; hallucinations 23:02, 23:04. 20:35.800
+       reduced to its last clause; stray CJK character stripped at 17:10.
+       Terms repaired: AND gates, temp S, MARS, END, S/E/IO/DA, MUX input
+       0, counter "action on overflow", three-state, CAEZ, Ctmp, flags,
+       clock E / clock S / clock L, three by eight, red, byte; names and
+       the pronoun I capitalised. 306 cues out. The repaired file is
+       csc210-wk15.vtt in this folder.
+       ------------------------------------------------------------ */
+
+    var VIDEO_ID = 'yOXd6hBdvKE';
+    var vttContent = `WEBVTT
+
+00:00.240 --> 00:06.880
+Aloha, and I hope everybody's going to have a happy Thanksgiving this week.
+
+00:07.120 --> 00:11.520
+This is week 15. We do have some stuff to cover.
+
+00:12.400 --> 00:17.760
+I'm not really going to go over it because I want to go over the final CPU simulation,
+
+00:18.500 --> 00:21.700
+or part of it, the next step from last week.
+
+00:22.500 --> 00:26.800
+This information is in here about CPU performance,
+
+00:26.800 --> 00:32.840
+and it goes beyond what our 8-bit CPU sim does.
+
+00:32.980 --> 00:38.500
+So it's important about how CPUs work, how to improve performance,
+
+00:38.760 --> 00:42.140
+things that we cannot do with our 8-bit simulation.
+
+00:43.120 --> 00:49.380
+All right, so we'll go through this, and there'll be a little bit of homework,
+
+00:50.960 --> 00:53.100
+but it shouldn't be too bad.
+
+00:53.460 --> 00:56.380
+And the big thing is really working on your CPU sims.
+
+00:56.800 --> 01:02.640
+Okay, so when we're looking at the final CPU simulation,
+
+01:03.280 --> 01:08.800
+sorry, when we're looking at, from last week,
+
+01:10.040 --> 01:14.080
+the finished machine, which I said is no submission,
+
+01:14.860 --> 01:19.200
+but it explains a lot about the final sim, okay?
+
+01:19.840 --> 01:24.960
+And so what I want to do is talk about, because I don't think everything was in here,
+
+01:24.960 --> 01:25.000
+okay?
+
+01:26.800 --> 01:29.420
+Actually, it's in the previous week, something that's in the previous week.
+
+01:31.520 --> 01:37.200
+And so what I want to talk about is, let's see here.
+
+01:39.200 --> 01:46.120
+I want to go to my, I'll just send this one here.
+
+01:47.240 --> 01:49.140
+Okay, so this is my final CPU.
+
+01:49.480 --> 01:50.700
+I finished it all up.
+
+01:52.000 --> 01:56.780
+So basically what I did from last week is I finished up,
+
+01:56.800 --> 02:01.860
+this control unit, it's slightly different, kind of odd looking,
+
+02:02.120 --> 02:07.600
+but it's a little bit wider and more spread out than the one that I posted for the wires,
+
+02:08.040 --> 02:11.200
+but I built it very similarly.
+
+02:12.620 --> 02:19.360
+And one of the things that really, I really had to do is I had to keep all these wires,
+
+02:19.360 --> 02:22.720
+like one off, one, one, one, one, one, separated.
+
+02:23.240 --> 02:26.760
+Same with these, you know, off of these AND gates.
+
+02:27.400 --> 02:28.500
+Like you'll see this one is here.
+
+02:28.500 --> 02:29.860
+The second one is right next to it.
+
+02:29.860 --> 02:31.280
+The third one is right next to it.
+
+02:32.000 --> 02:34.880
+And that made it easier for me to make the wires.
+
+02:34.880 --> 02:36.620
+Cause then I just count how many wires over.
+
+02:36.620 --> 02:37.540
+Oh, it's on the third wire.
+
+02:37.540 --> 02:38.560
+It's on the fourth wire.
+
+02:39.640 --> 02:40.000
+Okay.
+
+02:41.140 --> 02:43.420
+So, um, that's what I did.
+
+02:44.180 --> 02:51.580
+The difference in this one is I used all our three by eight where I had three inputs, two by fours with two inputs.
+
+02:51.580 --> 02:55.860
+And I used a fan to split them because there's two inputs coming in.
+
+02:56.500 --> 02:57.960
+The same with the ALU.
+
+02:58.060 --> 02:59.280
+I had three inputs.
+
+03:00.660 --> 03:01.080
+Okay.
+
+03:01.260 --> 03:03.240
+So this is the difference that I did here.
+
+03:03.780 --> 03:10.200
+Anybody wants, um, I'm more than happy to share pictures, great pictures and show it to you, um, separately.
+
+03:11.080 --> 03:16.060
+Um, notice that I do didn't do a very good job of aligning up my stepper.
+
+03:16.560 --> 03:19.980
+Now I can go back and build a new stepper and move these things over.
+
+03:19.980 --> 03:24.400
+So they all line up very straight, but I'm just going to leave it how it is.
+
+03:25.860 --> 03:26.360
+All right.
+
+03:26.440 --> 03:36.120
+But what I want to talk about on the CPU, so when you build your CPU and let's start over here on the left.
+
+03:36.380 --> 03:36.780
+Okay.
+
+03:37.740 --> 03:39.600
+So I built my control section.
+
+03:40.300 --> 03:44.760
+I got all my E's and S's, right?
+
+03:44.760 --> 03:46.260
+So here's the bus one signal.
+
+03:46.280 --> 03:47.400
+Here's the temp S.
+
+03:47.760 --> 03:50.760
+Here's the C and I'll explain what we use that for.
+
+03:51.180 --> 03:55.500
+R3 set, R3 enable, R2 set, R2 enable R1 set, R1 enable.
+
+03:55.780 --> 04:02.260
+R0 set, R0 enable, then down the right, MAR underscore S.
+
+04:02.320 --> 04:06.400
+This is your memory address register set load.
+
+04:07.840 --> 04:08.040
+Okay.
+
+04:08.040 --> 04:11.280
+We use load to load our program into memory.
+
+04:12.300 --> 04:16.360
+MARS, M A R S, which is a memory address register set.
+
+04:16.680 --> 04:25.600
+This one is this M A R S in our control unit is this.
+
+04:25.600 --> 04:25.700
+Okay.
+
+04:25.780 --> 04:38.140
+So this is our M A R S, which is different than M A R underscore S, okay, this is an input, a one bit input that comes in and we click on it, it says, set the memory address register, okay?
+
+04:39.280 --> 04:42.640
+So it's a shortcut, same with the reset down here.
+
+04:44.980 --> 04:45.280
+Okay.
+
+04:45.280 --> 04:47.740
+So let's go back to our CPU.
+
+04:49.480 --> 04:49.660
+Okay.
+
+04:49.660 --> 04:52.180
+So we have a load, we have MARS, we have an END.
+
+04:53.580 --> 04:53.800
+Okay.
+
+04:53.800 --> 04:55.660
+We have an END output comes out.
+
+04:55.660 --> 04:55.720
+Okay.
+
+04:55.720 --> 04:57.400
+And it goes into this flag called END.
+
+04:58.180 --> 05:03.280
+So when it ends, when the program ends, this will go to one and it will be one.
+
+05:03.820 --> 05:05.020
+Otherwise it will be zero.
+
+05:06.460 --> 05:13.060
+I modified my RAM to move everything down a little bit towards the bottom to make it easier to do these wiring.
+
+05:13.720 --> 05:19.600
+So I think my old CPU doesn't work anymore because I moved all these things.
+
+05:20.400 --> 05:20.600
+Okay.
+
+05:20.600 --> 05:24.880
+So I have like the CPU 13.
+
+05:24.880 --> 05:26.380
+So I moved all these things.
+
+05:26.380 --> 05:28.340
+They weren't wired up anyway, but I moved them all.
+
+05:28.480 --> 05:29.560
+So they just show it down here.
+
+05:33.040 --> 05:33.380
+Okay.
+
+05:33.560 --> 05:36.120
+So anyway, I did that to make it easier.
+
+05:36.160 --> 05:38.620
+So we have load down here.
+
+05:38.620 --> 05:40.960
+I had S, E, IO, DA.
+
+05:41.320 --> 05:44.140
+So IO and DA, we didn't talk about either.
+
+05:44.140 --> 05:46.580
+We didn't really talk about S, E, IO or DA.
+
+05:47.320 --> 05:54.160
+We don't use them, but we put them in the S and E are actually the IO clock set and IO clock.
+
+05:54.760 --> 05:55.300
+Enable.
+
+05:57.960 --> 05:58.240
+Okay.
+
+06:01.060 --> 06:03.880
+And we'll call, I'll go through what's in this RAM, how we do this.
+
+06:03.880 --> 06:11.980
+I have my instruction register, my program counter have that reset bit that I showed you in the control section.
+
+06:12.500 --> 06:15.700
+I have it coming out here, so here's an input.
+
+06:15.740 --> 06:19.900
+And so if I want to reset, I click this and it'll go one guy.
+
+06:19.900 --> 06:20.680
+Reset.
+
+06:22.440 --> 06:23.960
+He goes to this flag too.
+
+06:24.160 --> 06:37.560
+Okay, and when this, when I click one here, it goes into the control section, it also sets reset to one here, and it goes into the RAM, and everything in RAM input gets put into all the RAM.
+
+06:39.280 --> 06:49.560
+All right, so the multiplexer, since we're over here, let's go over to this side.
+
+06:49.560 --> 07:01.420
+Okay, so my load is an input, and I use a load tunnel, and that goes here to this MUX, this multiplexer.
+
+07:01.680 --> 07:08.400
+It also goes down here to this 256 counter, okay, and I'll go over this counter in a little bit.
+
+07:09.880 --> 07:11.100
+I'll probably next, okay?
+
+07:11.100 --> 07:19.100
+Okay, so MUX is, we're going to just use, this is one of those where we're just going to use this.
+
+07:19.560 --> 07:26.240
+The multiplexer from Plexers, you bring in a multiplexer, you drop it in, okay?
+
+07:26.920 --> 07:29.200
+This 0 is one of the inputs.
+
+07:29.600 --> 07:37.960
+This is the other input, so we have two inputs, and then we use this one bit thing as a load, and then this is our output.
+
+07:37.960 --> 07:49.300
+Okay, both of these inputs are 8-bit, the output is 8-bit, so when you select it, make sure you set those bits, okay?
+
+07:49.560 --> 07:54.180
+Data bits, got to change it to 8.
+
+07:56.260 --> 08:00.380
+Selection bit is still 1, okay?
+
+08:01.580 --> 08:06.180
+And if you ensure I can click on this one, you can see I just have those.
+
+08:06.180 --> 08:07.740
+The only difference is data bits is 8.
+
+08:09.760 --> 08:10.820
+Okay, I have two inputs.
+
+08:10.920 --> 08:17.500
+RAM input is an 8-bit input, and then I have 8 bits that go to the bus, okay?
+
+08:17.720 --> 08:19.480
+And so when load is high, all it's doing.
+
+08:19.560 --> 08:23.820
+All it's doing is it's alternating between what's on the bus and the RAM input.
+
+08:24.600 --> 08:34.100
+So the bus will come from this counter, and it'll start at 0 and go 0, okay?
+
+08:34.320 --> 08:41.540
+So it'll take 0 to set the address, and then it'll put whatever's in RAM input into 0.
+
+08:42.320 --> 08:49.040
+Then it'll count to 1 and do 1, then it'll count to 2 and do 2, 3, 4, and it'll count up to 255.
+
+08:50.240 --> 08:51.600
+Because that's what the counter does.
+
+08:54.140 --> 08:54.540
+Oops.
+
+08:55.640 --> 08:57.020
+Didn't want to delete that.
+
+08:59.040 --> 09:00.080
+I just want to delete.
+
+09:03.760 --> 09:05.720
+Control-Z, I don't want to do that.
+
+09:17.400 --> 09:17.920
+Okay.
+
+09:17.920 --> 09:18.180
+So this.
+
+09:18.480 --> 09:19.440
+Because I'm clicking.
+
+09:19.440 --> 09:19.500
+Okay.
+
+09:19.700 --> 09:30.300
+So I can use Shift and deselect, okay, and then hit Delete, or see if I try to grab and
+
+09:30.300 --> 09:35.320
+drag, it'll move it, okay?
+
+09:36.880 --> 09:44.960
+So if I go Shift, I can select multiple things, and then I can deselect, hit Delete, and delete
+
+09:44.960 --> 09:46.180
+those things that I stuck in there.
+
+09:47.240 --> 09:47.500
+Okay.
+
+09:47.500 --> 09:48.580
+So hopefully this is straightforward.
+
+09:49.260 --> 09:49.540
+Reset.
+
+09:49.540 --> 09:57.940
+just a flag right make sure zero is always the inside loop okay instruction
+
+09:57.940 --> 10:04.180
+register just goes in reset okay so first big thing here that's different is
+
+10:04.180 --> 10:11.780
+this little configuration here okay so we have a flag for load and a flag for
+
+10:11.780 --> 10:16.720
+clock L they come into this AND gate and then they go into this input of this 256
+
+10:16.720 --> 10:24.580
+now this 256 is a new circuit all right and I don't think it's very well defined
+
+10:24.580 --> 10:30.580
+I didn't very define it very well but here in my diagram is called load 256
+
+10:30.580 --> 10:40.160
+count okay so let's go look at this load 256 count right so what it has I'm not
+
+10:40.160 --> 10:46.240
+sure why this should have a label of count on it
+
+10:46.720 --> 10:57.340
+all right so what it has we have this little thing we put in here all right
+
+10:57.340 --> 11:03.900
+and it's a counter so you see under memory this counter this is what we put
+
+11:03.900 --> 11:15.440
+in this counter okay and now on the counter itself it's an 8-bit with 0 X F
+
+11:15.440 --> 11:16.560
+F as the maximum value
+
+11:16.720 --> 11:23.920
+which is 255 action on overflow we want stay at value trigger falling edge okay
+
+11:23.920 --> 11:30.840
+so you got to set those four things to make sure they're right okay and then Q
+
+11:30.840 --> 11:38.620
+goes out to an 8-bit output you know just an 8-bit output not three-state
+
+11:38.620 --> 11:46.600
+then below the Q this is the carry which is one when reaches maximum minimum okay
+
+11:46.720 --> 11:50.860
+and so what we're going to do is we're going to have this come out through a
+
+11:50.860 --> 11:56.080
+gate and to a one-bit output that we're calling carry and we're not going to use
+
+11:56.080 --> 12:04.540
+it but it's there okay we have two with clear and we have clock value may update
+
+12:04.540 --> 12:08.680
+on trigger and so we're going to do is put a clock input a one bit input into
+
+12:08.680 --> 12:15.220
+here and on this count this is our increment so we're going to set it to one
+
+12:15.220 --> 12:16.540
+that means every time
+
+12:16.540 --> 12:22.480
+account it's gonna count by one that's what we want okay so that's our clock
+
+12:22.480 --> 12:31.180
+and then all I did is make it a rectangle put 256 this is the 8-bit
+
+12:31.180 --> 12:39.040
+output this is the carry output and this is the clock input all right so you
+
+12:39.040 --> 12:46.240
+make that little rectangle like that and then you're gonna drop it into your CPU
+
+12:46.240 --> 12:55.500
+okay put an AND gate on it so that when clock L is high and when load is high
+
+12:55.500 --> 13:02.000
+meaning you want to load okay so load means load the program into RAM we do
+
+13:02.000 --> 13:09.820
+that manually we have a semi manually I should say okay so we load the program
+
+13:09.820 --> 13:15.520
+into RAM and then we turn load off to run the program that's stored in RAM
+
+13:15.520 --> 13:16.220
+okay
+
+13:16.240 --> 13:22.080
+okay so this is just a little circuit that works to load it okay and then we put a control buffer
+
+13:22.080 --> 13:29.120
+on the output and on this controlled buffer if you make it left-handed is the default is
+
+13:29.120 --> 13:35.920
+right-handed meaning it points straight down okay if you make it left-handed you can put that tab
+
+13:35.920 --> 13:42.720
+upward so it makes it easier to draw that little make that connection I think in the other one
+
+13:42.720 --> 13:46.320
+in this one
+
+13:48.880 --> 13:51.280
+when you look at the complete CPU in this one
+
+14:00.880 --> 14:03.120
+you'll see like I did a loop around to the bottom
+
+14:08.320 --> 14:09.520
+let's open any tab
+
+14:12.720 --> 14:20.080
+right I did a loop down to the bottom just flip it over and you can all have to do that loop
+
+14:21.520 --> 14:23.840
+okay and then it goes out to the 8 bits for our bus
+
+14:28.400 --> 14:37.120
+okay flags go in no problem standard put your flag in CAEZ I didn't
+
+14:37.120 --> 14:42.000
+number these CAEZ but they should be CAEZ from the control section
+
+14:43.360 --> 14:51.600
+um all right so then what I need to do is we have a carry-in okay so we need to say
+
+14:52.240 --> 14:55.120
+when do we carry something in and what's the value we carry in
+
+14:56.000 --> 15:00.320
+we'll have that carry out coming from our control section so we're going to use that as our carry-in
+
+15:01.920 --> 15:12.640
+okay now we have this Ctmp, carry temp is what I'm calling it, Ctmp okay so we view it it's all it is
+
+15:13.200 --> 15:22.000
+is a one-bit memory circuit which is a carry as our input has an s for set and the o is our output
+
+15:22.000 --> 15:33.280
+it's all one bit okay and so when I redraw that it's just a rectangle okay carries input on the
+
+15:33.280 --> 15:41.920
+right s for set I put on the top and our output goes out the left and I called it Ctmp
+
+15:42.720 --> 15:50.800
+okay and we put that into our CPU
+
+15:53.440 --> 15:59.840
+okay now in the old diagram there's a fictitious wire that goes like this
+
+16:01.280 --> 16:05.200
+okay but it doesn't go anywhere because there's no connection to the control section
+
+16:06.080 --> 16:11.920
+so this you don't really need this okay so you're gonna take that carry part that's our input to c
+
+16:13.200 --> 16:24.080
+the s comes from our temp s set okay so when it's zero remember when it's zero we're taking
+
+16:32.480 --> 16:40.080
+oh it's zero sorry when it's zero it's not putting anything in
+
+16:42.720 --> 16:45.840
+okay when it's zero it doesn't do anything and then bus just takes
+
+16:49.840 --> 16:54.080
+um when bus is one you know you just get nothing coming down and you get whatever
+
+16:54.960 --> 17:05.280
+bus comes over here typically is one because it's usually one to add in the ALU add one
+
+17:05.280 --> 17:09.280
+to the memory of current memory location and then when it's zero it doesn't do anything and then bus
+
+17:09.280 --> 17:10.240
+just takes
+
+17:10.240 --> 17:14.880
+um to the memory current memory for the performance
+
+17:16.880 --> 17:18.000
+set
+
+17:19.760 --> 17:21.760
+okay so it's going to be just standard level
+
+17:22.320 --> 17:29.280
+okay so we want to pick this off of s this is our temp s
+
+17:30.880 --> 17:37.360
+okay I'm going to pick that up s that's going to be here so set so when that's one
+
+17:37.360 --> 17:39.760
+we will set the carry and send it out
+
+17:39.760 --> 17:46.780
+and when then when this C from our control section we have this C right
+
+17:46.780 --> 17:58.660
+here as an output when that's one that says the the process or the thing you
+
+17:58.660 --> 18:08.280
+want the ALU to do needs a carry in like a shift right or a shift left you
+
+18:08.280 --> 18:13.680
+might need that you need that value of zero or one whatever you're filling with
+
+18:13.680 --> 18:20.600
+to go in to have it to fill in otherwise it won't fill okay or shouldn't though
+
+18:20.600 --> 18:25.860
+right that kind of thing if you need a carry in this is where it comes from but
+
+18:25.860 --> 18:32.900
+you only get it when this C is one okay
+
+18:38.280 --> 18:45.220
+okay flags you should have built it already so the C goes in as okay our
+
+18:45.220 --> 18:54.200
+clock so ever old clock clock clock E clock S okay
+
+19:00.740 --> 19:05.360
+okay so here we are with our old clock
+
+19:08.280 --> 19:14.180
+okay let's see if I blow it up again okay there's our old clock clock E
+
+19:14.180 --> 19:19.200
+clock S goes over the clock clock E and clock S in our control system that
+
+19:19.200 --> 19:25.680
+run around the stepper okay all right we're gonna pull off on this side just
+
+19:25.680 --> 19:31.580
+some output so we have them clock E clock S and clock L the clock L we're
+
+19:31.580 --> 19:36.660
+gonna put on even though it's clock we're gonna call it clock label okay and
+
+19:36.660 --> 19:38.240
+we're gonna make a tunnel for clock
+
+19:38.280 --> 19:44.220
+L which is going to go down to this clock L okay we're putting these other
+
+19:44.220 --> 19:50.820
+outputs just because we want them at the next higher level okay our clock in are
+
+19:50.820 --> 19:57.660
+where our driver is which was just this one bit input what we're gonna do is put
+
+19:57.660 --> 20:05.820
+it now behind it and and AND it with whatever END is not so when END is zero
+
+20:05.820 --> 20:12.020
+this is a one meaning clock will work it'll cycle one zero one zero one zero
+
+20:12.020 --> 20:17.880
+when it's a one it'll be a zero and no matter what you do with clock we won't
+
+20:17.880 --> 20:25.260
+continue to cycle this clock because the input will always be zero okay and so
+
+20:25.260 --> 20:30.600
+that what this does is if you're running the super fast frequency simulation
+
+20:30.600 --> 20:35.660
+mode that we will be running in when you to end it'll stop processing
+
+20:35.800 --> 20:39.220
+okay and that's why we put it
+
+20:39.220 --> 20:47.980
+in that way all right and then you can see my opcode from the ALU this time I
+
+20:47.980 --> 20:51.580
+used it as a three bit instead of three single bits I used as a three bit input
+
+20:51.580 --> 21:00.100
+zero to two my opcode on my ALU is ABC two one zero so I just tied them
+
+21:00.100 --> 21:05.640
+together and it should be right I'll find out it should be right
+
+21:05.640 --> 21:15.960
+okay so these were the two that you had to build to actually complete this and
+
+21:15.960 --> 21:23.300
+then these were just a flag the tunnels s here see you have to hear and here
+
+21:23.300 --> 21:33.320
+clock L S and C used for this carry in clock L and load used to load it reset
+
+21:33.320 --> 21:35.460
+tunnel used on your reset and shaken up your switch.
+
+21:35.640 --> 21:47.340
+reset also goes into reset RAM so whenever I click um this one when I'm in simulation mode
+
+21:47.340 --> 21:54.360
+I click a one here it'll reset the entire control section and also it'll reset RAM to be whatever
+
+21:54.360 --> 22:03.500
+RAM input is set to be in this case all zeros okay when it reaches END you cycle through the
+
+22:03.500 --> 22:13.740
+program's over END becomes one this END then jumps over here sets this END to one which sets this to
+
+22:13.740 --> 22:25.380
+zero which stops cycling the clock okay manually when we set MARS to one that's we use that
+
+22:25.380 --> 22:31.080
+manually do that manually to load the program into RAM same with load we set load to one we put it in
+
+22:31.080 --> 22:32.000
+the mode of
+
+22:32.000 --> 22:35.160
+loading the program into RAM
+
+22:35.160 --> 22:45.380
+okay that's kind of how you set up the CPU the final layout of the CPU to have everything on
+
+22:45.380 --> 22:52.960
+there and it's basically now ready to go to the next level so we can run a program load and run a
+
+22:52.960 --> 23:00.080
+program okay so if you have any issues or questions like I said last week the best thing to do
+
+23:00.080 --> 23:01.980
+is actually to run a program load and run a program
+
+23:06.000 --> 23:08.000
+what's your problem is I was going on
+
+23:08.000 --> 23:12.300
+and send me your file so I can look at your diagrams make sure everything's
+
+23:12.300 --> 23:14.300
+connected
+
+23:14.300 --> 23:16.240
+making sure that one of the biggest ones
+
+23:16.240 --> 23:20.240
+is you know we have all these
+
+23:20.240 --> 23:22.240
+a bit in puts of
+
+23:22.240 --> 23:24.040
+on and people sometimes get them
+
+23:24.040 --> 23:26.700
+backwards specially what the
+
+23:26.700 --> 23:30.660
+decoder of the two by four and the three by eight
+
+23:30.660 --> 23:31.160
+and the four by sixteen decoder of us
+
+23:31.160 --> 23:39.680
+um when they think they got zero they got 32 or 15 or 31 or 15 instead of zero that kind of thing
+
+23:39.680 --> 23:46.680
+it's not a big issue but it's easy to get confused and have that happen
+
+23:46.680 --> 23:52.400
+all right so hopefully that helps people you want to get to this level
+
+23:52.400 --> 23:59.080
+before we go to the next level which I'll do for next week the week after Thanksgiving
+
+23:59.080 --> 24:01.680
+and that is to take this
+
+24:01.680 --> 24:07.220
+which looks like this and to put it into
+
+24:07.220 --> 24:10.840
+this format
+
+24:10.840 --> 24:19.400
+oops let me shrink that down a minute into this format where I create this is my CPU
+
+24:19.400 --> 24:27.240
+okay and I take all these inputs and I flag them outputs these are all outputs and I flag them
+
+24:29.080 --> 24:37.080
+I have my inputs over here for load and MARS and reset I just have clock out clock E clock S so I
+
+24:37.080 --> 24:47.400
+can see them same with clock so I can see them cycle and then this external RAM okay I have a
+
+24:47.400 --> 24:58.040
+memory thing I have this 256 clock thing I have clock l from here I have RAM input from here
+
+24:59.080 --> 25:04.680
+okay and so what's going to happen is when this loads when we cycle through the clock
+
+25:05.240 --> 25:12.360
+we'll pre-load our program into this external RAM it'll dump it into RAM input every cycle
+
+25:12.360 --> 25:18.840
+which will go into the multi multiplexer here and load into RAM and every cycle
+
+25:20.280 --> 25:29.000
+of this of the 256 clock cycle okay and then we'll turn this stuff off
+
+25:29.080 --> 25:35.000
+and we'll run the program one last thing to I forgot to mention so when you're in your
+
+25:37.320 --> 25:40.360
+when you're in your CPU here so if you're
+
+25:44.600 --> 25:47.640
+like this everything is red
+
+25:49.080 --> 25:58.040
+okay and that's because there's nothing on the bus everything's a zero e e e on your bus okay
+
+25:59.080 --> 26:04.120
+if things aren't working you can reset as many times as you want it's always going to be red
+
+26:04.120 --> 26:09.000
+okay if for some reason it doesn't seem to work but you want to run your simulation
+
+26:09.720 --> 26:15.480
+you know I'm running my simulation but it doesn't it's all red and I'm getting weird answers
+
+26:16.280 --> 26:26.120
+what you can do before you start is just come over here and just click the reset because I'm in
+
+26:26.120 --> 26:28.120
+simulation mode reset to one
+
+26:29.080 --> 26:35.880
+go back to zero and what that did is it set everything to zero okay so it reset everything
+
+26:35.880 --> 26:40.520
+so everything is zero now if I go up to my seat registers they all have zero in them
+
+26:41.560 --> 26:54.600
+you know if I go to RAM and view RAM oops the inputs like every byte of RAM I have should I
+
+26:54.600 --> 26:57.880
+have all zeros in it okay
+
+26:59.480 --> 27:05.240
+because I hit the reset which reset everything to zeros all right so that's the
+
+27:07.720 --> 27:11.080
+way if you really want you don't want it to look like it's all
+
+27:11.080 --> 27:17.320
+red the only thing I read just go over here and
+
+27:20.200 --> 27:28.200
+okay now when you go back here and you reset the simulation it's fine but if I disable simulation
+
+27:29.720 --> 27:31.720
+wait I'm gonna go over here
+
+27:33.880 --> 27:35.720
+and reset it it's not all red
+
+27:38.280 --> 27:45.640
+there's some here not sure what I did there but here's my enabled
+
+27:46.680 --> 27:54.200
+it's all red it's gonna be in simulation mode and then I can just go boom notice when I reset
+
+27:55.080 --> 27:58.600
+all the sets are one and the innate and
+
+27:58.600 --> 28:04.120
+all the sets are one all the sets are one so whatever's on the bus is going to go into
+
+28:04.120 --> 28:12.440
+everything because all the sets are one okay and that's because we look in our control section oops
+
+28:16.520 --> 28:26.600
+using an or gate we wired instruction register program counter accumulator temp flag s
+
+28:26.600 --> 28:34.200
+and r0 to r3 we wire them all through these or gates to the reset button
+
+28:36.200 --> 28:41.480
+okay so all those have gone become essentially zero when we click on reset
+
+28:44.360 --> 28:48.680
+all right well that's enough for tonight and have a great Thanksgiving
+
+28:49.960 --> 28:52.360
+and I'll hopefully talk to you soon
+
+28:55.240 --> 28:56.440
+and hopefully everybody's
+
+28:56.600 --> 28:59.480
+able to get this uh working
+
+29:01.960 --> 29:03.240
+thanks bye`;
+
+    var player, timeUpdater, parsedTranscript = [];
+
+    function timeToSeconds(timeStr) {
+      if (!timeStr) return 0;
+      var parts = timeStr.trim().split(':');
+      if (parts.length === 2) {
+        return (parseInt(parts[0]) || 0) * 60 + (parseFloat(parts[1]) || 0);
+      } else if (parts.length === 3) {
+        return (parseInt(parts[0]) || 0) * 3600 + (parseInt(parts[1]) || 0) * 60 + (parseFloat(parts[2]) || 0);
+      }
+      return 0;
+    }
+
+    function parseVtt(vttText) {
+      var cues = vttText.trim().split(/\n\n+/);
+      var parsedCues = [];
+      cues.forEach(function (cueBlock) {
+        if (cueBlock.indexOf('WEBVTT') === 0 || cueBlock.trim() === '') return;
+        var lines = cueBlock.trim().split('\n');
+        var timeLine = lines.filter(function (l) { return l.indexOf('-->') !== -1; })[0];
+        if (!timeLine) return;
+        var parts = timeLine.split(' --> ');
+        var textLines = lines.slice(lines.indexOf(timeLine) + 1);
+        parsedCues.push({
+          start: timeToSeconds(parts[0]),
+          end: timeToSeconds(parts[1]),
+          text: textLines.join(' ').trim()
+        });
+      });
+      return parsedCues;
+    }
+
+    function populateTranscript() {
+      var container = document.getElementById('transcript-container');
+      if (!container) return;
+      container.innerHTML = '';
+      parsedTranscript.forEach(function (cue) {
+        var lineEl = document.createElement('div');
+        lineEl.className = 'transcript-line';
+        lineEl.dataset.start = cue.start;
+        lineEl.dataset.end = cue.end;
+        lineEl.textContent = cue.text;
+        lineEl.setAttribute('role', 'button');
+        lineEl.setAttribute('tabindex', '0');
+        var seekTo = function () {
+          if (player && player.seekTo) { player.seekTo(cue.start, true); player.playVideo(); }
+        };
+        lineEl.addEventListener('click', seekTo);
+        lineEl.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); seekTo(); }
+        });
+        container.appendChild(lineEl);
+      });
+    }
+
+    function highlightCurrentLine() {
+      if (!player || !player.getCurrentTime) return;
+      var currentTime = player.getCurrentTime();
+      var lines = document.querySelectorAll('#transcript-container .transcript-line');
+      lines.forEach(function (line) {
+        var start = parseFloat(line.dataset.start);
+        var end = parseFloat(line.dataset.end);
+        if (currentTime >= start && currentTime < end) {
+          if (!line.classList.contains('active-transcript-line')) {
+            var prev = document.querySelector('#transcript-container .active-transcript-line');
+            if (prev) prev.classList.remove('active-transcript-line');
+            line.classList.add('active-transcript-line');
+            line.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else {
+          line.classList.remove('active-transcript-line');
+        }
+      });
+    }
+
+    function syncTranscriptHeight() {
+      var videoContainer = document.getElementById('video-container');
+      var transcriptContainer = document.getElementById('transcript-container');
+      if (!videoContainer || !transcriptContainer) return;
+      var videoCol = videoContainer.closest('.video-col');
+      var transcriptCol = transcriptContainer.closest('.transcript-col');
+      var sideBySide = !!(videoCol && transcriptCol) && Math.abs(
+        transcriptCol.getBoundingClientRect().top - videoCol.getBoundingClientRect().top) < 2;
+      if (sideBySide) {
+        transcriptContainer.style.height = videoContainer.offsetHeight + 'px';
+        transcriptContainer.style.maxHeight = videoContainer.offsetHeight + 'px';
+      } else {
+        transcriptContainer.style.height = '24rem';
+        transcriptContainer.style.maxHeight = '24rem';
+      }
+    }
+
+    window.onYouTubeIframeAPIReady = function () {
+      if (!VIDEO_ID || !document.getElementById('youtube-player')) return;
+      player = new YT.Player('youtube-player', {
+        videoId: VIDEO_ID,
+        events: {
+          onStateChange: function (event) {
+            clearInterval(timeUpdater);
+            if (event.data === YT.PlayerState.PLAYING) {
+              timeUpdater = setInterval(highlightCurrentLine, 300);
+            }
+          }
+        }
+      });
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      if (!VIDEO_ID || !vttContent.trim()) { syncTranscriptHeight(); return; }
+
+      parsedTranscript = parseVtt(vttContent);
+      populateTranscript();
+      setTimeout(syncTranscriptHeight, 100);
+      if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+        var tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      } else {
+        window.onYouTubeIframeAPIReady();
+      }
+    });
+
+    var resizeTimeout;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(syncTranscriptHeight, 250);
+    });
+  })();
+  </script>
 </body>
 </html>
